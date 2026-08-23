@@ -1,0 +1,76 @@
+import type { ParentSignUpFormValues } from './parentSignUpValidation';
+
+export const parentSignUpDefaults: ParentSignUpFormValues = {
+  nurseryId: '',
+  childFirstName: '',
+  childMiddleName: '',
+  childLastName: '',
+  childNickname: '',
+  childDob: '',
+  childNationality: '',
+  childGender: '',
+
+  fatherFullName: '',
+  fatherJob: '',
+  fatherMobile: '',
+  fatherEmail: '',
+
+  motherFullName: '',
+  motherJob: '',
+  motherMobile: '',
+  motherEmail: '',
+  username: '',
+  password: '',
+
+  maritalStatus: '',
+  address: '',
+  hasSiblings: false,
+  siblingAges: '',
+
+  department: '',
+  schoolPreference: '',
+  schoolAdmissionsPlan: '',
+  academicYear: '',
+
+  hasAllergy: false,
+  allergyDetails: '',
+  allergyTypes: [] as string[],
+  hasMedicalCondition: false,
+  medicalConditionDetails: '',
+  referralSource: '',
+  emergencyContacts: [{ name: '', phone: '', relationship: '' }],
+
+
+  pickupPerson1Name: '',
+  pickupPerson1Phone: '',
+  pickupPerson1Relation: '',
+  pickupPerson1Authorization: 'anytime',
+  pickupPerson2Name: '',
+  pickupPerson2Phone: '',
+  pickupPerson2Relation: '',
+  pickupPerson2Authorization: 'anytime',
+
+  arrivalTime: '',
+  takesBreakfastAtHome: '',
+  eatsNurseryMeals: '',
+  foodAllergies: '',
+  sendsExtraSnacks: '',
+  sendsVitamins: '',
+  vitaminDetails: '',
+  waterPreference: '',
+  extraMealPreference: '',
+  diaperSupplyMethod: '',
+  dailyDiaperCount: '',
+  rashCreamUsage: '',
+  diaperChangeFrequency: '',
+  toiletTrainingStatus: '',
+  napTimePreference: '',
+  maxNapTime: '',
+
+  medicationConsents: [],
+
+  agreeHealthPolicy: false,
+  agreeFinancialAgreement: false,
+  agreePolicies: false,
+  agreeInfoAccuracy: false,
+};

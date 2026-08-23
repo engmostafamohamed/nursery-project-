@@ -1,0 +1,77 @@
+{
+  "id": "/",
+  "name": "XO Nursery",
+  "short_name": "XO",
+  "description": "Nursery management for parents and teachers — XO.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f7f9fb",
+  "theme_color": "#000613",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["education", "lifestyle"],
+  "shortcuts": [
+    {
+      "name": "Parent home",
+      "short_name": "Parent",
+      "description": "Open parent dashboard",
+      "url": "/parent",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Teacher home",
+      "short_name": "Teacher",
+      "description": "Open teacher dashboard",
+      "url": "/teacher",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Daily reports",
+      "short_name": "Reports",
+      "description": "Daily reports",
+      "url": "/parent/daily-reports",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Attendance",
+      "short_name": "Attendance",
+      "description": "Attendance",
+      "url": "/teacher/attendance",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Admin dashboard",
+      "short_name": "Admin",
+      "description": "Open admin dashboard",
+      "url": "/admin",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Parent attendance",
+      "short_name": "My attendance",
+      "description": "Parent attendance history",
+      "url": "/parent/attendance",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
