@@ -163,6 +163,7 @@ export function StepReview({ values, files, onJumpTo }: Props) {
               ? values.medicalConditionDetails || t('common.yes')
               : t('common.no'),
           },
+          { label: t('signup.childBehaviorHealthNotes'), value: values.childBehaviorHealthNotes || null },
         ]}
       />
 
@@ -209,7 +210,8 @@ export function StepReview({ values, files, onJumpTo }: Props) {
           { label: t('signup.eatsNurseryMeals'), value: yesNo(values.eatsNurseryMeals) },
           { label: t('signup.diaperSupplyMethod'), value: values.diaperSupplyMethod || null },
           { label: t('signup.toiletTrainingStatus'), value: values.toiletTrainingStatus || null },
-          { label: t('signup.napTimePreference'), value: values.napTimePreference || null },
+          { label: t('signup.napTimePreference'), value: yesNo(values.napTimePreference) },
+          { label: t('signup.maxNapTime'), value: values.napTimePreference === 'Yes' ? values.maxNapTime || null : null },
         ]}
       />
 

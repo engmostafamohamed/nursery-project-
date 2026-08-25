@@ -146,13 +146,14 @@ export async function submitParentSignUp(
       : null,
     has_medical_condition: v.hasMedicalCondition,
     medical_condition_details: v.hasMedicalCondition ? v.medicalConditionDetails.trim() || null : null,
+    child_behavior_health_notes: v.childBehaviorHealthNotes.trim() || null,
     diaper_supply_method: v.diaperSupplyMethod === 'Stock' ? ('stock' as const) : v.diaperSupplyMethod === 'On daily basis' ? ('daily' as const) : null,
     daily_diaper_count: v.dailyDiaperCount ? parseInt(v.dailyDiaperCount, 10) || null : null,
     rash_cream_usage: v.rashCreamUsage || null,
     diaper_change_frequency: v.diaperChangeFrequency || null,
     toilet_training_status: v.toiletTrainingStatus || null,
     nap_time_preference: v.napTimePreference || null,
-    max_nap_time: v.maxNapTime || null,
+    max_nap_time: v.napTimePreference === 'Yes' ? v.maxNapTime || null : null,
     emergency_medications: v.medicationConsents && v.medicationConsents.length > 0 ? v.medicationConsents : null,
   };
 

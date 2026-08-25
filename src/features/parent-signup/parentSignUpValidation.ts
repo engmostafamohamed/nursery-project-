@@ -6,6 +6,7 @@ import { isChildAgeValid, isValidIsoDate } from '@/lib/onboardingDateBounds';
 const medicationConsentIdSchema = z.enum(MEDICATION_CONSENT_IDS);
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phonePattern = /^\d{11}$/;
+export const NAP_DURATION_VALUES = ['0.5', '1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5'] as const;
 
 const optionalEmail = z.string().refine((value) => !value.trim() || emailPattern.test(value.trim()), 'signup.invalidEmail');
 const optionalPhone = z
@@ -17,6 +18,11 @@ const requiredPhone = z
   .min(1, 'signup.requiredField')
   .refine((value) => /^\d+$/.test(value.trim()), 'signup.phoneDigitsOnly')
   .refine((value) => phonePattern.test(value.trim()), 'signup.invalidPhone');
+const emergencyContactSchema = z.object({
+  name: z.string(),
+  phone: optionalPhone,
+  relationship: z.string(),
+});
 const childDob = z
   .string()
   .min(1, 'signup.requiredField')
@@ -63,18 +69,12 @@ export const parentSignUpBaseSchema = z.object({
   allergyTypes: z.array(z.string()),
   hasMedicalCondition: z.boolean(),
   medicalConditionDetails: z.string(),
+  childBehaviorHealthNotes: z.string(),
   referralSource: z.string(),
 
-  // One contact is required; the parent can add more cards from the form.
-  emergencyContacts: z
-    .array(
-      z.object({
-        name: z.string().min(1),
-        phone: requiredPhone,
-        relationship: z.string().min(1),
-      }),
-    )
-    .min(1),
+  // The first two emergency contacts are required. Any extra card is optional
+  // until the parent starts filling it, then it must be complete.
+  emergencyContacts: z.array(emergencyContactSchema).min(2),
 
   pickupPerson1Name: z.string().min(1),
   pickupPerson1Phone: requiredPhone,
@@ -108,6 +108,58 @@ export const parentSignUpBaseSchema = z.object({
   agreeFinancialAgreement: z.boolean(),
   agreePolicies: z.boolean(),
   agreeInfoAccuracy: z.boolean(),
+}).superRefine((data, ctx) => {
+  data.emergencyContacts.forEach((contact, index) => {
+    const isRequiredContact = index < 2;
+    const hasAnyValue = Boolean(contact.name.trim() || contact.phone.trim() || contact.relationship.trim());
+    if (!isRequiredContact && !hasAnyValue) return;
+
+    if (!contact.name.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'signup.requiredField',
+        path: ['emergencyContacts', index, 'name'],
+      });
+    }
+    if (!contact.phone.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'signup.requiredField',
+        path: ['emergencyContacts', index, 'phone'],
+      });
+    }
+    if (!contact.relationship.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'signup.requiredField',
+        path: ['emergencyContacts', index, 'relationship'],
+      });
+    }
+  });
+
+  if (data.napTimePreference && data.napTimePreference !== 'Yes' && data.napTimePreference !== 'No') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'signup.requiredField',
+      path: ['napTimePreference'],
+    });
+  }
+
+  if (data.napTimePreference === 'Yes' && !data.maxNapTime.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'signup.requiredField',
+      path: ['maxNapTime'],
+    });
+  }
+
+  if (data.maxNapTime.trim() && !NAP_DURATION_VALUES.includes(data.maxNapTime.trim() as (typeof NAP_DURATION_VALUES)[number])) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'signup.maxNapTimeRange',
+      path: ['maxNapTime'],
+    });
+  }
 });
 
 export type ParentSignUpFormValues = z.infer<typeof parentSignUpBaseSchema>;

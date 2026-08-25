@@ -224,6 +224,11 @@ export function ApplicationReviewTabs({ parentInfo, childInfo }: Props) {
                 <Row label={t('signup.maxNapTime')} value={readString(dailyCare, 'max_nap_time')} />
               </dl>
             </Section>
+            <Section title={t('signup.childBehaviorHealthNotes')} icon="psychology">
+              <dl className="space-y-3">
+                <Row label={t('signup.childBehaviorHealthNotes')} value={readString(dailyCare, 'child_behavior_health_notes')} />
+              </dl>
+            </Section>
           </div>
         </div>
       </TabsContent>

@@ -10,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { FileDropzoneWithPreview } from '@/components/signup/FileDropzoneWithPreview';
 import { SignupShell } from '@/components/signup/SignupShell';
@@ -31,7 +32,12 @@ import {
   type SignupNursery,
 } from '@/features/parent-signup/signupNurseries';
 import { emptyParentSignUpFiles, type ParentSignUpFileBundle } from '@/features/parent-signup/parentSignUpFiles';
-import { parentSignUpBaseSchema, validateCrossFieldRules, type ParentSignUpFormValues } from '@/features/parent-signup/parentSignUpValidation';
+import {
+  NAP_DURATION_VALUES,
+  parentSignUpBaseSchema,
+  validateCrossFieldRules,
+  type ParentSignUpFormValues,
+} from '@/features/parent-signup/parentSignUpValidation';
 import { submitParentSignUp } from '@/features/parent-signup/submitParentSignUp';
 import { SIGNUP_STEPS, STEP_FIELDS, type SignUpStep } from '@/features/parent-signup/parentSignUpTypes';
 import { clearDraft, loadDraft, useApplicationDraft } from '@/hooks/useApplicationDraft';
@@ -74,6 +80,21 @@ const isValidEmail = (value: unknown) => typeof value === 'string' && emailPatte
 const isValidPhone = (value: unknown) => typeof value === 'string' && phonePattern.test(value.trim());
 const isOptionalEmailValid = (value: unknown) => !requiredTextFilled(value) || isValidEmail(value);
 const isOptionalPhoneValid = (value: unknown) => !requiredTextFilled(value) || isValidPhone(value);
+const emptyEmergencyContact = () => ({ name: '', phone: '', relationship: '' });
+
+function hasStartedEmergencyContact(contact: ParentSignUpFormValues['emergencyContacts'][number]) {
+  return requiredTextFilled(contact.name) || requiredTextFilled(contact.phone) || requiredTextFilled(contact.relationship);
+}
+
+function hasCompleteEmergencyContact(contact: ParentSignUpFormValues['emergencyContacts'][number]) {
+  return requiredTextFilled(contact.name) && isValidPhone(contact.phone) && requiredTextFilled(contact.relationship);
+}
+
+function normalizeEmergencyContacts(values: ParentSignUpFormValues): ParentSignUpFormValues {
+  const emergencyContacts = [...(values.emergencyContacts ?? [])];
+  while (emergencyContacts.length < 2) emergencyContacts.push(emptyEmergencyContact());
+  return { ...values, emergencyContacts };
+}
 
 const USERNAME_PATTERN = /^[a-zA-Z0-9._-]{4,32}$/;
 
@@ -112,21 +133,27 @@ function hasCompleteFamilyDetails(values: ParentSignUpFormValues) {
   return true;
 }
 
+function hasCompleteNapPreferences(values: ParentSignUpFormValues) {
+  if (values.napTimePreference !== 'Yes' && values.napTimePreference !== 'No') return false;
+  if (values.napTimePreference === 'No') return true;
+  return NAP_DURATION_VALUES.includes(values.maxNapTime as (typeof NAP_DURATION_VALUES)[number]);
+}
+
 function isStepComplete(step: SignUpStep, values: ParentSignUpFormValues, files: ParentSignUpFileBundle) {
   if (step === 'parents') return hasCompleteParent(values);
   if (step === 'family') return hasCompleteFamilyDetails(values);
+  if (step === 'dailyCare') return hasCompleteNapPreferences(values);
   if (step === 'consents') return hasAcceptedAllConsents(values);
   if (step === 'pickups' && (!files.pickupPerson1Photo || !files.pickupPerson2Photo)) return false;
   if (step === 'emergency') {
-    // A list now, not six flat fields: every card the parent added must be complete.
+    // First two cards are required; extra cards are optional unless started.
     const contacts = values.emergencyContacts ?? [];
     return (
-      contacts.length > 0 &&
-      contacts.every(
-        (contact) =>
-          requiredTextFilled(contact.name) &&
-          isValidPhone(contact.phone) &&
-          requiredTextFilled(contact.relationship),
+      contacts.length >= 2 &&
+      contacts.every((contact, index) =>
+        index < 2
+          ? hasCompleteEmergencyContact(contact)
+          : !hasStartedEmergencyContact(contact) || hasCompleteEmergencyContact(contact),
       )
     );
   }
@@ -415,6 +442,13 @@ function StepFamily({ form, t }: StepProps) {
             <Input {...form.register('medicalConditionDetails')} placeholder={t('signup.pleaseSpecify')} />
           </Field>
         )}
+        <Field label={t('signup.childBehaviorHealthNotes')}>
+          <Textarea
+            {...form.register('childBehaviorHealthNotes')}
+            className="min-h-28"
+            placeholder={t('signup.childBehaviorHealthNotesHint')}
+          />
+        </Field>
       </div>
     </div>
   );
@@ -523,7 +557,7 @@ function StepHealth({ t, files, setFiles }: StepProps) {
 }
 
 function StepEmergency({ form, t }: StepProps) {
-  // One contact is required; the rest are added and removed by the parent.
+  // The first two contacts are required; the rest are added and removed by the parent.
   const { fields, append, remove } = useFieldArray({ control: form.control, name: 'emergencyContacts' });
   const errors = form.formState.errors.emergencyContacts;
 
@@ -537,9 +571,9 @@ function StepEmergency({ form, t }: StepProps) {
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm font-medium text-on-surface">
               {t('signup.emergencyContact')} {index + 1}
-              {index === 0 ? <span className="text-error ms-0.5">*</span> : null}
+              {index < 2 ? <span className="text-error ms-0.5">*</span> : null}
             </p>
-            {index > 0 ? (
+            {index > 1 ? (
               <Button type="button" variant="outline" size="sm" onClick={() => remove(index)}>
                 <MaterialSymbol name="delete" size="text-base" />
                 {t('signup.removeContact')}
@@ -547,13 +581,17 @@ function StepEmergency({ form, t }: StepProps) {
             ) : null}
           </div>
           <div className="grid gap-4 sm:grid-cols-3">
-            <Field label={t('signup.contactName')} error={errors?.[index]?.name?.message} required>
+            <Field label={t('signup.contactName')} error={errors?.[index]?.name?.message} required={index < 2}>
               <Input {...form.register(`emergencyContacts.${index}.name`)} />
             </Field>
-            <Field label={t('signup.contactPhone')} error={errors?.[index]?.phone?.message} required>
+            <Field label={t('signup.contactPhone')} error={errors?.[index]?.phone?.message} required={index < 2}>
               <Input {...phoneInputProps} {...form.register(`emergencyContacts.${index}.phone`)} />
             </Field>
-            <Field label={t('signup.contactRelationship')} error={errors?.[index]?.relationship?.message} required>
+            <Field
+              label={t('signup.contactRelationship')}
+              error={errors?.[index]?.relationship?.message}
+              required={index < 2}
+            >
               <Input {...form.register(`emergencyContacts.${index}.relationship`)} />
             </Field>
           </div>
@@ -574,6 +612,11 @@ function StepEmergency({ form, t }: StepProps) {
 
 function StepDailyCare({ form, t }: StepProps) {
   const sendsVitamins = form.watch('sendsVitamins');
+  const napAccepted = form.watch('napTimePreference');
+  const maxNapTime = form.watch('maxNapTime');
+  const maxNapTimeInvalid =
+    requiredTextFilled(maxNapTime) &&
+    !NAP_DURATION_VALUES.includes(maxNapTime as (typeof NAP_DURATION_VALUES)[number]);
   const yesNo = (name: 'takesBreakfastAtHome' | 'eatsNurseryMeals' | 'extraMealPreference'
     | 'sendsExtraSnacks' | 'waterPreference' | 'sendsVitamins') => (
     <Select {...form.register(name)}>
@@ -640,12 +683,38 @@ function StepDailyCare({ form, t }: StepProps) {
       <div>
         <h4 className="mb-3 text-sm font-semibold uppercase tracking-wide text-on-surface-variant">{t('signup.napSection')}</h4>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={t('signup.napTimePreference')}>
-            <Input type="time" {...form.register('napTimePreference')} />
+          <Field label={t('signup.napTimePreference')} required>
+            <Select
+              value={napAccepted}
+              onChange={(event) => {
+                const value = event.currentTarget.value;
+                form.setValue('napTimePreference', value, { shouldValidate: true });
+                if (value !== 'Yes') form.setValue('maxNapTime', '', { shouldValidate: true });
+              }}
+            >
+              <option value="">{t('common.select')}</option>
+              <option value="Yes">{t('common.yes')}</option>
+              <option value="No">{t('common.no')}</option>
+            </Select>
           </Field>
-          <Field label={t('signup.maxNapTime')}>
-            <Input {...form.register('maxNapTime')} placeholder={t('signup.maxNapTimeHint')} />
-          </Field>
+          {napAccepted === 'Yes' && (
+            <Field
+              label={t('signup.maxNapTime')}
+              error={maxNapTimeInvalid ? 'signup.maxNapTimeRange' : undefined}
+              required
+            >
+              <Select {...form.register('maxNapTime')}>
+                <option value="">{t('common.select')}</option>
+                {NAP_DURATION_VALUES.map((value) => (
+                  <option key={value} value={value}>
+                    {value === '1'
+                      ? t('signup.napDurationOneHour')
+                      : t('signup.napDurationHours', { hours: value })}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
         </div>
       </div>
     </div>
@@ -774,10 +843,14 @@ export function ParentSignUpPage() {
   const [files, setFiles] = useState<ParentSignUpFileBundle>(emptyParentSignUpFiles);
 
   const initialDraft = useMemo(() => loadDraft(), []);
+  const initialValues = useMemo(
+    () => normalizeEmergencyContacts({ ...parentSignUpDefaults, ...(initialDraft.values as Partial<ParentSignUpFormValues>) }),
+    [initialDraft],
+  );
 
   const form = useForm<ParentSignUpFormValues>({
     resolver: zodResolver(parentSignUpBaseSchema),
-    defaultValues: { ...parentSignUpDefaults, ...(initialDraft.values as Partial<ParentSignUpFormValues>) },
+    defaultValues: initialValues,
     mode: 'onChange',
   });
 

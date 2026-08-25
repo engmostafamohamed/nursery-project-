@@ -23,7 +23,7 @@ export const STEP_FIELDS: Record<SignUpStep, string[]> = {
   enrollment: [],
   health: [],
   emergency: ['emergencyContacts'],
-  dailyCare: [],
+  dailyCare: ['napTimePreference', 'maxNapTime'],
   pickups: [
     'pickupPerson1Name', 'pickupPerson1Phone',
     'pickupPerson2Name', 'pickupPerson2Phone',

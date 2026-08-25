@@ -37,8 +37,12 @@ export const parentSignUpDefaults: ParentSignUpFormValues = {
   allergyTypes: [] as string[],
   hasMedicalCondition: false,
   medicalConditionDetails: '',
+  childBehaviorHealthNotes: '',
   referralSource: '',
-  emergencyContacts: [{ name: '', phone: '', relationship: '' }],
+  emergencyContacts: [
+    { name: '', phone: '', relationship: '' },
+    { name: '', phone: '', relationship: '' },
+  ],
 
 
   pickupPerson1Name: '',

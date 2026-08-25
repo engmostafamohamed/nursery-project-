@@ -1,5 +1,6 @@
 export const MEDICATION_CONSENT_IDS = [
   'cetal',
+  'panadol',
   'brufen',
   'antinal',
   'motilium',
@@ -27,6 +28,13 @@ export const MEDICATION_CONSENT_OPTIONS: MedicationConsentOption[] = [
     labelAr: 'سيتال',
     descriptionEn: 'Paracetamol — fever and mild pain relief',
     descriptionAr: 'باراسيتامول — لخفض الحرارة وتسكين الألم الخفيف',
+  },
+  {
+    id: 'panadol',
+    labelEn: 'Panadol',
+    labelAr: 'Panadol',
+    descriptionEn: 'Paracetamol - fever and mild pain relief',
+    descriptionAr: 'Paracetamol - fever and mild pain relief',
   },
   {
     id: 'brufen',
