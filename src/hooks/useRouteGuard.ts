@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -18,6 +19,7 @@ export type RouteGuardStatus =
 export function useRouteGuard(allowedRoles: UserRole[]): RouteGuardStatus {
   const { session, loading: sessionLoading } = useAuthSession();
   const userId = session?.user?.id;
+  const queryClient = useQueryClient();
   const { data: profile, isPending, isError, error } = useUserProfile(userId);
 
   // An access token can die while a session object is still held in memory, so the
@@ -26,9 +28,13 @@ export function useRouteGuard(allowedRoles: UserRole[]): RouteGuardStatus {
   const sessionExpired = isError && isAuthSessionError(error);
   useEffect(() => {
     if (sessionExpired) {
-      handleFailedRequest(error);
+      void handleFailedRequest(error).then((result) => {
+        if (result === 'refreshed' && userId) {
+          void queryClient.invalidateQueries({ queryKey: ['user-profile', userId] });
+        }
+      });
     }
-  }, [sessionExpired, error]);
+  }, [sessionExpired, error, queryClient, userId]);
 
   if (sessionLoading) {
     return 'loading';
@@ -38,9 +44,8 @@ export function useRouteGuard(allowedRoles: UserRole[]): RouteGuardStatus {
     return 'unauthenticated';
   }
 
-  // Checked before isPending so an expired token is never reported as loading.
   if (sessionExpired) {
-    return 'expired';
+    return 'loading';
   }
 
   if (isPending) {
