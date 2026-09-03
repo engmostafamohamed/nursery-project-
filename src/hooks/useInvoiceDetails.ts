@@ -27,6 +27,9 @@ export type InvoiceDetailsData = {
   parentLanguage: 'ar' | 'en';
   childNames: string[];
   amount: number;
+  paidAmount: number;
+  pendingAmount: number;
+  balanceDue: number;
   type: 'monthly' | 'event' | 'extra_hours' | 'other';
   status: 'pending' | 'paid' | 'overdue' | 'cancelled';
   /** True when a parent-submitted payment is awaiting finance confirmation. */
@@ -171,19 +174,32 @@ export function useInvoiceDetails(invoiceId: string | undefined) {
       if (notificationRes.error) throw notificationRes.error;
       const notificationRows = (notificationRes.data ?? []) as { id: string; type: string; sent_at: string }[];
 
-      const attemptRes = await supabase
-        .from('payment_attempts')
-        .select('id, status')
-        .eq('invoice_id', invoice.id)
-        .eq('status', 'pending_confirmation')
-        .limit(1);
+      const [paymentRes, attemptRes] = await Promise.all([
+        supabase
+          .from('payments')
+          .select('amount, status')
+          .eq('invoice_id', invoice.id),
+        supabase
+          .from('payment_attempts')
+          .select('id, status, amount')
+          .eq('invoice_id', invoice.id)
+          .eq('status', 'pending_confirmation'),
+      ]);
+      if (paymentRes.error) throw paymentRes.error;
       if (attemptRes.error) throw attemptRes.error;
+      const paidAmount = ((paymentRes.data ?? []) as Array<{ amount: string | number; status: string }>)
+        .filter((row) => row.status === 'completed')
+        .reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
+      const pendingAmount = ((attemptRes.data ?? []) as Array<{ amount: string | number; status: string }>)
+        .filter((row) => row.status === 'pending_confirmation')
+        .reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
       const inReview =
         (attemptRes.data ?? []).length > 0 && invoice.status !== 'paid' && invoice.status !== 'cancelled';
 
       const { items, notes, tax } = parseLineItems(invoice.line_items_json);
       const subtotal = items.reduce((sum, row) => sum + row.total, 0);
       const total = Number(invoice.amount || 0);
+      const balanceDue = Math.max(0, total - paidAmount);
       const dueDate = new Date(invoice.due_date);
       const overdue = invoice.status === 'pending' && dueDate.getTime() < Date.now();
       const status = overdue ? 'overdue' : invoice.status;
@@ -216,6 +232,9 @@ export function useInvoiceDetails(invoiceId: string | undefined) {
         parentLanguage: parent?.language_pref === 'en' ? 'en' : 'ar',
         childNames,
         amount: total,
+        paidAmount,
+        pendingAmount,
+        balanceDue,
         type: invoice.invoice_type,
         status,
         inReview,

@@ -74,6 +74,8 @@ export function ParentEventDetailsPage() {
     await queryClient.invalidateQueries({ queryKey: ['parent-event-permissions', parentId] });
     await queryClient.invalidateQueries({ queryKey: parentPermissionsCountsQueryKey(parentId) });
     await queryClient.invalidateQueries({ queryKey: ['parent-permissions-page', parentId] });
+    await queryClient.invalidateQueries({ queryKey: ['parent-dashboard-feed', parentId] });
+    await queryClient.invalidateQueries({ queryKey: ['parent-invoices', parentId] });
   };
 
   const runInvoiceAfterGrant = async (permissionId: string, childId: string) => {

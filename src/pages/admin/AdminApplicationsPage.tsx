@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Input } from '@/components/ui/input';
+import { useActiveNurseryId } from '@/hooks/useActiveNurseryId';
 import { useApplications } from '@/hooks/useApplications';
-import { useAuthSession } from '@/hooks/useAuthSession';
-import { useUserProfile } from '@/hooks/useUserProfile';
 
 /**
  * Two flows write applications with different shapes: the inquiry flow stores a flat
@@ -34,15 +34,19 @@ function applicantChildName(childInfo: Record<string, unknown>): string {
 
 export function AdminApplicationsPage() {
   const { t } = useTranslation();
-  const { user } = useAuthSession();
-  const { data: profile } = useUserProfile(user?.id);
-  const apps = useApplications({ nurseryId: profile?.nursery_id ?? undefined });
+  const location = useLocation();
+  const { activeNurseryId } = useActiveNurseryId();
+  const apps = useApplications({ nurseryId: activeNurseryId ?? undefined });
   const [status, setStatus] = useState('all');
   const [search, setSearch] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  const admissionsBasePath = location.pathname.startsWith('/xo-admin/')
+    ? '/xo-admin/nursery/admissions'
+    : '/admin/admissions';
 
   const rows = useMemo(() => apps.adminApplications.filter((r) => {
+    if (status === 'all' && ['approved', 'rejected'].includes(String(r.status))) return false;
     if (status !== 'all' && String(r.status) !== status) return false;
     if (from && String(r.created_at) < `${from}T00:00:00`) return false;
     if (to && String(r.created_at) > `${to}T23:59:59`) return false;
@@ -55,7 +59,12 @@ export function AdminApplicationsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-semibold text-on-surface">{t('applications.adminListTitle')}</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-lg font-semibold text-on-surface">{t('applications.adminListTitle')}</h1>
+        <Button asChild variant="outline" size="sm">
+          <Link to={`${admissionsBasePath}/inquiries`}>{t('admissions.inquiriesTitle')}</Link>
+        </Button>
+      </div>
       <div className="grid gap-3 md:grid-cols-3">
         <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3"><p className="text-xs">{t('applications.pendingReview')}</p><p className="text-lg font-bold">{apps.stats.pendingReview}</p></div>
         <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3"><p className="text-xs">{t('applications.approvedThisMonth')}</p><p className="text-lg font-bold">{apps.stats.approvedThisMonth}</p></div>
@@ -87,7 +96,13 @@ export function AdminApplicationsPage() {
                     <td className="px-3 py-2">{r.submitted_at ? new Date(String(r.submitted_at)).toLocaleDateString() : '-'}</td>
                     <td className="px-3 py-2">{t(`applications.statuses.${String(r.status)}`)}</td>
                     <td className="px-3 py-2">{Number(r.documents_count ?? 0)}</td>
-                    <td className="px-3 py-2"><Link className="text-secondary underline" to={`/admin/admissions/applications/${String(r.id)}`}>{t('invoice.actions.viewDetails')}</Link></td>
+                    <td className="px-3 py-2">
+                      <Button asChild size="sm" variant="outline">
+                        <Link to={`${admissionsBasePath}/applications/${String(r.id)}`}>
+                          {t('invoice.actions.viewDetails')}
+                        </Link>
+                      </Button>
+                    </td>
                   </tr>
                 );
               })}

@@ -76,6 +76,13 @@ export function ParentDashboardFeedList({ items, isLoading }: Props) {
             });
             to = `/parent/invoices/${item.id}`;
             break;
+          case 'application_status':
+            icon = item.status === 'approved' ? 'verified' : item.status === 'rejected' ? 'block' : 'upload_file';
+            primary = t(`parent.dashboard.feed.application.${item.status}`, {
+              name: item.childName || t('common.parent'),
+            });
+            to = `/parent/applications/${item.id}`;
+            break;
         }
 
         return (

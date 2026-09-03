@@ -44,7 +44,7 @@ const NAV_SECTIONS: NavSection[] = [
       { key: 'children',           to: '/xo-admin/nursery/children',              icon: 'group',                  tKey: 'admin.nav.children' },
       { key: 'staff',              to: '/xo-admin/nursery/staff',                 icon: 'badge',                  tKey: 'admin.nav.staff' },
       { key: 'classes',            to: '/xo-admin/nursery/classes',               icon: 'school',                 tKey: 'admin.nav.classes' },
-      { key: 'admissions',         to: '/xo-admin/nursery/admissions/inquiries',  icon: 'group_add',              tKey: 'admin.nav.admissions' },
+      { key: 'admissions',         to: '/xo-admin/nursery/admissions/applications', icon: 'group_add',             tKey: 'admin.nav.admissions' },
       { key: 'childEnrollment',    to: '/xo-admin/nursery/children/enroll',       icon: 'child_care',             tKey: 'admin.nav.childEnrollment' },
       { key: 'staffOnboarding',    to: '/xo-admin/nursery/staff/onboarding',      icon: 'assignment_ind',         tKey: 'admin.nav.staffOnboarding' },
       { key: 'admissionsImport',   to: '/xo-admin/nursery/admissions/import',     icon: 'upload_file',            tKey: 'admin.nav.admissionsImport' },

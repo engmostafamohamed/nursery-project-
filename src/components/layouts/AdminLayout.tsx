@@ -4,7 +4,6 @@ import { Outlet } from 'react-router-dom';
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
-import { AdminNurseryPicker } from '@/components/admin/AdminNurseryPicker';
 import { AdminUserMenu } from '@/components/admin/AdminUserMenu';
 import { HelpAiBundle } from '@/components/help/HelpAiBundle';
 import { NotificationCenterDrawer } from '@/components/notifications/NotificationCenterDrawer';
@@ -61,7 +60,7 @@ const navItems: NavItem[] = [
   { to: '/admin/children', key: 'children', icon: 'group', feature: 'kids_applications' },
   { to: '/admin/staff', key: 'staff', icon: 'badge', feature: 'staff' },
   { to: '/admin/classes', key: 'classes', icon: 'school', feature: 'classes' },
-  { to: '/admin/admissions/inquiries', key: 'admissions', icon: 'group_add', feature: 'admissions' },
+  { to: '/admin/admissions/applications', key: 'admissions', icon: 'group_add', feature: 'admissions' },
   { to: '/admin/attendance', key: 'attendance', icon: 'how_to_reg', feature: 'dashboard_attendance' },
   { to: '/admin/events', key: 'events', icon: 'event', feature: 'event_calendar' },
   { to: '/admin/courses', key: 'courses', icon: 'school' },
@@ -120,6 +119,7 @@ export function AdminLayout() {
   const setHelpOpen = useHelpAiUiStore((s) => s.setHelpOpen);
   const { user } = useAuthSession();
   const { data: profile } = useUserProfile(user?.id);
+  const { activeNurseryId, availableNurseries } = useActiveNurseryId();
   const { data: languagePref = 'both' } = useNurseryLanguagePref(profile?.nursery_id);
   const subject = useCurrentSubject();
   // DB-driven feature set for the current user. Reflects custom roles created
@@ -159,21 +159,37 @@ export function AdminLayout() {
   const { data: notifications = [] } = useNotificationsCenter(user?.id);
   const { data: inAppNotifications = [] } = useAdminInAppNotifications(user?.id);
   const mediaPendingQuery = useQuery({
-    queryKey: ['admin-media-pending-count', profile?.nursery_id],
+    queryKey: ['admin-media-pending-count', activeNurseryId],
     queryFn: async () => {
-      if (!profile?.nursery_id) return 0;
+      if (!activeNurseryId) return 0;
       const res = await supabase
         .from('media')
         .select('id', { count: 'exact', head: true })
-        .eq('nursery_id', profile.nursery_id)
+        .eq('nursery_id', activeNurseryId)
         .eq('status', 'pending_approval');
       if (res.error) throw res.error;
       return res.count ?? 0;
     },
-    enabled: Boolean(profile?.nursery_id),
+    enabled: Boolean(activeNurseryId),
     staleTime: 5 * 60 * 1000,
   });
   const mediaPending = mediaPendingQuery.data ?? 0;
+  const admissionsPendingQuery = useQuery({
+    queryKey: ['admin-admissions-pending-count', activeNurseryId],
+    queryFn: async () => {
+      if (!activeNurseryId) return 0;
+      const res = await supabase
+        .from('applications')
+        .select('id', { count: 'exact', head: true })
+        .eq('nursery_id', activeNurseryId)
+        .in('status', ['submitted', 'under_review', 'documents_pending']);
+      if (res.error) throw res.error;
+      return res.count ?? 0;
+    },
+    enabled: Boolean(activeNurseryId),
+    staleTime: 60 * 1000,
+  });
+  const admissionsPending = admissionsPendingQuery.data ?? 0;
   const unreadCount = useMemo(
     () => notifications.filter((item) => !item.read).length,
     [notifications],
@@ -190,34 +206,28 @@ export function AdminLayout() {
   const accountEmail = profile?.email ?? user?.email ?? '';
   const sidebarInitials = getUserInitials(displayName, accountEmail);
 
-  // A branch admin gets no nursery picker (their nursery is fixed), so without this
-  // nothing on screen tells them which nursery they are administering.
-  const { activeNurseryId, availableNurseries, isMultiNurseryAdmin } = useActiveNurseryId();
+  // Keep the active nursery visible without putting the nursery picker in the sidebar.
   const activeNursery = availableNurseries.find((n) => n.id === activeNurseryId);
   const activeNurseryLabel = activeNursery
     ? i18n.language === 'ar'
       ? activeNursery.name_ar?.trim() || activeNursery.name_en?.trim() || ''
       : activeNursery.name_en?.trim() || activeNursery.name_ar?.trim() || ''
     : '';
-  // Multi-nursery admins already see the active one in the picker right below.
-  const brandTitle = !isMultiNurseryAdmin && activeNurseryLabel ? activeNurseryLabel : 'XO Nursery';
+  const brandTitle = activeNurseryLabel || 'XO Nursery';
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <OfflineIndicator />
-      <aside className="no-print fixed start-0 top-0 z-40 flex h-dvh max-h-dvh w-64 flex-col overflow-hidden bg-primary p-5">
-        <div className="mb-4 shrink-0 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 text-sm font-bold text-white">XO</div>
+      <aside className="no-print fixed start-0 top-0 z-40 flex h-dvh max-h-dvh w-64 flex-col overflow-hidden bg-primary p-4 shadow-lg">
+        <div className="mb-4 shrink-0 flex items-center gap-3 rounded-2xl bg-white/10 p-2">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/20 text-sm font-bold text-white">XO</div>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-white" title={brandTitle}>{brandTitle}</p>
             <p className="text-xs text-white/70">{t('admin.nav.brandSubtitle')}</p>
           </div>
         </div>
-        <div className="mb-3 shrink-0">
-          <AdminNurseryPicker />
-        </div>
         <nav
-          className="min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden overscroll-y-contain"
+          className="admin-sidebar-scroll min-h-0 flex-1 space-y-1.5 overflow-y-auto overflow-x-hidden overscroll-y-contain pe-1"
           aria-label={t('admin.nav.sidebarLabel')}
         >
           {visibleNavItems.map((item) => (
@@ -227,41 +237,40 @@ export function AdminLayout() {
               end={NAV_LINK_END_PATHS.has(item.to)}
               className={({ isActive }) =>
                 cn(
-                  'flex items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors',
+                  'group flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors',
                   isActive
-                    ? 'border-e-4 border-white/40 bg-white/10 text-white'
-                    : 'text-white/60 hover:text-white',
+                    ? 'active bg-white/15 text-white shadow-sm ring-1 ring-white/20'
+                    : 'text-white/70 hover:bg-white/10 hover:text-white',
                 )
               }
             >
-              <span className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-base" aria-hidden>{item.icon}</span>
-                {t(`admin.nav.${item.key}`)}
-              </span>
-              {item.key === 'mediaApproval' && mediaPending > 0 ? (
-                <span className="rounded-full bg-white/20 px-1.5 text-[10px] text-white">
-                  {mediaPending}
+              <span className="material-symbols-outlined shrink-0 text-base opacity-90" aria-hidden>{item.icon}</span>
+              <span className="min-w-0 truncate">{t(`admin.nav.${item.key}`)}</span>
+              {item.key === 'admissions' && admissionsPending > 0 ? (
+                <span className="rounded-full bg-white px-1.5 text-[10px] font-bold leading-5 text-primary shadow-sm">
+                  {admissionsPending}
                 </span>
               ) : null}
               {item.key === 'notifications' && inAppUnreadCount > 0 ? (
-                <span className="rounded-full bg-white/20 px-1.5 text-[10px] text-white">
+                <span className="rounded-full bg-white px-1.5 text-[10px] font-bold leading-5 text-primary shadow-sm">
                   {inAppUnreadCount}
                 </span>
               ) : null}
+              <span className="ms-auto h-1.5 w-1.5 rounded-full bg-white opacity-0 transition-opacity group-[.active]:opacity-80" />
             </NavLink>
           ))}
-          <div className="mt-3 border-t border-white/20 pt-3">
+          <div className="mt-3 border-t border-white/15 pt-3">
             <button
               type="button"
-              className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm text-white/80 transition-colors hover:text-white"
+              className="flex min-h-11 w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
               aria-expanded={moreOpen}
               onClick={() => setMoreOpen((prev) => !prev)}
             >
-              <span className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-base" aria-hidden>menu</span>
-                {t('admin.nav.more')}
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="material-symbols-outlined shrink-0 text-base" aria-hidden>menu</span>
+                <span className="truncate">{t('admin.nav.more')}</span>
               </span>
-              <span className="material-symbols-outlined text-base" aria-hidden>
+              <span className="material-symbols-outlined shrink-0 text-base" aria-hidden>
                 {moreOpen ? 'expand_less' : 'expand_more'}
               </span>
             </button>
@@ -279,17 +288,20 @@ export function AdminLayout() {
                         end={NAV_LINK_END_PATHS.has(item.to)}
                         className={({ isActive }) =>
                           cn(
-                            'flex items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors',
+                            'flex min-h-10 items-center gap-2 rounded-xl px-3 py-2 text-sm transition-colors',
                             isActive
-                              ? 'border-e-4 border-white/40 bg-white/10 text-white'
-                              : 'text-white/60 hover:text-white',
+                              ? 'bg-white/15 text-white ring-1 ring-white/15'
+                              : 'text-white/60 hover:bg-white/10 hover:text-white',
                           )
                         }
                       >
-                        <span className="flex items-center gap-2">
-                          <span className="material-symbols-outlined text-base" aria-hidden>{item.icon}</span>
-                          {t(`admin.nav.${item.key}`)}
-                        </span>
+                        <span className="material-symbols-outlined shrink-0 text-base" aria-hidden>{item.icon}</span>
+                        <span className="min-w-0 truncate">{t(`admin.nav.${item.key}`)}</span>
+                        {item.key === 'mediaApproval' && mediaPending > 0 ? (
+                          <span className="rounded-full bg-white px-1.5 text-[10px] font-bold leading-5 text-primary shadow-sm">
+                            {mediaPending}
+                          </span>
+                        ) : null}
                       </NavLink>
                     ))}
                   </div>

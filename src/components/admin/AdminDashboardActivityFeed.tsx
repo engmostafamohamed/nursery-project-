@@ -43,7 +43,7 @@ export function AdminDashboardActivityFeed({ items, isLoading }: Props) {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
+      <div className="h-full max-h-[24rem] space-y-4 overflow-y-auto pe-2 xl:max-h-none">
         {[1, 2, 3, 4, 5].map((k) => (
           <div key={k} className="flex items-center gap-3 rounded-2xl bg-surface-container-low p-3">
             <Skeleton className="h-10 w-10 rounded-full" />
@@ -68,7 +68,7 @@ export function AdminDashboardActivityFeed({ items, isLoading }: Props) {
   }
 
   return (
-    <ul className="space-y-3">
+    <ul className="h-full max-h-[24rem] space-y-3 overflow-y-auto pe-2 xl:max-h-none">
       {items.map((item) => {
         const when = formatWhen(item.at, locale);
         let primary = '';

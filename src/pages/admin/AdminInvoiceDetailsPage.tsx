@@ -70,7 +70,7 @@ export function AdminInvoiceDetailsPage() {
         invoiceNumber: details.invoiceNumber,
         amount: details.amount,
         paymentMethod: 'cash',
-        paidAt: new Date().toISOString().slice(0, 10),
+        paidAt: new Date().toISOString(),
       });
       toast.success(t('invoice.markPaid.success'));
       await detailsQuery.refetch();
@@ -214,13 +214,6 @@ export function AdminInvoiceDetailsPage() {
       {details ? (
         <PendingPaymentAttempts
           attempts={attemptsQuery.data ?? []}
-          invoice={{
-            id: details.id,
-            nurseryId: details.nurseryId,
-            parentId: details.parentId,
-            invoiceNumber: details.invoiceNumber,
-            amount: details.amount,
-          }}
           onUpdated={async () => {
             await attemptsQuery.refetch();
             await detailsQuery.refetch();

@@ -16,6 +16,7 @@ interface RequestBody {
 function template(triggerType: EmailTrigger, data: RequestBody['data']) {
   const name = String(data?.name ?? 'Parent');
   const amount = String(data?.amount ?? '');
+  const code = String(data?.otp_code ?? '');
   const titleArByType: Record<EmailTrigger, string> = {
     welcome: 'مرحباً بك في XO Nursery',
     invoice: 'فاتورة جديدة',
@@ -37,14 +38,18 @@ function template(triggerType: EmailTrigger, data: RequestBody['data']) {
   const bodyEnByType: Record<EmailTrigger, string> = {
     welcome: `Hi ${name}, thank you for joining XO Nursery.`,
     invoice: `A new invoice of ${amount} has been generated.`,
-    password_reset: 'You can reset your password from the sent link.',
+    password_reset: code
+      ? `Your password reset verification code is: ${code}`
+      : 'You can reset your password from the sent link.',
     trial_expiry: 'Your trial will expire soon. Please upgrade to continue.',
   };
 
   return {
     titleAr: titleArByType[triggerType],
     titleEn: titleEnByType[triggerType],
-    bodyAr: bodyArByType[triggerType],
+    bodyAr: triggerType === 'password_reset' && code
+      ? `Your password reset verification code is: ${code}`
+      : bodyArByType[triggerType],
     bodyEn: bodyEnByType[triggerType],
   };
 }

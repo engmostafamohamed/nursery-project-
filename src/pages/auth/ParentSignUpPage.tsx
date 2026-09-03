@@ -280,6 +280,7 @@ function StepChild({ form, t, files, setFiles, nurseries, nurseriesLoading, nurs
 
 function StepParents({ form, t, files, setFiles }: StepProps) {
   const e = form.formState.errors;
+  const [showPassword, setShowPassword] = useState(false);
   return (
     <div className="space-y-6">
       <h3 className="text-lg font-semibold text-on-surface">{t('signup.steps.parents')}</h3>
@@ -295,7 +296,25 @@ function StepParents({ form, t, files, setFiles }: StepProps) {
             <Input {...form.register('username')} autoComplete="username" placeholder={t('signup.usernameHint')} />
           </Field>
           <Field label={t('signup.password')} error={e.password?.message} required>
-            <Input type="password" {...form.register('password')} autoComplete="new-password" placeholder={t('signup.passwordHint')} />
+            <div className="relative">
+              <Input
+                type={showPassword ? 'text' : 'password'}
+                {...form.register('password')}
+                autoComplete="new-password"
+                className="pe-11"
+                placeholder={t('signup.passwordHint')}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute end-1 top-1/2 size-9 -translate-y-1/2 text-on-surface-variant"
+                aria-label={showPassword ? t('signup.hidePassword') : t('signup.showPassword')}
+                onClick={() => setShowPassword((visible) => !visible)}
+              >
+                <MaterialSymbol name={showPassword ? 'visibility_off' : 'visibility'} size="text-xl" />
+              </Button>
+            </div>
           </Field>
         </div>
       </div>

@@ -15,6 +15,7 @@ import {
 } from '@/hooks/useAdminInvoices';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { cancelInvoice, markInvoiceAsPaid } from '@/lib/invoiceActions';
 import { supabase } from '@/lib/supabase';
 
 export function AdminInvoicesPage() {
@@ -74,6 +75,20 @@ export function AdminInvoicesPage() {
     invoiceNumber: string,
     amount: number,
   ) => {
+    if (!profile?.nursery_id) return;
+    await markInvoiceAsPaid({
+      invoiceId,
+      nurseryId: profile.nursery_id,
+      parentId,
+      invoiceNumber,
+      amount,
+      paymentMethod: payload.paymentMethod,
+      paidAt: payload.paidAt,
+    });
+    toast.success(t('invoice.markPaid.success'));
+    await invoicesQuery.refetch();
+    return;
+
     const { error } = await supabase
       .from('invoices')
       .update({
@@ -101,6 +116,11 @@ export function AdminInvoicesPage() {
   };
 
   const onCancel = async (invoiceId: string) => {
+    await cancelInvoice({ invoiceId });
+    toast.success(t('invoice.cancel.success'));
+    await invoicesQuery.refetch();
+    return;
+
     const { error } = await supabase
       .from('invoices')
       .update({ status: 'cancelled', updated_at: new Date().toISOString() } as never)

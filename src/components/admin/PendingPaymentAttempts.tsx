@@ -1,50 +1,44 @@
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import type { PaymentAttemptItem } from '@/hooks/usePaymentAttempts';
-import { markInvoiceAsPaid } from '@/lib/invoiceActions';
+import { confirmPaymentAttempt } from '@/lib/invoiceActions';
 import { supabase } from '@/lib/supabase';
 
 interface Props {
   attempts: PaymentAttemptItem[];
-  invoice: {
-    id: string;
-    nurseryId: string;
-    parentId: string;
-    invoiceNumber: string;
-    amount: number;
-  };
   onUpdated: () => Promise<void>;
 }
 
-export function PendingPaymentAttempts({ attempts, invoice, onUpdated }: Props) {
+export function PendingPaymentAttempts({ attempts, onUpdated }: Props) {
   const { t } = useTranslation();
   const { user } = useAuthSession();
+  const queryClient = useQueryClient();
   const pending = attempts.filter((a) => a.status === 'pending_confirmation');
   if (!pending.length) return null;
 
+  const invalidatePaymentViews = () => {
+    void queryClient.invalidateQueries({ queryKey: ['payment-history'] });
+    void queryClient.invalidateQueries({ queryKey: ['parent-invoices'] });
+    void queryClient.invalidateQueries({ queryKey: ['financial-reports'] });
+    void queryClient.invalidateQueries({ queryKey: ['admin-financial-dashboard'] });
+    void queryClient.invalidateQueries({ queryKey: ['application-package-invoice'] });
+    void queryClient.invalidateQueries({ queryKey: ['admin-applications'] });
+    void queryClient.invalidateQueries({ queryKey: ['application-detail'] });
+    void queryClient.invalidateQueries({ queryKey: ['parent-applications'] });
+    void queryClient.invalidateQueries({ queryKey: ['parent-dashboard-children'] });
+    void queryClient.invalidateQueries({ queryKey: ['parent-dashboard-feed'] });
+    void queryClient.invalidateQueries({ queryKey: ['admin-children-list'] });
+  };
+
   const confirmAttempt = async (attempt: PaymentAttemptItem) => {
     try {
-      await markInvoiceAsPaid({
-        invoiceId: invoice.id,
-        nurseryId: invoice.nurseryId,
-        parentId: invoice.parentId,
-        invoiceNumber: invoice.invoiceNumber,
-        amount: invoice.amount,
-        paymentMethod: attempt.method,
-        paidAt: new Date().toISOString().slice(0, 10),
-      });
-      await supabase
-        .from('payment_attempts')
-        .update({
-          status: 'confirmed',
-          confirmed_at: new Date().toISOString(),
-          confirmed_by: user?.id ?? null,
-        } as never)
-        .eq('id', attempt.id);
+      await confirmPaymentAttempt(attempt.id);
       toast.success(t('payment.admin.confirmed'));
+      invalidatePaymentViews();
       await onUpdated();
     } catch {
       toast.error(t('payment.errors.actionFailed'));
@@ -70,6 +64,7 @@ export function PendingPaymentAttempts({ attempts, invoice, onUpdated }: Props) 
         sent_at: new Date().toISOString(),
       } as never);
       toast.success(t('payment.admin.rejected'));
+      invalidatePaymentViews();
       await onUpdated();
     } catch {
       toast.error(t('payment.errors.actionFailed'));

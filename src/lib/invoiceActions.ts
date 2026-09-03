@@ -26,11 +26,58 @@ interface ReminderInput {
 }
 
 export async function markInvoiceAsPaid(input: MarkPaidInput) {
+  const paidAt = new Date(input.paidAt).toISOString();
+  const invoiceRes = await supabase
+    .from('invoices')
+    .select('amount')
+    .eq('id', input.invoiceId)
+    .maybeSingle();
+  if (invoiceRes.error) throw invoiceRes.error;
+  const invoiceTotal = Number((invoiceRes.data as { amount?: string | number } | null)?.amount ?? input.amount);
+
+  const paymentsRes = await supabase
+    .from('payments')
+    .select('amount, status')
+    .eq('invoice_id', input.invoiceId)
+    .eq('status', 'completed');
+  if (paymentsRes.error) throw paymentsRes.error;
+  const alreadyPaid = ((paymentsRes.data ?? []) as Array<{ amount: string | number }>).reduce(
+    (sum, row) => sum + Number(row.amount ?? 0),
+    0,
+  );
+  const remainingBeforePayment = Math.max(0, invoiceTotal - alreadyPaid);
+  const confirmedAmount = Math.min(input.amount, remainingBeforePayment);
+  const totalPaid = alreadyPaid + confirmedAmount;
+  const fullyPaid = totalPaid + 0.005 >= invoiceTotal;
+
+  if (confirmedAmount <= 0) {
+    const { error } = await supabase
+      .from('invoices')
+      .update({
+        status: 'paid',
+        paid_at: paidAt,
+        payment_method: input.paymentMethod,
+        updated_at: new Date().toISOString(),
+      } as never)
+      .eq('id', input.invoiceId);
+    if (error) throw error;
+    return;
+  }
+
+  const paymentRes = await supabase.from('payments').insert({
+    invoice_id: input.invoiceId,
+    amount: confirmedAmount.toFixed(2),
+    method: input.paymentMethod,
+    status: 'completed',
+    paid_at: paidAt,
+  } as never);
+  if (paymentRes.error) throw paymentRes.error;
+
   const { error } = await supabase
     .from('invoices')
     .update({
-      status: 'paid',
-      paid_at: new Date(input.paidAt).toISOString(),
+      status: fullyPaid ? 'paid' : 'pending',
+      paid_at: fullyPaid ? paidAt : null,
       payment_method: input.paymentMethod,
       updated_at: new Date().toISOString(),
     } as never)
@@ -44,7 +91,7 @@ export async function markInvoiceAsPaid(input: MarkPaidInput) {
     title_ar: 'تم تأكيد سداد الفاتورة',
     title_en: 'Invoice payment confirmed',
     body_ar: `تم تأكيد سداد الفاتورة ${input.invoiceNumber} بقيمة ${input.amount} جنيه.`,
-    body_en: `Invoice ${input.invoiceNumber} payment of EGP ${input.amount} has been confirmed.`,
+    body_en: `Invoice ${input.invoiceNumber} payment of EGP ${confirmedAmount} has been confirmed.`,
     channel: 'push',
     read: false,
     sent_at: new Date().toISOString(),
@@ -65,7 +112,7 @@ export async function markInvoiceAsPaid(input: MarkPaidInput) {
           nurseryId: input.nurseryId,
           parentId: input.parentId,
           invoiceId: input.invoiceId,
-          amount: input.amount,
+          amount: confirmedAmount,
           pointsPerEgp: Number(settings.points_per_egp ?? 0),
         });
       }
@@ -73,6 +120,22 @@ export async function markInvoiceAsPaid(input: MarkPaidInput) {
   } catch {
     // Swallow — the invoice is already marked paid and the parent notified.
   }
+}
+
+export async function confirmPaymentAttempt(attemptId: string) {
+  const { data, error } = await supabase.rpc('confirm_invoice_payment_attempt' as never, {
+    p_attempt_id: attemptId,
+  } as never);
+  if (error) throw error;
+  return data as {
+    invoiceId: string;
+    paymentId: string | null;
+    confirmedAmount: number;
+    paidAmount: number;
+    invoiceStatus: string;
+    applicationId: string | null;
+    approval: unknown | null;
+  };
 }
 
 export async function cancelInvoice(input: CancelInvoiceInput) {

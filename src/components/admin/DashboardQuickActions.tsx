@@ -49,7 +49,7 @@ export function DashboardQuickActions({ basePath = '/admin' }: Props) {
   const { t } = useTranslation();
 
   return (
-    <div className="rounded-3xl bg-surface-container-lowest p-6 shadow-sm">
+    <div className="h-full rounded-3xl bg-surface-container-lowest p-6 shadow-sm">
       <h2 className="mb-4 text-lg font-semibold text-on-surface">{t('admin.dashboard.quickActions.title')}</h2>
       <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {ACTIONS.map((a) => (

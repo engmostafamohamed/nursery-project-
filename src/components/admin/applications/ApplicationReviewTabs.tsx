@@ -163,6 +163,7 @@ export function ApplicationReviewTabs({ parentInfo, childInfo }: Props) {
             <Row label={t('signup.address')} value={readString(family, 'address')} />
             <Row label={t('signup.hasSiblings')} value={formatYesNo(t, readBool(childInfo, 'has_siblings'))} />
             <Row label={t('signup.siblingAges')} value={readString(childInfo, 'sibling_ages')} />
+            <Row label={t('signup.passwordRecoveryContact')} value={readString(family, 'password_recovery_contact')} />
             <Row label={t('signup.referralSource')} value={readString(family, 'referral_source')} />
           </dl>
         </Section>

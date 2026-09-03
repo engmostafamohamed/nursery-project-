@@ -7,10 +7,12 @@ import { InvoiceStatusChart } from '@/components/admin/reports/InvoiceStatusChar
 import { InvoiceTypesChart } from '@/components/admin/reports/InvoiceTypesChart';
 import { PaymentMethodsChart } from '@/components/admin/reports/PaymentMethodsChart';
 import { RevenueChart } from '@/components/admin/reports/RevenueChart';
+import { PaymentHistoryTable } from '@/components/financial/PaymentHistoryTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuthSession } from '@/hooks/useAuthSession';
-import { useFinancialReports, type RangePreset } from '@/hooks/useFinancialReports';
+import { startEndForPreset, useFinancialReports, type RangePreset } from '@/hooks/useFinancialReports';
+import { usePaymentHistory } from '@/hooks/usePaymentHistory';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { downloadFinancialReportCsv, downloadFinancialReportPdf, type FinancialReportInput } from '@/lib/exports';
 import { sendInvoiceReminder } from '@/lib/invoiceActions';
@@ -27,6 +29,13 @@ export function AdminFinancialReportsPage() {
   const [toDate, setToDate] = useState('');
 
   const reports = useFinancialReports(profile?.nursery_id ?? undefined, preset, fromDate || undefined, toDate || undefined);
+  const historyRange = startEndForPreset(preset, fromDate || undefined, toDate || undefined);
+  const paymentHistory = usePaymentHistory({
+    nurseryId: profile?.nursery_id ?? undefined,
+    fromDate: historyRange.from,
+    toDate: historyRange.to,
+    limit: 50,
+  });
   const d = reports.data;
 
   const buildReportInput = (): FinancialReportInput | null => {
@@ -132,6 +141,14 @@ export function AdminFinancialReportsPage() {
         <InvoiceStatusChart data={d?.statusData ?? []} />
         <InvoiceTypesChart data={d?.typesData ?? []} />
       </div>
+
+      <PaymentHistoryTable
+        title={t('financial.paymentHistory.reportTitle', { defaultValue: 'Payment history' })}
+        rows={paymentHistory.data}
+        isLoading={paymentHistory.isLoading}
+        showParent
+        linkBase="/admin/invoices"
+      />
 
       <section className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
         <h3 className="mb-2 text-sm font-semibold">{t('reports.financial.tables.topParents')}</h3>

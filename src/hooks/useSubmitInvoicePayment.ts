@@ -25,6 +25,7 @@ export function useSubmitInvoicePayment() {
     mutationFn: async (input: SubmitPaymentInput) => {
       const nurseryId = profile?.nursery_id ?? null;
       if (!user?.id || !nurseryId) throw new Error('Missing user or nursery');
+      if (!Number.isFinite(input.amount) || input.amount <= 0) throw new Error('Invalid payment amount');
 
       const insertRes = await supabase.from('payment_attempts').insert({
         invoice_id: input.invoiceId,
@@ -72,6 +73,8 @@ export function useSubmitInvoicePayment() {
       void queryClient.invalidateQueries({ queryKey: ['parent-invoices', user?.id] });
       void queryClient.invalidateQueries({ queryKey: ['parent-pending-payment-attempts', user?.id] });
       void queryClient.invalidateQueries({ queryKey: ['invoice-details'] });
+      void queryClient.invalidateQueries({ queryKey: ['payment-history'] });
+      void queryClient.invalidateQueries({ queryKey: ['application-package-invoice'] });
     },
   });
 }

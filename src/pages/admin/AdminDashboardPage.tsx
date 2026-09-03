@@ -144,12 +144,14 @@ export function AdminDashboardPage() {
         <DashboardAlertsBar alerts={alerts} isLoading={Boolean(nurseryId) && alertsPending} basePath={adminBasePath} />
       </section>
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-        <div className="rounded-3xl bg-surface-container-lowest p-6 shadow-sm xl:col-span-7">
+      <section className="grid grid-cols-1 items-stretch gap-6 xl:grid-cols-12">
+        <div className="flex min-h-0 flex-col rounded-3xl bg-surface-container-lowest p-6 shadow-sm xl:col-span-7 xl:h-[30rem]">
           <h2 className="mb-4 text-lg font-semibold">{t('admin.dashboard.recentActivity')}</h2>
-          <AdminDashboardActivityFeed items={feedItems} isLoading={Boolean(nurseryId) && feedPending} />
+          <div className="min-h-0 flex-1">
+            <AdminDashboardActivityFeed items={feedItems} isLoading={Boolean(nurseryId) && feedPending} />
+          </div>
         </div>
-        <div className="xl:col-span-5">
+        <div className="xl:col-span-5 xl:h-[30rem]">
           <DashboardQuickActions basePath={adminBasePath} />
         </div>
       </section>

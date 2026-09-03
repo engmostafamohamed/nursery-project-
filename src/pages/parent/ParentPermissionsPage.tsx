@@ -39,7 +39,7 @@ export function ParentPermissionsPage() {
   const countsQuery = useParentPermissionCounts(parentId);
   const cardsQuery = useParentPermissionCards(parentId, tab);
   const counts = countsQuery.data ?? { pending: 0, granted: 0, denied: 0 };
-  const cards = cardsQuery.data ?? [];
+  const cards = useMemo(() => cardsQuery.data ?? [], [cardsQuery.data]);
 
   const locale = i18n.language.startsWith('ar') ? 'ar-EG' : 'en-GB';
   const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short', hour12: true });
@@ -64,6 +64,8 @@ export function ParentPermissionsPage() {
     await queryClient.invalidateQueries({ queryKey: ['parent-permissions-page', parentId] });
     await queryClient.invalidateQueries({ queryKey: parentPermissionsCountsQueryKey(parentId) });
     await queryClient.invalidateQueries({ queryKey: ['parent-event-permissions', parentId] });
+    await queryClient.invalidateQueries({ queryKey: ['parent-dashboard-feed', parentId] });
+    await queryClient.invalidateQueries({ queryKey: ['parent-invoices', parentId] });
   };
 
   const onApprove = async (row: ParentPermissionCard) => {
@@ -77,25 +79,29 @@ export function ParentPermissionsPage() {
         .eq('id', row.id);
       if (error) throw error;
 
-      let invoice = await getInvoiceForPermission(row.id);
-      if (!invoice) {
-        invoice = await generateEventInvoice({
-          permissionId: row.id,
-          eventId: row.event_id,
-          childId: row.child_id,
-          invoiceDueDays: Number(settings.invoice_due_days ?? 7),
-        });
-      }
-      if (invoice) {
-        await supabase.from('notifications').insert({
-          user_id: parentId,
-          type: 'event_invoice_generated',
+      try {
+        let invoice = await getInvoiceForPermission(row.id);
+        if (!invoice) {
+          invoice = await generateEventInvoice({
+            permissionId: row.id,
+            eventId: row.event_id,
+            childId: row.child_id,
+            invoiceDueDays: Number(settings.invoice_due_days ?? 7),
+          });
+        }
+        if (invoice) {
+          await supabase.from('notifications').insert({
+            user_id: parentId,
+            type: 'event_invoice_generated',
           title_ar: 'تم إصدار فاتورة فعالية',
-          title_en: 'Event invoice generated',
+            title_en: 'Event invoice generated',
           body_ar: `تم إصدار فاتورة للفعالية ${row.title_ar}: ${invoice.amount} جنيه.`,
-          body_en: `Invoice generated for ${row.title_en}: EGP ${invoice.amount}.`,
-          channel: 'push',
-        } as never);
+            body_en: `Invoice generated for ${row.title_en}: EGP ${invoice.amount}.`,
+            channel: 'push',
+          } as never);
+        }
+      } catch (invErr) {
+        console.error('event invoice generation failed (non-blocking)', invErr);
       }
 
       toast.success(t('parent.permissions.toastGranted', { title: displayTitle(row) }));

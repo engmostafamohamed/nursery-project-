@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
@@ -40,20 +40,36 @@ export type AdminInvoiceItem = {
   overdueDays: number;
 };
 
+function invoiceOrder(sort: AdminInvoiceSort): { column: string; ascending: boolean } {
+  if (sort === 'created_asc') return { column: 'created_at', ascending: true };
+  if (sort === 'amount_desc') return { column: 'amount', ascending: false };
+  if (sort === 'amount_asc') return { column: 'amount', ascending: true };
+  if (sort === 'due_date_asc') return { column: 'due_date', ascending: true };
+  if (sort === 'due_date_desc') return { column: 'due_date', ascending: false };
+  return { column: 'created_at', ascending: false };
+}
+
 export function useAdminInvoices(params: UseAdminInvoicesParams) {
   const [page, setPage] = useState(1);
   const pageSize = 50;
+
+  useEffect(() => {
+    setPage(1);
+  }, [params.dateField, params.fromDate, params.search, params.sort, params.status, params.toDate, params.type]);
 
   const query = useQuery({
     queryKey: ['admin-invoices', params, page],
     queryFn: async () => {
       if (!params.nurseryId) return [] as AdminInvoiceItem[];
 
+      const searchTerm = params.search.trim();
+      const isInvoiceSearch = /^inv[-\d]/i.test(searchTerm);
+      const order = invoiceOrder(params.sort);
+
       let queryBuilder = supabase
         .from('invoices')
         .select('id, generated_invoice_number, parent_id, amount, invoice_type, status, due_date, created_at, paid_at, payment_method')
-        .eq('nursery_id', params.nurseryId)
-        .range((page - 1) * pageSize, page * pageSize - 1);
+        .eq('nursery_id', params.nurseryId);
 
       if (params.type !== 'all') queryBuilder = queryBuilder.eq('invoice_type', params.type);
       if (params.status === 'pending') queryBuilder = queryBuilder.eq('status', 'pending');
@@ -61,6 +77,11 @@ export function useAdminInvoices(params: UseAdminInvoicesParams) {
       if (params.status === 'cancelled') queryBuilder = queryBuilder.eq('status', 'cancelled');
       if (params.fromDate) queryBuilder = queryBuilder.gte(params.dateField, params.fromDate);
       if (params.toDate) queryBuilder = queryBuilder.lte(params.dateField, `${params.toDate}T23:59:59`);
+      if (isInvoiceSearch) queryBuilder = queryBuilder.ilike('generated_invoice_number', `%${searchTerm}%`);
+
+      queryBuilder = queryBuilder
+        .order(order.column, { ascending: order.ascending })
+        .range((page - 1) * pageSize, page * pageSize - 1);
 
       const { data, error } = await queryBuilder;
       if (error) throw error;

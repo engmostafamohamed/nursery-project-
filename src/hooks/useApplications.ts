@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { uploadApplicationDocument } from '@/lib/applicationDocuments';
 import { activateEnrollment } from '@/lib/enrollmentActivation';
+import { getOrCreateConversationId } from '@/lib/chat';
 import { supabase } from '@/lib/supabase';
 
 type AdminApplicationView = Record<string, unknown> & {
@@ -28,13 +29,19 @@ export function useApplications(params: { nurseryId?: string; applicationId?: st
       const usersRes = parentIds.length ? await supabase.from('users').select('id, name_ar, name_en').in('id', parentIds) : { data: [], error: null };
       if (usersRes.error) throw usersRes.error;
       const userMap = new Map(((usersRes.data ?? []) as Array<Record<string, unknown>>).map((u) => [String(u.id), u]));
-      const docsRes = await supabase.from('application_documents').select('id, application_id');
-      if (docsRes.error) throw docsRes.error;
       const counts = new Map<string, number>();
-      ((docsRes.data ?? []) as Array<Record<string, unknown>>).forEach((d) => {
-        const id = String(d.application_id);
-        counts.set(id, (counts.get(id) ?? 0) + 1);
-      });
+      const applicationIds = rows.map((r) => String(r.id ?? '')).filter(Boolean);
+      if (applicationIds.length) {
+        const docsRes = await supabase
+          .from('application_documents')
+          .select('id, application_id')
+          .in('application_id', applicationIds);
+        if (docsRes.error) throw docsRes.error;
+        ((docsRes.data ?? []) as Array<Record<string, unknown>>).forEach((d) => {
+          const id = String(d.application_id);
+          counts.set(id, (counts.get(id) ?? 0) + 1);
+        });
+      }
       return rows.map((r) => ({
         ...r,
         parent_user: userMap.get(String(r.parent_id ?? '')) ?? null,
@@ -53,9 +60,41 @@ export function useApplications(params: { nurseryId?: string; applicationId?: st
       const app = appRes.data as Record<string, unknown>;
       const docsRes = await supabase.from('application_documents').select('*').eq('application_id', params.applicationId).order('uploaded_at', { ascending: false });
       if (docsRes.error) throw docsRes.error;
-      return { application: app, documents: (docsRes.data ?? []) as Array<Record<string, unknown>> };
+      const parentId = typeof app.parent_id === 'string' ? app.parent_id : '';
+      let parentUser: Record<string, unknown> | null = null;
+      if (parentId) {
+        const parentRes = await supabase
+          .from('users')
+          .select('id, username, name_ar, name_en, email, phone')
+          .eq('id', parentId)
+          .maybeSingle();
+        if (parentRes.error) throw parentRes.error;
+        parentUser = (parentRes.data as Record<string, unknown> | null) ?? null;
+      }
+      return {
+        application: app,
+        documents: (docsRes.data ?? []) as Array<Record<string, unknown>>,
+        parent_user: parentUser,
+      };
     },
     enabled: Boolean(params.applicationId),
+  });
+
+  const parentApplicationsQuery = useQuery({
+    queryKey: ['parent-applications', params.parentId, params.nurseryId],
+    queryFn: async () => {
+      if (!params.parentId) return [];
+      let query = supabase
+        .from('applications')
+        .select('*')
+        .eq('parent_id', params.parentId)
+        .order('created_at', { ascending: false });
+      if (params.nurseryId) query = query.eq('nursery_id', params.nurseryId);
+      const res = await query;
+      if (res.error) throw res.error;
+      return (res.data ?? []) as Array<Record<string, unknown>>;
+    },
+    enabled: Boolean(params.parentId),
   });
 
   const createFromInquiry = useMutation({
@@ -178,15 +217,98 @@ export function useApplications(params: { nurseryId?: string; applicationId?: st
   });
 
   const updateApplicationStatus = useMutation({
-    mutationFn: async (payload: { id: string; status: 'under_review' | 'documents_pending' | 'approved' | 'rejected'; reason?: string; reviewedBy?: string; parentEmail?: string; nurseryId?: string }) => {
-      const updates: Record<string, unknown> = {
-        status: payload.status,
-        reviewed_by: payload.reviewedBy ?? null,
-        reviewed_at: new Date().toISOString(),
-      };
-      if (payload.status === 'rejected') updates.rejection_reason = payload.reason ?? null;
-      const res = await supabase.from('applications').update(updates as never).eq('id', payload.id);
-      if (res.error) throw res.error;
+    mutationFn: async (payload: {
+      id: string;
+      status: 'under_review' | 'documents_pending' | 'approved' | 'rejected';
+      reason?: string;
+      reviewedBy?: string;
+      parentEmail?: string;
+      nurseryId?: string;
+      parentId?: string;
+      chatMessage?: string;
+      openChat?: boolean;
+    }) => {
+      let resolvedParentId = payload.parentId;
+
+      if (payload.status === 'approved') {
+        if (!payload.nurseryId) throw new Error('Cannot approve application without a nursery id');
+        const result = await activateEnrollment({
+          applicationId: payload.id,
+          nurseryId: payload.nurseryId,
+          reviewerId: payload.reviewedBy,
+          autoGenerateFirstInvoice: true,
+        });
+        resolvedParentId = result.parentId ?? resolvedParentId;
+      } else {
+        const updates: Record<string, unknown> = {
+          status: payload.status,
+          reviewed_by: payload.reviewedBy ?? null,
+          reviewed_at: new Date().toISOString(),
+        };
+        if (payload.status === 'rejected') updates.rejection_reason = payload.reason ?? null;
+        const res = await supabase.from('applications').update(updates as never).eq('id', payload.id);
+        if (res.error) throw res.error;
+      }
+
+      if (resolvedParentId && payload.nurseryId && payload.status !== 'under_review') {
+        const actionLink = `/parent/applications/${payload.id}`;
+        const titleByStatus = {
+          approved: {
+            ar: 'تم قبول طلب التسجيل',
+            en: 'Application approved',
+          },
+          documents_pending: {
+            ar: 'مستندات إضافية مطلوبة',
+            en: 'Additional documents requested',
+          },
+          rejected: {
+            ar: 'تم رفض طلب التسجيل',
+            en: 'Application rejected',
+          },
+        } as const;
+        const bodyByStatus = {
+          approved: {
+            ar: 'تم قبول طلب طفلك وتفعيل ملفه في لوحة ولي الأمر.',
+            en: 'Your child application was approved and the child profile is now visible on your dashboard.',
+          },
+          documents_pending: {
+            ar: payload.reason || 'يرجى رفع المستندات الإضافية المطلوبة من الحضانة.',
+            en: payload.reason || 'Please upload the additional documents requested by the nursery.',
+          },
+          rejected: {
+            ar: payload.reason || 'راجع رسالة الإدارة لمعرفة سبب الرفض.',
+            en: payload.reason || 'Check the admin message for the rejection reason.',
+          },
+        } as const;
+        const notificationCopy = titleByStatus[payload.status];
+        const notificationBody = bodyByStatus[payload.status];
+        await supabase.from('notifications').insert({
+          nursery_id: payload.nurseryId,
+          user_id: resolvedParentId,
+          type: `application_${payload.status}`,
+          title_ar: notificationCopy.ar,
+          title_en: notificationCopy.en,
+          body_ar: notificationBody.ar,
+          body_en: notificationBody.en,
+          channel: 'in_app',
+          urgency: payload.status === 'approved' ? 'normal' : 'high',
+          read: false,
+          action_link: actionLink,
+          sent_at: new Date().toISOString(),
+        } as never);
+
+        if (payload.openChat && payload.reviewedBy && payload.chatMessage?.trim()) {
+          const conversationId = getOrCreateConversationId(undefined);
+          const chatRes = await supabase.from('messages').insert({
+            conversation_id: conversationId,
+            sender_id: payload.reviewedBy,
+            receiver_id: resolvedParentId,
+            content: payload.chatMessage.trim(),
+            type: 'text',
+          } as never);
+          if (chatRes.error) throw chatRes.error;
+        }
+      }
 
       if (payload.parentEmail) {
         await supabase.functions.invoke('email-dispatch', {
@@ -203,6 +325,12 @@ export function useApplications(params: { nurseryId?: string; applicationId?: st
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['application-detail'] });
       void qc.invalidateQueries({ queryKey: ['admin-applications'] });
+      void qc.invalidateQueries({ queryKey: ['parent-applications'] });
+      void qc.invalidateQueries({ queryKey: ['parent-dashboard-children'] });
+      void qc.invalidateQueries({ queryKey: ['parent-dashboard-feed'] });
+      void qc.invalidateQueries({ queryKey: ['parent-in-app-notifications'] });
+      void qc.invalidateQueries({ queryKey: ['payment-history'] });
+      void qc.invalidateQueries({ queryKey: ['admin-children-list'] });
     },
   });
 
@@ -213,6 +341,12 @@ export function useApplications(params: { nurseryId?: string; applicationId?: st
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['application-detail'] });
       void qc.invalidateQueries({ queryKey: ['admin-applications'] });
+      void qc.invalidateQueries({ queryKey: ['parent-applications'] });
+      void qc.invalidateQueries({ queryKey: ['parent-dashboard-children'] });
+      void qc.invalidateQueries({ queryKey: ['parent-dashboard-feed'] });
+      void qc.invalidateQueries({ queryKey: ['parent-invoices'] });
+      void qc.invalidateQueries({ queryKey: ['payment-history'] });
+      void qc.invalidateQueries({ queryKey: ['admin-children-list'] });
     },
   });
 
@@ -232,8 +366,9 @@ export function useApplications(params: { nurseryId?: string; applicationId?: st
 
   return {
     adminApplications: adminListQuery.data ?? [],
+    parentApplications: parentApplicationsQuery.data ?? [],
     applicationDetail: detailQuery.data,
-    isLoading: adminListQuery.isLoading || detailQuery.isLoading,
+    isLoading: adminListQuery.isLoading || detailQuery.isLoading || parentApplicationsQuery.isLoading,
     stats,
     createFromInquiry: createFromInquiry.mutateAsync,
     saveApplicationDraft: saveApplicationDraft.mutateAsync,

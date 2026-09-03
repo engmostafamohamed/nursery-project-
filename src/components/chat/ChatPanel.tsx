@@ -20,7 +20,7 @@ import {
 } from '@/lib/chat';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
-import type { ChatParticipant, ChatRole } from '@/types/chat';
+import type { ChatParticipant, ChatParticipantRole, ChatRole } from '@/types/chat';
 
 const MAX_CHAT_FILE_BYTES = 10 * 1024 * 1024;
 
@@ -45,6 +45,8 @@ interface ChatPanelProps {
   currentUserId: string;
   nurseryId: string | null;
   languagePref: 'ar' | 'en' | 'both';
+  initialParticipantId?: string | null;
+  initialParticipantRole?: ChatParticipantRole | ChatParticipantRole[];
   readOnly?: boolean;
   className?: string;
 }
@@ -72,6 +74,8 @@ export function ChatPanel({
   currentUserId,
   nurseryId,
   languagePref,
+  initialParticipantId,
+  initialParticipantRole,
   readOnly = false,
   className,
 }: ChatPanelProps) {
@@ -84,6 +88,7 @@ export function ChatPanel({
   const [text, setText] = useState('');
   const [uploading, setUploading] = useState(false);
   const threadRef = useRef<HTMLDivElement>(null);
+  const initialParticipantOpenedRef = useRef<string | null>(null);
 
   // Single batched query — one round-trip for all participants' inbox data
   const inboxQuery = useQuery({
@@ -139,6 +144,7 @@ export function ChatPanel({
 
   const currentConversationId = selected?.conversationId ?? null;
   const messagesQuery = useConversationMessages(currentConversationId);
+  const messages = useMemo(() => messagesQuery.data ?? [], [messagesQuery.data]);
 
   // Scroll to bottom whenever new messages arrive
   useEffect(() => {
@@ -148,10 +154,10 @@ export function ChatPanel({
   }, [messagesQuery.data?.length]);
 
   const imageUrlsQuery = useQuery({
-    queryKey: ['chat-image-urls', currentConversationId, messagesQuery.data?.length],
+    queryKey: ['chat-image-urls', currentConversationId, messages.length],
     queryFn: async (): Promise<Record<string, string>> => {
       const map: Record<string, string> = {};
-      for (const m of messagesQuery.data ?? []) {
+      for (const m of messages) {
         if (m.type === 'image' && isStorageImage(m.content)) {
           const path = storagePathFromContent(m.content);
           const { data } = await supabase.storage.from('chat-media').createSignedUrl(path, 3600);
@@ -160,14 +166,14 @@ export function ChatPanel({
       }
       return map;
     },
-    enabled: Boolean(currentConversationId && messagesQuery.data?.length),
+    enabled: Boolean(currentConversationId && messages.length),
   });
 
   const fileUrlsQuery = useQuery({
-    queryKey: ['chat-file-urls', currentConversationId, messagesQuery.data?.length],
+    queryKey: ['chat-file-urls', currentConversationId, messages.length],
     queryFn: async (): Promise<Record<string, string>> => {
       const map: Record<string, string> = {};
-      for (const m of messagesQuery.data ?? []) {
+      for (const m of messages) {
         if (m.type === 'file' && isStorageFile(m.content)) {
           const path = filePathFromContent(m.content);
           const { data } = await supabase.storage.from('chat-files').createSignedUrl(path, 3600);
@@ -176,7 +182,7 @@ export function ChatPanel({
       }
       return map;
     },
-    enabled: Boolean(currentConversationId && messagesQuery.data?.length),
+    enabled: Boolean(currentConversationId && messages.length),
   });
 
   const markRead = useMutation({
@@ -282,9 +288,9 @@ export function ChatPanel({
 
   // Group messages by calendar day for thread separators
   const dayGroups = useMemo(() => {
-    type Msg = NonNullable<typeof messagesQuery.data>[number];
+    type Msg = (typeof messages)[number];
     const groups: Array<{ dayKey: string; messages: Msg[] }> = [];
-    const msgs = messagesQuery.data ?? [];
+    const msgs = messages;
     let currentDay = '';
     let current: Msg[] = [];
     for (const m of msgs) {
@@ -299,9 +305,35 @@ export function ChatPanel({
     }
     if (current.length) groups.push({ dayKey: currentDay, messages: current });
     return groups;
-  }, [messagesQuery.data]);
+  }, [messages]);
 
-  const inbox = inboxQuery.data ?? [];
+  const inbox = useMemo(() => inboxQuery.data ?? [], [inboxQuery.data]);
+
+  const initialRoleList = useMemo(
+    () => (Array.isArray(initialParticipantRole) ? initialParticipantRole : initialParticipantRole ? [initialParticipantRole] : []),
+    [initialParticipantRole],
+  );
+  const initialTargetParticipantId =
+    initialParticipantId ??
+    initialRoleList.map((roleName) => participants.find((p) => p.role === roleName)?.id).find(Boolean) ??
+    null;
+
+  useEffect(() => {
+    if (!initialTargetParticipantId) return;
+    const participant = participants.find((p) => p.id === initialTargetParticipantId);
+    if (!participant) return;
+    const existing = inbox.find((r) => r.participant.id === initialTargetParticipantId);
+    if (
+      initialParticipantOpenedRef.current === initialTargetParticipantId &&
+      selected?.participant.id === initialTargetParticipantId &&
+      selected.conversationId === existing?.conversationId
+    ) {
+      return;
+    }
+    setSelected(existing ?? { participant, unread: 0 });
+    initialParticipantOpenedRef.current = initialTargetParticipantId;
+  }, [initialTargetParticipantId, inbox, participants, selected]);
+
   // The inbox sidebar lists only real conversations (people already messaged).
   // Starting a thread with anyone else goes through the recipient picker.
   const conversations = inbox.filter((r) => Boolean(r.lastAt));

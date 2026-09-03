@@ -18,7 +18,10 @@ import { supabase } from '@/lib/supabase';
 type ChildRecord = ChildQrInput & {
   avatar_url: string | null;
   class_id?: string | null;
+  status?: string | null;
   dob?: string | null;
+  enrollment_date?: string | null;
+  created_at?: string | null;
   nationality?: string | null;
   home_address?: string | null;
   enrollment_department?: string | null;
@@ -103,12 +106,14 @@ type ChildRecordPayload = {
 };
 
 function formatValue(value: string | number | null | undefined) {
+  return displayValue(value);
   if (value === null || value === undefined) return '—';
   const s = String(value).trim();
   return s.length ? s : '—';
 }
 
 function formatBool(value: boolean | null | undefined, t: (k: string) => string) {
+  return displayBool(value, t);
   if (value === null || value === undefined) return '—';
   return value ? t('common.yes') : t('common.no');
 }
@@ -118,6 +123,75 @@ function emergencyContactsArray(raw: unknown): EmergencyContact[] {
   if (Array.isArray(raw)) return raw as EmergencyContact[];
   if (typeof raw === 'object') return [raw as EmergencyContact];
   return [];
+}
+
+function displayValue(value: string | number | null | undefined) {
+  if (value === null || value === undefined) return '-';
+  const s = String(value).trim();
+  return s.length ? s : '-';
+}
+
+function displayBool(value: boolean | null | undefined, t: (k: string) => string) {
+  if (value === null || value === undefined) return '-';
+  return value ? t('common.yes') : t('common.no');
+}
+
+function initials(name: string): string {
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0])
+      .join('')
+      .toUpperCase() || 'CH'
+  );
+}
+
+function calculateAge(dob: string | null | undefined): string {
+  if (!dob) return '-';
+  const birth = new Date(dob);
+  if (Number.isNaN(birth.getTime())) return displayValue(dob);
+  const today = new Date();
+  let years = today.getFullYear() - birth.getFullYear();
+  const monthDelta = today.getMonth() - birth.getMonth();
+  if (monthDelta < 0 || (monthDelta === 0 && today.getDate() < birth.getDate())) years -= 1;
+  return years >= 0 ? `${years} years` : '-';
+}
+
+function displayDate(value: string | null | undefined): string {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return displayValue(value);
+  return date.toLocaleDateString();
+}
+
+function statusLabel(status: string | null | undefined): string {
+  const raw = displayValue(status);
+  if (raw === '-') return raw;
+  return raw.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function DetailTile({
+  icon,
+  label,
+  value,
+  className,
+}: {
+  icon: string;
+  label: string;
+  value: string | number | null | undefined;
+  className?: string;
+}) {
+  return (
+    <div className={`rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 ${className ?? ''}`}>
+      <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase text-on-surface-variant">
+        <span className="material-symbols-outlined text-base text-primary">{icon}</span>
+        {label}
+      </div>
+      <p className="break-words text-base font-semibold text-on-surface">{displayValue(value)}</p>
+    </div>
+  );
 }
 
 export function AdminChildRecordPage() {
@@ -150,10 +224,13 @@ export function AdminChildRecordPage() {
             'id',
             'nursery_id',
             'class_id',
+            'status',
             'full_name_ar',
             'full_name_en',
             'avatar_url',
             'dob',
+            'enrollment_date',
+            'created_at',
             'nationality',
             'home_address',
             'enrollment_department',
@@ -284,7 +361,7 @@ export function AdminChildRecordPage() {
   }
 
   const { child, parents, dietary, diaper, pickups, childClass } = childQuery.data;
-  const childDisplayName = placeholderName || '—';
+  const childDisplayName = placeholderName || '-';
   const classNameDisplay = (() => {
     if (!childClass) return '—';
     const ar = childClass.name_ar?.trim() ?? '';
@@ -294,7 +371,7 @@ export function AdminChildRecordPage() {
     if (ar && en) return `${ar} / ${en}`;
     return ar || en || '—';
   })();
-  const labelValueClass = 'text-sm text-foreground';
+  const labelValueClass = 'text-sm font-medium text-on-surface';
 
   const localizedParentName = (p: ParentLink) => {
     const ar = p.user?.name_ar?.trim() ?? '';
@@ -309,74 +386,98 @@ export function AdminChildRecordPage() {
   const family = (child.enrollment_extended_json as { family?: Record<string, unknown> } | null)?.family ?? null;
 
   const tk = (k: string) => t(`admin.children.childRecord.${k}`);
+  const avatarSrc =
+    child.avatar_url ??
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(childDisplayName)}&background=eceef0&color=191c1e`;
+  const primaryParent = parents.find((parent) => parent.is_primary) ?? parents[0] ?? null;
+  const primaryPhone = primaryParent?.user?.phone ?? parents.find((parent) => parent.user?.phone)?.user?.phone ?? null;
+  const activePickups = pickups.filter((pickup) => Boolean(pickup.active ?? pickup.can_pickup)).length + parents.length;
+  const enrolledOn = child.enrollment_date ?? child.created_at;
 
   return (
-    <div className="space-y-6">
-      {/* SUMMARY HEADER */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{tk('identityTitle')}</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
-          <div>
-            <p className="text-xs text-foreground-secondary">{tk('name')}</p>
-            <p className={labelValueClass}>{childDisplayName}</p>
-          </div>
-          <div>
-            <p className="text-xs text-foreground-secondary">{tk('dob')}</p>
-            <p className={labelValueClass}>{formatValue(child.dob)}</p>
-          </div>
-          <div>
-            <p className="text-xs text-foreground-secondary">{tk('nationality')}</p>
-            <p className={labelValueClass}>{formatValue(child.nationality)}</p>
-          </div>
-          <div>
-            <p className="text-xs text-foreground-secondary">{tk('class')}</p>
-            <p className={labelValueClass}>{classNameDisplay}</p>
-          </div>
-          <div>
-            <p className="text-xs text-foreground-secondary">{tk('department')}</p>
-            <p className={labelValueClass}>{formatValue(child.enrollment_department)}</p>
-          </div>
-          {child.lead_source ? (
-            <div>
-              <p className="text-xs text-foreground-secondary">{tk('leadSource')}</p>
-              <p className={labelValueClass}>{formatValue(child.lead_source)}</p>
+    <div className="w-full space-y-5">
+      <section className="overflow-hidden rounded-3xl border border-outline-variant bg-surface-container-lowest shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-outline-variant bg-surface-container p-5">
+          <div className="flex min-w-0 items-center gap-4">
+            <img
+              src={avatarSrc}
+              alt=""
+              className="h-20 w-20 shrink-0 rounded-3xl object-cover ring-4 ring-surface"
+              loading="lazy"
+              decoding="async"
+            />
+            <div className="min-w-0">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                  {statusLabel(child.status)}
+                </span>
+                <span className="rounded-full bg-surface px-3 py-1 text-xs font-semibold text-on-surface-variant">
+                  {displayValue(classNameDisplay)}
+                </span>
+              </div>
+              <h1 className="truncate text-2xl font-bold text-on-surface">{childDisplayName}</h1>
+              <p className="mt-1 text-sm text-on-surface-variant">
+                {tk('dob')}: {displayDate(child.dob)} | {calculateAge(child.dob)}
+              </p>
             </div>
-          ) : null}
-          <div>
-            <p className="text-xs text-foreground-secondary">{tk('homeAddress')}</p>
-            <p className={labelValueClass}>{formatValue(child.home_address)}</p>
           </div>
-        </CardContent>
-      </Card>
+          <Button variant="outline" asChild className="h-11 rounded-2xl">
+            <Link to={`/admin/children/${child.id}/health`}>
+              <span className="material-symbols-outlined me-2 text-base" aria-hidden>
+                medical_services
+              </span>
+              {t('health.pageTitle')}
+            </Link>
+          </Button>
+        </div>
+
+        <div className="grid gap-3 p-5 md:grid-cols-2 xl:grid-cols-4">
+          <DetailTile icon="school" label={tk('class')} value={classNameDisplay} />
+          <DetailTile icon="family_restroom" label={tk('tabParents')} value={parents.length} />
+          <DetailTile icon="call" label={tk('phone')} value={primaryPhone} />
+          <DetailTile icon="how_to_reg" label={tk('tabEnrollment')} value={displayDate(enrolledOn)} />
+        </div>
+
+        <div className="grid gap-3 px-5 pb-5 md:grid-cols-2 xl:grid-cols-4">
+          <DetailTile icon="public" label={tk('nationality')} value={child.nationality} />
+          <DetailTile icon="badge" label={tk('department')} value={child.enrollment_department} />
+          <DetailTile icon="approval_delegation" label={tk('pickupTitle')} value={activePickups} />
+          <DetailTile icon="home" label={tk('homeAddress')} value={child.home_address} />
+        </div>
+      </section>
 
       {/* TABS */}
-      <Tabs defaultValue="parents">
-        <TabsList className="flex w-full flex-wrap gap-1">
-          <TabsTrigger value="parents">{tk('tabParents')}</TabsTrigger>
-          <TabsTrigger value="care">{tk('tabCare')}</TabsTrigger>
-          <TabsTrigger value="emergency">{tk('tabEmergency')}</TabsTrigger>
-          <TabsTrigger value="enrollment">{tk('tabEnrollment')}</TabsTrigger>
+      <Tabs defaultValue="parents" className="space-y-4">
+        <TabsList className="flex h-auto w-full flex-wrap justify-center gap-2 rounded-3xl border border-outline-variant bg-surface-container-lowest p-2 shadow-sm">
+          <TabsTrigger value="parents" className="h-10 px-5 text-sm">{tk('tabParents')}</TabsTrigger>
+          <TabsTrigger value="care" className="h-10 px-5 text-sm">{tk('tabCare')}</TabsTrigger>
+          <TabsTrigger value="emergency" className="h-10 px-5 text-sm">{tk('tabEmergency')}</TabsTrigger>
+          <TabsTrigger value="enrollment" className="h-10 px-5 text-sm">{tk('tabEnrollment')}</TabsTrigger>
         </TabsList>
 
         {/* PARENTS */}
-        <TabsContent value="parents">
-          <Card>
+        <TabsContent value="parents" className="pt-0">
+          <Card className="rounded-3xl border border-outline-variant bg-surface-container-lowest shadow-sm">
             <CardHeader>
-              <CardTitle>{tk('tabParents')}</CardTitle>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <span className="material-symbols-outlined text-primary">family_restroom</span>
+                {tk('tabParents')}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {parents.length === 0 ? (
                 <p className="text-sm text-foreground-secondary">{tk('parentsEmpty')}</p>
               ) : (
-                <div className="space-y-3">
+                <div className="grid gap-3 xl:grid-cols-2">
                   {parents.map((p) => (
-                    <div key={p.parent_id} className="rounded-lg border border-border-subtle bg-surface-low p-3 space-y-2">
+                    <div key={p.parent_id} className="space-y-3 rounded-2xl border border-outline-variant bg-surface p-4 shadow-sm">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-sm font-medium text-foreground">{localizedParentName(p)}</p>
+                        <div>
+                          <p className="text-base font-semibold text-on-surface">{localizedParentName(p)}</p>
+                          <p className="text-xs font-medium uppercase text-on-surface-variant">{formatValue(p.parent_type ?? p.relationship)}</p>
+                        </div>
                         {p.is_primary ? (
-                          <span className="rounded-full bg-secondary/10 px-2 py-0.5 text-xs text-secondary">
+                          <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                             {tk('primary')}
                           </span>
                         ) : null}
@@ -418,9 +519,12 @@ export function AdminChildRecordPage() {
         {/* CARE */}
         <TabsContent value="care">
           <div className="space-y-4">
-            <Card>
+            <Card className="rounded-3xl border border-outline-variant bg-surface-container-lowest shadow-sm">
               <CardHeader>
-                <CardTitle>{tk('careTitle')}</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <span className="material-symbols-outlined text-primary">child_care</span>
+                  {tk('careTitle')}
+                </CardTitle>
               </CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-2">
                 <div>
@@ -434,9 +538,12 @@ export function AdminChildRecordPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="rounded-3xl border border-outline-variant bg-surface-container-lowest shadow-sm">
               <CardHeader>
-                <CardTitle>{tk('dietTitle')}</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <span className="material-symbols-outlined text-primary">restaurant</span>
+                  {tk('dietTitle')}
+                </CardTitle>
               </CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-2">
                 {dietary ? (
@@ -496,9 +603,12 @@ export function AdminChildRecordPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="rounded-3xl border border-outline-variant bg-surface-container-lowest shadow-sm">
               <CardHeader>
-                <CardTitle>{tk('diaperTitle')}</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <span className="material-symbols-outlined text-primary">baby_changing_station</span>
+                  {tk('diaperTitle')}
+                </CardTitle>
               </CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-2">
                 {diaper ? (
@@ -537,25 +647,28 @@ export function AdminChildRecordPage() {
         </TabsContent>
 
         {/* EMERGENCY & PICKUP */}
-        <TabsContent value="emergency">
+        <TabsContent value="emergency" className="pt-0">
           <div className="space-y-4">
-            <Card>
+            <Card className="rounded-3xl border border-outline-variant bg-surface-container-lowest shadow-sm">
               <CardHeader>
-                <CardTitle>{tk('emergencyTitle')}</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <span className="material-symbols-outlined text-primary">emergency_home</span>
+                  {tk('emergencyTitle')}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 {emergencyContacts.length === 0 ? (
                   <p className="text-sm text-foreground-secondary">{tk('emergencyEmpty')}</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="grid gap-3 xl:grid-cols-2">
                     {emergencyContacts.map((c, i) => (
-                      <div key={`emerg-${i}`} className="rounded-lg border border-border-subtle bg-surface-low p-3">
-                        <p className="text-sm font-medium text-foreground">{formatValue(c.name as string | undefined)}</p>
-                        <p className="text-xs text-foreground-secondary">
-                          {tk('relation')}: {formatValue(c.relation as string | undefined)}
+                      <div key={`emerg-${i}`} className="rounded-2xl border border-outline-variant bg-surface p-4 shadow-sm">
+                        <p className="text-base font-semibold text-on-surface">{displayValue(c.name as string | undefined)}</p>
+                        <p className="mt-2 text-sm text-on-surface-variant">
+                          {tk('relation')}: {displayValue(c.relation as string | undefined)}
                         </p>
-                        <p className="text-xs text-foreground-secondary">
-                          {tk('phone')}: {formatValue(c.phone as string | undefined)}
+                        <p className="text-sm text-on-surface-variant">
+                          {tk('phone')}: {displayValue(c.phone as string | undefined)}
                         </p>
                       </div>
                     ))}
@@ -564,54 +677,57 @@ export function AdminChildRecordPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="rounded-3xl border border-outline-variant bg-surface-container-lowest shadow-sm">
               <CardHeader>
-                <CardTitle>{tk('pickupTitle')}</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <span className="material-symbols-outlined text-primary">approval_delegation</span>
+                  {tk('pickupTitle')}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 {parents.length === 0 && pickups.length === 0 ? (
                   <p className="text-sm text-foreground-secondary">{tk('pickupEmpty')}</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="grid gap-3 xl:grid-cols-2">
                     {parents.map((p) => (
-                      <div key={`pp-${p.parent_id}`} className="rounded-lg border border-border-subtle bg-surface-low p-3">
+                      <div key={`pp-${p.parent_id}`} className="rounded-2xl border border-outline-variant bg-surface p-4 shadow-sm">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <p className="text-sm font-medium text-foreground">{localizedParentName(p)}</p>
-                          <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs text-success">
+                          <p className="text-base font-semibold text-on-surface">{localizedParentName(p)}</p>
+                          <span className="rounded-full bg-success/10 px-3 py-1 text-xs font-semibold text-success">
                             {tk('allowed')}
                           </span>
                         </div>
-                        <p className="text-xs text-foreground-secondary">
-                          {tk('relation')}: {formatValue(p.parent_type ?? p.relationship ?? tk('relationParent'))}
+                        <p className="mt-2 text-sm text-on-surface-variant">
+                          {tk('relation')}: {displayValue(p.parent_type ?? p.relationship ?? tk('relationParent'))}
                         </p>
-                        <p className="text-xs text-foreground-secondary">
-                          {tk('phone')}: {formatValue(p.user?.phone)}
+                        <p className="text-sm text-on-surface-variant">
+                          {tk('phone')}: {displayValue(p.user?.phone)}
                         </p>
                       </div>
                     ))}
                     {pickups.map((row) => {
                       const allowed = Boolean(row.active ?? row.can_pickup);
                       return (
-                        <div key={`au-${row.id}`} className="rounded-lg border border-border-subtle bg-surface-low p-3">
+                        <div key={`au-${row.id}`} className="rounded-2xl border border-outline-variant bg-surface p-4 shadow-sm">
                           <div className="flex flex-wrap items-center justify-between gap-2">
-                            <p className="text-sm font-medium text-foreground">{formatValue(row.name)}</p>
+                            <p className="text-base font-semibold text-on-surface">{displayValue(row.name)}</p>
                             <span
-                              className={`rounded-full px-2 py-0.5 text-xs ${
+                              className={`rounded-full px-3 py-1 text-xs font-semibold ${
                                 allowed ? 'bg-success/10 text-success' : 'bg-error/10 text-error'
                               }`}
                             >
                               {allowed ? tk('allowed') : tk('notAllowed')}
                             </span>
                           </div>
-                          <p className="text-xs text-foreground-secondary">
-                            {tk('relation')}: {formatValue(row.relation ?? tk('relationGuardian'))}
+                          <p className="mt-2 text-sm text-on-surface-variant">
+                            {tk('relation')}: {displayValue(row.relation ?? tk('relationGuardian'))}
                           </p>
-                          <p className="text-xs text-foreground-secondary">
-                            {tk('phone')}: {formatValue(row.mobile_phone ?? row.phone)}
+                          <p className="text-sm text-on-surface-variant">
+                            {tk('phone')}: {displayValue(row.mobile_phone ?? row.phone)}
                           </p>
                           {row.national_id ? (
-                            <p className="text-xs text-foreground-secondary">
-                              {tk('nationalId')}: {formatValue(row.national_id)}
+                            <p className="text-sm text-on-surface-variant">
+                              {tk('nationalId')}: {displayValue(row.national_id)}
                             </p>
                           ) : null}
                         </div>
@@ -625,11 +741,14 @@ export function AdminChildRecordPage() {
         </TabsContent>
 
         {/* ENROLLMENT */}
-        <TabsContent value="enrollment">
+        <TabsContent value="enrollment" className="pt-0">
           <div className="space-y-4">
-            <Card>
+            <Card className="rounded-3xl border border-outline-variant bg-surface-container-lowest shadow-sm">
               <CardHeader>
-                <CardTitle>{tk('enrollmentTitle')}</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <span className="material-symbols-outlined text-primary">how_to_reg</span>
+                  {tk('enrollmentTitle')}
+                </CardTitle>
               </CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-2">
                 <div>
@@ -664,9 +783,12 @@ export function AdminChildRecordPage() {
                 : [];
               const siblingCount = (family as Record<string, unknown>).sibling_count;
               return (
-                <Card>
+                <Card className="rounded-3xl border border-outline-variant bg-surface-container-lowest shadow-sm">
                   <CardHeader>
-                    <CardTitle>{tk('familyTitle')}</CardTitle>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <span className="material-symbols-outlined text-primary">diversity_1</span>
+                      {tk('familyTitle')}
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {familyEntries.length > 0 ? (
@@ -692,7 +814,7 @@ export function AdminChildRecordPage() {
                         <p className="text-xs text-foreground-secondary">{tk('siblings')}</p>
                         <div className="space-y-2">
                           {siblings.map((s, i) => (
-                            <div key={`sib-${i}`} className="rounded-lg border border-border-subtle bg-surface-low p-3 text-sm text-foreground">
+                            <div key={`sib-${i}`} className="rounded-2xl border border-outline-variant bg-surface p-3 text-sm font-medium text-on-surface shadow-sm">
                               {typeof s === 'string'
                                 ? s
                                 : Object.entries(s)
@@ -711,19 +833,42 @@ export function AdminChildRecordPage() {
         </TabsContent>
       </Tabs>
 
-      <Button variant="outline" asChild>
-        <Link to={`/admin/children/${child.id}/health`}>
-          <span className="material-symbols-outlined me-2 text-base" aria-hidden>medical_services</span>
-          {t('health.pageTitle')}
-        </Link>
-      </Button>
-      <ChildAvatarUpload
-        childId={child.id}
-        nurseryId={child.nursery_id}
-        fullNameForPlaceholder={placeholderName}
-        avatarUrl={child.avatar_url}
-      />
-      <ChildQrCodeCard child={child} languagePref={languagePref} />
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
+        <div className="space-y-5">
+          <section className="rounded-3xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm">
+            <div className="mb-4 flex items-center gap-3">
+              <span className="material-symbols-outlined flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-xl text-primary">
+                manage_accounts
+              </span>
+              <div>
+                <h2 className="text-lg font-semibold text-on-surface">Profile tools</h2>
+                <p className="text-sm text-on-surface-variant">Photo, health record, and family QR access.</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Button variant="outline" asChild className="h-11 rounded-2xl">
+                <Link to={`/admin/children/${child.id}/health`}>
+                  <span className="material-symbols-outlined me-2 text-base" aria-hidden>
+                    medical_services
+                  </span>
+                  {t('health.pageTitle')}
+                </Link>
+              </Button>
+            </div>
+          </section>
+
+          <ChildAvatarUpload
+            childId={child.id}
+            nurseryId={child.nursery_id}
+            fullNameForPlaceholder={placeholderName}
+            avatarUrl={child.avatar_url}
+          />
+        </div>
+
+        <div className="self-start xl:sticky xl:top-24">
+          <ChildQrCodeCard child={child} languagePref={languagePref} qrSize={180} />
+        </div>
+      </div>
     </div>
   );
 }

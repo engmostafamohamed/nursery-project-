@@ -34,6 +34,13 @@ export type ParentDashboardFeedItem =
       amount: number;
       dueDate: string;
       status: string;
+    }
+  | {
+      kind: 'application_status';
+      id: string;
+      at: string;
+      status: string;
+      childName: string;
     };
 
 export function useParentDashboardFeed(parentId: string | undefined, nurseryId: string | undefined) {
@@ -59,7 +66,7 @@ export function useParentDashboardFeed(parentId: string | undefined, nurseryId: 
         ]),
       );
 
-      const [reportsRes, invRes, evRes] = await Promise.all([
+      const [reportsRes, invRes, evRes, appRes] = await Promise.all([
         supabase
           .from('daily_reports')
           .select('id, child_id, report_date, updated_at')
@@ -82,11 +89,20 @@ export function useParentDashboardFeed(parentId: string | undefined, nurseryId: 
           .is('cancelled_at', null)
           .order('created_at', { ascending: false })
           .limit(8),
+        supabase
+          .from('applications')
+          .select('id, status, reviewed_at, updated_at, created_at, child_info_json')
+          .eq('nursery_id', nurseryId)
+          .eq('parent_id', parentId)
+          .in('status', ['approved', 'documents_pending', 'rejected'])
+          .order('updated_at', { ascending: false })
+          .limit(8),
       ]);
 
       if (reportsRes.error) throw reportsRes.error;
       if (invRes.error) throw invRes.error;
       if (evRes.error) throw evRes.error;
+      if (appRes.error) throw appRes.error;
 
       const items: ParentDashboardFeedItem[] = [];
 
@@ -166,6 +182,26 @@ export function useParentDashboardFeed(parentId: string | undefined, nurseryId: 
           eventId: row.id,
           titleAr: row.title_ar,
           titleEn: row.title_en,
+        });
+      }
+
+      for (const r of appRes.data ?? []) {
+        const row = r as {
+          id: string;
+          status: string;
+          reviewed_at: string | null;
+          updated_at: string;
+          created_at: string;
+          child_info_json: Record<string, unknown> | null;
+        };
+        const child = row.child_info_json ?? {};
+        const childName = String(child.full_name_en ?? child.full_name_ar ?? child.full_name ?? '');
+        items.push({
+          kind: 'application_status',
+          id: row.id,
+          at: row.reviewed_at ?? row.updated_at ?? row.created_at,
+          status: row.status,
+          childName,
         });
       }
 

@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { Navigate, Route, Routes, useSearchParams } from 'react-router-dom';
+import { Navigate, Route, Routes, useParams, useSearchParams } from 'react-router-dom';
 
 import { ServiceWorkerNavigateBridge } from '@/components/shared/ServiceWorkerNavigateBridge';
 import { PageRouteSkeleton } from '@/components/shared/PageRouteSkeleton';
@@ -22,6 +22,11 @@ function LegacyXoNurseryEventNewRedirect() {
   const [searchParams] = useSearchParams();
   const qs = searchParams.toString();
   return <Navigate to={qs ? `/xo-admin/nursery/events/create?${qs}` : '/xo-admin/nursery/events/create'} replace />;
+}
+
+function LegacyParentPayRedirect() {
+  const { invoiceId } = useParams();
+  return <Navigate to={invoiceId ? `/parent/invoices/${invoiceId}/pay` : '/parent/invoices'} replace />;
 }
 
 export function AppRouter() {
@@ -71,11 +76,13 @@ export function AppRouter() {
               <Route path="staff/payroll" element={<P.AdminPayrollPage />} />
               <Route path="payroll" element={<Navigate to="/admin/staff/payroll" replace />} />
               <Route path="payroll/new" element={<Navigate to="/admin/staff/payroll/new" replace />} />
+              <Route path="admissions" element={<Navigate to="/admin/admissions/applications" replace />} />
               <Route path="admissions/inquiries" element={<P.AdminInquiriesPage />} />
               <Route path="admissions/waitlist" element={<P.AdminWaitlistPage />} />
               <Route path="admissions/applications" element={<P.AdminApplicationsPage />} />
               <Route path="admissions/applications/:id" element={<P.AdminApplicationDetailPage />} />
               <Route path="admissions/import" element={<P.AdminImportChildrenPage />} />
+              <Route path="inquiries" element={<Navigate to="/admin/admissions/inquiries" replace />} />
               <Route path="import" element={<P.AdminImportChildrenPage />} />
               <Route path="import/review/:jobId" element={<P.AdminImportReviewPage />} />
               <Route path="import/progress/:jobId" element={<P.AdminImportProgressPage />} />
@@ -107,7 +114,7 @@ export function AppRouter() {
               <Route path="calendar" element={<P.AdminCalendarPage />} />
               <Route path="inbox" element={<P.AdminInboxPage />} />
               <Route path="messages" element={<P.AdminMessagesPage />} />
-              <Route path="chat" element={<P.AdminChatPage />} />
+              <Route path="chat" element={<P.ParentMessagesPage />} />
               <Route path="messages/broadcast" element={<P.AdminBroadcastMessagePage />} />
               <Route path="messages/broadcasts" element={<P.AdminBroadcastHistoryPage />} />
               <Route path="classes" element={<P.AdminClassesListPage />} />
@@ -133,6 +140,7 @@ export function AppRouter() {
               <Route path="payment-record" element={<P.ParentPaymentRecordPage />} />
               <Route path="invoices/:invoiceId" element={<P.ParentInvoiceDetailsPage />} />
               <Route path="invoices/:invoiceId/pay" element={<P.ParentPaymentPage />} />
+              <Route path="pay/:invoiceId" element={<LegacyParentPayRedirect />} />
               <Route path="inbox" element={<P.ParentInboxPage />} />
               <Route path="messages" element={<P.ParentMessagesPage />} />
               <Route path="chat" element={<P.AdminChatPage />} />
@@ -229,11 +237,13 @@ export function AppRouter() {
               <Route path="nursery/staff/payroll" element={<P.AdminPayrollPage />} />
               <Route path="nursery/payroll" element={<Navigate to="/xo-admin/nursery/staff/payroll" replace />} />
               <Route path="nursery/payroll/new" element={<Navigate to="/xo-admin/nursery/staff/payroll/new" replace />} />
+              <Route path="nursery/admissions" element={<Navigate to="/xo-admin/nursery/admissions/applications" replace />} />
               <Route path="nursery/admissions/inquiries" element={<P.AdminInquiriesPage />} />
               <Route path="nursery/admissions/waitlist" element={<P.AdminWaitlistPage />} />
               <Route path="nursery/admissions/applications" element={<P.AdminApplicationsPage />} />
               <Route path="nursery/admissions/applications/:id" element={<P.AdminApplicationDetailPage />} />
               <Route path="nursery/admissions/import" element={<P.AdminImportChildrenPage />} />
+              <Route path="nursery/inquiries" element={<Navigate to="/xo-admin/nursery/admissions/inquiries" replace />} />
               <Route path="nursery/import" element={<P.AdminImportChildrenPage />} />
               <Route path="nursery/import/review/:jobId" element={<P.AdminImportReviewPage />} />
               <Route path="nursery/import/progress/:jobId" element={<P.AdminImportProgressPage />} />

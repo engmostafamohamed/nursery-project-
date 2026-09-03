@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
@@ -8,16 +8,17 @@ import { InquiryKanban } from '@/components/admin/InquiryKanban';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { useActiveNurseryId } from '@/hooks/useActiveNurseryId';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useInquiries } from '@/hooks/useInquiries';
-import { useUserProfile } from '@/hooks/useUserProfile';
 import { useWaitlist } from '@/hooks/useWaitlist';
 import { useApplications } from '@/hooks/useApplications';
 
 export function AdminInquiriesPage() {
   const { t } = useTranslation();
+  const location = useLocation();
   const { user } = useAuthSession();
-  const { data: profile } = useUserProfile(user?.id);
+  const { activeNurseryId } = useActiveNurseryId();
   const [view, setView] = useState<'kanban' | 'list'>('kanban');
   const [status, setStatus] = useState('all');
   const [source, setSource] = useState('all');
@@ -26,9 +27,12 @@ export function AdminInquiriesPage() {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [selected, setSelected] = useState<Record<string, unknown> | null>(null);
-  const inquiries = useInquiries(profile?.nursery_id ?? undefined, { status, source, assignedTo, search, fromDate, toDate });
-  const waitlist = useWaitlist(profile?.nursery_id ?? undefined);
-  const apps = useApplications({ nurseryId: profile?.nursery_id ?? undefined });
+  const inquiries = useInquiries(activeNurseryId ?? undefined, { status, source, assignedTo, search, fromDate, toDate });
+  const waitlist = useWaitlist(activeNurseryId ?? undefined);
+  const apps = useApplications({ nurseryId: activeNurseryId ?? undefined });
+  const admissionsBasePath = location.pathname.startsWith('/xo-admin/')
+    ? '/xo-admin/nursery/admissions'
+    : '/admin/admissions';
 
   const waitlistCount = useMemo(() => inquiries.inquiries.filter((i) => String(i.status) === 'waitlisted').length, [inquiries.inquiries]);
 
@@ -37,11 +41,20 @@ export function AdminInquiriesPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-on-surface">{t('admissions.inquiriesTitle')}</h1>
         <div className="flex gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link to={`${admissionsBasePath}/applications`} className="gap-2">
+              <span>{t('applications.adminListTitle')}</span>
+              {apps.stats.pendingReview > 0 ? (
+                <span className="rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground">
+                  {apps.stats.pendingReview}
+                </span>
+              ) : null}
+            </Link>
+          </Button>
           <Button variant={view === 'kanban' ? 'default' : 'outline'} size="sm" onClick={() => setView('kanban')}>{t('admissions.kanban')}</Button>
           <Button variant={view === 'list' ? 'default' : 'outline'} size="sm" onClick={() => setView('list')}>{t('admissions.list')}</Button>
-          <Button asChild variant="outline" size="sm"><Link to="/admin/admissions/applications">{t('applications.adminListTitle')}</Link></Button>
-          <Button asChild variant="outline" size="sm"><Link to="/admin/admissions/waitlist">{t('admissions.waitlistTitle')}</Link></Button>
-          <Button asChild variant="outline" size="sm"><Link to="/admin/admissions/import">{t('import.title')}</Link></Button>
+          <Button asChild variant="outline" size="sm"><Link to={`${admissionsBasePath}/waitlist`}>{t('admissions.waitlistTitle')}</Link></Button>
+          <Button asChild variant="outline" size="sm"><Link to={`${admissionsBasePath}/import`}>{t('import.title')}</Link></Button>
         </div>
       </div>
 
@@ -109,13 +122,13 @@ export function AdminInquiriesPage() {
           toast.success(t('admissions.interviewScheduled'));
         }}
         onMoveToWaitlist={(id, classId) => {
-          if (!profile?.nursery_id) return;
-          void waitlist.addToWaitlist({ inquiryId: id, classId, nurseryId: profile.nursery_id });
+          if (!activeNurseryId) return;
+          void waitlist.addToWaitlist({ inquiryId: id, classId, nurseryId: activeNurseryId });
           toast.success(t('admissions.movedToWaitlist'));
         }}
         onCreateApplication={(inquiryId) => {
-          if (!profile?.nursery_id) return;
-          void apps.createFromInquiry({ inquiryId, nurseryId: profile.nursery_id }).then(() => toast.success(t('applications.createdFromInquiry')));
+          if (!activeNurseryId) return;
+          void apps.createFromInquiry({ inquiryId, nurseryId: activeNurseryId }).then(() => toast.success(t('applications.createdFromInquiry')));
         }}
       />
     </div>

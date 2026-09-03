@@ -16,6 +16,7 @@ export function ParentMessagesPage() {
       currentUserId={user.id}
       nurseryId={profile?.nursery_id ?? null}
       languagePref={languagePref}
+      initialParticipantRole={['branch_admin', 'manager', 'chain_super_admin', 'teacher']}
       className="h-[calc(100dvh-11rem)]"
     />
   );

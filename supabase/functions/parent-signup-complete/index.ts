@@ -160,11 +160,12 @@ async function removeUploadedFiles(admin: ReturnType<typeof getAdminClient>, upl
 
 async function uploadSignupFiles(
   admin: ReturnType<typeof getAdminClient>,
+  nurseryId: string,
   files: SignupFilesPayload | undefined,
   uploaded: UploadedObject[],
 ) {
   const sessionId = crypto.randomUUID();
-  const base = `parent-signup/${sessionId}`;
+  const base = `${nurseryId}/parent-signup/${sessionId}`;
 
   let childPhotoUrl: string | null = null;
   if (files?.childPhoto) {
@@ -218,6 +219,41 @@ async function uploadSignupFiles(
   );
 
   return { childPhotoUrl, fatherIdPath, motherIdPath, birthCertPath, vaccinationCardPath, pickup1PhotoPath, pickup2PhotoPath };
+}
+
+async function createApplicationDocuments(
+  admin: ReturnType<typeof getAdminClient>,
+  nurseryId: string,
+  applicationId: string,
+  files: SignupFilesPayload | undefined,
+  useMotherId: boolean,
+  uploaded: UploadedObject[],
+) {
+  const parentIdFile = useMotherId ? files?.motherIdPhoto ?? files?.fatherIdPhoto : files?.fatherIdPhoto ?? files?.motherIdPhoto;
+  const rows: Array<{ application_id: string; document_type: string; file_url: string }> = [];
+  const docs = [
+    { documentType: 'birth_certificate', file: files?.birthCertificate, name: 'birth-certificate' },
+    { documentType: 'vaccination_card', file: files?.vaccinationCard, name: 'vaccination-card' },
+    { documentType: 'parent_id', file: parentIdFile, name: 'parent-id' },
+  ];
+
+  for (const doc of docs) {
+    if (!doc.file) continue;
+    const path = `${nurseryId}/${applicationId}/${doc.name}.${extFromFile(doc.file)}`;
+    const uploadedPath = await uploadSignupFile(admin, 'application-documents', doc.file, path, uploaded);
+    if (uploadedPath) {
+      rows.push({
+        application_id: applicationId,
+        document_type: doc.documentType,
+        file_url: uploadedPath,
+      });
+    }
+  }
+
+  if (rows.length > 0) {
+    const { error } = await admin.from('application_documents').insert(rows as never);
+    if (error) throw new Error(`application documents insert failed: ${error.message}`);
+  }
 }
 
 async function findAuthUserByEmail(admin: ReturnType<typeof getAdminClient>, email: string) {
@@ -357,7 +393,7 @@ Deno.serve(async (req) => {
     // A second auth account per family is gone: the whole family shares one login,
     // so the father/mother distinction is recorded on the profile and application
     // rather than by minting a second account.
-    const uploaded = await uploadSignupFiles(admin, body.files, uploadedObjects);
+    const uploaded = await uploadSignupFiles(admin, body.nursery_id, body.files, uploadedObjects);
 
     const primaryAuthId = primaryUser.user.id;
     const parentIds: string[] = [];
@@ -388,8 +424,14 @@ Deno.serve(async (req) => {
     if (profileErr) throw new Error(profileErr.message);
     parentIds.push(primaryAuthId);
 
+    const publicFamily = {
+      marital_status: body.family.marital_status,
+      address: body.family.address,
+      referral_source: body.family.referral_source,
+    };
+
     const enrollmentExtended = {
-      family: body.family,
+      family: publicFamily,
       consents: body.consents,
       // Both parents' details, since only the primary one gets a profile row.
       parents: { father: publicParentPayload(body.father), mother: publicParentPayload(body.mother) },
@@ -459,7 +501,7 @@ Deno.serve(async (req) => {
     // Child + parent rows are already written but child.status='pending' — admin approval
     // will flip it to 'active' and flip the application status to 'approved'.
     const primaryParentId = parentIds[0] ?? null;
-    const { error: appErr } = await admin.from('applications').insert({
+    const { data: applicationRow, error: appErr } = await admin.from('applications').insert({
       nursery_id: body.nursery_id,
       parent_id: primaryParentId,
       child_id: childId,
@@ -468,7 +510,7 @@ Deno.serve(async (req) => {
       parent_info_json: {
         father: publicParentPayload(body.father),
         mother: publicParentPayload(body.mother),
-        family: body.family,
+        family: publicFamily,
         pickups: body.pickups,
       },
       child_info_json: body.child,
@@ -477,10 +519,23 @@ Deno.serve(async (req) => {
         body.consents.financial_agreement &&
         body.consents.policies &&
         body.consents.info_accuracy,
-    } as never);
+    } as never).select('id').single();
     if (appErr) {
       // Non-fatal: child + parent rows are already written; log the gap for admin follow-up.
       console.error('applications row insert failed', appErr.message);
+    } else if (applicationRow) {
+      try {
+        await createApplicationDocuments(
+          admin,
+          body.nursery_id,
+          (applicationRow as { id: string }).id,
+          body.files,
+          Boolean(body.mother),
+          uploadedObjects,
+        );
+      } catch (docErr) {
+        console.error('application documents insert failed', docErr);
+      }
     }
 
     return jsonResponse({ child_id: childId });

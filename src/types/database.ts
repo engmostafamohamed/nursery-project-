@@ -175,6 +175,23 @@ export type Database = {
       }>;
     };
     Functions: {
+      approve_application_enrollment: {
+        Args: {
+          p_application_id: string;
+          p_nursery_id: string;
+          p_auto_generate_first_invoice?: boolean;
+        };
+        Returns: {
+          childId: string;
+          parentId: string | null;
+          invoiceId?: string;
+          paidAmount?: number;
+        };
+      };
+      select_application_payment_package: {
+        Args: { p_application_id: string; p_package_id: string };
+        Returns: string;
+      };
       set_class_lead: {
         Args: { p_class_id: string; p_user_id: string | null };
         Returns: void;

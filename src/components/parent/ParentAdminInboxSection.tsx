@@ -5,10 +5,15 @@ import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useParentInAppNotifications } from '@/hooks/useParentInAppNotifications';
+import type { ParentInAppNotificationRow } from '@/hooks/useParentInAppNotifications';
 import type { SurveyType } from '@/hooks/useSurveys';
 import { useSurveys } from '@/hooks/useSurveys';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { resolveParentNotificationPath } from '@/lib/parentNotificationUtils';
+import {
+  formatNotificationRelativeTime,
+  parentNotificationMaterialIcon,
+  resolveParentNotificationPath,
+} from '@/lib/parentNotificationUtils';
 
 function deadlineUrgent(iso: string | null | undefined): boolean {
   if (!iso) return false;
@@ -26,6 +31,17 @@ function formatDeadline(iso: string | null | undefined, lang: string): string {
   } catch {
     return iso;
   }
+}
+
+type GroupedNotification = {
+  item: ParentInAppNotificationRow;
+  count: number;
+};
+
+function notificationGroupKey(item: ParentInAppNotificationRow, lang: string): string {
+  const title = lang === 'ar' ? item.title_ar : item.title_en;
+  const body = lang === 'ar' ? item.body_ar : item.body_en;
+  return [item.type, item.action_link ?? '', title, body].join('|');
 }
 
 /**
@@ -64,8 +80,16 @@ export function ParentAdminInboxSection() {
   );
 
   const urgentNotifications = useMemo(
-    () => (notifQuery.data ?? []).filter((n) => n.urgency === 'high' && !n.read).slice(0, 3),
-    [notifQuery.data],
+    () => {
+      const grouped = new Map<string, GroupedNotification>();
+      for (const item of (notifQuery.data ?? []).filter((n) => n.urgency === 'high' && !n.read)) {
+        const key = notificationGroupKey(item, i18n.language);
+        const current = grouped.get(key);
+        grouped.set(key, current ? { item: current.item, count: current.count + 1 } : { item, count: 1 });
+      }
+      return Array.from(grouped.values()).slice(0, 3);
+    },
+    [i18n.language, notifQuery.data],
   );
 
   if (
@@ -91,30 +115,51 @@ export function ParentAdminInboxSection() {
       </div>
 
       <div className="space-y-2">
-        {urgentNotifications.map((n) => (
-          <Link
-            key={n.id}
-            to={resolveParentNotificationPath(n.type, n.action_link)}
-            className="flex items-start gap-3 rounded-2xl border border-error/60 bg-error/5 p-4 ring-1 ring-error/40 transition-colors hover:bg-error/10"
-          >
-            <span className="material-symbols-outlined mt-0.5 shrink-0 text-xl text-error" aria-hidden>
-              priority_high
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-sm font-semibold text-on-surface">
-                  {i18n.language === 'ar' ? n.title_ar : n.title_en}
-                </p>
-                <Badge className="border-error bg-error/10 text-error text-[10px]">
-                  {t('parent.dashboard.adminInbox.urgentBadge')}
-                </Badge>
+        {urgentNotifications.map(({ item: n, count }) => {
+          const title = i18n.language === 'ar' ? n.title_ar : n.title_en;
+          const body = i18n.language === 'ar' ? n.body_ar : n.body_en;
+          return (
+            <Link
+              key={n.id}
+              to={resolveParentNotificationPath(n.type, n.action_link)}
+              className="group flex items-start gap-3 rounded-2xl border border-error/30 bg-surface-container-lowest p-4 shadow-sm transition-colors hover:border-error/50 hover:bg-error/5"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-error/10 text-error">
+                <span className="material-symbols-outlined text-xl" aria-hidden>
+                  {parentNotificationMaterialIcon(n.type)}
+                </span>
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm font-semibold text-on-surface">{title}</p>
+                  <Badge variant="error" className="text-[10px]">
+                    {t('parent.dashboard.adminInbox.urgentBadge')}
+                  </Badge>
+                  {count > 1 ? (
+                    <Badge variant="secondary" className="text-[10px]">
+                      {t('parent.dashboard.adminInbox.repeatCount', {
+                        count,
+                        defaultValue: '{{count}} updates',
+                      })}
+                    </Badge>
+                  ) : null}
+                </div>
+                <p className="mt-1 text-sm leading-5 text-on-surface-variant">{body}</p>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <span className="text-on-surface-variant">
+                    {formatNotificationRelativeTime(n.sent_at, i18n.language)}
+                  </span>
+                  <span className="inline-flex items-center gap-1 font-medium text-primary">
+                    {t('common.open', { defaultValue: 'Open' })}
+                    <span className="material-symbols-outlined text-base transition-transform group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5" aria-hidden>
+                      arrow_forward
+                    </span>
+                  </span>
+                </div>
               </div>
-              <p className="mt-1 text-sm text-on-surface-variant">
-                {i18n.language === 'ar' ? n.body_ar : n.body_en}
-              </p>
-            </div>
-          </Link>
-        ))}
+            </Link>
+          );
+        })}
 
         {permissions.map((s) => {
           const sDeadline = s.deadline ? String(s.deadline) : null;

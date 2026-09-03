@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { PointsRedemptionWidget } from '@/components/parent/PointsRedemptionWidget';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useInvoiceDetails } from '@/hooks/useInvoiceDetails';
 import { useLoyalty } from '@/hooks/useLoyalty';
@@ -27,18 +29,32 @@ export function ParentPaymentPage() {
   const invoiceQuery = useInvoiceDetails(invoiceId);
   const invoice = invoiceQuery.data;
   const [expanded, setExpanded] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const submitPayment = useSubmitInvoicePayment();
 
   const inReview = Boolean(invoice?.inReview);
+  const balanceDue = invoice?.balanceDue ?? invoice?.amount ?? 0;
+  const parsedPaymentAmount = useMemo(() => Number(paymentAmount), [paymentAmount]);
+  const defaultPaymentAmount = useMemo(
+    () => (invoice ? (invoice.balanceDue || invoice.amount).toFixed(2) : ''),
+    [invoice],
+  );
+  const validPaymentAmount =
+    Number.isFinite(parsedPaymentAmount) && parsedPaymentAmount > 0 && parsedPaymentAmount <= balanceDue;
+
+  useEffect(() => {
+    if (!defaultPaymentAmount) return;
+    setPaymentAmount(defaultPaymentAmount);
+  }, [defaultPaymentAmount]);
 
   const handlePayNow = async () => {
-    if (!invoice) return;
+    if (!invoice || !validPaymentAmount) return;
     setSubmitting(true);
     try {
       await submitPayment.mutateAsync({
         invoiceId: invoice.id,
-        amount: invoice.amount,
+        amount: parsedPaymentAmount,
         invoiceNumber: invoice.invoiceNumber,
       });
       await invoiceQuery.refetch();
@@ -56,6 +72,11 @@ export function ParentPaymentPage() {
       <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
         <p className="text-xs text-on-surface-variant">{t('invoice.invoiceNumber', { number: invoice?.invoiceNumber ?? '' })}</p>
         <p className="mt-1 text-2xl font-extrabold text-on-surface">{t('invoice.egpAmount', { amount: invoice?.amount.toFixed(2) ?? '0.00' })}</p>
+        <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-on-surface-variant">
+          <p>{t('financial.paymentHistory.paid', { defaultValue: 'Paid' })}: {t('invoice.egpAmount', { amount: (invoice?.paidAmount ?? 0).toFixed(2) })}</p>
+          <p>{t('financial.paymentHistory.balance', { defaultValue: 'Balance' })}: {t('invoice.egpAmount', { amount: balanceDue.toFixed(2) })}</p>
+          <p>{t('invoice.inReview')}: {t('invoice.egpAmount', { amount: (invoice?.pendingAmount ?? 0).toFixed(2) })}</p>
+        </div>
         <p className="text-xs text-on-surface-variant">{t('invoice.dueDate', { date: invoice ? formatDate(invoice.dueDate) : '-' })}</p>
       </div>
 
@@ -113,9 +134,40 @@ export function ParentPaymentPage() {
           {t('invoice.inReviewNote')}
         </div>
       ) : (
-        <Button className="w-full" onClick={() => void handlePayNow()} disabled={submitting || !invoice}>
-          {submitting ? t('payment.submitting') : t('payment.payNowAmount', { amount: invoice?.amount.toFixed(2) ?? '0.00' })}
-        </Button>
+        <section className="space-y-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
+          <div className="space-y-2">
+            <Label>{t('payment.amountToPay', { defaultValue: 'Amount to pay' })}</Label>
+            <Input
+              type="number"
+              min={1}
+              max={balanceDue || undefined}
+              step={0.01}
+              value={paymentAmount}
+              onChange={(e) => setPaymentAmount(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setPaymentAmount(balanceDue.toFixed(2))}>
+              {t('payment.fullBalance', { defaultValue: 'Full balance' })}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setPaymentAmount(Math.max(1, balanceDue / 2).toFixed(2))}
+            >
+              {t('payment.halfBalance', { defaultValue: 'Half' })}
+            </Button>
+          </div>
+          {!validPaymentAmount && paymentAmount ? (
+            <p className="text-xs text-error">
+              {t('payment.invalidPartialAmount', { defaultValue: 'Enter an amount greater than 0 and not more than the balance.' })}
+            </p>
+          ) : null}
+          <Button className="w-full" onClick={() => void handlePayNow()} disabled={submitting || !invoice || !validPaymentAmount}>
+            {submitting ? t('payment.submitting') : t('payment.payNowAmount', { amount: validPaymentAmount ? parsedPaymentAmount.toFixed(2) : '0.00' })}
+          </Button>
+        </section>
       )}
 
       <Button variant="outline" className="w-full" onClick={() => navigate(`/parent/invoices/${invoiceId}${qs}`)}>

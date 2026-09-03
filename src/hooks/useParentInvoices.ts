@@ -28,6 +28,12 @@ interface UseParentInvoicesParams {
   sort: ParentInvoiceSort;
 }
 
+function readLineItems(raw: unknown): Array<{ description?: string }> {
+  if (Array.isArray(raw)) return raw as Array<{ description?: string }>;
+  const items = (raw as { items?: unknown } | null)?.items;
+  return Array.isArray(items) ? (items as Array<{ description?: string }>) : [];
+}
+
 export function useParentInvoices({ parentId, childId, status, sort }: UseParentInvoicesParams) {
   const query = useQuery({
     queryKey: ['parent-invoices', parentId],
@@ -40,7 +46,7 @@ export function useParentInvoices({ parentId, childId, status, sort }: UseParent
       if (error) throw error;
 
       const invoiceIds = ((data ?? []) as { id: string }[]).map((r) => r.id);
-      let eventInvoiceMap = new Map<string, string[]>();
+      const eventInvoiceMap = new Map<string, string[]>();
       const inReviewSet = new Set<string>();
       if (invoiceIds.length > 0) {
         const { data: eiData, error: eiErr } = await supabase
@@ -81,7 +87,7 @@ export function useParentInvoices({ parentId, childId, status, sort }: UseParent
         const now = new Date();
         const overdue = row.status === 'pending' && due.getTime() < now.getTime();
         const overdueDays = overdue ? Math.ceil((now.getTime() - due.getTime()) / 86400000) : 0;
-        const items = Array.isArray(row.line_items_json) ? row.line_items_json : [];
+        const items = readLineItems(row.line_items_json);
         const firstItem = (items[0] as { description?: string } | undefined)?.description;
         return {
           id: row.id,
