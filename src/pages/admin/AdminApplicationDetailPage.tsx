@@ -31,6 +31,20 @@ function parentAccountName(parentUser: Record<string, unknown> | null | undefine
   return readText(parentUser, 'name_en') || readText(parentUser, 'name_ar') || readText(parentUser, 'email');
 }
 
+function SummaryItem({ icon, label, value }: { icon: string; label: string; value: string }) {
+  return (
+    <div className="flex min-w-0 items-start gap-3 px-4 py-3">
+      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+        <MaterialSymbol name={icon} size="text-lg" />
+      </span>
+      <div className="min-w-0">
+        <p className="text-[11px] font-semibold uppercase text-on-surface-variant">{label}</p>
+        <p className="mt-0.5 truncate text-sm font-medium text-on-surface">{value}</p>
+      </div>
+    </div>
+  );
+}
+
 export function AdminApplicationDetailPage() {
   const { t } = useTranslation();
   const { id } = useParams();
@@ -129,24 +143,34 @@ export function AdminApplicationDetailPage() {
   };
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
-        <div className="min-w-0">
-          <h1 className="text-lg font-semibold text-on-surface">{t('applications.detailTitle')}</h1>
-          <p className="mt-1 text-xs text-on-surface-variant">
-            {applicantChildName(child)}
-          </p>
-          <p className="mt-1 text-xs text-on-surface-variant">
-            {t('applications.parentAccount')}: {accountName || t('applications.noParentAccount')}
-          </p>
-          <p className="mt-1 text-xs text-on-surface-variant">
-            {t('applications.parentUsername')}: {accountUsername || '-'}
-          </p>
+    <div className="space-y-5">
+      <header className="overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-4 px-4 py-5 sm:px-5">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase text-primary">{t('applications.detailTitle')}</p>
+            <h1 className="mt-1 truncate text-2xl font-semibold text-on-surface">{applicantChildName(child)}</h1>
+          </div>
+          <div className="flex items-center gap-2 rounded-md border border-primary/20 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary">
+            <MaterialSymbol name="fact_check" size="text-base" />
+            <span>{statusLabel}</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-          <MaterialSymbol name="fact_check" size="text-base" />
-          <span>{statusLabel}</span>
+        <div className="grid divide-y divide-outline-variant/70 bg-surface/50 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          <SummaryItem
+            icon="account_circle"
+            label={t('applications.parentAccount')}
+            value={accountName || t('applications.noParentAccount')}
+          />
+          <SummaryItem
+            icon="alternate_email"
+            label={t('applications.parentUsername')}
+            value={accountUsername || '-'}
+          />
+          <SummaryItem
+            icon="badge"
+            label="Application ID"
+            value={id}
+          />
         </div>
       </header>
 
@@ -161,82 +185,92 @@ export function AdminApplicationDetailPage() {
         linkBase="/admin/invoices"
       />
 
-      {/* Documents section (retained) */}
-      <section className="space-y-2 rounded-xl border border-outline-variant bg-surface-container-lowest p-3">
-        <h2 className="text-sm font-semibold text-on-surface">{t('applications.documents')}</h2>
+      <section className="space-y-3 rounded-xl border border-outline-variant bg-surface-container-lowest p-4 shadow-sm">
+        <div className="flex items-center gap-2">
+          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <MaterialSymbol name="folder_open" size="text-lg" />
+          </span>
+          <h2 className="text-sm font-semibold text-on-surface">{t('applications.documents')}</h2>
+        </div>
         {data.documents.length === 0 && (
           <p className="text-sm italic text-on-surface-variant/60">{t('applications.noDocuments')}</p>
         )}
-        {data.documents.map((doc) => {
-          const verified = Boolean(doc.verified);
-          return (
-            <ApplicationDocumentPreview
-              key={String(doc.id)}
-              document={doc}
-              actions={(
-                <>
-                <Button size="sm" variant="outline" onClick={() => setSelectedDoc(doc)}>{t('applications.reviewDoc')}</Button>
-                <Button
-                  size="sm"
-                  onClick={() => void apps.verifyDocument({
-                    documentId: String(doc.id),
-                    verified: !verified,
-                    notes: String(doc.notes ?? ''),
-                    reviewerId: user?.id,
-                  }).then(() => toast.success(t('applications.updated')))}
-                >
-                  {verified ? t('applications.markUnverified') : t('applications.markVerified')}
-                </Button>
-                </>
-              )}
-            />
-          );
-        })}
+        <div className="space-y-2">
+          {data.documents.map((doc) => {
+            const verified = Boolean(doc.verified);
+            return (
+              <ApplicationDocumentPreview
+                key={String(doc.id)}
+                document={doc}
+                actions={(
+                  <>
+                    <Button size="sm" variant="outline" onClick={() => setSelectedDoc(doc)}>{t('applications.reviewDoc')}</Button>
+                    <Button
+                      size="sm"
+                      onClick={() => void apps.verifyDocument({
+                        documentId: String(doc.id),
+                        verified: !verified,
+                        notes: String(doc.notes ?? ''),
+                        reviewerId: user?.id,
+                      }).then(() => toast.success(t('applications.updated')))}
+                    >
+                      {verified ? t('applications.markUnverified') : t('applications.markVerified')}
+                    </Button>
+                  </>
+                )}
+              />
+            );
+          })}
+        </div>
       </section>
 
-      {/* Actions */}
-      <section className="space-y-3 rounded-xl border border-outline-variant bg-surface-container-lowest p-3">
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => void apps.updateApplicationStatus({ id, status: 'under_review', reviewedBy: user?.id, parentEmail: String(parentEmail), nurseryId: activeNurseryId ?? undefined })}>
+      <section className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2 border-b border-outline-variant pb-3">
+          <Button className="gap-2" variant="outline" onClick={() => void apps.updateApplicationStatus({ id, status: 'under_review', reviewedBy: user?.id, parentEmail: String(parentEmail), nurseryId: activeNurseryId ?? undefined })}>
+            <MaterialSymbol name="rate_review" size="text-base" />
             {t('applications.startReview')}
           </Button>
-          <Button variant="outline" onClick={() => void handleRequestDocuments()}>
+          <Button className="gap-2" variant="outline" onClick={() => void handleRequestDocuments()}>
+            <MaterialSymbol name="upload_file" size="text-base" />
             {t('applications.requestMoreDocs')}
           </Button>
-          <Button onClick={() => void handleApprove()} disabled={!canApprove}>
+          <Button className="gap-2" onClick={() => void handleApprove()} disabled={!canApprove}>
+            <MaterialSymbol name="check_circle" size="text-base" />
             {t('applications.approve')}
           </Button>
+        </div>
+        <div className="flex flex-col gap-2 py-3 text-xs text-on-surface-variant">
           {!canReviewApprove ? (
-            <p className="self-center text-xs text-on-surface-variant">
+            <p>
               {t('applications.approvePendingOnlyHint', {
                 defaultValue: 'Approve is enabled only for applications that are pending review.',
               })}
             </p>
           ) : null}
           {canReviewApprove && !hasConfirmedApplicationPayment ? (
-            <p className="self-center text-xs text-on-surface-variant">
+            <p>
               {t('applications.approveNeedsPaymentHint', {
                 defaultValue: 'Approve is enabled after finance confirms at least one package payment.',
               })}
             </p>
           ) : null}
           {!allRequiredVerified ? (
-            <p className="self-center text-xs text-on-surface-variant">
-              {t('applications.approveWithoutDocsHint')}
-            </p>
+            <p>{t('applications.approveWithoutDocsHint')}</p>
           ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
           <input
-            className="h-10 flex-1 rounded-lg border border-outline-variant px-3 text-sm"
+            className="h-11 min-w-[240px] flex-1 rounded-md border border-outline-variant bg-surface px-3 text-sm text-on-surface transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             placeholder={t('applications.parentMessage')}
             value={reviewMessage}
             onChange={(e) => setReviewMessage(e.target.value)}
           />
           <Button
             variant="outline"
+            className="gap-2 border-error/40 text-error hover:bg-error/10"
             onClick={() => void handleReject()}
           >
+            <MaterialSymbol name="cancel" size="text-base" />
             {t('applications.reject')}
           </Button>
         </div>

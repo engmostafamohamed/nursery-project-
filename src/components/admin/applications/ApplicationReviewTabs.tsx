@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
@@ -7,6 +7,7 @@ import {
   MEDICATION_CONSENT_OPTIONS,
   type MedicationConsentId,
 } from '@/lib/admissions/medicationConsentOptions';
+import { cn } from '@/lib/utils';
 
 type AnyJson = Record<string, unknown>;
 
@@ -48,32 +49,62 @@ function formatYesNo(t: (k: string) => string, v: boolean | null): string | null
   return v ? t('common.yes') : t('common.no');
 }
 
-function Row({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
+function Row({ label, value, mono }: { label: string; value: ReactNode; mono?: boolean }) {
   return (
-    <div className="flex min-w-0 flex-col">
-      <dt className="text-xs uppercase tracking-wide text-on-surface-variant">{label}</dt>
+    <div className="min-w-0 border-b border-outline-variant/60 py-3 last:border-b-0">
+      <dt className="text-[11px] font-semibold uppercase text-on-surface-variant">{label}</dt>
       <dd
         className={
           value
-            ? `text-sm ${mono ? 'font-mono text-xs' : ''} text-on-surface break-words`
-            : 'text-sm italic text-on-surface-variant/60'
+            ? `mt-1 break-words text-sm leading-6 text-on-surface ${mono ? 'font-mono text-xs' : ''}`
+            : 'mt-1 text-sm italic text-on-surface-variant/60'
         }
       >
-        {value || '—'}
+        {value || '-'}
       </dd>
     </div>
   );
 }
 
-function Section({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
+function FieldGrid({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <section className="space-y-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
-      <div className="flex items-center gap-2">
-        <MaterialSymbol name={icon} className="text-primary" />
+    <dl className={cn('grid gap-x-8 sm:grid-cols-2', className)}>
+      {children}
+    </dl>
+  );
+}
+
+function Section({ title, icon, children }: { title: string; icon: string; children: ReactNode }) {
+  return (
+    <section className="border-t border-outline-variant/70 px-4 py-5 first:border-t-0 sm:px-5">
+      <div className="mb-3 flex items-center gap-2">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+          <MaterialSymbol name={icon} size="text-lg" />
+        </span>
         <h4 className="text-sm font-semibold text-on-surface">{title}</h4>
       </div>
       {children}
     </section>
+  );
+}
+
+function ReviewTab({ value, icon, children }: { value: string; icon: string; children: ReactNode }) {
+  return (
+    <TabsTrigger
+      value={value}
+      className="h-9 shrink-0 gap-2 rounded-md px-3 text-xs data-[state=active]:shadow-none"
+    >
+      <MaterialSymbol name={icon} size="text-base" />
+      <span>{children}</span>
+    </TabsTrigger>
+  );
+}
+
+function ReviewPanel({ value, children }: { value: string; children: ReactNode }) {
+  return (
+    <TabsContent value={value} className="pt-0">
+      {children}
+    </TabsContent>
   );
 }
 
@@ -86,7 +117,7 @@ export function ApplicationReviewTabs({ parentInfo, childInfo }: Props) {
   const family = readObject(parentInfo, 'family');
   const pickups = readArray<AnyJson>(parentInfo, 'pickups');
 
-  const dailyCare = readObject(childInfo, 'daily_care_preferences') ?? {};
+  const dailyCare = useMemo(() => readObject(childInfo, 'daily_care_preferences') ?? {}, [childInfo]);
   const emergencyContacts = readArray<AnyJson>(childInfo, 'emergency_contacts');
   const enrollmentConsents = readObject(parentInfo, 'consents');
 
@@ -106,93 +137,96 @@ export function ApplicationReviewTabs({ parentInfo, childInfo }: Props) {
     .join(' ') || readString(childInfo, 'full_name_en') || readString(childInfo, 'full_name_ar');
 
   return (
-    <Tabs defaultValue="child">
-      <TabsList className="flex h-auto flex-wrap gap-1">
-        <TabsTrigger value="child">{t('admin.applications.tabs.child')}</TabsTrigger>
-        <TabsTrigger value="parents">{t('admin.applications.tabs.parents')}</TabsTrigger>
-        <TabsTrigger value="family">{t('admin.applications.tabs.family')}</TabsTrigger>
-        <TabsTrigger value="enrollment">{t('admin.applications.tabs.enrollment')}</TabsTrigger>
-        <TabsTrigger value="health">{t('admin.applications.tabs.health')}</TabsTrigger>
-        <TabsTrigger value="dailyCare">{t('admin.applications.tabs.dailyCare')}</TabsTrigger>
-        <TabsTrigger value="emergency">{t('admin.applications.tabs.emergency')}</TabsTrigger>
-        <TabsTrigger value="pickups">{t('admin.applications.tabs.pickups')}</TabsTrigger>
-        <TabsTrigger value="medication">{t('admin.applications.tabs.medication')}</TabsTrigger>
-        <TabsTrigger value="consents">{t('admin.applications.tabs.consents')}</TabsTrigger>
+    <Tabs
+      defaultValue="child"
+      className="overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest shadow-sm"
+    >
+      <TabsList className="flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-none border-b border-outline-variant bg-transparent p-2">
+        <ReviewTab value="child" icon="child_care">{t('admin.applications.tabs.child')}</ReviewTab>
+        <ReviewTab value="parents" icon="supervisor_account">{t('admin.applications.tabs.parents')}</ReviewTab>
+        <ReviewTab value="family" icon="home">{t('admin.applications.tabs.family')}</ReviewTab>
+        <ReviewTab value="enrollment" icon="school">{t('admin.applications.tabs.enrollment')}</ReviewTab>
+        <ReviewTab value="health" icon="health_and_safety">{t('admin.applications.tabs.health')}</ReviewTab>
+        <ReviewTab value="dailyCare" icon="restaurant">{t('admin.applications.tabs.dailyCare')}</ReviewTab>
+        <ReviewTab value="emergency" icon="emergency">{t('admin.applications.tabs.emergency')}</ReviewTab>
+        <ReviewTab value="pickups" icon="directions_car">{t('admin.applications.tabs.pickups')}</ReviewTab>
+        <ReviewTab value="medication" icon="medication">{t('admin.applications.tabs.medication')}</ReviewTab>
+        <ReviewTab value="consents" icon="verified">{t('admin.applications.tabs.consents')}</ReviewTab>
       </TabsList>
 
-      <TabsContent value="child">
+      <ReviewPanel value="child">
         <Section title={t('admin.applications.tabs.child')} icon="child_care">
-          <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+          <FieldGrid>
             <Row label={t('signup.childFirstName')} value={childFullName} />
             <Row label={t('signup.childNickname')} value={readString(childInfo, 'nickname')} />
             <Row label={t('signup.childDob')} value={readString(childInfo, 'dob')} />
             <Row label={t('signup.childNationality')} value={readString(childInfo, 'nationality')} />
             <Row label={t('signup.childGender')} value={readString(childInfo, 'gender')} />
             <Row label={t('signup.address')} value={readString(childInfo, 'home_address')} />
-          </dl>
+          </FieldGrid>
         </Section>
-      </TabsContent>
+      </ReviewPanel>
 
-      <TabsContent value="parents">
-        <div className="grid gap-4 lg:grid-cols-2">
+      <ReviewPanel value="parents">
+        <div className="grid lg:grid-cols-2 lg:divide-x lg:divide-outline-variant/70">
           <Section title={t('signup.fatherInfo')} icon="man">
-            <dl className="space-y-3">
+            <FieldGrid className="sm:grid-cols-1">
               <Row label={t('signup.fatherFullName')} value={readString(father, 'full_name')} />
               <Row label={t('signup.fatherJob')} value={readString(father, 'job')} />
               <Row label={t('signup.fatherMobile')} value={readString(father, 'mobile')} mono />
               <Row label={t('signup.fatherEmail')} value={readString(father, 'email')} mono />
               <Row label={t('signup.fatherIdPhoto')} value={readString(father, 'id_photo_path')} mono />
-            </dl>
+            </FieldGrid>
           </Section>
           <Section title={t('signup.motherInfo')} icon="woman">
-            <dl className="space-y-3">
+            <FieldGrid className="sm:grid-cols-1">
               <Row label={t('signup.motherFullName')} value={readString(mother, 'full_name')} />
               <Row label={t('signup.motherJob')} value={readString(mother, 'job')} />
               <Row label={t('signup.motherMobile')} value={readString(mother, 'mobile')} mono />
               <Row label={t('signup.motherEmail')} value={readString(mother, 'email')} mono />
               <Row label={t('signup.motherIdPhoto')} value={readString(mother, 'id_photo_path')} mono />
-            </dl>
+            </FieldGrid>
           </Section>
         </div>
-      </TabsContent>
+      </ReviewPanel>
 
-      <TabsContent value="family">
+      <ReviewPanel value="family">
         <Section title={t('admin.applications.tabs.family')} icon="home">
-          <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+          <FieldGrid>
             <Row label={t('signup.maritalStatus')} value={readString(family, 'marital_status')} />
             <Row label={t('signup.address')} value={readString(family, 'address')} />
             <Row label={t('signup.hasSiblings')} value={formatYesNo(t, readBool(childInfo, 'has_siblings'))} />
             <Row label={t('signup.siblingAges')} value={readString(childInfo, 'sibling_ages')} />
             <Row label={t('signup.passwordRecoveryContact')} value={readString(family, 'password_recovery_contact')} />
             <Row label={t('signup.referralSource')} value={readString(family, 'referral_source')} />
-          </dl>
+          </FieldGrid>
         </Section>
-      </TabsContent>
+      </ReviewPanel>
 
-      <TabsContent value="enrollment">
+      <ReviewPanel value="enrollment">
         <Section title={t('admin.applications.tabs.enrollment')} icon="school">
-          <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+          <FieldGrid>
             <Row label={t('signup.department')} value={readString(childInfo, 'department')} />
             <Row label={t('signup.schoolPreference')} value={readString(childInfo, 'school_preference')} />
             <Row label={t('signup.schoolAdmissionsPlan')} value={readString(childInfo, 'school_admissions_plan')} />
             <Row label={t('signup.academicYear')} value={readString(childInfo, 'academic_year')} />
-          </dl>
+          </FieldGrid>
         </Section>
-      </TabsContent>
+      </ReviewPanel>
 
-      <TabsContent value="health">
+      <ReviewPanel value="health">
         <Section title={t('admin.applications.tabs.health')} icon="health_and_safety">
-          <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+          <FieldGrid>
             <Row label={t('signup.birthCertificate')} value={readString(childInfo, 'birth_certificate_path')} mono />
             <Row label={t('signup.vaccinationCard')} value={readString(childInfo, 'vaccination_card_path')} mono />
-          </dl>
+          </FieldGrid>
         </Section>
-      </TabsContent>
+      </ReviewPanel>
 
-      <TabsContent value="dailyCare">
-        <div className="grid gap-4 lg:grid-cols-2">
+      <ReviewPanel value="dailyCare">
+        <div className="grid lg:grid-cols-2 lg:divide-x lg:divide-outline-variant/70">
           <Section title={t('signup.mealsSection')} icon="restaurant">
-            <dl className="space-y-3">
+            <FieldGrid className="sm:grid-cols-1">
               <Row label={t('signup.arrivalTime')} value={readString(dailyCare, 'arrival_time')} />
               <Row label={t('signup.takesBreakfastAtHome')} value={formatYesNo(t, readBool(dailyCare, 'takes_breakfast_at_home'))} />
               <Row label={t('signup.eatsNurseryMeals')} value={formatYesNo(t, readBool(dailyCare, 'eats_nursery_meals'))} />
@@ -205,72 +239,72 @@ export function ApplicationReviewTabs({ parentInfo, childInfo }: Props) {
               <Row label={t('signup.timeBetweenMeals')} value={readString(dailyCare, 'time_between_meals')} />
               <Row label={t('signup.waterPreference')} value={readString(dailyCare, 'water_preference')} />
               <Row label={t('signup.extraMealPreference')} value={readString(dailyCare, 'extra_meal_preference')} />
-            </dl>
+            </FieldGrid>
           </Section>
 
-          <div className="space-y-4">
+          <div>
             <Section title={t('signup.diaperSection')} icon="baby_changing_station">
-              <dl className="space-y-3">
+              <FieldGrid className="sm:grid-cols-1">
                 <Row label={t('signup.diaperSupplyMethod')} value={readString(dailyCare, 'diaper_supply_method')} />
                 <Row label={t('signup.dailyDiaperCount')} value={readString(dailyCare, 'daily_diaper_count')} />
                 <Row label={t('signup.rashCreamUsage')} value={readString(dailyCare, 'rash_cream_usage')} />
                 <Row label={t('signup.diaperChangeSchedule')} value={readString(dailyCare, 'diaper_change_schedule')} />
                 <Row label={t('signup.diaperChangeFrequency')} value={readString(dailyCare, 'diaper_change_frequency')} />
                 <Row label={t('signup.toiletTrainingStatus')} value={readString(dailyCare, 'toilet_training_status')} />
-              </dl>
+              </FieldGrid>
             </Section>
             <Section title={t('signup.napSection')} icon="bedtime">
-              <dl className="space-y-3">
+              <FieldGrid className="sm:grid-cols-1">
                 <Row label={t('signup.napTimePreference')} value={readString(dailyCare, 'nap_time_preference')} />
                 <Row label={t('signup.maxNapTime')} value={readString(dailyCare, 'max_nap_time')} />
-              </dl>
+              </FieldGrid>
             </Section>
             <Section title={t('signup.childBehaviorHealthNotes')} icon="psychology">
-              <dl className="space-y-3">
+              <FieldGrid className="sm:grid-cols-1">
                 <Row label={t('signup.childBehaviorHealthNotes')} value={readString(dailyCare, 'child_behavior_health_notes')} />
-              </dl>
+              </FieldGrid>
             </Section>
           </div>
         </div>
-      </TabsContent>
+      </ReviewPanel>
 
-      <TabsContent value="emergency">
-        <div className="grid gap-4 lg:grid-cols-2">
+      <ReviewPanel value="emergency">
+        <div className="grid lg:grid-cols-2 lg:divide-x lg:divide-outline-variant/70">
           {emergencyContacts.length === 0 && (
-            <p className="text-sm text-on-surface-variant">{t('admin.applications.noEmergencyContacts')}</p>
+            <p className="px-5 py-6 text-sm text-on-surface-variant">{t('admin.applications.noEmergencyContacts')}</p>
           )}
           {emergencyContacts.map((ec, idx) => (
             <Section key={idx} title={`${t('signup.emergencyContact')} ${idx + 1}`} icon="emergency">
-              <dl className="space-y-3">
+              <FieldGrid className="sm:grid-cols-1">
                 <Row label={t('signup.contactName')} value={readString(ec, 'name')} />
                 <Row label={t('signup.contactPhone')} value={readString(ec, 'phone')} mono />
                 <Row label={t('signup.contactRelationship')} value={readString(ec, 'relationship')} />
-              </dl>
+              </FieldGrid>
             </Section>
           ))}
         </div>
-      </TabsContent>
+      </ReviewPanel>
 
-      <TabsContent value="pickups">
-        <div className="grid gap-4 lg:grid-cols-2">
+      <ReviewPanel value="pickups">
+        <div className="grid lg:grid-cols-2 lg:divide-x lg:divide-outline-variant/70">
           {pickups.length === 0 && (
-            <p className="text-sm text-on-surface-variant">{t('admin.applications.noPickups')}</p>
+            <p className="px-5 py-6 text-sm text-on-surface-variant">{t('admin.applications.noPickups')}</p>
           )}
           {pickups.map((p, idx) => (
             <Section key={idx} title={`${t('signup.pickupPerson')} ${idx + 1}`} icon="directions_car">
-              <dl className="space-y-3">
+              <FieldGrid className="sm:grid-cols-1">
                 <Row label={t('signup.pickupName')} value={readString(p, 'name')} />
                 <Row label={t('signup.pickupPhone')} value={readString(p, 'phone')} mono />
                 <Row label={t('signup.pickupRelation')} value={readString(p, 'relation')} />
                 <Row label={t('signup.pickupAuthorization')} value={readString(p, 'authorization')} />
                 <Row label={t('signup.pickupPhoto')} value={readString(p, 'photo_path')} mono />
-              </dl>
+              </FieldGrid>
             </Section>
           ))}
         </div>
-      </TabsContent>
+      </ReviewPanel>
 
-      <TabsContent value="medication">
+      <ReviewPanel value="medication">
         <Section title={t('admin.applications.tabs.medication')} icon="medication">
           {medicationIds.length === 0 ? (
             <p className="text-sm italic text-on-surface-variant/60">{t('signup.review.medicationNone')}</p>
@@ -281,7 +315,7 @@ export function ApplicationReviewTabs({ parentInfo, childInfo }: Props) {
                 return (
                   <li
                     key={opt.id}
-                    className={`flex items-center gap-3 rounded-xl border px-3 py-2 text-sm ${
+                    className={`flex items-center gap-3 rounded-md border px-3 py-2 text-sm ${
                       approved
                         ? 'border-primary/50 bg-primary/5 text-on-surface'
                         : 'border-outline-variant text-on-surface-variant/80'
@@ -298,11 +332,11 @@ export function ApplicationReviewTabs({ parentInfo, childInfo }: Props) {
             </ul>
           )}
         </Section>
-      </TabsContent>
+      </ReviewPanel>
 
-      <TabsContent value="consents">
+      <ReviewPanel value="consents">
         <Section title={t('admin.applications.tabs.consents')} icon="verified">
-          <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+          <FieldGrid>
             <Row
               label={t('signup.agreeHealthPolicyShort')}
               value={formatYesNo(t, readBool(enrollmentConsents, 'health_policy'))}
@@ -319,9 +353,9 @@ export function ApplicationReviewTabs({ parentInfo, childInfo }: Props) {
               label={t('signup.agreeInfoAccuracyShort')}
               value={formatYesNo(t, readBool(enrollmentConsents, 'info_accuracy'))}
             />
-          </dl>
+          </FieldGrid>
         </Section>
-      </TabsContent>
+      </ReviewPanel>
     </Tabs>
   );
 }

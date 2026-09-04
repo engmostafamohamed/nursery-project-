@@ -13,13 +13,13 @@ export function ParentDashboardQuickActions() {
   const { t } = useTranslation();
 
   return (
-    <section className="rounded-3xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm">
-      <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <section className="max-h-[280px] overflow-y-auto rounded-xl border border-outline-variant bg-surface-container-lowest p-4 shadow-sm lg:max-h-[360px]">
+      <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1">
         {ACTIONS.map((a) => (
           <li key={a.to}>
             <Link
               to={a.to}
-              className="flex items-center gap-3 rounded-2xl border border-outline-variant bg-surface text-foreground px-4 py-3 transition-colors hover:border-primary hover:bg-primary-container/20"
+              className="flex items-center gap-3 rounded-lg border border-outline-variant bg-surface px-4 py-3 text-foreground transition-colors hover:border-primary hover:bg-primary-container/20"
             >
               <span className="material-symbols-outlined shrink-0 text-2xl text-primary" aria-hidden>
                 {a.icon}

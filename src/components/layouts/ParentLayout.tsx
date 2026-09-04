@@ -11,6 +11,7 @@ import { BackButton } from '@/components/shared/BackButton';
 import { OfflineIndicator } from '@/components/shared/OfflineIndicator';
 import { PWAInstallPrompt } from '@/components/shared/PWAInstallPrompt';
 import { UserMenu } from '@/components/shared/UserMenu';
+import { ThemeSwitcher } from '@/components/theme-switcher';
 import { Button } from '@/components/ui/button';
 import { ChatWidget } from '@/components/chat/ChatWidget';
 import { useAuthSession } from '@/hooks/useAuthSession';
@@ -187,17 +188,17 @@ export function ParentLayout() {
       </aside>
 
       <OfflineIndicator />
-      <header className="sticky top-0 z-30 border-b border-outline-variant bg-surface/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 lg:max-w-none lg:px-8">
-          <div className="flex items-center gap-2">
+      <header className="sticky top-0 z-30 border-b border-outline-variant bg-surface/90 shadow-sm backdrop-blur-xl">
+        <div className="mx-auto flex max-w-4xl items-center justify-between gap-2 px-3 py-3 sm:px-4 lg:max-w-none lg:px-8">
+          <div className="flex min-w-0 items-center gap-2">
             <BackButton />
             <UserMenu profilePath="/parent/profile" profileLabel={t('parent.nav.profile')} />
-            <div>
-              <p className="text-sm font-semibold text-on-surface">{parentDisplayName}</p>
+            <div className="hidden min-w-0 sm:block">
+              <p className="truncate text-sm font-semibold text-on-surface">{parentDisplayName}</p>
               <p className="text-xs text-on-surface-variant">{t('parent.atNursery')}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             {isHelpPanelEnabled() ? (
               <button
                 type="button"
@@ -232,7 +233,8 @@ export function ParentLayout() {
                 settings
               </span>
             </Link>
-            <LanguageToggle />
+            <ThemeSwitcher className="h-10 w-10" />
+            <LanguageToggle className="h-10 w-10 px-0 sm:w-auto sm:px-3" />
           </div>
         </div>
       </header>

@@ -12,6 +12,18 @@ type Props = {
   isLoading: boolean;
   totalOutstanding?: number;
   upcomingEventsCount?: number;
+  childInsights?: Record<
+    string,
+    {
+      outstanding: number;
+      latestInvoiceNumber?: string;
+      latestInvoiceStatus?: string;
+      absentDays: number;
+      attendanceRate: number;
+      attendanceCalendar: Array<{ date: string; status: 'present' | 'absent' | 'off' }>;
+      relatedUpdate?: { label: string; to: string };
+    }
+  >;
 };
 
 function formatClock(iso: string | null, locale: string): string {
@@ -30,6 +42,7 @@ export function ParentChildSummaryCards({
   isLoading,
   totalOutstanding,
   upcomingEventsCount,
+  childInsights = {},
 }: Props) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
@@ -56,7 +69,7 @@ export function ParentChildSummaryCards({
   return (
     <div className="space-y-3">
       {rows.length > 1 ? (
-        <div className="flex flex-wrap gap-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-3">
+        <div className="flex flex-wrap gap-3 rounded-2xl border border-outline-variant bg-surface p-3 shadow-sm">
           <div className="flex items-center gap-2 text-sm text-on-surface-variant">
             <span className="material-symbols-outlined text-lg text-primary" aria-hidden>check_circle</span>
             {t('parent.dashboard.totals.checkedIn', { count: checkedInCount, total: rows.length })}
@@ -75,11 +88,13 @@ export function ParentChildSummaryCards({
           ) : null}
         </div>
       ) : null}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 2xl:grid-cols-2">
       {rows.map((c) => {
         const name = locale === 'ar' ? c.nameAr : c.nameEn;
         const initials = getUserInitials(name, '');
         const detailHref = `/parent/child/${c.id}/qr`;
+        const insight = childInsights[c.id];
+        const hasOutstanding = (insight?.outstanding ?? 0) > 0;
 
         let attendanceText = t('parent.dashboard.child.attendanceAbsent');
         if (c.attendanceLabel === 'checked_in') {
@@ -99,10 +114,9 @@ export function ParentChildSummaryCards({
           : t('parent.dashboard.child.noMeals');
 
         return (
-          <Link
+          <div
             key={c.id}
-            to={detailHref}
-            className="block rounded-3xl border border-outline-variant bg-surface-container-lowest p-4 shadow-sm transition-colors hover:border-primary"
+            className="rounded-2xl border border-outline-variant bg-surface p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
           >
             <div className="flex gap-3">
               <Avatar className="h-14 w-14 shrink-0 border border-outline-variant">
@@ -110,25 +124,85 @@ export function ParentChildSummaryCards({
                 <AvatarFallback className="text-sm">{initials}</AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-base font-semibold text-on-surface">{name}</p>
-                <p className="mt-1 text-xs text-on-surface-variant">{attendanceText}</p>
-                <p className="mt-2 line-clamp-2 text-xs text-on-surface-variant">{moodLine}</p>
-                <p className="line-clamp-2 text-xs text-on-surface-variant">{mealsLine}</p>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  {unreadTotal > 0 ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-primary-container px-2 py-0.5 text-[11px] font-medium text-primary">
-                      <span className="material-symbols-outlined text-[14px]" aria-hidden>
-                        notifications
-                      </span>
-                      {t('parent.dashboard.child.unreadBadge', { count: unreadTotal })}
-                    </span>
-                  ) : (
-                    <span className="text-[11px] text-on-surface-variant">{t('parent.dashboard.child.noUnread')}</span>
-                  )}
+                <div className="flex items-start justify-between gap-3">
+                  <Link to={detailHref} className="min-w-0 hover:text-primary">
+                    <p className="truncate text-base font-semibold text-on-surface">{name}</p>
+                  </Link>
+                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                    hasOutstanding ? 'bg-error/10 text-error' : 'bg-success/10 text-success'
+                  }`}>
+                    {hasOutstanding ? 'Payment due' : 'Paid'}
+                  </span>
                 </div>
+                <p className="mt-1 text-xs text-on-surface-variant">{attendanceText}</p>
               </div>
             </div>
-          </Link>
+
+            <div className="mt-4 grid gap-2 sm:grid-cols-3">
+              <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3">
+                <p className="text-[11px] font-semibold uppercase text-on-surface-variant">Absent</p>
+                <p className="mt-1 text-lg font-bold text-on-surface">{insight?.absentDays ?? 0}</p>
+              </div>
+              <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3">
+                <p className="text-[11px] font-semibold uppercase text-on-surface-variant">Attendance</p>
+                <p className="mt-1 text-lg font-bold text-on-surface">{insight?.attendanceRate ?? 0}%</p>
+              </div>
+              <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3">
+                <p className="text-[11px] font-semibold uppercase text-on-surface-variant">Previous pay</p>
+                <p className={`mt-1 truncate text-sm font-bold ${hasOutstanding ? 'text-error' : 'text-success'}`}>
+                  {hasOutstanding ? `EGP ${insight?.outstanding.toFixed(2)}` : 'Clear'}
+                </p>
+              </div>
+            </div>
+
+            {insight?.attendanceCalendar?.length ? (
+              <div className="mt-3 flex flex-wrap gap-1.5" title="Recent attendance calendar">
+                {insight.attendanceCalendar.map((day) => (
+                  <span
+                    key={day.date}
+                    className={`h-3 w-3 rounded-full ${
+                      day.status === 'present'
+                        ? 'bg-success'
+                        : day.status === 'absent'
+                          ? 'bg-error'
+                          : 'bg-outline-variant'
+                    }`}
+                    title={`${day.date}: ${day.status}`}
+                  />
+                ))}
+              </div>
+            ) : null}
+
+            <div className="mt-3 rounded-xl bg-surface-container-lowest p-3">
+              <p className="line-clamp-1 text-xs font-semibold text-on-surface">{moodLine}</p>
+              <p className="line-clamp-1 text-xs text-on-surface-variant">{mealsLine}</p>
+              {insight?.relatedUpdate ? (
+                <Link to={insight.relatedUpdate.to} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-primary">
+                  <span className="material-symbols-outlined text-sm" aria-hidden>notifications</span>
+                  {insight.relatedUpdate.label}
+                </Link>
+              ) : unreadTotal > 0 ? (
+                <Link to="/parent/notifications" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-primary">
+                  <span className="material-symbols-outlined text-sm" aria-hidden>notifications</span>
+                  {t('parent.dashboard.child.unreadBadge', { count: unreadTotal })}
+                </Link>
+              ) : (
+                <p className="mt-2 text-[11px] text-on-surface-variant">{t('parent.dashboard.child.noUnread')}</p>
+              )}
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Link to={`/parent/attendance?child=${c.id}`} className="rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
+                Attendance
+              </Link>
+              <Link to={`/parent/invoices?child=${c.id}`} className="rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
+                Payments
+              </Link>
+              <Link to="/parent/messages" className="rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
+                Message nursery
+              </Link>
+            </div>
+          </div>
         );
       })}
       </div>

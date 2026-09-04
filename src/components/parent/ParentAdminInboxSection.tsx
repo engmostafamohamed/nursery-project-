@@ -101,7 +101,7 @@ export function ParentAdminInboxSection() {
   }
 
   return (
-    <section className="space-y-3">
+    <section className="space-y-3 rounded-xl border border-outline-variant bg-surface p-4 shadow-sm md:col-span-2 xl:col-span-1">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-base font-semibold text-on-surface">
           {t('parent.dashboard.adminInbox.title')}
@@ -122,9 +122,9 @@ export function ParentAdminInboxSection() {
             <Link
               key={n.id}
               to={resolveParentNotificationPath(n.type, n.action_link)}
-              className="group flex items-start gap-3 rounded-2xl border border-error/30 bg-surface-container-lowest p-4 shadow-sm transition-colors hover:border-error/50 hover:bg-error/5"
+              className="group flex items-start gap-3 rounded-lg border border-error/30 bg-surface-container-lowest p-4 shadow-sm transition-colors hover:border-error/50 hover:bg-error/5"
             >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-error/10 text-error">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-error/10 text-error">
                 <span className="material-symbols-outlined text-xl" aria-hidden>
                   {parentNotificationMaterialIcon(n.type)}
                 </span>
@@ -169,7 +169,7 @@ export function ParentAdminInboxSection() {
             <Link
               key={String(s.id)}
               to="/parent/surveys"
-              className={`flex items-start gap-3 rounded-2xl border p-4 transition-colors ${
+              className={`flex items-start gap-3 rounded-lg border p-4 transition-colors ${
                 urgent
                   ? 'border-error/60 bg-error/5 ring-1 ring-error/40 hover:bg-error/10'
                   : 'border-outline-variant bg-surface-container-lowest hover:bg-surface-container-low'
@@ -215,7 +215,7 @@ export function ParentAdminInboxSection() {
             <Link
               key={String(s.id)}
               to="/parent/surveys"
-              className="flex items-start gap-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 transition-colors hover:bg-surface-container-low"
+              className="flex items-start gap-3 rounded-lg border border-outline-variant bg-surface-container-lowest p-4 transition-colors hover:bg-surface-container-low"
             >
               <span
                 className="material-symbols-outlined mt-0.5 shrink-0 text-xl text-primary"

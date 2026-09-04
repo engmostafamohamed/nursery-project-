@@ -178,10 +178,10 @@ export function ParentPasswordResetCard({ profile }: { profile: UserRow | null |
   };
 
   return (
-    <section className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-5">
+    <section className="rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
       <div className="flex flex-col gap-4">
         <div className="flex min-w-0 gap-3">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-secondary-container text-secondary">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
             <MaterialSymbol name="lock_reset" size="text-2xl" />
           </span>
           <div className="min-w-0">
@@ -189,7 +189,7 @@ export function ParentPasswordResetCard({ profile }: { profile: UserRow | null |
             <p className="mt-1 max-w-prose text-sm leading-5 text-on-surface-variant">{t('parent.dashboard.passwordReset.subtitle')}</p>
           </div>
         </div>
-        <Button type="button" variant="outline" className="w-full justify-center sm:w-auto" onClick={() => handleOpenChange(true)}>
+        <Button type="button" variant="outline" className="h-10 w-full justify-center rounded-md" onClick={() => handleOpenChange(true)}>
           <MaterialSymbol name="lock_reset" size="text-base" />
           <span>{t('parent.dashboard.passwordReset.open')}</span>
         </Button>

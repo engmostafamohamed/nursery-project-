@@ -32,6 +32,11 @@ function applicantChildName(childInfo: Record<string, unknown>): string {
   return '';
 }
 
+function shortApplicationId(id: unknown): string {
+  const value = typeof id === 'string' ? id.trim() : '';
+  return value ? value.slice(0, 8) : '-';
+}
+
 export function AdminApplicationsPage() {
   const { t } = useTranslation();
   const location = useLocation();
@@ -54,7 +59,12 @@ export function AdminApplicationsPage() {
     if (!q) return true;
     const parent = (r.parent_info_json as Record<string, unknown> | undefined) ?? {};
     const child = (r.child_info_json as Record<string, unknown> | undefined) ?? {};
-    return `${applicantParentName(parent)} ${applicantChildName(child)}`.toLowerCase().includes(q);
+    return [
+      String(r.id ?? ''),
+      shortApplicationId(r.id),
+      applicantParentName(parent),
+      applicantChildName(child),
+    ].join(' ').toLowerCase().includes(q);
   }), [apps.adminApplications, status, search, from, to]);
 
   return (
@@ -84,13 +94,16 @@ export function AdminApplicationsPage() {
       ) : (
         <div className="overflow-x-auto rounded-xl border border-outline-variant bg-surface-container-lowest">
           <table className="w-full min-w-[900px] text-sm">
-            <thead><tr className="bg-surface-container text-on-surface-variant"><th className="px-3 py-2 text-start">{t('applications.parentName')}</th><th className="px-3 py-2 text-start">{t('applications.childName')}</th><th className="px-3 py-2 text-start">{t('applications.submittedAt')}</th><th className="px-3 py-2 text-start">{t('applications.status')}</th><th className="px-3 py-2 text-start">{t('applications.documentsCount')}</th><th className="px-3 py-2 text-start">{t('common.actions')}</th></tr></thead>
+            <thead><tr className="bg-surface-container text-on-surface-variant"><th className="px-3 py-2 text-start">{t('applications.applicationId')}</th><th className="px-3 py-2 text-start">{t('applications.parentName')}</th><th className="px-3 py-2 text-start">{t('applications.childName')}</th><th className="px-3 py-2 text-start">{t('applications.submittedAt')}</th><th className="px-3 py-2 text-start">{t('applications.status')}</th><th className="px-3 py-2 text-start">{t('applications.documentsCount')}</th><th className="px-3 py-2 text-start">{t('common.actions')}</th></tr></thead>
             <tbody>
               {rows.map((r) => {
                 const parent = (r.parent_info_json as Record<string, unknown> | undefined) ?? {};
                 const child = (r.child_info_json as Record<string, unknown> | undefined) ?? {};
                 return (
                   <tr key={String(r.id)} className="border-t border-outline-variant">
+                    <td className="px-3 py-2 font-mono text-xs text-on-surface-variant" title={String(r.id)}>
+                      {shortApplicationId(r.id)}
+                    </td>
                     <td className="px-3 py-2">{applicantParentName(parent) || '-'}</td>
                     <td className="px-3 py-2">{applicantChildName(child) || '-'}</td>
                     <td className="px-3 py-2">{r.submitted_at ? new Date(String(r.submitted_at)).toLocaleDateString() : '-'}</td>

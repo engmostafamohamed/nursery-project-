@@ -144,6 +144,75 @@ export function useApplications(params: { nurseryId?: string; applicationId?: st
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['admin-applications'] }),
   });
 
+  const createParentDraft = useMutation({
+    mutationFn: async (payload: {
+      parentId: string;
+      nurseryId: string;
+      parentProfile?: {
+        name_ar?: string | null;
+        name_en?: string | null;
+        email?: string | null;
+        phone?: string | null;
+      } | null;
+    }) => {
+      const sourceRes = await supabase
+        .from('applications')
+        .select('id, parent_info_json')
+        .eq('parent_id', payload.parentId)
+        .eq('nursery_id', payload.nurseryId)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (sourceRes.error) throw sourceRes.error;
+
+      const source = (sourceRes.data as { id: string; parent_info_json: Record<string, unknown> | null } | null) ?? null;
+      const fallbackParentInfo = {
+        full_name: payload.parentProfile?.name_ar || payload.parentProfile?.name_en || '',
+        email: payload.parentProfile?.email || '',
+        phone: payload.parentProfile?.phone || '',
+      };
+
+      const appRes = await supabase
+        .from('applications')
+        .insert({
+          nursery_id: payload.nurseryId,
+          parent_id: payload.parentId,
+          status: 'draft',
+          parent_info_json: source?.parent_info_json ?? fallbackParentInfo,
+          child_info_json: {},
+          terms_accepted: false,
+        } as never)
+        .select('id')
+        .single();
+      if (appRes.error) throw appRes.error;
+      const applicationId = (appRes.data as { id: string }).id;
+
+      if (source?.id) {
+        const docsRes = await supabase
+          .from('application_documents')
+          .select('document_type, file_url')
+          .eq('application_id', source.id)
+          .in('document_type', ['parent_id', 'proof_of_address']);
+        if (docsRes.error) throw docsRes.error;
+        const docs = ((docsRes.data ?? []) as Array<{ document_type: string; file_url: string }>).map((doc) => ({
+          application_id: applicationId,
+          document_type: doc.document_type,
+          file_url: doc.file_url,
+        }));
+        if (docs.length) {
+          const copyDocsRes = await supabase.from('application_documents').insert(docs as never);
+          if (copyDocsRes.error) throw copyDocsRes.error;
+        }
+      }
+
+      return applicationId;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['parent-applications'] });
+      void qc.invalidateQueries({ queryKey: ['application-detail'] });
+    },
+  });
+
   const saveApplicationDraft = useMutation({
     mutationFn: async (payload: { id: string; updates: Record<string, unknown> }) => {
       const res = await supabase.from('applications').update(payload.updates as never).eq('id', payload.id);
@@ -371,6 +440,7 @@ export function useApplications(params: { nurseryId?: string; applicationId?: st
     isLoading: adminListQuery.isLoading || detailQuery.isLoading || parentApplicationsQuery.isLoading,
     stats,
     createFromInquiry: createFromInquiry.mutateAsync,
+    createParentDraft: createParentDraft.mutateAsync,
     saveApplicationDraft: saveApplicationDraft.mutateAsync,
     submitApplication: submitApplication.mutateAsync,
     uploadDocument: uploadDocument.mutateAsync,

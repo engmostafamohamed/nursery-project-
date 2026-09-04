@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 
 import { ChildSelector, useParentChildren } from '@/components/parent/ChildSelector';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -13,9 +14,10 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 
 export function ParentAttendanceHistoryPage() {
   const { t, i18n } = useTranslation();
+  const [searchParams] = useSearchParams();
   const { user } = useAuthSession();
   const { data: profile } = useUserProfile(user?.id);
-  const [childId, setChildId] = useState('');
+  const [childId, setChildId] = useState(searchParams.get('child') ?? '');
   const locale = i18n.language === 'ar' ? 'ar-EG' : 'en-GB';
   const nurseryId = profile?.nursery_id ?? undefined;
 

@@ -18,7 +18,7 @@ export function LanguageToggle({ className }: { className?: string }) {
       onClick={() => void i18n.changeLanguage(next)}
     >
       <Languages className="h-4 w-4" aria-hidden />
-      <span className="text-sm font-medium">
+      <span className="hidden text-sm font-medium sm:inline">
         {i18n.language === 'ar' ? 'English' : 'العربية'}
       </span>
     </Button>

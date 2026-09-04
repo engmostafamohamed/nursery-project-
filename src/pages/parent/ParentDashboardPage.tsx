@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 import { ChatPanel } from '@/components/chat/ChatPanel';
 import { PaymentHistoryTable } from '@/components/financial/PaymentHistoryTable';
@@ -11,26 +12,30 @@ import { ParentDashboardFeedList } from '@/components/parent/ParentDashboardFeed
 import { ParentDashboardQuickActions } from '@/components/parent/ParentDashboardQuickActions';
 import { ParentDashboardScheduleSection } from '@/components/parent/ParentDashboardScheduleSection';
 import { ParentPasswordResetCard } from '@/components/parent/ParentPasswordResetCard';
+import { Button } from '@/components/ui/button';
+import { useApplicationPackagePayment } from '@/hooks/useApplicationPackagePayment';
+import { useAllChildrenAttendanceSummary } from '@/hooks/useAllChildrenAttendanceSummary';
 import { useApplications } from '@/hooks/useApplications';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useNurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
 import { useParentDashboardChildren } from '@/hooks/useParentDashboardChildren';
-import { useParentDashboardFeed } from '@/hooks/useParentDashboardFeed';
+import { useParentDashboardFeed, type ParentDashboardFeedItem } from '@/hooks/useParentDashboardFeed';
 import { useParentDashboardSchedule } from '@/hooks/useParentDashboardSchedule';
 import { useParentEventPermissions } from '@/hooks/useParentEventPermissions';
 import { useParentInAppNotifications } from '@/hooks/useParentInAppNotifications';
 import { useParentInvoices } from '@/hooks/useParentInvoices';
 import { usePaymentHistory } from '@/hooks/usePaymentHistory';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { cn } from '@/lib/utils';
 
 function SectionHeading({ icon, children }: { icon: string; children: React.ReactNode }) {
   return (
-    <h2 className="flex items-center gap-2 text-base font-semibold text-on-surface">
-      <span className="material-symbols-outlined text-lg text-primary" aria-hidden>
-        {icon}
+    <div className="flex items-center gap-2">
+      <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary" aria-hidden>
+        <span className="material-symbols-outlined text-lg">{icon}</span>
       </span>
-      {children}
-    </h2>
+      <h2 className="text-base font-semibold text-on-surface">{children}</h2>
+    </div>
   );
 }
 
@@ -44,15 +49,15 @@ type DashboardStatCardProps = {
 
 function DashboardStatCard({ icon, label, value, tone, to }: DashboardStatCardProps) {
   const toneClasses = {
-    primary: 'bg-primary/10 text-primary',
-    success: 'bg-success/10 text-success',
-    warning: 'bg-warning/10 text-warning',
-    error: 'bg-error/10 text-error',
+    primary: 'bg-primary text-primary-foreground',
+    success: 'bg-success text-white',
+    warning: 'bg-warning text-white',
+    error: 'bg-error text-white',
   }[tone];
 
   const content = (
     <>
-      <span className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${toneClasses}`}>
+      <span className={cn('flex size-11 shrink-0 items-center justify-center rounded-xl shadow-sm', toneClasses)}>
         <span className="material-symbols-outlined text-xl" aria-hidden>
           {icon}
         </span>
@@ -65,7 +70,7 @@ function DashboardStatCard({ icon, label, value, tone, to }: DashboardStatCardPr
   );
 
   const className =
-    'flex min-h-[88px] items-center gap-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 shadow-sm transition-colors hover:border-primary/50 hover:bg-surface-container';
+    'group flex min-h-[92px] items-center gap-3 rounded-lg border border-outline-variant bg-surface p-4 shadow-sm transition-all hover:border-primary/50 hover:shadow-md';
 
   return to ? (
     <Link to={to} className={className}>
@@ -86,8 +91,140 @@ function applicationChildName(row: Record<string, unknown>) {
   return readText(child, 'full_name_en') || readText(child, 'full_name') || readText(child, 'full_name_ar') || '-';
 }
 
+function admissionStatusUi(status: string) {
+  if (status === 'approved') {
+    return { icon: 'verified', tone: 'success' as const, className: 'bg-success/10 text-success border-success/30' };
+  }
+  if (status === 'rejected') {
+    return { icon: 'cancel', tone: 'error' as const, className: 'bg-error/10 text-error border-error/30' };
+  }
+  if (status === 'documents_pending') {
+    return { icon: 'upload_file', tone: 'warning' as const, className: 'bg-warning/10 text-warning border-warning/30' };
+  }
+  if (status === 'submitted' || status === 'under_review') {
+    return { icon: 'manage_search', tone: 'primary' as const, className: 'bg-primary/10 text-primary border-primary/30' };
+  }
+  return { icon: 'edit_document', tone: 'primary' as const, className: 'bg-primary/10 text-primary border-primary/30' };
+}
+
+function ParentAdmissionCyclePanel({
+  application,
+  isLoading,
+  invoice,
+  packagesCount,
+  onAddChild,
+  t,
+}: {
+  application?: Record<string, unknown>;
+  isLoading: boolean;
+  invoice: ReturnType<typeof useApplicationPackagePayment>['invoice'];
+  packagesCount: number;
+  onAddChild: () => void;
+  t: (key: string, options?: Record<string, unknown>) => string;
+}) {
+  if (isLoading) {
+    return (
+      <section className="rounded-xl border border-outline-variant bg-surface p-5 shadow-sm">
+        <p className="text-sm text-on-surface-variant">{t('common.loading')}</p>
+      </section>
+    );
+  }
+
+  if (!application) {
+    return (
+      <section className="rounded-xl border border-outline-variant bg-surface p-5 shadow-sm">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <SectionHeading icon="assignment_add">
+            {t('parent.dashboard.admissionCycle.title', { defaultValue: 'Admission cycle' })}
+          </SectionHeading>
+          <Button type="button" className="h-11 rounded-md" onClick={onAddChild}>
+            <span className="material-symbols-outlined me-2 text-base" aria-hidden>person_add</span>
+            {t('applications.createApplication', { defaultValue: 'Start application' })}
+          </Button>
+        </div>
+        <p className="mt-4 text-sm text-on-surface-variant">
+          {t('parent.dashboard.admissionCycle.empty', {
+            defaultValue: 'Start an application to track review status, choose a package, and pay registration fees.',
+          })}
+        </p>
+      </section>
+    );
+  }
+
+  const id = String(application.id);
+  const status = String(application.status ?? 'draft');
+  const statusUi = admissionStatusUi(status);
+  const balanceDue = invoice?.balanceDue ?? 0;
+  const nextAction =
+    status === 'rejected'
+      ? t('parent.dashboard.admissionCycle.contact', { defaultValue: 'Contact nursery' })
+      : invoice && balanceDue > 0
+        ? t('payment.payNowAmount', { amount: balanceDue.toFixed(2) })
+        : invoice
+          ? t('parent.dashboard.admissionCycle.reviewInvoice', { defaultValue: 'Review invoice' })
+          : packagesCount > 0
+            ? t('parent.dashboard.admissionCycle.choosePackage', { defaultValue: 'Choose package' })
+            : t('parent.dashboard.admissionCycle.openApplication', { defaultValue: 'Open application' });
+
+  return (
+    <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
+      <div className="flex flex-col gap-4 border-b border-outline-variant bg-surface-container-lowest p-4 sm:flex-row sm:items-start sm:justify-between sm:p-5">
+        <div className="min-w-0">
+          <SectionHeading icon="assignment">
+            {t('parent.dashboard.admissionCycle.title', { defaultValue: 'Admission cycle' })}
+          </SectionHeading>
+          <p className="mt-3 truncate text-lg font-semibold text-on-surface">{applicationChildName(application)}</p>
+          <p className="mt-1 text-xs text-on-surface-variant">
+            {t('applications.submittedAt')}: {application.submitted_at ? new Date(String(application.submitted_at)).toLocaleDateString() : '-'}
+          </p>
+        </div>
+        <span className={`inline-flex w-fit items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold ${statusUi.className}`}>
+          <span className="material-symbols-outlined text-base" aria-hidden>{statusUi.icon}</span>
+          {t(`applications.statuses.${status}`, { defaultValue: status })}
+        </span>
+      </div>
+      <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_220px]">
+        <div className="grid divide-y divide-outline-variant sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          <div className="p-4">
+            <p className="text-[11px] font-semibold uppercase text-on-surface-variant">
+              {t('parent.dashboard.admissionCycle.status', { defaultValue: 'Application' })}
+            </p>
+            <p className="mt-1 text-sm font-semibold text-on-surface">
+              {t(`applications.statuses.${status}`, { defaultValue: status })}
+            </p>
+          </div>
+          <div className="p-4">
+            <p className="text-[11px] font-semibold uppercase text-on-surface-variant">
+              {t('applications.paymentPackage.title', { defaultValue: 'Payment package' })}
+            </p>
+            <p className="mt-1 text-sm font-semibold text-on-surface">
+              {invoice?.packageName || t('applications.paymentPackage.notSelected', { defaultValue: 'Not selected' })}
+            </p>
+          </div>
+          <div className="p-4">
+            <p className="text-[11px] font-semibold uppercase text-on-surface-variant">
+              {t('financial.paymentHistory.balance', { defaultValue: 'Balance' })}
+            </p>
+            <p className="mt-1 text-sm font-semibold text-on-surface">
+              {invoice ? t('invoice.egpAmount', { amount: balanceDue.toFixed(2) }) : '-'}
+            </p>
+          </div>
+        </div>
+        <div className="border-t border-outline-variant p-4 lg:border-l lg:border-t-0">
+          <Button asChild className="h-11 w-full rounded-md">
+            <Link to={invoice && balanceDue > 0 ? `/parent/invoices/${invoice.id}/pay` : `/parent/applications/${id}`}>
+              {nextAction}
+            </Link>
+          </Button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function ParentDashboardPage() {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const { user } = useAuthSession();
   const { data: profile } = useUserProfile(user?.id);
   const nurseryId = profile?.nursery_id ?? undefined;
@@ -102,7 +239,24 @@ export function ParentDashboardPage() {
   const eventPermissionsQuery = useParentEventPermissions(user?.id);
   const applications = useApplications({ parentId: user?.id, nurseryId });
   const applicationRows = useMemo(() => applications.parentApplications.slice(0, 3), [applications.parentApplications]);
-  const activeChildrenCount = childrenQuery.data?.length ?? 0;
+  const highlightedApplication = useMemo(
+    () =>
+      applications.parentApplications.find((row) => !['approved', 'rejected'].includes(String(row.status ?? 'draft'))) ??
+      applications.parentApplications[0],
+    [applications.parentApplications],
+  );
+  const highlightedApplicationId = highlightedApplication ? String(highlightedApplication.id) : undefined;
+  const highlightedApplicationNurseryId =
+    typeof highlightedApplication?.nursery_id === 'string' ? highlightedApplication.nursery_id : nurseryId;
+  const highlightedApplicationPayment = useApplicationPackagePayment({
+    applicationId: highlightedApplicationId,
+    parentId: user?.id,
+    nurseryId: highlightedApplicationNurseryId,
+  });
+  const childRows = useMemo(() => childrenQuery.data ?? [], [childrenQuery.data]);
+  const activeChildrenCount = childRows.length;
+  const childIds = useMemo(() => childRows.map((child) => child.id), [childRows]);
+  const attendanceSummary = useAllChildrenAttendanceSummary({ childIds, nurseryId });
 
   const unreadTotal = useMemo(
     () => (notifQuery.data ?? []).filter((n) => !n.read).length,
@@ -155,76 +309,146 @@ export function ParentDashboardPage() {
     return i18n.language.startsWith('ar') ? ar || en : en || ar;
   })();
 
+  const childInsights = useMemo(() => {
+    return childRows.reduce<Record<string, {
+      outstanding: number;
+      latestInvoiceNumber?: string;
+      latestInvoiceStatus?: string;
+      absentDays: number;
+      attendanceRate: number;
+      attendanceCalendar: Array<{ date: string; status: 'present' | 'absent' | 'off' }>;
+      relatedUpdate?: { label: string; to: string };
+    }>>((acc, child) => {
+      const childInvoices = (invoicesQuery.allData ?? []).filter((invoice) => invoice.childIds.includes(child.id));
+      const dueInvoices = childInvoices.filter((invoice) => invoice.status === 'pending' || invoice.status === 'overdue');
+      const latestInvoice = [...childInvoices].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))[0];
+      const attendance = attendanceSummary.perChildSummary[child.id];
+      const relatedFeed = (feedQuery.data ?? []).find(
+        (item): item is Extract<ParentDashboardFeedItem, { kind: 'daily_report' }> =>
+          item.kind === 'daily_report' && item.childId === child.id,
+      );
+      acc[child.id] = {
+        outstanding: dueInvoices.reduce((sum, invoice) => sum + invoice.amount / Math.max(invoice.childIds.length, 1), 0),
+        latestInvoiceNumber: latestInvoice?.invoiceNumber,
+        latestInvoiceStatus: latestInvoice?.status,
+        absentDays: attendance?.absentDays ?? 0,
+        attendanceRate: attendance?.ratePct ?? 0,
+        attendanceCalendar: attendance?.calendar ?? [],
+        relatedUpdate: relatedFeed
+          ? {
+              label: t('parent.dashboard.feed.report', {
+                name: i18n.language === 'ar' ? relatedFeed.childNameAr : relatedFeed.childNameEn,
+              }),
+              to: `/parent/daily-reports?child=${child.id}&date=${relatedFeed.reportDate}`,
+            }
+          : undefined,
+      };
+      return acc;
+    }, {});
+  }, [attendanceSummary.perChildSummary, childRows, feedQuery.data, i18n.language, invoicesQuery.allData, t]);
+
+  const handleAddChild = async () => {
+    if (!user?.id || !nurseryId) {
+      toast.error(t('applications.notFound'));
+      return;
+    }
+    try {
+      const applicationId = await applications.createParentDraft({
+        parentId: user.id,
+        nurseryId,
+        parentProfile: profile,
+      });
+      navigate(`/parent/applications/${applicationId}?newChild=1`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('payment.errors.actionFailed'));
+    }
+  };
+
   return (
-    <div className="mx-auto max-w-6xl space-y-8">
+    <div className="mx-auto max-w-7xl space-y-6">
       <section className="space-y-4">
-        <div className="max-w-xl rounded-3xl border border-outline-variant bg-gradient-to-br from-primary/10 via-surface-container-lowest to-surface-container-lowest p-5 shadow-sm">
-          <div className="flex items-center gap-4">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary">
-              <span className="material-symbols-outlined text-2xl" aria-hidden>waving_hand</span>
-            </span>
-            <div className="min-w-0">
-              <h1 className="font-headline text-2xl font-extrabold text-on-surface">
-                {t('parent.dashboard.title')}
-              </h1>
-              <p className="mt-0.5 text-sm text-on-surface-variant">
-                {parentName ? `${parentName} - ` : ''}
-                {t('parent.dashboard.subtitle')}
-              </p>
+        <div className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
+          <div className="flex flex-col gap-4 border-b border-outline-variant bg-surface-container-lowest px-4 py-5 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-center gap-4">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-md">
+                <span className="material-symbols-outlined text-2xl" aria-hidden>waving_hand</span>
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase text-primary">
+                  {t('parent.atNursery')}
+                </p>
+                <h1 className="font-headline text-2xl font-extrabold text-on-surface sm:text-3xl">
+                  {t('parent.dashboard.title')}
+                </h1>
+                <p className="mt-0.5 max-w-2xl text-sm text-on-surface-variant">
+                  {parentName ? `${parentName} - ` : ''}
+                  {t('parent.dashboard.subtitle')}
+                </p>
+              </div>
             </div>
+            <Button type="button" className="h-11 w-full rounded-md px-4 shadow-sm sm:w-auto" onClick={() => void handleAddChild()}>
+              <span className="material-symbols-outlined me-2 text-base" aria-hidden>person_add</span>
+              {t('applications.createApplication', { defaultValue: 'Add child' })}
+            </Button>
+          </div>
+          <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
+            <DashboardStatCard
+              icon="child_care"
+              label={t('parent.dashboard.stats.children', { defaultValue: 'Children' })}
+              value={activeChildrenCount}
+              tone="primary"
+              to="/parent/profile"
+            />
+            <DashboardStatCard
+              icon="assignment"
+              label={t('parent.dashboard.stats.applications', { defaultValue: 'Applications' })}
+              value={pendingApplicationsCount}
+              tone={pendingApplicationsCount > 0 ? 'warning' : 'success'}
+              to={applicationRows[0] ? `/parent/applications/${String(applicationRows[0].id)}` : undefined}
+            />
+            <DashboardStatCard
+              icon="payments"
+              label={t('parent.dashboard.stats.outstanding', { defaultValue: 'Outstanding' })}
+              value={moneyFormatter.format(totalOutstanding)}
+              tone={totalOutstanding > 0 ? 'error' : 'success'}
+              to="/parent/invoices"
+            />
+            <DashboardStatCard
+              icon="notifications"
+              label={t('parent.dashboard.stats.unread', { defaultValue: 'Unread' })}
+              value={unreadTotal}
+              tone={unreadTotal > 0 ? 'warning' : 'primary'}
+              to="/parent/notifications"
+            />
           </div>
         </div>
-
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <DashboardStatCard
-            icon="child_care"
-            label={t('parent.dashboard.stats.children', { defaultValue: 'Children' })}
-            value={activeChildrenCount}
-            tone="primary"
-            to="/parent/profile"
-          />
-          <DashboardStatCard
-            icon="assignment"
-            label={t('parent.dashboard.stats.applications', { defaultValue: 'Applications' })}
-            value={pendingApplicationsCount}
-            tone={pendingApplicationsCount > 0 ? 'warning' : 'success'}
-            to={applicationRows[0] ? `/parent/applications/${String(applicationRows[0].id)}` : undefined}
-          />
-          <DashboardStatCard
-            icon="payments"
-            label={t('parent.dashboard.stats.outstanding', { defaultValue: 'Outstanding' })}
-            value={moneyFormatter.format(totalOutstanding)}
-            tone={totalOutstanding > 0 ? 'error' : 'success'}
-            to="/parent/invoices"
-          />
-          <DashboardStatCard
-            icon="notifications"
-            label={t('parent.dashboard.stats.unread', { defaultValue: 'Unread' })}
-            value={unreadTotal}
-            tone={unreadTotal > 0 ? 'warning' : 'primary'}
-            to="/parent/notifications"
-          />
-        </div>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-2">
+      <ParentAdmissionCyclePanel
+        application={highlightedApplication}
+        isLoading={applications.isLoading || highlightedApplicationPayment.isLoading}
+        invoice={highlightedApplicationPayment.invoice}
+        packagesCount={highlightedApplicationPayment.packages.length}
+        onAddChild={() => void handleAddChild()}
+        t={t}
+      />
+
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <ParentAdminInboxSection />
-        <div className="space-y-5">
-          <ParentPasswordResetCard profile={profile} />
-          <DashboardStatCard
-            icon="hourglass_top"
-            label={t('parent.dashboard.stats.paymentsInReview', { defaultValue: 'Payments in review' })}
-            value={inReviewInvoicesCount}
-            tone={inReviewInvoicesCount > 0 ? 'warning' : 'success'}
-            to="/parent/invoices"
-          />
-        </div>
+        <ParentPasswordResetCard profile={profile} />
+        <DashboardStatCard
+          icon="hourglass_top"
+          label={t('parent.dashboard.stats.paymentsInReview', { defaultValue: 'Payments in review' })}
+          value={inReviewInvoicesCount}
+          tone={inReviewInvoicesCount > 0 ? 'warning' : 'success'}
+          to="/parent/invoices"
+        />
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-12">
+      <section className="grid gap-5 xl:grid-cols-12">
         <div className="space-y-3 xl:col-span-5">
           <SectionHeading icon="assignment">{t('parent.dashboard.sectionApplications')}</SectionHeading>
-          <div className="rounded-3xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm">
+          <div className="rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
             {applications.isLoading ? (
               <p className="text-sm text-on-surface-variant">{t('common.loading')}</p>
             ) : applicationRows.length === 0 ? (
@@ -239,7 +463,7 @@ export function ParentDashboardPage() {
                     <Link
                       key={id}
                       to={`/parent/applications/${id}`}
-                      className="rounded-2xl border border-outline-variant bg-surface p-4 text-foreground transition-colors hover:border-primary hover:bg-primary-container/15"
+                      className="rounded-lg border border-outline-variant bg-surface-container-lowest p-4 text-foreground transition-all hover:border-primary hover:shadow-sm"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -261,11 +485,12 @@ export function ParentDashboardPage() {
         <div className="space-y-3 xl:col-span-7">
           <SectionHeading icon="child_care">{t('parent.dashboard.sectionChildren')}</SectionHeading>
           <ParentChildSummaryCards
-            children={childrenQuery.data ?? []}
+            children={childRows}
             unreadTotal={unreadTotal}
             isLoading={showChildSkeleton}
             totalOutstanding={totalOutstanding}
             upcomingEventsCount={upcomingEventsCount}
+            childInsights={childInsights}
           />
         </div>
       </section>

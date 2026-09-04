@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import type { DayAttendanceRow } from './useChildAttendanceHistory';
 
 const DAYS = 30;
+const MINI_CALENDAR_DAYS = 14;
 
 function pastNDates(n: number): string[] {
   const out: string[] = [];
@@ -110,9 +111,51 @@ export function useAllChildrenAttendanceSummary(params: {
     };
   }, [query.data, dates, childCount]);
 
+  const perChildSummary = useMemo(() => {
+    const schoolDateSet = new Set<string>();
+    for (const date of dates) {
+      const w = new Date(date + 'T12:00:00').getDay();
+      if (w !== 0 && w !== 6) schoolDateSet.add(date);
+    }
+
+    const presentByChildDate = new Set(
+      (query.data ?? [])
+        .filter((row) => row.check_in)
+        .map((row) => `${row.child_id}|${row.attendance_date}`),
+    );
+
+    return params.childIds.reduce<Record<string, {
+      presentDays: number;
+      absentDays: number;
+      schoolDaysCount: number;
+      ratePct: number;
+      calendar: Array<{ date: string; status: 'present' | 'absent' | 'off' }>;
+    }>>((acc, childId) => {
+      const schoolDays = dates.filter((date) => schoolDateSet.has(date));
+      const presentDays = schoolDays.filter((date) => presentByChildDate.has(`${childId}|${date}`)).length;
+      const calendar = dates.slice(0, MINI_CALENDAR_DAYS).reverse().map((date) => {
+        if (!schoolDateSet.has(date)) return { date, status: 'off' as const };
+        return {
+          date,
+          status: presentByChildDate.has(`${childId}|${date}`) ? ('present' as const) : ('absent' as const),
+        };
+      });
+
+      acc[childId] = {
+        presentDays,
+        absentDays: Math.max(0, schoolDays.length - presentDays),
+        schoolDaysCount: schoolDays.length,
+        ratePct: schoolDays.length > 0 ? Math.min(100, Math.round((presentDays / schoolDays.length) * 1000) / 10) : 0,
+        calendar,
+      };
+      return acc;
+    }, {});
+  }, [query.data, dates, params.childIds]);
+
   return {
     ...query,
     rows,
     summary,
+    perChildSummary,
   };
 }

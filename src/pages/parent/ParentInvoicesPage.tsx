@@ -23,12 +23,13 @@ export function ParentInvoicesPage() {
   const qs = isPreview ? '?preview=true' : '';
   const { user } = useAuthSession();
   const initialStatus = searchParams.get('status');
+  const initialChildId = searchParams.get('child') ?? '';
   const highlightId = searchParams.get('highlight');
   const [status, setStatus] = useState<ParentInvoiceStatusFilter>(
     initialStatus === 'pending' || initialStatus === 'paid' ? initialStatus : 'all',
   );
   const [sort, setSort] = useState<ParentInvoiceSort>('due_soon');
-  const [selectedChildId, setSelectedChildId] = useState('');
+  const [selectedChildId, setSelectedChildId] = useState(initialChildId);
 
   const childrenQuery = useParentChildren();
   const invoicesQuery = useParentInvoices({
@@ -71,8 +72,31 @@ export function ParentInvoicesPage() {
   }, [invoices]);
 
   return (
-    <div className="mx-auto w-full max-w-md lg:max-w-none space-y-4 pb-28">
-      <h1 className="text-lg font-semibold text-on-surface">{t('parent.invoices.title')}</h1>
+    <div className="mx-auto w-full max-w-6xl space-y-5 pb-28">
+      <section className="rounded-xl border border-outline-variant bg-surface p-4 shadow-sm sm:p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase text-primary">{t('parent.dashboard.sectionFinancial')}</p>
+            <h1 className="mt-1 text-2xl font-semibold text-on-surface">{t('parent.invoices.title')}</h1>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {(['all', 'pending', 'paid'] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                className={`h-9 rounded-md px-3 text-xs font-semibold ${status === value ? 'bg-primary text-white' : 'border border-outline-variant bg-surface-container-lowest text-on-surface-variant'}`}
+                onClick={() => setStatus(value)}
+              >
+                {t(`invoice.statusTabs.${value}`)}
+              </button>
+            ))}
+            <select className="h-9 rounded-md border border-outline-variant bg-surface px-2 text-xs text-foreground" value={sort} onChange={(e) => setSort(e.target.value as ParentInvoiceSort)}>
+              <option value="due_soon">{t('invoice.filters.parentSortDueSoon')}</option>
+              <option value="newest">{t('invoice.filters.parentSortNewest')}</option>
+            </select>
+          </div>
+        </div>
+      </section>
 
       {(childrenQuery.data ?? []).length > 1 ? (
         <ChildSelector
@@ -83,39 +107,22 @@ export function ParentInvoicesPage() {
       ) : null}
 
       <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3">
+        <div className="rounded-lg border border-outline-variant bg-surface p-4 shadow-sm">
           <p className="text-xs text-on-surface-variant">{t('parent.invoices.totalDue')}</p>
-          <p className="text-base font-bold text-on-surface">{t('invoice.egpAmount', { amount: summary.totalDue.toFixed(2) })}</p>
+          <p className="mt-1 text-xl font-semibold text-on-surface">{t('invoice.egpAmount', { amount: summary.totalDue.toFixed(2) })}</p>
         </div>
-        <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3">
+        <div className="rounded-lg border border-outline-variant bg-surface p-4 shadow-sm">
           <p className="text-xs text-on-surface-variant">{t('parent.invoices.nextDue')}</p>
-          <p className="text-base font-bold text-on-surface">
+          <p className="mt-1 text-xl font-semibold text-on-surface">
             {summary.nextDue ? formatDate(summary.nextDue.dueDate) : '-'}
           </p>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {(['all', 'pending', 'paid'] as const).map((value) => (
-          <button
-            key={value}
-            type="button"
-            className={`rounded-full px-3 py-1 text-xs ${status === value ? 'bg-primary text-white' : 'bg-surface-container text-on-surface-variant'}`}
-            onClick={() => setStatus(value)}
-          >
-            {t(`invoice.statusTabs.${value}`)}
-          </button>
-        ))}
-        <select className="ms-auto h-9 rounded-lg border border-outline-variant bg-surface text-foreground px-2 text-xs" value={sort} onChange={(e) => setSort(e.target.value as ParentInvoiceSort)}>
-          <option value="due_soon">{t('invoice.filters.parentSortDueSoon')}</option>
-          <option value="newest">{t('invoice.filters.parentSortNewest')}</option>
-        </select>
-      </div>
-
       {!invoicesQuery.isLoading && !invoices.length ? (
         <EmptyState icon="receipt_long" title={t('parent.invoices.emptyTitle')} description={t('parent.invoices.emptyDescription')} />
       ) : (
-        <div className="space-y-3">
+        <div className="grid gap-3 lg:grid-cols-2">
           {invoices.map((invoice) => (
             <InvoiceCard
               key={invoice.id}
