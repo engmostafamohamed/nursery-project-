@@ -55,11 +55,11 @@ function MiniStat({
   tone?: 'default' | 'success' | 'error';
 }) {
   return (
-    <div className="rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2">
-      <p className="text-[11px] font-semibold uppercase text-on-surface-variant">{label}</p>
+    <div className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2 py-2 sm:px-3">
+      <p className="truncate text-[10px] font-semibold uppercase text-on-surface-variant sm:text-[11px]">{label}</p>
       <p
         className={cn(
-          'mt-1 text-lg font-bold',
+          'mt-1 text-base font-bold sm:text-lg',
           tone === 'success' && 'text-success',
           tone === 'error' && 'text-error',
           tone === 'default' && 'text-on-surface',
@@ -124,7 +124,7 @@ export function ParentChildSummaryCards({
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr))]">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))]">
         {rows.map((child) => {
           const name = locale === 'ar' ? child.nameAr : child.nameEn;
           const initials = getUserInitials(name, '');
@@ -162,18 +162,18 @@ export function ParentChildSummaryCards({
           return (
             <article
               key={child.id}
-              className="flex h-full min-h-[460px] flex-col overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm transition hover:border-primary/40 hover:shadow-md"
+              className="flex h-full min-h-[360px] flex-col overflow-hidden rounded-2xl border border-outline-variant bg-surface shadow-sm transition hover:border-primary/40 hover:shadow-md sm:min-h-[460px] sm:rounded-xl"
             >
-              <div className="border-b border-outline-variant bg-surface-container-lowest p-4">
+              <div className="border-b border-outline-variant bg-surface-container-lowest p-3 sm:p-4">
                 <div className="flex items-start gap-3">
-                  <Avatar className="h-14 w-14 shrink-0 border border-outline-variant">
+                  <Avatar className="h-12 w-12 shrink-0 border border-outline-variant sm:h-14 sm:w-14">
                     <AvatarImage src={child.avatarUrl ?? undefined} alt="" />
                     <AvatarFallback className="text-sm">{initials}</AvatarFallback>
                   </Avatar>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-3">
                       <Link to={`/parent/child/${child.id}/qr`} className="min-w-0 hover:text-primary">
-                        <p className="truncate text-base font-semibold text-on-surface">{name}</p>
+                        <p className="truncate text-sm font-semibold text-on-surface sm:text-base">{name}</p>
                       </Link>
                       <span
                         className={cn(
@@ -195,13 +195,13 @@ export function ParentChildSummaryCards({
               </div>
 
               <div className="flex flex-1 flex-col p-4">
-                <div className="grid gap-2 sm:grid-cols-3">
+                <div className="grid grid-cols-3 gap-2">
                   <MiniStat label={t('parent.dashboard.analytics.present', { defaultValue: 'Present' })} value={weeklyPresent} tone="success" />
                   <MiniStat label={t('parent.dashboard.analytics.absent', { defaultValue: 'Absent' })} value={weeklyAbsent} tone="error" />
                   <MiniStat label={t('parent.dashboard.analytics.weekTitle', { defaultValue: 'This week' })} value={`${weeklyRate}%`} />
                 </div>
 
-                <div className="mt-4 rounded-lg border border-outline-variant bg-surface-container-lowest p-3">
+                <div className="mt-3 rounded-xl border border-outline-variant bg-surface-container-lowest p-3 sm:mt-4 sm:rounded-lg">
                   <div className="mb-2 flex items-center justify-between gap-3">
                     <p className="text-xs font-semibold uppercase text-on-surface-variant">
                       {t('parent.dashboard.analytics.openAttendance', { defaultValue: 'Attendance details' })}
@@ -212,12 +212,12 @@ export function ParentChildSummaryCards({
                     <div className="h-full rounded-full bg-success" style={{ width: `${weeklyRate}%` }} />
                   </div>
                   {insight?.attendanceCalendar?.length ? (
-                    <div className="mt-3 grid grid-cols-7 gap-1.5">
+                    <div className="mt-3 grid grid-cols-7 gap-1">
                       {insight.attendanceCalendar.slice(-7).map((day) => (
                         <span
                           key={day.date}
                           className={cn(
-                            'flex h-8 items-center justify-center rounded-md border text-[10px] font-semibold',
+                            'flex h-7 items-center justify-center rounded-md border text-[10px] font-semibold sm:h-8',
                             day.status === 'present' && 'border-success/30 bg-success/10 text-success',
                             day.status === 'absent' && 'border-error/30 bg-error/10 text-error',
                             day.status === 'off' && 'border-outline-variant bg-surface text-on-surface-variant',
@@ -257,24 +257,24 @@ export function ParentChildSummaryCards({
                   )}
                 </div>
 
-                <div className="mt-auto grid gap-2 pt-3 sm:grid-cols-3">
+                <div className="mt-auto grid grid-cols-2 gap-2 pt-3 sm:grid-cols-3">
                   <Link
                     to={`/parent/attendance?child=${child.id}`}
-                    className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md bg-primary/10 px-3 text-xs font-semibold text-primary transition hover:bg-primary/15"
+                    className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md bg-primary/10 px-2 text-xs font-semibold text-primary transition hover:bg-primary/15"
                   >
                     <span className="material-symbols-outlined text-sm" aria-hidden>history</span>
                     {t('parent.dashboard.analytics.openAttendance', { defaultValue: 'Attendance details' })}
                   </Link>
                   <Link
                     to={`/parent/daily-reports?child=${child.id}`}
-                    className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md bg-primary/10 px-3 text-xs font-semibold text-primary transition hover:bg-primary/15"
+                    className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md bg-primary/10 px-2 text-xs font-semibold text-primary transition hover:bg-primary/15"
                   >
                     <span className="material-symbols-outlined text-sm" aria-hidden>description</span>
                     {t('parent.dashboard.analytics.openReports', { defaultValue: 'Open reports' })}
                   </Link>
                   <Link
                     to="/parent/messages"
-                    className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md bg-surface-container px-3 text-xs font-semibold text-on-surface transition hover:bg-surface-high"
+                    className="col-span-2 inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md bg-surface-container px-2 text-xs font-semibold text-on-surface transition hover:bg-surface-high sm:col-span-1"
                   >
                     <span className="material-symbols-outlined text-sm" aria-hidden>forum</span>
                     {t('parent.dashboard.child.messageNursery', { defaultValue: 'Message nursery' })}

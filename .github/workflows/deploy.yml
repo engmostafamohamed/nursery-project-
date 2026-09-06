@@ -1,8 +1,4 @@
-name: CI & Deploy
-
-# Vercel can also deploy straight from its own Git integration. If that is switched
-# on for this repo, turn it off (Vercel → Project → Settings → Git → disconnect, or
-# set "Ignored Build Step" to skip) so a push does not deploy twice from two places.
+name: CI
 
 on:
   push:
@@ -12,7 +8,6 @@ on:
   workflow_dispatch:
 
 concurrency:
-  # A newer push makes an in-flight deploy pointless.
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
@@ -34,9 +29,8 @@ jobs:
       - name: Install
         run: npm ci
 
-      # Reported, not enforced: main currently carries 124 type errors and 80 lint
-      # errors. Making these blocking would fail every run before anything ships.
-      # Once they are cleared, drop the continue-on-error lines to make them gates.
+      # Reported, not enforced yet: main currently carries existing type/lint debt.
+      # Build remains the deploy gate for Vercel's Git integration.
       - name: Typecheck
         run: npm run typecheck
         continue-on-error: true
@@ -45,88 +39,5 @@ jobs:
         run: npm run lint
         continue-on-error: true
 
-      # The real gate. This must pass for anything to deploy.
       - name: Build
         run: npm run build
-
-  deploy:
-    name: Deploy to Vercel
-    # A pull request from a fork cannot read secrets, so it would fail on an empty token.
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    needs: verify
-    runs-on: ubuntu-latest
-    environment:
-      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }}
-      url: ${{ steps.deploy.outputs.url }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-
-      - name: Check the deploy credentials are present
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: |
-          missing=""
-          [ -z "$VERCEL_TOKEN" ]      && missing="$missing VERCEL_TOKEN"
-          [ -z "$VERCEL_ORG_ID" ]     && missing="$missing VERCEL_ORG_ID"
-          [ -z "$VERCEL_PROJECT_ID" ] && missing="$missing VERCEL_PROJECT_ID"
-          if [ -n "$missing" ]; then
-            echo "::error::Missing repository secret(s):$missing"
-            echo "Add them under Settings → Secrets and variables → Actions."
-            echo "VERCEL_ORG_ID and VERCEL_PROJECT_ID are in .vercel/project.json after running 'vercel link'."
-            exit 1
-          fi
-
-      - name: Install Vercel CLI
-        run: npm install --global vercel@latest
-
-      - name: Pull Vercel project settings and environment
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: |
-          vercel pull --yes \
-            --environment=${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }} \
-            --token=${{ secrets.VERCEL_TOKEN }}
-
-      # Without these the build still succeeds and the site loads to a blank screen,
-      # because src/lib/supabase.ts throws on module load. Fail here instead, where
-      # the reason is visible.
-      - name: Check the app's runtime config came through
-        run: |
-          envfile=$(ls .vercel/.env.*.local 2>/dev/null | head -1)
-          if [ -z "$envfile" ]; then
-            echo "::error::vercel pull produced no environment file."
-            exit 1
-          fi
-          missing=""
-          grep -q '^VITE_SUPABASE_URL=' "$envfile"      || missing="$missing VITE_SUPABASE_URL"
-          grep -q '^VITE_SUPABASE_ANON_KEY=' "$envfile" || missing="$missing VITE_SUPABASE_ANON_KEY"
-          if [ -n "$missing" ]; then
-            echo "::error::Missing Vercel environment variable(s):$missing"
-            echo "Set them in Vercel → Project → Settings → Environment Variables."
-            echo "The build would otherwise succeed and ship a blank page."
-            exit 1
-          fi
-          echo "Runtime config present."
-
-      - name: Build
-        run: |
-          vercel build ${{ github.ref == 'refs/heads/main' && '--prod' || '' }} \
-            --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Deploy
-        id: deploy
-        run: |
-          url=$(vercel deploy --prebuilt ${{ github.ref == 'refs/heads/main' && '--prod' || '' }} \
-            --token=${{ secrets.VERCEL_TOKEN }})
-          echo "url=$url" >> "$GITHUB_OUTPUT"
-          echo "Deployed to $url"
-          echo "### Deployed" >> "$GITHUB_STEP_SUMMARY"
-          echo "$url" >> "$GITHUB_STEP_SUMMARY"

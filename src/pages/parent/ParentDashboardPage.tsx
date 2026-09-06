@@ -43,10 +43,10 @@ import { cn } from '@/lib/utils';
 function SectionHeading({ icon, children }: { icon: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary" aria-hidden>
-        <span className="material-symbols-outlined text-lg">{icon}</span>
+      <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary sm:size-8" aria-hidden>
+        <span className="material-symbols-outlined text-base sm:text-lg">{icon}</span>
       </span>
-      <h2 className="text-base font-semibold text-on-surface">{children}</h2>
+      <h2 className="text-sm font-semibold text-on-surface sm:text-base">{children}</h2>
     </div>
   );
 }
@@ -70,20 +70,20 @@ function DashboardStatCard({ icon, label, value, tone, to, className }: Dashboar
 
   const content = (
     <>
-      <span className={cn('flex size-11 shrink-0 items-center justify-center rounded-xl shadow-sm', toneClasses)}>
-        <span className="material-symbols-outlined text-xl" aria-hidden>
+      <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-lg shadow-sm sm:size-11 sm:rounded-xl', toneClasses)}>
+        <span className="material-symbols-outlined text-lg sm:text-xl" aria-hidden>
           {icon}
         </span>
       </span>
       <span className="min-w-0">
-        <span className="block text-xs font-medium leading-4 text-on-surface-variant">{label}</span>
-        <span className="mt-1 block text-xl font-extrabold leading-6 text-on-surface">{value}</span>
+        <span className="block truncate text-[11px] font-medium leading-4 text-on-surface-variant sm:text-xs">{label}</span>
+        <span className="mt-0.5 block truncate text-lg font-extrabold leading-6 text-on-surface sm:mt-1 sm:text-xl">{value}</span>
       </span>
     </>
   );
 
   const cardClassName = cn(
-    'group flex min-h-[92px] items-center gap-3 rounded-lg border border-outline-variant bg-surface p-4 shadow-sm transition-all hover:border-primary/50 hover:shadow-md',
+    'group flex min-h-[76px] items-center gap-2 rounded-xl border border-outline-variant bg-surface p-3 shadow-sm transition-all hover:border-primary/50 hover:shadow-md sm:min-h-[92px] sm:gap-3 sm:p-4',
     className,
   );
 
@@ -184,19 +184,19 @@ function ParentDashboardAnalyticsPanel({
   });
 
   return (
-    <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
-      <div className="flex flex-col gap-3 border-b border-outline-variant bg-surface-container-lowest p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+    <section className="overflow-hidden rounded-2xl border border-outline-variant bg-surface shadow-sm sm:rounded-xl">
+      <div className="flex flex-col gap-3 border-b border-outline-variant bg-surface-container-lowest p-3 sm:flex-row sm:items-center sm:justify-between sm:p-5">
         <SectionHeading icon="monitoring">
           {t('parent.dashboard.analytics.title', { defaultValue: 'Weekly family overview' })}
         </SectionHeading>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild variant="outline" className="h-10 rounded-md">
+        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
+          <Button asChild variant="outline" className="h-9 shrink-0 rounded-md px-3 text-xs sm:h-10 sm:text-sm">
             <Link to="/parent/daily-reports">
               <span className="material-symbols-outlined me-2 text-base" aria-hidden>description</span>
               {t('parent.dashboard.analytics.openReports', { defaultValue: 'Open reports' })}
             </Link>
           </Button>
-          <Button asChild variant="outline" className="h-10 rounded-md">
+          <Button asChild variant="outline" className="h-9 shrink-0 rounded-md px-3 text-xs sm:h-10 sm:text-sm">
             <Link to="/parent/attendance">
               <span className="material-symbols-outlined me-2 text-base" aria-hidden>history</span>
               {t('parent.dashboard.analytics.openAttendance', { defaultValue: 'Attendance details' })}
@@ -206,8 +206,8 @@ function ParentDashboardAnalyticsPanel({
       </div>
 
       <div className="grid gap-0 xl:grid-cols-[minmax(0,1.3fr)_360px]">
-        <div className="p-4 sm:p-5">
-          <div className="grid gap-3 sm:grid-cols-4">
+        <div className="p-3 sm:p-5">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
             <DashboardStatCard
               icon="how_to_reg"
               label={t('parent.dashboard.analytics.monthRate', { defaultValue: '30-day attendance' })}
@@ -238,12 +238,12 @@ function ParentDashboardAnalyticsPanel({
             />
           </div>
 
-          <div className="mt-4 h-72 rounded-lg border border-outline-variant bg-surface-container-lowest p-3">
+          <div className="mt-3 h-48 rounded-xl border border-outline-variant bg-surface-container-lowest p-2 sm:mt-4 sm:h-72 sm:p-3">
             {isLoading ? (
               <div className="flex h-full items-center justify-center text-sm text-on-surface-variant">{t('common.loading')}</div>
             ) : dayData.length ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dayData} margin={{ left: -24, right: 8, top: 12, bottom: 0 }}>
+                <BarChart data={dayData} margin={{ left: -28, right: 4, top: 8, bottom: 0 }}>
                   <CartesianGrid stroke="rgb(var(--border-default))" strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={12} />
                   <YAxis allowDecimals={false} tickLine={false} axisLine={false} fontSize={12} />
@@ -268,14 +268,14 @@ function ParentDashboardAnalyticsPanel({
           </div>
         </div>
 
-        <aside className="border-t border-outline-variant bg-surface-container-lowest p-4 sm:p-5 xl:border-l xl:border-t-0">
+        <aside className="border-t border-outline-variant bg-surface-container-lowest p-3 sm:p-5 xl:border-l xl:border-t-0">
           <div className="grid gap-4">
             <div className="rounded-lg border border-outline-variant bg-surface p-4">
               <p className="text-sm font-semibold text-on-surface">
                 {t('parent.dashboard.analytics.weekTitle', { defaultValue: 'This week' })}
               </p>
-              <div className="mt-3 grid grid-cols-[140px_minmax(0,1fr)] items-center gap-4">
-                <div className="h-32">
+              <div className="mt-3 grid grid-cols-[110px_minmax(0,1fr)] items-center gap-3 sm:grid-cols-[140px_minmax(0,1fr)] sm:gap-4">
+                <div className="h-28 sm:h-32">
                   {pieData.length ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
@@ -689,33 +689,33 @@ export function ParentDashboardPage() {
   };
 
   return (
-    <div className="w-full max-w-none space-y-6">
-      <section className="space-y-4">
-        <div className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
-          <div className="flex flex-col gap-4 border-b border-outline-variant bg-surface-container-lowest px-4 py-5 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex min-w-0 items-center gap-4">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-md">
-                <span className="material-symbols-outlined text-2xl" aria-hidden>waving_hand</span>
+    <div className="w-full max-w-none space-y-4 sm:space-y-6">
+      <section className="space-y-3 sm:space-y-4">
+        <div className="overflow-hidden rounded-2xl border border-outline-variant bg-surface shadow-sm sm:rounded-xl">
+          <div className="flex flex-col gap-3 border-b border-outline-variant bg-surface-container-lowest px-3 py-4 sm:px-5 sm:py-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md sm:h-12 sm:w-12 sm:rounded-md">
+                <span className="material-symbols-outlined text-xl sm:text-2xl" aria-hidden>waving_hand</span>
               </span>
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase text-primary">
                   {t('parent.atNursery')}
                 </p>
-                <h1 className="font-headline text-2xl font-extrabold text-on-surface sm:text-3xl">
+                <h1 className="font-headline text-xl font-extrabold leading-tight text-on-surface sm:text-3xl">
                   {t('parent.dashboard.title')}
                 </h1>
-                <p className="mt-0.5 max-w-2xl text-sm text-on-surface-variant">
+                <p className="mt-0.5 line-clamp-2 max-w-2xl text-xs text-on-surface-variant sm:text-sm">
                   {parentName ? `${parentName} - ` : ''}
                   {t('parent.dashboard.subtitle')}
                 </p>
               </div>
             </div>
-            <Button type="button" className="h-11 w-full rounded-md px-4 shadow-sm sm:w-auto" onClick={() => void handleAddChild()}>
+            <Button type="button" className="h-10 w-full rounded-lg px-4 text-sm shadow-sm sm:h-11 sm:w-auto sm:rounded-md" onClick={() => void handleAddChild()}>
               <span className="material-symbols-outlined me-2 text-base" aria-hidden>person_add</span>
               {t('applications.createApplication', { defaultValue: 'Add child' })}
             </Button>
           </div>
-          <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 p-3 sm:gap-3 sm:p-4 xl:grid-cols-4">
             <DashboardStatCard
               icon="child_care"
               label={t('parent.dashboard.stats.children', { defaultValue: 'Children' })}
@@ -770,7 +770,7 @@ export function ParentDashboardPage() {
         t={t}
       />
 
-      <section className="grid items-stretch gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr))]">
+      <section className="grid items-stretch gap-3 sm:gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))]">
         <ParentAdminInboxSection />
         <ParentPasswordResetCard profile={profile} />
         <DashboardStatCard
@@ -779,14 +779,14 @@ export function ParentDashboardPage() {
           value={inReviewInvoicesCount}
           tone={inReviewInvoicesCount > 0 ? 'warning' : 'success'}
           to="/parent/invoices"
-          className="h-full min-h-[150px]"
+          className="h-full min-h-[116px] sm:min-h-[150px]"
         />
       </section>
 
-      <section className="grid items-stretch gap-5 xl:grid-cols-2">
+      <section className="grid items-stretch gap-4 sm:gap-5 xl:grid-cols-2">
         <div className="flex min-w-0 flex-col gap-3">
           <SectionHeading icon="assignment">{t('parent.dashboard.sectionApplications')}</SectionHeading>
-          <div className="h-full rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
+          <div className="h-full rounded-2xl border border-outline-variant bg-surface p-3 shadow-sm sm:rounded-xl sm:p-4">
             {applications.isLoading ? (
               <p className="text-sm text-on-surface-variant">{t('common.loading')}</p>
             ) : applicationRows.length === 0 ? (
@@ -801,7 +801,7 @@ export function ParentDashboardPage() {
                     <Link
                       key={id}
                       to={`/parent/applications/${id}`}
-                      className="rounded-lg border border-outline-variant bg-surface-container-lowest p-4 text-foreground transition-all hover:border-primary hover:shadow-sm"
+                      className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3 text-foreground transition-all hover:border-primary hover:shadow-sm sm:rounded-lg sm:p-4"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -833,7 +833,7 @@ export function ParentDashboardPage() {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+      <section className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-12">
         <div className="space-y-3 xl:col-span-7">
           <SectionHeading icon="calendar_month">{t('parent.dashboard.sectionSchedule')}</SectionHeading>
           <ParentDashboardScheduleSection
@@ -849,7 +849,7 @@ export function ParentDashboardPage() {
         </div>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-12">
+      <section className="grid gap-4 sm:gap-6 xl:grid-cols-12">
         {user?.id && nurseryId ? (
           <div className="space-y-3 xl:col-span-7">
             <SectionHeading icon="forum">{t('parent.dashboard.sectionNurseryChat')}</SectionHeading>
@@ -869,7 +869,7 @@ export function ParentDashboardPage() {
         </div>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-12">
+      <section className="grid gap-4 sm:gap-6 xl:grid-cols-12">
         <div className="space-y-3 xl:col-span-5">
           <SectionHeading icon="account_balance_wallet">{t('parent.dashboard.sectionFinancial')}</SectionHeading>
           <FinancialSummaryCard />

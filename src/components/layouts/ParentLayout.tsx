@@ -119,7 +119,7 @@ export function ParentLayout() {
   };
 
   return (
-    <div className="parent-shell min-h-screen bg-background pb-32 lg:ps-64 lg:pb-0">
+    <div className="parent-shell min-h-screen w-full overflow-x-hidden bg-background pb-28 lg:ps-64 lg:pb-0">
       {/* Desktop sidebar — uses the empty side space on wide screens. */}
       <aside className="no-print hidden lg:fixed lg:inset-y-0 lg:start-0 lg:z-40 lg:flex lg:w-64 lg:flex-col lg:border-e lg:border-outline-variant lg:bg-surface">
         <div className="flex items-center gap-2 border-b border-outline-variant px-5 py-4">
@@ -189,7 +189,7 @@ export function ParentLayout() {
 
       <OfflineIndicator />
       <header className="no-print sticky top-0 z-30 border-b border-outline-variant bg-surface/90 shadow-sm backdrop-blur-xl">
-        <div className="mx-auto flex max-w-4xl items-center justify-between gap-2 px-3 py-3 sm:px-4 lg:max-w-none lg:px-8">
+        <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-2 px-2 py-2.5 sm:px-4 sm:py-3 lg:max-w-none lg:px-8">
           <div className="flex min-w-0 items-center gap-2">
             <BackButton />
             <UserMenu profilePath="/parent/profile" profileLabel={t('parent.nav.profile')} />
@@ -239,7 +239,7 @@ export function ParentLayout() {
         </div>
       </header>
 
-      <main className="print-main mx-auto max-w-4xl px-4 py-6 lg:max-w-none lg:px-8">
+      <main className="print-main mx-auto w-full max-w-4xl px-2 py-3 sm:px-4 sm:py-6 lg:max-w-none lg:px-8">
         <PWAInstallPrompt />
         {showPrompt ? (
           <div className="mb-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
@@ -255,7 +255,7 @@ export function ParentLayout() {
       </main>
 
       <nav
-        className="no-print fixed inset-x-0 bottom-0 z-40 mx-auto max-w-4xl rounded-t-3xl border border-outline-variant bg-surface/85 px-4 py-3 backdrop-blur-2xl lg:hidden"
+        className="no-print fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-4xl rounded-t-2xl border border-outline-variant bg-surface/90 px-3 py-2.5 backdrop-blur-2xl sm:rounded-t-3xl sm:px-4 sm:py-3 lg:hidden"
         aria-label={t('parent.nav.bottomBarLabel')}
       >
         <ul className="grid grid-cols-4 gap-2">
