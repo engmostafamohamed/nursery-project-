@@ -6,6 +6,8 @@ import { activateEnrollment } from '@/lib/enrollmentActivation';
 import { getOrCreateConversationId } from '@/lib/chat';
 import { supabase } from '@/lib/supabase';
 
+const requiredApplicationDocs = ['birth_certificate', 'vaccination_card', 'parent_id', 'proof_of_address'] as const;
+
 type AdminApplicationView = Record<string, unknown> & {
   parent_user: Record<string, unknown> | null;
   documents_count: number;
@@ -223,11 +225,61 @@ export function useApplications(params: { nurseryId?: string; applicationId?: st
 
   const submitApplication = useMutation({
     mutationFn: async (payload: { id: string; nurseryId: string; parentName: string }) => {
+      const currentAppRes = await supabase
+        .from('applications')
+        .select('id, parent_id, status, reviewed_at')
+        .eq('id', payload.id)
+        .single();
+      if (currentAppRes.error) throw currentAppRes.error;
+      const currentApp = currentAppRes.data as {
+        id: string;
+        parent_id: string | null;
+        status: string;
+        reviewed_at: string | null;
+      };
+
+      const docsRes = await supabase
+        .from('application_documents')
+        .select('document_type, file_url, uploaded_at')
+        .eq('application_id', payload.id)
+        .order('uploaded_at', { ascending: false });
+      if (docsRes.error) throw docsRes.error;
+      const docs = (docsRes.data ?? []) as Array<{ document_type: string; file_url: string | null; uploaded_at: string }>;
+      const latestByType = new Map<string, { file_url: string | null; uploaded_at: string }>();
+      for (const doc of docs) {
+        if (!latestByType.has(doc.document_type)) latestByType.set(doc.document_type, doc);
+      }
+      const missingRequired = requiredApplicationDocs.filter((type) => {
+        const latest = latestByType.get(type);
+        return !latest?.file_url;
+      });
+      if (missingRequired.length > 0) {
+        throw new Error('missing_required_documents');
+      }
+      if (currentApp.status === 'documents_pending' && currentApp.reviewed_at) {
+        const reviewTime = new Date(currentApp.reviewed_at).getTime();
+        const hasNewUpload = docs.some((doc) => {
+          const uploadTime = new Date(doc.uploaded_at).getTime();
+          return Number.isFinite(uploadTime) && uploadTime > reviewTime;
+        });
+        if (!hasNewUpload) throw new Error('requested_documents_not_updated');
+      }
+
       const res = await supabase.from('applications').update({
         status: 'submitted',
         submitted_at: new Date().toISOString(),
       } as never).eq('id', payload.id);
       if (res.error) throw res.error;
+
+      if (currentApp.parent_id) {
+        await supabase
+          .from('notifications')
+          .update({ read: true } as never)
+          .eq('user_id', currentApp.parent_id)
+          .eq('read', false)
+          .eq('action_link', `/parent/applications/${payload.id}`);
+      }
+
       const adminsRes = await supabase
         .from('users')
         .select('id')
@@ -251,7 +303,13 @@ export function useApplications(params: { nurseryId?: string; applicationId?: st
         }
       }
     },
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ['application-detail'] }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['application-detail'] });
+      void qc.invalidateQueries({ queryKey: ['parent-applications'] });
+      void qc.invalidateQueries({ queryKey: ['parent-dashboard-feed'] });
+      void qc.invalidateQueries({ queryKey: ['parent-in-app-notifications'] });
+      void qc.invalidateQueries({ queryKey: ['notifications-center'] });
+    },
   });
 
   const uploadDocument = useMutation({

@@ -165,7 +165,7 @@ export function ApplicationPackagePaymentCard({
                     <dd className="font-medium text-on-surface">{t('invoice.egpAmount', { amount: invoice.amount.toFixed(2) })}</dd>
                   </div>
                   <div className="flex justify-between gap-3">
-                    <dt className="text-on-surface-variant">{t('financial.paymentHistory.paid', { defaultValue: 'Paid' })}</dt>
+                    <dt className="text-on-surface-variant">{t('financial.paymentHistory.paidLabel', { defaultValue: 'Paid' })}</dt>
                     <dd className="font-medium text-success">{t('invoice.egpAmount', { amount: invoice.paidAmount.toFixed(2) })}</dd>
                   </div>
                   <div className="flex justify-between gap-3">
@@ -173,7 +173,7 @@ export function ApplicationPackagePaymentCard({
                     <dd className="font-medium text-warning">{t('invoice.egpAmount', { amount: invoice.pendingAmount.toFixed(2) })}</dd>
                   </div>
                   <div className="flex justify-between gap-3 border-t border-outline-variant pt-2">
-                    <dt className="font-semibold text-on-surface">{t('financial.paymentHistory.balance', { defaultValue: 'Balance' })}</dt>
+                    <dt className="font-semibold text-on-surface">{t('financial.paymentHistory.balanceLabel', { defaultValue: 'Balance' })}</dt>
                     <dd className="font-semibold text-on-surface">{t('invoice.egpAmount', { amount: invoice.balanceDue.toFixed(2) })}</dd>
                   </div>
                 </dl>

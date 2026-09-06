@@ -1,6 +1,18 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import { toast } from 'sonner';
 
 import { ChatPanel } from '@/components/chat/ChatPanel';
@@ -18,13 +30,13 @@ import { useAllChildrenAttendanceSummary } from '@/hooks/useAllChildrenAttendanc
 import { useApplications } from '@/hooks/useApplications';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useNurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
-import { useParentDashboardChildren } from '@/hooks/useParentDashboardChildren';
+import { useParentDashboardChildren, type ParentDashboardChildCard } from '@/hooks/useParentDashboardChildren';
 import { useParentDashboardFeed, type ParentDashboardFeedItem } from '@/hooks/useParentDashboardFeed';
 import { useParentDashboardSchedule } from '@/hooks/useParentDashboardSchedule';
 import { useParentEventPermissions } from '@/hooks/useParentEventPermissions';
 import { useParentInAppNotifications } from '@/hooks/useParentInAppNotifications';
 import { useParentInvoices } from '@/hooks/useParentInvoices';
-import { usePaymentHistory } from '@/hooks/usePaymentHistory';
+import { usePaymentHistory, type PaymentHistoryRow } from '@/hooks/usePaymentHistory';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { cn } from '@/lib/utils';
 
@@ -45,9 +57,10 @@ type DashboardStatCardProps = {
   value: string | number;
   tone: 'primary' | 'success' | 'warning' | 'error';
   to?: string;
+  className?: string;
 };
 
-function DashboardStatCard({ icon, label, value, tone, to }: DashboardStatCardProps) {
+function DashboardStatCard({ icon, label, value, tone, to, className }: DashboardStatCardProps) {
   const toneClasses = {
     primary: 'bg-primary text-primary-foreground',
     success: 'bg-success text-white',
@@ -69,15 +82,17 @@ function DashboardStatCard({ icon, label, value, tone, to }: DashboardStatCardPr
     </>
   );
 
-  const className =
-    'group flex min-h-[92px] items-center gap-3 rounded-lg border border-outline-variant bg-surface p-4 shadow-sm transition-all hover:border-primary/50 hover:shadow-md';
+  const cardClassName = cn(
+    'group flex min-h-[92px] items-center gap-3 rounded-lg border border-outline-variant bg-surface p-4 shadow-sm transition-all hover:border-primary/50 hover:shadow-md',
+    className,
+  );
 
   return to ? (
-    <Link to={to} className={className}>
+    <Link to={to} className={cardClassName}>
       {content}
     </Link>
   ) : (
-    <div className={className}>{content}</div>
+    <div className={cardClassName}>{content}</div>
   );
 }
 
@@ -89,6 +104,239 @@ function readText(source: Record<string, unknown>, key: string): string {
 function applicationChildName(row: Record<string, unknown>) {
   const child = (row.child_info_json as Record<string, unknown> | undefined) ?? {};
   return readText(child, 'full_name_en') || readText(child, 'full_name') || readText(child, 'full_name_ar') || '-';
+}
+
+type ChildDashboardInsight = {
+  outstanding: number;
+  latestInvoiceNumber?: string;
+  latestInvoiceStatus?: string;
+  absentDays: number;
+  attendanceRate: number;
+  attendanceCalendar: Array<{ date: string; status: 'present' | 'absent' | 'off' }>;
+  relatedUpdate?: { label: string; to: string };
+};
+
+function formatShortDay(iso: string, locale: string): string {
+  const d = new Date(`${iso}T12:00:00`);
+  return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-GB', {
+    weekday: 'short',
+  }).format(d);
+}
+
+function ParentDashboardAnalyticsPanel({
+  children,
+  childInsights,
+  isLoading,
+  attendanceRate,
+  presentDays,
+  schoolDays,
+  unreadTotal,
+  totalOutstandingLabel,
+}: {
+  children: ParentDashboardChildCard[];
+  childInsights: Record<string, ChildDashboardInsight>;
+  isLoading: boolean;
+  attendanceRate: number;
+  presentDays: number;
+  schoolDays: number;
+  unreadTotal: number;
+  totalOutstandingLabel: string;
+}) {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language;
+  const dayData = useMemo(() => {
+    const map = new Map<string, { date: string; present: number; absent: number }>();
+    for (const child of children) {
+      for (const day of (childInsights[child.id]?.attendanceCalendar ?? []).slice(-7)) {
+        if (day.status === 'off') continue;
+        const row = map.get(day.date) ?? { date: day.date, present: 0, absent: 0 };
+        if (day.status === 'present') row.present += 1;
+        if (day.status === 'absent') row.absent += 1;
+        map.set(day.date, row);
+      }
+    }
+    return [...map.values()]
+      .sort((a, b) => +new Date(`${a.date}T12:00:00`) - +new Date(`${b.date}T12:00:00`))
+      .map((row) => ({ ...row, label: formatShortDay(row.date, locale) }));
+  }, [childInsights, children, locale]);
+
+  const weeklyPresent = dayData.reduce((sum, row) => sum + row.present, 0);
+  const weeklyAbsent = dayData.reduce((sum, row) => sum + row.absent, 0);
+  const pieData = [
+    { name: t('parent.dashboard.analytics.present', { defaultValue: 'Present' }), value: weeklyPresent, color: 'rgb(var(--success))' },
+    { name: t('parent.dashboard.analytics.absent', { defaultValue: 'Absent' }), value: weeklyAbsent, color: 'rgb(var(--error))' },
+  ].filter((row) => row.value > 0);
+
+  const childRows = children.map((child) => {
+    const insight = childInsights[child.id];
+    const week = (insight?.attendanceCalendar ?? []).slice(-7).filter((day) => day.status !== 'off');
+    const present = week.filter((day) => day.status === 'present').length;
+    const absent = week.filter((day) => day.status === 'absent').length;
+    const total = present + absent;
+    const rate = total > 0 ? Math.round((present / total) * 100) : 0;
+    return {
+      id: child.id,
+      name: locale === 'ar' ? child.nameAr : child.nameEn,
+      present,
+      absent,
+      rate,
+    };
+  });
+
+  return (
+    <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
+      <div className="flex flex-col gap-3 border-b border-outline-variant bg-surface-container-lowest p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+        <SectionHeading icon="monitoring">
+          {t('parent.dashboard.analytics.title', { defaultValue: 'Weekly family overview' })}
+        </SectionHeading>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline" className="h-10 rounded-md">
+            <Link to="/parent/daily-reports">
+              <span className="material-symbols-outlined me-2 text-base" aria-hidden>description</span>
+              {t('parent.dashboard.analytics.openReports', { defaultValue: 'Open reports' })}
+            </Link>
+          </Button>
+          <Button asChild variant="outline" className="h-10 rounded-md">
+            <Link to="/parent/attendance">
+              <span className="material-symbols-outlined me-2 text-base" aria-hidden>history</span>
+              {t('parent.dashboard.analytics.openAttendance', { defaultValue: 'Attendance details' })}
+            </Link>
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid gap-0 xl:grid-cols-[minmax(0,1.3fr)_360px]">
+        <div className="p-4 sm:p-5">
+          <div className="grid gap-3 sm:grid-cols-4">
+            <DashboardStatCard
+              icon="how_to_reg"
+              label={t('parent.dashboard.analytics.monthRate', { defaultValue: '30-day attendance' })}
+              value={`${attendanceRate}%`}
+              tone={attendanceRate >= 80 ? 'success' : 'warning'}
+              to="/parent/attendance"
+            />
+            <DashboardStatCard
+              icon="event_available"
+              label={t('parent.dashboard.analytics.presentDays', { defaultValue: 'Present' })}
+              value={presentDays}
+              tone="success"
+              to="/parent/attendance"
+            />
+            <DashboardStatCard
+              icon="event_busy"
+              label={t('parent.dashboard.analytics.absentDays', { defaultValue: 'Absent' })}
+              value={Math.max(0, schoolDays - presentDays)}
+              tone="error"
+              to="/parent/attendance"
+            />
+            <DashboardStatCard
+              icon="account_balance_wallet"
+              label={t('parent.dashboard.analytics.outstanding', { defaultValue: 'Outstanding' })}
+              value={totalOutstandingLabel}
+              tone="primary"
+              to="/parent/invoices"
+            />
+          </div>
+
+          <div className="mt-4 h-72 rounded-lg border border-outline-variant bg-surface-container-lowest p-3">
+            {isLoading ? (
+              <div className="flex h-full items-center justify-center text-sm text-on-surface-variant">{t('common.loading')}</div>
+            ) : dayData.length ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={dayData} margin={{ left: -24, right: 8, top: 12, bottom: 0 }}>
+                  <CartesianGrid stroke="rgb(var(--border-default))" strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={12} />
+                  <YAxis allowDecimals={false} tickLine={false} axisLine={false} fontSize={12} />
+                  <Tooltip
+                    cursor={{ fill: 'rgb(var(--surface-high))' }}
+                    contentStyle={{
+                      border: '1px solid rgb(var(--border-default))',
+                      borderRadius: 8,
+                      background: 'rgb(var(--surface))',
+                      color: 'rgb(var(--foreground))',
+                    }}
+                  />
+                  <Bar dataKey="present" stackId="attendance" fill="rgb(var(--success))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="absent" stackId="attendance" fill="rgb(var(--error))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full items-center justify-center text-center text-sm text-on-surface-variant">
+                {t('parent.dashboard.analytics.emptyChart', { defaultValue: 'Attendance chart will appear after the first check-in.' })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <aside className="border-t border-outline-variant bg-surface-container-lowest p-4 sm:p-5 xl:border-l xl:border-t-0">
+          <div className="grid gap-4">
+            <div className="rounded-lg border border-outline-variant bg-surface p-4">
+              <p className="text-sm font-semibold text-on-surface">
+                {t('parent.dashboard.analytics.weekTitle', { defaultValue: 'This week' })}
+              </p>
+              <div className="mt-3 grid grid-cols-[140px_minmax(0,1fr)] items-center gap-4">
+                <div className="h-32">
+                  {pieData.length ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={36} outerRadius={58} paddingAngle={3}>
+                          {pieData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex h-full items-center justify-center rounded-full border border-outline-variant text-xs text-on-surface-variant">
+                      0
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-on-surface-variant">{t('parent.dashboard.analytics.present', { defaultValue: 'Present' })}</span>
+                    <span className="font-semibold text-success">{weeklyPresent}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-on-surface-variant">{t('parent.dashboard.analytics.absent', { defaultValue: 'Absent' })}</span>
+                    <span className="font-semibold text-error">{weeklyAbsent}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 border-t border-outline-variant pt-2">
+                    <span className="text-on-surface-variant">{t('parent.dashboard.analytics.unread', { defaultValue: 'Unread' })}</span>
+                    <span className="font-semibold text-on-surface">{unreadTotal}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="max-h-72 space-y-2 overflow-y-auto pe-1">
+              {childRows.map((child) => (
+                <Link
+                  key={child.id}
+                  to={`/parent/attendance?child=${child.id}`}
+                  className="block rounded-lg border border-outline-variant bg-surface p-3 transition hover:border-primary/60"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="min-w-0 truncate text-sm font-semibold text-on-surface">{child.name}</p>
+                    <span className="shrink-0 text-sm font-semibold text-primary">{child.rate}%</span>
+                  </div>
+                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-high">
+                    <div className="h-full rounded-full bg-success" style={{ width: `${child.rate}%` }} />
+                  </div>
+                  <p className="mt-2 text-xs text-on-surface-variant">
+                    {t('parent.dashboard.analytics.childWeek', {
+                      present: child.present,
+                      absent: child.absent,
+                      defaultValue: '{{present}} present, {{absent}} absent this week',
+                    })}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+  );
 }
 
 function admissionStatusUi(status: string) {
@@ -111,6 +359,8 @@ function ParentAdmissionCyclePanel({
   application,
   isLoading,
   invoice,
+  paymentRows,
+  paymentHistoryLoading,
   packagesCount,
   onAddChild,
   t,
@@ -118,6 +368,8 @@ function ParentAdmissionCyclePanel({
   application?: Record<string, unknown>;
   isLoading: boolean;
   invoice: ReturnType<typeof useApplicationPackagePayment>['invoice'];
+  paymentRows: PaymentHistoryRow[];
+  paymentHistoryLoading: boolean;
   packagesCount: number;
   onAddChild: () => void;
   t: (key: string, options?: Record<string, unknown>) => string;
@@ -155,6 +407,9 @@ function ParentAdmissionCyclePanel({
   const status = String(application.status ?? 'draft');
   const statusUi = admissionStatusUi(status);
   const balanceDue = invoice?.balanceDue ?? 0;
+  const paidAmount = invoice?.paidAmount ?? 0;
+  const pendingAmount = invoice?.pendingAmount ?? 0;
+  const nextPaymentDate = invoice?.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : '-';
   const nextAction =
     status === 'rejected'
       ? t('parent.dashboard.admissionCycle.contact', { defaultValue: 'Contact nursery' })
@@ -184,7 +439,7 @@ function ParentAdmissionCyclePanel({
         </span>
       </div>
       <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_220px]">
-        <div className="grid divide-y divide-outline-variant sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        <div className="grid divide-y divide-outline-variant sm:grid-cols-2 xl:grid-cols-5 sm:divide-x sm:divide-y-0">
           <div className="p-4">
             <p className="text-[11px] font-semibold uppercase text-on-surface-variant">
               {t('parent.dashboard.admissionCycle.status', { defaultValue: 'Application' })}
@@ -203,11 +458,33 @@ function ParentAdmissionCyclePanel({
           </div>
           <div className="p-4">
             <p className="text-[11px] font-semibold uppercase text-on-surface-variant">
-              {t('financial.paymentHistory.balance', { defaultValue: 'Balance' })}
+              {t('financial.paymentHistory.balanceLabel', { defaultValue: 'Balance' })}
             </p>
             <p className="mt-1 text-sm font-semibold text-on-surface">
               {invoice ? t('invoice.egpAmount', { amount: balanceDue.toFixed(2) }) : '-'}
             </p>
+          </div>
+          <div className="p-4">
+            <p className="text-[11px] font-semibold uppercase text-on-surface-variant">
+              {t('financial.paymentHistory.paidLabel', { defaultValue: 'Paid' })}
+            </p>
+            <p className="mt-1 text-sm font-semibold text-success">
+              {invoice ? t('invoice.egpAmount', { amount: paidAmount.toFixed(2) }) : '-'}
+            </p>
+          </div>
+          <div className="p-4">
+            <p className="text-[11px] font-semibold uppercase text-on-surface-variant">
+              {t('parent.financial.nextDueLabel', { defaultValue: 'Next payment' })}
+            </p>
+            <p className="mt-1 text-sm font-semibold text-on-surface">{nextPaymentDate}</p>
+            {pendingAmount > 0 ? (
+              <p className="mt-1 text-xs font-medium text-warning">
+                {t('financial.paymentHistory.pending', {
+                  amount: pendingAmount.toFixed(2),
+                  defaultValue: 'Pending {{amount}}',
+                })}
+              </p>
+            ) : null}
           </div>
         </div>
         <div className="border-t border-outline-variant p-4 lg:border-l lg:border-t-0">
@@ -218,6 +495,55 @@ function ParentAdmissionCyclePanel({
           </Button>
         </div>
       </div>
+      {paymentHistoryLoading || paymentRows.length > 0 ? (
+        <div className="border-t border-outline-variant bg-surface-container-lowest p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-on-surface">
+              {t('financial.paymentHistory.applicationTitle', { defaultValue: 'Application payment history' })}
+            </p>
+            <Link className="text-xs font-semibold text-primary hover:underline" to="/parent/payment-record">
+              {t('common.viewAll', { defaultValue: 'View all' })}
+            </Link>
+          </div>
+          {paymentHistoryLoading ? (
+            <p className="text-sm text-on-surface-variant">{t('common.loading')}</p>
+          ) : (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {paymentRows.slice(0, 2).map((row) => (
+                <Link
+                  key={row.id}
+                  to={`/parent/invoices/${row.invoiceId}`}
+                  className="rounded-lg border border-outline-variant bg-surface p-3 transition hover:border-primary/60"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-primary">{row.invoiceNumber}</p>
+                      <p className="mt-1 text-xs text-on-surface-variant">{row.description || t(`invoice.types.${row.invoiceType}`)}</p>
+                    </div>
+                    <span className="shrink-0 text-sm font-semibold text-on-surface">
+                      {t('invoice.egpAmount', { amount: row.amount.toFixed(2) })}
+                    </span>
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+                    <span>
+                      <span className="block text-on-surface-variant">{t('financial.paymentHistory.paidLabel', { defaultValue: 'Paid' })}</span>
+                      <span className="font-semibold text-success">{t('invoice.egpAmount', { amount: row.paidAmount.toFixed(2) })}</span>
+                    </span>
+                    <span>
+                      <span className="block text-on-surface-variant">{t('invoice.inReview')}</span>
+                      <span className="font-semibold text-warning">{t('invoice.egpAmount', { amount: row.pendingAmount.toFixed(2) })}</span>
+                    </span>
+                    <span>
+                      <span className="block text-on-surface-variant">{t('financial.paymentHistory.balanceLabel', { defaultValue: 'Balance' })}</span>
+                      <span className="font-semibold text-on-surface">{t('invoice.egpAmount', { amount: row.balanceDue.toFixed(2) })}</span>
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -252,6 +578,12 @@ export function ParentDashboardPage() {
     applicationId: highlightedApplicationId,
     parentId: user?.id,
     nurseryId: highlightedApplicationNurseryId,
+  });
+  const highlightedApplicationPaymentHistory = usePaymentHistory({
+    applicationId: highlightedApplicationId,
+    parentId: user?.id,
+    nurseryId: highlightedApplicationNurseryId,
+    limit: 3,
   });
   const childRows = useMemo(() => childrenQuery.data ?? [], [childrenQuery.data]);
   const activeChildrenCount = childRows.length;
@@ -310,15 +642,7 @@ export function ParentDashboardPage() {
   })();
 
   const childInsights = useMemo(() => {
-    return childRows.reduce<Record<string, {
-      outstanding: number;
-      latestInvoiceNumber?: string;
-      latestInvoiceStatus?: string;
-      absentDays: number;
-      attendanceRate: number;
-      attendanceCalendar: Array<{ date: string; status: 'present' | 'absent' | 'off' }>;
-      relatedUpdate?: { label: string; to: string };
-    }>>((acc, child) => {
+    return childRows.reduce<Record<string, ChildDashboardInsight>>((acc, child) => {
       const childInvoices = (invoicesQuery.allData ?? []).filter((invoice) => invoice.childIds.includes(child.id));
       const dueInvoices = childInvoices.filter((invoice) => invoice.status === 'pending' || invoice.status === 'overdue');
       const latestInvoice = [...childInvoices].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))[0];
@@ -365,7 +689,7 @@ export function ParentDashboardPage() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="w-full max-w-none space-y-6">
       <section className="space-y-4">
         <div className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
           <div className="flex flex-col gap-4 border-b border-outline-variant bg-surface-container-lowest px-4 py-5 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
@@ -424,16 +748,29 @@ export function ParentDashboardPage() {
         </div>
       </section>
 
+      <ParentDashboardAnalyticsPanel
+        children={childRows}
+        childInsights={childInsights}
+        isLoading={showChildSkeleton || attendanceSummary.isLoading}
+        attendanceRate={attendanceSummary.summary.ratePct}
+        presentDays={attendanceSummary.summary.presentDays}
+        schoolDays={attendanceSummary.summary.schoolDaysCount}
+        unreadTotal={unreadTotal}
+        totalOutstandingLabel={moneyFormatter.format(totalOutstanding)}
+      />
+
       <ParentAdmissionCyclePanel
         application={highlightedApplication}
         isLoading={applications.isLoading || highlightedApplicationPayment.isLoading}
         invoice={highlightedApplicationPayment.invoice}
+        paymentRows={highlightedApplicationPaymentHistory.data}
+        paymentHistoryLoading={highlightedApplicationPaymentHistory.isLoading}
         packagesCount={highlightedApplicationPayment.packages.length}
         onAddChild={() => void handleAddChild()}
         t={t}
       />
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <section className="grid items-stretch gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr))]">
         <ParentAdminInboxSection />
         <ParentPasswordResetCard profile={profile} />
         <DashboardStatCard
@@ -442,13 +779,14 @@ export function ParentDashboardPage() {
           value={inReviewInvoicesCount}
           tone={inReviewInvoicesCount > 0 ? 'warning' : 'success'}
           to="/parent/invoices"
+          className="h-full min-h-[150px]"
         />
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-12">
-        <div className="space-y-3 xl:col-span-5">
+      <section className="grid items-stretch gap-5 xl:grid-cols-2">
+        <div className="flex min-w-0 flex-col gap-3">
           <SectionHeading icon="assignment">{t('parent.dashboard.sectionApplications')}</SectionHeading>
-          <div className="rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
+          <div className="h-full rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
             {applications.isLoading ? (
               <p className="text-sm text-on-surface-variant">{t('common.loading')}</p>
             ) : applicationRows.length === 0 ? (
@@ -482,7 +820,7 @@ export function ParentDashboardPage() {
           </div>
         </div>
 
-        <div className="space-y-3 xl:col-span-7">
+        <div className="flex min-w-0 flex-col gap-3">
           <SectionHeading icon="child_care">{t('parent.dashboard.sectionChildren')}</SectionHeading>
           <ParentChildSummaryCards
             children={childRows}

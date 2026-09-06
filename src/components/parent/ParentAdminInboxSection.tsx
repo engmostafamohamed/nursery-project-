@@ -1,10 +1,14 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { Badge } from '@/components/ui/badge';
 import { useAuthSession } from '@/hooks/useAuthSession';
-import { useParentInAppNotifications } from '@/hooks/useParentInAppNotifications';
+import {
+  parentInAppNotificationsQueryKey,
+  useParentInAppNotifications,
+} from '@/hooks/useParentInAppNotifications';
 import type { ParentInAppNotificationRow } from '@/hooks/useParentInAppNotifications';
 import type { SurveyType } from '@/hooks/useSurveys';
 import { useSurveys } from '@/hooks/useSurveys';
@@ -14,6 +18,7 @@ import {
   parentNotificationMaterialIcon,
   resolveParentNotificationPath,
 } from '@/lib/parentNotificationUtils';
+import { supabase } from '@/lib/supabase';
 
 function deadlineUrgent(iso: string | null | undefined): boolean {
   if (!iso) return false;
@@ -51,6 +56,7 @@ function notificationGroupKey(item: ParentInAppNotificationRow, lang: string): s
  */
 export function ParentAdminInboxSection() {
   const { t, i18n } = useTranslation();
+  const queryClient = useQueryClient();
   const { user } = useAuthSession();
   const { data: profile } = useUserProfile(user?.id);
   const nurseryId = profile?.nursery_id ?? undefined;
@@ -100,8 +106,20 @@ export function ParentAdminInboxSection() {
     return null;
   }
 
+  const markNotificationRead = (notificationId: string) => {
+    if (!user?.id) return;
+    void supabase
+      .from('notifications')
+      .update({ read: true } as never)
+      .eq('id', notificationId)
+      .eq('user_id', user.id)
+      .then(() => {
+        void queryClient.invalidateQueries({ queryKey: parentInAppNotificationsQueryKey(user.id) });
+      });
+  };
+
   return (
-    <section className="space-y-3 rounded-xl border border-outline-variant bg-surface p-4 shadow-sm md:col-span-2 xl:col-span-1">
+    <section className="flex h-full min-h-[150px] flex-col rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-base font-semibold text-on-surface">
           {t('parent.dashboard.adminInbox.title')}
@@ -114,7 +132,7 @@ export function ParentAdminInboxSection() {
         </Link>
       </div>
 
-      <div className="space-y-2">
+      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pe-1">
         {urgentNotifications.map(({ item: n, count }) => {
           const title = i18n.language === 'ar' ? n.title_ar : n.title_en;
           const body = i18n.language === 'ar' ? n.body_ar : n.body_en;
@@ -122,6 +140,7 @@ export function ParentAdminInboxSection() {
             <Link
               key={n.id}
               to={resolveParentNotificationPath(n.type, n.action_link)}
+              onClick={() => markNotificationRead(n.id)}
               className="group flex items-start gap-3 rounded-lg border border-error/30 bg-surface-container-lowest p-4 shadow-sm transition-colors hover:border-error/50 hover:bg-error/5"
             >
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-error/10 text-error">

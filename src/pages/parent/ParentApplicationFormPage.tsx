@@ -15,8 +15,24 @@ import { useApplicationPackagePayment } from '@/hooks/useApplicationPackagePayme
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { usePaymentHistory } from '@/hooks/usePaymentHistory';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { cn } from '@/lib/utils';
 
 const requiredDocs = ['birth_certificate', 'vaccination_card', 'parent_id', 'proof_of_address'] as const;
+const requiredParentFields = ['full_name', 'email', 'phone', 'national_id', 'address', 'emergency_contact'] as const;
+const requiredChildFields = ['full_name', 'dob', 'gender'] as const;
+type ApplicationWorkspaceTab = 'information' | 'packages' | 'payments';
+
+function latestDocumentsByType(docs: Array<Record<string, unknown>>) {
+  return docs.reduce<Record<string, Record<string, unknown>>>((acc, doc) => {
+    const type = String(doc.document_type ?? '');
+    if (!type) return acc;
+    const current = acc[type];
+    const currentTime = current ? new Date(String(current.uploaded_at ?? '')).getTime() : -Infinity;
+    const nextTime = new Date(String(doc.uploaded_at ?? '')).getTime();
+    if (!current || nextTime >= currentTime) acc[type] = doc;
+    return acc;
+  }, {});
+}
 
 function readApplicationName(childInfo: Record<string, unknown>) {
   const keys = ['full_name_en', 'full_name', 'full_name_ar'];
@@ -95,7 +111,78 @@ function PanelHeader({ icon, title, body }: { icon: string; title: string; body?
   );
 }
 
-const fieldClassName = 'grid gap-3 rounded-xl border border-outline-variant bg-surface p-4 shadow-sm md:grid-cols-2 disabled:opacity-80';
+function ApplicationWorkspaceTabs({
+  activeTab,
+  setActiveTab,
+  nextPaymentDate,
+  balanceLabel,
+}: {
+  activeTab: ApplicationWorkspaceTab;
+  setActiveTab: (tab: ApplicationWorkspaceTab) => void;
+  nextPaymentDate: string;
+  balanceLabel: string;
+}) {
+  const { t } = useTranslation();
+  const tabs = [
+    {
+      id: 'information',
+      icon: 'assignment',
+      label: t('applications.tabs.information', { defaultValue: 'Application information' }),
+    },
+    {
+      id: 'packages',
+      icon: 'inventory_2',
+      label: t('applications.tabs.packages', { defaultValue: 'Packages' }),
+    },
+    {
+      id: 'payments',
+      icon: 'receipt_long',
+      label: t('applications.tabs.paymentHistory', { defaultValue: 'Payment history' }),
+    },
+  ] as const;
+
+  return (
+    <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
+      <div className="flex gap-2 overflow-x-auto border-b border-outline-variant bg-surface-container-lowest p-2">
+        {tabs.map((tab) => {
+          const active = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                'flex h-11 shrink-0 items-center gap-2 rounded-md border px-3 text-sm font-semibold transition',
+                active
+                  ? 'border-primary bg-primary text-on-primary shadow-sm'
+                  : 'border-transparent bg-transparent text-on-surface-variant hover:bg-surface',
+              )}
+            >
+              <span className="material-symbols-outlined text-base" aria-hidden>{tab.icon}</span>
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+      <div className="grid divide-y divide-outline-variant bg-surface sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+        <div className="px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase text-on-surface-variant">
+            {t('parent.financial.nextDueLabel', { defaultValue: 'Next payment' })}
+          </p>
+          <p className="mt-1 text-sm font-semibold text-on-surface">{nextPaymentDate}</p>
+        </div>
+        <div className="px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase text-on-surface-variant">
+            {t('financial.paymentHistory.balanceLabel', { defaultValue: 'Balance' })}
+          </p>
+          <p className="mt-1 text-sm font-semibold text-on-surface">{balanceLabel}</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const fieldClassName = 'grid gap-3 rounded-xl border border-outline-variant bg-surface p-4 shadow-sm md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 disabled:opacity-80';
 const textareaClassName = 'min-h-[96px] w-full rounded-md border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20';
 
 export function ParentApplicationFormPage() {
@@ -106,7 +193,9 @@ export function ParentApplicationFormPage() {
   const { data: profile } = useUserProfile(user?.id);
   const apps = useApplications({ applicationId: id, parentId: user?.id });
   const [step, setStep] = useState<1 | 2 | 3 | 4>(searchParams.get('newChild') === '1' ? 2 : 1);
+  const [activeTab, setActiveTab] = useState<ApplicationWorkspaceTab>('information');
   const [terms, setTerms] = useState(false);
+  const [submittingApplication, setSubmittingApplication] = useState(false);
 
   const app = apps.applicationDetail?.application;
   const docs = useMemo(() => apps.applicationDetail?.documents ?? [], [apps.applicationDetail?.documents]);
@@ -167,8 +256,24 @@ export function ParentApplicationFormPage() {
   }, [app?.id]);
 
   const missingRequired = useMemo(
-    () => requiredDocs.filter((d) => !docs.some((doc) => String(doc.document_type) === d)),
+    () => {
+      const latestDocs = latestDocumentsByType(docs);
+      return requiredDocs.filter((d) => !latestDocs[d]?.file_url);
+    },
     [docs],
+  );
+  const latestDocs = useMemo(() => latestDocumentsByType(docs), [docs]);
+  const visibleDocs = useMemo(
+    () => Object.values(latestDocs).sort((a, b) => +new Date(String(b.uploaded_at ?? '')) - +new Date(String(a.uploaded_at ?? ''))),
+    [latestDocs],
+  );
+  const missingParentFields = useMemo(
+    () => requiredParentFields.filter((field) => !String(parentForm[field] ?? '').trim()),
+    [parentForm],
+  );
+  const missingChildFields = useMemo(
+    () => requiredChildFields.filter((field) => !String(childForm[field] ?? '').trim()),
+    [childForm],
   );
 
   if (!id) return null;
@@ -177,10 +282,82 @@ export function ParentApplicationFormPage() {
   const canEditApplication = status === 'draft';
   const canUploadDocuments = status === 'draft' || status === 'documents_pending';
   const canSubmitApplication = status === 'draft' || status === 'documents_pending';
+  const reviewedAt = typeof app.reviewed_at === 'string' ? app.reviewed_at : null;
+  const hasRequestedUpload = status !== 'documents_pending' || !reviewedAt || docs.some((doc) => {
+    const uploadedAt = new Date(String(doc.uploaded_at ?? '')).getTime();
+    return Number.isFinite(uploadedAt) && uploadedAt > new Date(reviewedAt).getTime();
+  });
+  const isApplicationComplete =
+    terms && missingRequired.length === 0 && missingParentFields.length === 0 && missingChildFields.length === 0 && hasRequestedUpload;
   const statusUi = statusPresentation(status, t);
+  const packageInvoice = applicationPackagePayment.invoice;
+  const nextPaymentDate = packageInvoice?.dueDate ? new Date(packageInvoice.dueDate).toLocaleDateString() : '-';
+  const balanceLabel = packageInvoice
+    ? t('invoice.egpAmount', { amount: packageInvoice.balanceDue.toFixed(2) })
+    : '-';
+
+  const submitApplication = async () => {
+    if (!isApplicationComplete) {
+      if (missingParentFields.length || missingChildFields.length) {
+        toast.error(t('applications.submitFieldsValidation', {
+          defaultValue: 'Please complete all required parent and child information before submitting.',
+        }));
+        return;
+      }
+      if (missingRequired.length) {
+        toast.error(t('applications.submitValidation'));
+        setStep(3);
+        return;
+      }
+      if (!hasRequestedUpload) {
+        toast.error(t('applications.requestedDocumentsValidation', {
+          defaultValue: 'Please upload or replace at least one requested document before submitting again.',
+        }));
+        setStep(3);
+        return;
+      }
+      toast.error(t('applications.submitTermsValidation', { defaultValue: 'Please accept the terms before submitting.' }));
+      return;
+    }
+    setSubmittingApplication(true);
+    try {
+      if (canEditApplication) {
+        await apps.saveApplicationDraft({
+          id,
+          updates: {
+            parent_info_json: parentForm,
+            child_info_json: childForm,
+            terms_accepted: terms,
+            parent_id: user?.id,
+          },
+        });
+      }
+      await apps.submitApplication({
+        id,
+        nurseryId: String(app.nursery_id),
+        parentName: parentForm.full_name || t('common.parent'),
+      });
+      toast.success(t('applications.submittedSuccess'));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      if (message === 'missing_required_documents') {
+        toast.error(t('applications.submitValidation'));
+        setStep(3);
+      } else if (message === 'requested_documents_not_updated') {
+        toast.error(t('applications.requestedDocumentsValidation', {
+          defaultValue: 'Please upload or replace at least one requested document before submitting again.',
+        }));
+        setStep(3);
+      } else {
+        toast.error(t('payment.errors.actionFailed'));
+      }
+    } finally {
+      setSubmittingApplication(false);
+    }
+  };
 
   return (
-    <div className="mx-auto max-w-6xl space-y-5">
+    <div className="w-full max-w-none space-y-5 pb-6">
       <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-outline-variant bg-surface-container-lowest px-4 py-5 sm:px-5">
           <div className="min-w-0">
@@ -211,139 +388,229 @@ export function ParentApplicationFormPage() {
         </div>
       ) : null}
 
-      <ApplicationPackagePaymentCard
-        packages={applicationPackagePayment.packages}
-        invoice={applicationPackagePayment.invoice}
-        isLoading={applicationPackagePayment.isLoading}
-        isSelecting={applicationPackagePayment.isSelecting}
-        canChoose={status !== 'rejected'}
-        onSelect={applicationPackagePayment.selectPackage}
+      <ApplicationWorkspaceTabs
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        nextPaymentDate={nextPaymentDate}
+        balanceLabel={balanceLabel}
       />
 
-      <PaymentHistoryTable
-        title={t('financial.paymentHistory.registrationTitle', { defaultValue: 'Registration payment history' })}
-        rows={paymentHistory.data}
-        isLoading={paymentHistory.isLoading}
-        showParent={false}
-        linkBase="/parent/invoices"
-      />
-
-      <ApplicationSteps
-        step={step}
-        labels={[t('applications.steps.parentInfo'), t('applications.steps.childInfo'), t('applications.steps.documents'), t('applications.steps.review')]}
-      />
-
-      {step === 1 ? (
-        <fieldset disabled={!canEditApplication} className={fieldClassName}>
-          <div className="space-y-2"><Label>{t('applications.parentName')}</Label><Input value={parentForm.full_name} onChange={(e) => setParentForm((p) => ({ ...p, full_name: e.target.value }))} /></div>
-          <div className="space-y-2"><Label>{t('applications.parentEmail')}</Label><Input value={parentForm.email} onChange={(e) => setParentForm((p) => ({ ...p, email: e.target.value }))} /></div>
-          <div className="space-y-2"><Label>{t('applications.parentPhone')}</Label><Input value={parentForm.phone} onChange={(e) => setParentForm((p) => ({ ...p, phone: e.target.value }))} /></div>
-          <div className="space-y-2"><Label>{t('applications.nationalId')}</Label><Input value={parentForm.national_id} onChange={(e) => setParentForm((p) => ({ ...p, national_id: e.target.value }))} /></div>
-          <div className="space-y-2 md:col-span-2"><Label>{t('applications.address')}</Label><Input value={parentForm.address} onChange={(e) => setParentForm((p) => ({ ...p, address: e.target.value }))} /></div>
-          <div className="space-y-2 md:col-span-2"><Label>{t('applications.emergencyContact')}</Label><Input value={parentForm.emergency_contact} onChange={(e) => setParentForm((p) => ({ ...p, emergency_contact: e.target.value }))} /></div>
-        </fieldset>
-      ) : null}
-
-      {step === 2 ? (
-        <fieldset disabled={!canEditApplication} className={fieldClassName}>
-          <div className="space-y-2"><Label>{t('applications.childName')}</Label><Input value={childForm.full_name} onChange={(e) => setChildForm((p) => ({ ...p, full_name: e.target.value }))} /></div>
-          <div className="space-y-2"><Label>{t('applications.childDob')}</Label><Input type="date" value={childForm.dob} onChange={(e) => setChildForm((p) => ({ ...p, dob: e.target.value }))} /></div>
-          <div className="space-y-2"><Label>{t('applications.gender')}</Label><Input value={childForm.gender} onChange={(e) => setChildForm((p) => ({ ...p, gender: e.target.value }))} /></div>
-          <div className="space-y-2 md:col-span-2"><Label>{t('applications.medicalConditions')}</Label><textarea className={textareaClassName} value={childForm.medical_conditions} onChange={(e) => setChildForm((p) => ({ ...p, medical_conditions: e.target.value }))} /></div>
-          <div className="space-y-2"><Label>{t('applications.allergies')}</Label><textarea className={textareaClassName} value={childForm.allergies} onChange={(e) => setChildForm((p) => ({ ...p, allergies: e.target.value }))} /></div>
-          <div className="space-y-2"><Label>{t('applications.specialNeeds')}</Label><textarea className={textareaClassName} value={childForm.special_needs} onChange={(e) => setChildForm((p) => ({ ...p, special_needs: e.target.value }))} /></div>
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={childForm.photo_privacy} onChange={(e) => setChildForm((p) => ({ ...p, photo_privacy: e.target.checked }))} />{t('applications.photoPrivacyConsent')}</label>
-        </fieldset>
-      ) : null}
-
-      {step === 3 ? (
-        <div className="space-y-4 rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
-          <PanelHeader
-            icon="upload_file"
-            title={t('applications.documents')}
-            body={t('applications.documentsHelp', { defaultValue: 'Upload required files as PDF or image files.' })}
+      {activeTab === 'information' ? (
+        <>
+          <ApplicationSteps
+            step={step}
+            labels={[t('applications.steps.parentInfo'), t('applications.steps.childInfo'), t('applications.steps.documents'), t('applications.steps.review')]}
           />
-          <div className="grid gap-3 md:grid-cols-2">
-          {[...requiredDocs, 'medical_report', 'other'].map((docType) => (
-            <label key={docType} className="flex min-h-24 flex-col justify-between gap-3 rounded-lg border border-outline-variant bg-surface-container-lowest p-3 text-foreground">
-              <span className="text-sm font-semibold">{t(`applications.documentTypes.${docType}`)}</span>
-              <input
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
-                disabled={!canUploadDocuments}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (!file || !app.nursery_id) return;
-                  void apps.uploadDocument({
-                    nurseryId: String(app.nursery_id),
-                    applicationId: String(id),
-                    documentType: docType as 'birth_certificate' | 'vaccination_card' | 'parent_id' | 'proof_of_address' | 'medical_report' | 'other',
-                    file,
-                  }).then(() => toast.success(t('applications.documentUploaded')));
-                }}
+
+          {step === 1 ? (
+            <fieldset disabled={!canEditApplication} className={fieldClassName}>
+              <div className="space-y-2"><Label>{t('applications.parentName')}</Label><Input value={parentForm.full_name} onChange={(e) => setParentForm((p) => ({ ...p, full_name: e.target.value }))} /></div>
+              <div className="space-y-2"><Label>{t('applications.parentEmail')}</Label><Input value={parentForm.email} onChange={(e) => setParentForm((p) => ({ ...p, email: e.target.value }))} /></div>
+              <div className="space-y-2"><Label>{t('applications.parentPhone')}</Label><Input value={parentForm.phone} onChange={(e) => setParentForm((p) => ({ ...p, phone: e.target.value }))} /></div>
+              <div className="space-y-2"><Label>{t('applications.nationalId')}</Label><Input value={parentForm.national_id} onChange={(e) => setParentForm((p) => ({ ...p, national_id: e.target.value }))} /></div>
+              <div className="space-y-2 md:col-span-2 xl:col-span-3 2xl:col-span-2"><Label>{t('applications.address')}</Label><Input value={parentForm.address} onChange={(e) => setParentForm((p) => ({ ...p, address: e.target.value }))} /></div>
+              <div className="space-y-2 md:col-span-2 xl:col-span-3 2xl:col-span-2"><Label>{t('applications.emergencyContact')}</Label><Input value={parentForm.emergency_contact} onChange={(e) => setParentForm((p) => ({ ...p, emergency_contact: e.target.value }))} /></div>
+            </fieldset>
+          ) : null}
+
+          {step === 2 ? (
+            <fieldset disabled={!canEditApplication} className={fieldClassName}>
+              <div className="space-y-2"><Label>{t('applications.childName')}</Label><Input value={childForm.full_name} onChange={(e) => setChildForm((p) => ({ ...p, full_name: e.target.value }))} /></div>
+              <div className="space-y-2"><Label>{t('applications.childDob')}</Label><Input type="date" value={childForm.dob} onChange={(e) => setChildForm((p) => ({ ...p, dob: e.target.value }))} /></div>
+              <div className="space-y-2"><Label>{t('applications.gender')}</Label><Input value={childForm.gender} onChange={(e) => setChildForm((p) => ({ ...p, gender: e.target.value }))} /></div>
+              <div className="space-y-2 md:col-span-2 xl:col-span-3 2xl:col-span-2"><Label>{t('applications.medicalConditions')}</Label><textarea className={textareaClassName} value={childForm.medical_conditions} onChange={(e) => setChildForm((p) => ({ ...p, medical_conditions: e.target.value }))} /></div>
+              <div className="space-y-2"><Label>{t('applications.allergies')}</Label><textarea className={textareaClassName} value={childForm.allergies} onChange={(e) => setChildForm((p) => ({ ...p, allergies: e.target.value }))} /></div>
+              <div className="space-y-2"><Label>{t('applications.specialNeeds')}</Label><textarea className={textareaClassName} value={childForm.special_needs} onChange={(e) => setChildForm((p) => ({ ...p, special_needs: e.target.value }))} /></div>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={childForm.photo_privacy} onChange={(e) => setChildForm((p) => ({ ...p, photo_privacy: e.target.checked }))} />{t('applications.photoPrivacyConsent')}</label>
+            </fieldset>
+          ) : null}
+
+          {step === 3 ? (
+            <div className="space-y-4 rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
+              <PanelHeader
+                icon="upload_file"
+                title={t('applications.documents')}
+                body={t('applications.documentsHelp', { defaultValue: 'Upload required files as PDF or image files.' })}
               />
-            </label>
-          ))}
-          </div>
-          {docs.length > 0 ? (
-            <div className="space-y-2">
-              {docs.map((doc) => (
-                <ApplicationDocumentPreview key={String(doc.id)} document={doc} />
-              ))}
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                {[...requiredDocs, 'medical_report', 'other'].map((docType) => (
+                  <label key={docType} className="flex min-h-28 flex-col justify-between gap-3 rounded-lg border border-outline-variant bg-surface-container-lowest p-3 text-foreground">
+                    <span className="flex items-start justify-between gap-2">
+                      <span className="text-sm font-semibold">{t(`applications.documentTypes.${docType}`)}</span>
+                      <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
+                        latestDocs[docType]?.file_url
+                          ? 'bg-success/10 text-success'
+                          : requiredDocs.includes(docType as (typeof requiredDocs)[number])
+                            ? 'bg-error/10 text-error'
+                            : 'bg-surface-container text-on-surface-variant'
+                      }`}>
+                        {latestDocs[docType]?.file_url
+                          ? t('applications.documentUploadedBadge', { defaultValue: 'Uploaded' })
+                          : requiredDocs.includes(docType as (typeof requiredDocs)[number])
+                            ? t('applications.requiredBadge', { defaultValue: 'Required' })
+                            : t('applications.optionalBadge', { defaultValue: 'Optional' })}
+                      </span>
+                    </span>
+                    {latestDocs[docType]?.file_url ? (
+                      <span className="text-xs text-on-surface-variant">
+                        {canUploadDocuments
+                          ? t('applications.replaceDocumentHint', { defaultValue: 'Choose a new file to replace this document.' })
+                          : t('applications.documentLockedHint', { defaultValue: 'This document is locked after submission.' })}
+                      </span>
+                    ) : null}
+                    <input
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
+                      disabled={!canUploadDocuments}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file || !app.nursery_id) return;
+                        void apps.uploadDocument({
+                          nurseryId: String(app.nursery_id),
+                          applicationId: String(id),
+                          documentType: docType as 'birth_certificate' | 'vaccination_card' | 'parent_id' | 'proof_of_address' | 'medical_report' | 'other',
+                          file,
+                        }).then(() => toast.success(t('applications.documentUploaded')));
+                      }}
+                    />
+                  </label>
+                ))}
+              </div>
+              {status === 'documents_pending' && !hasRequestedUpload ? (
+                <div className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm font-medium text-warning">
+                  {t('applications.requestedDocumentsPendingHint', {
+                    defaultValue: 'The nursery requested documents. Upload or replace at least one file before submitting again.',
+                  })}
+                </div>
+              ) : null}
+              {docs.length > 0 ? (
+                <div className="space-y-2">
+                  {visibleDocs.map((doc) => (
+                    <ApplicationDocumentPreview key={String(doc.id)} document={doc} />
+                  ))}
+                </div>
+              ) : null}
+              <div className="text-xs text-on-surface-variant">{t('applications.uploadedCount', { count: docs.length })}</div>
             </div>
           ) : null}
-          <div className="text-xs text-on-surface-variant">{t('applications.uploadedCount', { count: docs.length })}</div>
-        </div>
-      ) : null}
 
-      {step === 4 ? (
-        <fieldset disabled={!canEditApplication} className="space-y-4 rounded-xl border border-outline-variant bg-surface p-4 shadow-sm disabled:opacity-80">
-          <PanelHeader icon="task_alt" title={t('applications.steps.review')} body={t('applications.reviewText')} />
-          <p className="rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2 text-xs text-on-surface-variant">{t('applications.missingRequired', { count: missingRequired.length })}</p>
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} />{t('applications.termsAccept')}</label>
-        </fieldset>
-      ) : null}
+          {step === 4 ? (
+            <fieldset disabled={!canEditApplication} className="space-y-4 rounded-xl border border-outline-variant bg-surface p-4 shadow-sm disabled:opacity-80">
+              <PanelHeader icon="task_alt" title={t('applications.steps.review')} body={t('applications.reviewText')} />
+              <div className="grid gap-2">
+                <p className={`rounded-lg border px-3 py-2 text-xs ${
+                  missingRequired.length ? 'border-error/30 bg-error/10 text-error' : 'border-success/30 bg-success/10 text-success'
+                }`}>
+                  {t('applications.missingRequired', { count: missingRequired.length })}
+                </p>
+                {missingParentFields.length || missingChildFields.length ? (
+                  <p className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+                    {t('applications.missingFields', {
+                      count: missingParentFields.length + missingChildFields.length,
+                      defaultValue: '{{count}} required information field(s) missing.',
+                    })}
+                  </p>
+                ) : null}
+                {!hasRequestedUpload ? (
+                  <p className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+                    {t('applications.requestedDocumentsPendingHint', {
+                      defaultValue: 'The nursery requested documents. Upload or replace at least one file before submitting again.',
+                    })}
+                  </p>
+                ) : null}
+              </div>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} />{t('applications.termsAccept')}</label>
+            </fieldset>
+          ) : null}
 
-      <div className="sticky bottom-4 z-10 flex flex-col gap-2 rounded-xl border border-outline-variant bg-surface/95 p-3 shadow-lg backdrop-blur sm:flex-row sm:justify-between">
-        <Button variant="outline" disabled={step === 1} onClick={() => setStep((s) => Math.max(1, s - 1) as 1 | 2 | 3 | 4)}>{t('common.previous')}</Button>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Button
-            variant="outline"
-            disabled={!canEditApplication}
-            onClick={() => void apps.saveApplicationDraft({
-              id,
-              updates: {
-                parent_info_json: parentForm,
-                child_info_json: childForm,
-                terms_accepted: terms,
-                parent_id: user?.id,
-              },
-            }).then(() => toast.success(t('applications.draftSaved')))}
-          >
-            {t('applications.saveDraft')}
-          </Button>
-          {step < 4 ? (
-            <Button onClick={() => setStep((s) => Math.min(4, s + 1) as 1 | 2 | 3 | 4)}>{t('common.next')}</Button>
-          ) : (
-            <Button
-              disabled={!canSubmitApplication}
-              onClick={() => {
-                if (!terms || missingRequired.length) {
-                  toast.error(t('applications.submitValidation'));
-                  return;
-                }
-                void apps.submitApplication({
+          <div className="sticky bottom-4 z-10 flex flex-col gap-2 rounded-xl border border-outline-variant bg-surface/95 p-3 shadow-lg backdrop-blur sm:flex-row sm:justify-between">
+            <Button variant="outline" disabled={step === 1} onClick={() => setStep((s) => Math.max(1, s - 1) as 1 | 2 | 3 | 4)}>{t('common.previous')}</Button>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                variant="outline"
+                disabled={!canEditApplication}
+                onClick={() => void apps.saveApplicationDraft({
                   id,
-                  nurseryId: String(app.nursery_id),
-                  parentName: parentForm.full_name || t('common.parent'),
-                }).then(() => toast.success(t('applications.submittedSuccess')));
-              }}
-            >
-              {t('applications.submit')}
-            </Button>
-          )}
+                  updates: {
+                    parent_info_json: parentForm,
+                    child_info_json: childForm,
+                    terms_accepted: terms,
+                    parent_id: user?.id,
+                  },
+                }).then(() => toast.success(t('applications.draftSaved')))}
+              >
+                {t('applications.saveDraft')}
+              </Button>
+              {step < 4 ? (
+                <Button onClick={() => setStep((s) => Math.min(4, s + 1) as 1 | 2 | 3 | 4)}>{t('common.next')}</Button>
+              ) : (
+                <Button
+                  disabled={!canSubmitApplication || submittingApplication}
+                  onClick={() => void submitApplication()}
+                >
+                  {submittingApplication ? t('common.saving') : t('applications.submit')}
+                </Button>
+              )}
+            </div>
+          </div>
+        </>
+      ) : null}
+
+      {activeTab === 'packages' ? (
+        <ApplicationPackagePaymentCard
+          packages={applicationPackagePayment.packages}
+          invoice={applicationPackagePayment.invoice}
+          isLoading={applicationPackagePayment.isLoading}
+          isSelecting={applicationPackagePayment.isSelecting}
+          canChoose={
+            status !== 'rejected' &&
+            !applicationPackagePayment.invoice?.paidAmount &&
+            !applicationPackagePayment.invoice?.pendingAmount
+          }
+          onSelect={applicationPackagePayment.selectPackage}
+        />
+      ) : null}
+
+      {activeTab === 'payments' ? (
+        <div className="space-y-4">
+          <section className="grid gap-3 rounded-xl border border-outline-variant bg-surface p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase text-on-surface-variant">
+                {t('parent.financial.nextDueLabel', { defaultValue: 'Next payment' })}
+              </p>
+              <p className="mt-1 text-sm font-semibold text-on-surface">{nextPaymentDate}</p>
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase text-on-surface-variant">
+                {t('financial.paymentHistory.paidLabel', { defaultValue: 'Paid' })}
+              </p>
+              <p className="mt-1 text-sm font-semibold text-success">
+                {packageInvoice ? t('invoice.egpAmount', { amount: packageInvoice.paidAmount.toFixed(2) }) : '-'}
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase text-on-surface-variant">{t('invoice.inReview')}</p>
+              <p className="mt-1 text-sm font-semibold text-warning">
+                {packageInvoice ? t('invoice.egpAmount', { amount: packageInvoice.pendingAmount.toFixed(2) }) : '-'}
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase text-on-surface-variant">
+                {t('financial.paymentHistory.balanceLabel', { defaultValue: 'Balance' })}
+              </p>
+              <p className="mt-1 text-sm font-semibold text-on-surface">{balanceLabel}</p>
+            </div>
+          </section>
+
+          <PaymentHistoryTable
+            title={t('financial.paymentHistory.registrationTitle', { defaultValue: 'Registration payment history' })}
+            rows={paymentHistory.data}
+            isLoading={paymentHistory.isLoading}
+            showParent={false}
+            linkBase="/parent/invoices"
+          />
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }

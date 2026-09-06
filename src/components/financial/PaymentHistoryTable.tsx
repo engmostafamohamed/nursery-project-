@@ -120,7 +120,15 @@ export function PaymentHistoryTable({
                   <td className="px-2 py-2">{t(`invoice.types.${row.invoiceType}`)}</td>
                   <td className="px-2 py-2">{t('invoice.egpAmount', { amount: row.amount.toFixed(2) })}</td>
                   <td className="px-2 py-2">
-                    <span className="block">{t('invoice.egpAmount', { amount: row.paidAmount.toFixed(2) })}</span>
+                    <span className="block font-medium text-success">{t('invoice.egpAmount', { amount: row.paidAmount.toFixed(2) })}</span>
+                    {row.pendingAmount > 0 ? (
+                      <span className="block text-xs text-warning">
+                        {t('financial.paymentHistory.pending', {
+                          amount: row.pendingAmount.toFixed(2),
+                          defaultValue: 'Pending {{amount}}',
+                        })}
+                      </span>
+                    ) : null}
                     <span className="block text-xs text-on-surface-variant">
                       {t('financial.paymentHistory.balance', {
                         amount: row.balanceDue.toFixed(2),

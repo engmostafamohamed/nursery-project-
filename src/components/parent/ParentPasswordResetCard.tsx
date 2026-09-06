@@ -178,8 +178,8 @@ export function ParentPasswordResetCard({ profile }: { profile: UserRow | null |
   };
 
   return (
-    <section className="rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
-      <div className="flex flex-col gap-4">
+    <section className="flex h-full min-h-[150px] rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
+      <div className="flex w-full flex-col justify-between gap-4">
         <div className="flex min-w-0 gap-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
             <MaterialSymbol name="lock_reset" size="text-2xl" />

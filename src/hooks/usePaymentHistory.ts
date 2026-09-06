@@ -20,6 +20,7 @@ export type PaymentHistoryRow = {
   updatedAt: string;
   paidAt: string | null;
   paidAmount: number;
+  pendingAmount: number;
   balanceDue: number;
   paymentMethod: string | null;
   gateway: string;
@@ -27,6 +28,7 @@ export type PaymentHistoryRow = {
   lastAttemptAt: string | null;
   lastAttemptStatus: string | null;
   lastAttemptMethod: string | null;
+  lastAttemptAmount: number;
   description: string;
 };
 
@@ -216,7 +218,14 @@ export function usePaymentHistory({ nurseryId, parentId, applicationId, fromDate
       if (parentsRes.error) throw parentsRes.error;
 
       const attemptsByInvoice = new Map<string, AttemptRow>();
+      const pendingAmountByInvoice = new Map<string, number>();
       for (const attempt of (attemptsRes.data ?? []) as AttemptRow[]) {
+        if (attempt.status === 'pending_confirmation') {
+          pendingAmountByInvoice.set(
+            attempt.invoice_id,
+            (pendingAmountByInvoice.get(attempt.invoice_id) ?? 0) + amount(attempt.amount),
+          );
+        }
         const current = attemptsByInvoice.get(attempt.invoice_id);
         if (!current || new Date(attempt.created_at).getTime() > new Date(current.created_at).getTime()) {
           attemptsByInvoice.set(attempt.invoice_id, attempt);
@@ -237,6 +246,7 @@ export function usePaymentHistory({ nurseryId, parentId, applicationId, fromDate
           .reduce((sum, payment) => sum + amount(payment.amount), 0);
         const invoiceAmount = amount(invoice.amount);
         const paidAmount = Math.min(rawPaidAmount, invoiceAmount);
+        const pendingAmount = Math.min(pendingAmountByInvoice.get(invoice.id) ?? 0, Math.max(0, invoiceAmount - paidAmount));
         return {
           id: `${invoice.id}-${latestPayment?.id ?? latestAttempt?.id ?? 'invoice'}`,
           invoiceId: invoice.id,
@@ -251,6 +261,7 @@ export function usePaymentHistory({ nurseryId, parentId, applicationId, fromDate
           updatedAt: invoice.updated_at,
           paidAt: latestPayment?.paid_at ?? invoice.paid_at,
           paidAmount,
+          pendingAmount,
           balanceDue: Math.max(0, invoiceAmount - paidAmount),
           paymentMethod: method,
           gateway: gatewayFor(method),
@@ -258,6 +269,7 @@ export function usePaymentHistory({ nurseryId, parentId, applicationId, fromDate
           lastAttemptAt: latestAttempt?.created_at ?? null,
           lastAttemptStatus: latestAttempt?.status ?? null,
           lastAttemptMethod: latestAttempt?.payment_method ?? null,
+          lastAttemptAmount: latestAttempt ? amount(latestAttempt.amount) : 0,
           description: firstDescription(invoice.line_items_json),
         };
       });

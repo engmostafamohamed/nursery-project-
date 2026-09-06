@@ -36,7 +36,8 @@ export function ParentDashboardFeedList({ items, isLoading }: Props) {
   }
 
   return (
-    <ul className="space-y-2">
+    <div className="max-h-[560px] overflow-y-auto pe-1">
+      <ul className="space-y-2">
       {items.map((item) => {
         const when = formatDateTime(item.at, { dateStyle: 'medium', timeStyle: 'short', hour12: true });
         let primary = '';
@@ -105,6 +106,7 @@ export function ParentDashboardFeedList({ items, isLoading }: Props) {
           </li>
         );
       })}
-    </ul>
+      </ul>
+    </div>
   );
 }

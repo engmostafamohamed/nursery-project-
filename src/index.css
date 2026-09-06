@@ -268,11 +268,33 @@
 }
 
 @media print {
+  html,
+  body,
+  #root {
+    background: #fff !important;
+  }
   .no-print {
     display: none !important;
   }
   .print-area {
     display: block !important;
+  }
+  .print-main {
+    margin: 0 !important;
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  .parent-shell {
+    padding: 0 !important;
+  }
+  .invoice-print-area {
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    color: #111827 !important;
+    margin: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
   }
 }
 
