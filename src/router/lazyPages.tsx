@@ -236,8 +236,17 @@ export const ParentAttendanceHistoryPage = lazy(() =>
 export const ParentChildProfilePage = lazy(() =>
   import('@/pages/parent/ParentChildProfilePage').then((m) => ({ default: m.ParentChildProfilePage })),
 );
+export const ParentProfilePage = lazy(() =>
+  import('@/pages/parent/ParentProfilePage').then((m) => ({ default: m.ParentProfilePage })),
+);
 export const ParentChildHealthPage = lazy(() =>
   import('@/pages/parent/ParentChildHealthPage').then((m) => ({ default: m.ParentChildHealthPage })),
+);
+export const ParentChildrenPage = lazy(() =>
+  import('@/pages/parent/ParentChildrenPage').then((m) => ({ default: m.ParentChildrenPage })),
+);
+export const ParentApplicationsPage = lazy(() =>
+  import('@/pages/parent/ParentApplicationsPage').then((m) => ({ default: m.ParentApplicationsPage })),
 );
 export const ParentEventDetailsPage = lazy(() =>
   import('@/pages/parent/ParentEventDetailsPage').then((m) => ({ default: m.ParentEventDetailsPage })),

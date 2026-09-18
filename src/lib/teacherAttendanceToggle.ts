@@ -20,6 +20,13 @@ type ParentChildRow = { parent_id: string };
 export type PickupContext = {
   purpose?: 'parent' | 'delegate';
   delegateName?: string | null;
+  pickupPersonFullName?: string | null;
+  pickupRelationship?: string | null;
+  pickupIdentityType?: string | null;
+  pickupIdentityNumber?: string | null;
+  pickupIdentityImagePath?: string | null;
+  pickupNotes?: string | null;
+  requireIdCapture?: boolean;
   /** uuid of the user who minted the QR (parent) — used to look up their photo. */
   issuedBy?: string | null;
   /** Identity already resolved by caller (skips re-query inside the toggle). */
@@ -158,6 +165,12 @@ export async function teacherAttendanceToggle(
       pickup_purpose: pickup.purpose ?? null,
       pickup_person_name: pickupPersonName,
       pickup_photo_url: pickupPhotoUrl,
+      pickup_relationship: pickup.pickupRelationship ?? null,
+      pickup_identity_type: pickup.pickupIdentityType ?? null,
+      pickup_identity_number: pickup.pickupIdentityNumber ?? null,
+      pickup_identity_image_path: pickup.pickupIdentityImagePath ?? null,
+      pickup_notes: pickup.pickupNotes ?? null,
+      require_id_capture: pickup.requireIdCapture ?? true,
     };
     if (pickup.verifiedBy || pickup.idPhotoPath) {
       scanLog.identity_verified = {
@@ -252,6 +265,12 @@ export async function resolvePickupIdentity(
   pickup: PickupContext,
 ): Promise<ResolvedPickupIdentity> {
   const purpose = pickup.purpose ?? 'parent';
+  if (purpose === 'delegate' && pickup.pickupPersonFullName) {
+    return {
+      pickupPersonName: pickup.pickupPersonFullName.trim(),
+      pickupPhotoUrl: null,
+    };
+  }
   if (purpose === 'delegate' && pickup.delegateName) {
     const name = pickup.delegateName.trim();
     const ap = await supabase

@@ -26,18 +26,19 @@ type UserMenuProps = {
   profilePath: string;
   /** Optional label for the profile item; defaults to common.profile. */
   profileLabel?: string;
+  /** Optional already-resolved display name for role-specific account labels. */
+  displayNameOverride?: string;
 };
 
-export function UserMenu({ profilePath, profileLabel }: UserMenuProps) {
+export function UserMenu({ profilePath, profileLabel, displayNameOverride }: UserMenuProps) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuthSession();
   const { data: profile } = useUserProfile(user?.id);
 
-  const displayName =
-    i18n.language === 'ar'
+  const displayName = displayNameOverride?.trim() || (i18n.language === 'ar'
       ? (profile?.name_ar?.trim() || profile?.name_en?.trim() || '')
-      : (profile?.name_en?.trim() || profile?.name_ar?.trim() || '');
+      : (profile?.name_en?.trim() || profile?.name_ar?.trim() || ''));
   const email = profile?.email ?? user?.email ?? '';
   const initials = getUserInitials(displayName, email);
   const avatarSrc =

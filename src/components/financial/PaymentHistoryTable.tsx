@@ -54,7 +54,7 @@ export function PaymentHistoryTable({
   const { t } = useTranslation();
 
   return (
-    <section className={cn('rounded-2xl border border-outline-variant bg-surface-container-lowest p-4', className)}>
+    <section className={cn('rounded-xl border border-outline-variant bg-surface p-4 shadow-sm', className)}>
       {title ? <h3 className="mb-3 text-sm font-semibold text-on-surface">{title}</h3> : null}
       {isLoading ? (
         <p className="text-sm text-on-surface-variant">{t('common.loading')}</p>

@@ -53,7 +53,7 @@ export function useUserProfile(userId: string | undefined) {
       const { data, error } = await supabase
         .from('users')
         .select(
-          'id, nursery_id, chain_id, role, role_id, department, name_ar, name_en, email, phone, status, language_pref, onboarding_completed, created_at, updated_at',
+          'id, nursery_id, chain_id, role, role_id, department, name_ar, name_en, email, phone, occupation, id_photo_url, status, language_pref, onboarding_completed, created_at, updated_at',
         )
         .eq('id', userId as string)
         .maybeSingle();

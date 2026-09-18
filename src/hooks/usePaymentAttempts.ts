@@ -68,5 +68,7 @@ export function usePaymentAttempts(invoiceId: string | undefined) {
       }));
     },
     enabled: Boolean(invoiceId),
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 }

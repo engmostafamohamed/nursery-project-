@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 
+import { FilterMenu, type FilterMenuOption } from '@/components/ui/FilterMenu';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -68,6 +69,17 @@ export function ChildSelector({ value, onChange, children: childrenProp, showAll
     return (c: ChildOption) => i18n.language === 'ar' ? (c.nameAr || c.nameEn) : (c.nameEn || c.nameAr);
   }, [i18n.language]);
 
+  const options = useMemo<FilterMenuOption[]>(() => {
+    const childOptions = children.map((c) => ({
+      value: c.id,
+      label: getName(c),
+      icon: 'face',
+    }));
+    return showAllOption
+      ? [{ value: '', label: t('parent.childSelector.allChildren'), icon: 'groups' }, ...childOptions]
+      : childOptions;
+  }, [children, getName, showAllOption, t]);
+
   if (children.length <= 1) return null;
 
   return (
@@ -76,18 +88,7 @@ export function ChildSelector({ value, onChange, children: childrenProp, showAll
         <MaterialSymbol name="face" size="text-lg" />
         {t('parent.childSelector.label')}
       </label>
-      <select
-        className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        {showAllOption ? (
-          <option value="">{t('parent.childSelector.allChildren')}</option>
-        ) : null}
-        {children.map((c) => (
-          <option key={c.id} value={c.id}>{getName(c)}</option>
-        ))}
-      </select>
+      <FilterMenu value={value} options={options} onChange={onChange} />
     </div>
   );
 }

@@ -102,7 +102,7 @@ export function ParentQrHistoryList({ parentId, children }: Props) {
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-sm font-semibold text-on-surface">
                           {token.purpose === 'delegate'
-                            ? token.delegateName ?? t('qr.history.unnamedDelegate')
+                            ? token.pickupPersonFullName ?? token.delegateName ?? t('qr.history.unnamedDelegate')
                             : t('qr.history.parentSelfPickup')}
                         </p>
                         <Badge className={`text-[10px] ${STATUS_BADGE_CLASS[token.status]}`}>
@@ -113,6 +113,21 @@ export function ParentQrHistoryList({ parentId, children }: Props) {
                         {child ? `${t('qr.history.forChild')}: ${child.displayName} · ` : ''}
                         {t('qr.history.issuedAt')}: {formatDateTime(token.createdAt)}
                       </p>
+                      {token.purpose === 'delegate' ? (
+                        <div className="flex flex-wrap gap-2 text-xs text-on-surface-variant">
+                          {token.pickupRelationship ? (
+                            <span className="rounded-full bg-surface px-2 py-1">{token.pickupRelationship}</span>
+                          ) : null}
+                          {token.pickupIdentityType || token.pickupIdentityNumber ? (
+                            <span className="rounded-full bg-surface px-2 py-1">
+                              {token.pickupIdentityType ?? t('qr.custom.fields.identityType', { defaultValue: 'ID type' })}: {token.pickupIdentityNumber ?? '-'}
+                            </span>
+                          ) : null}
+                          {token.pickupNotes ? (
+                            <span className="rounded-full bg-surface px-2 py-1">{token.pickupNotes}</span>
+                          ) : null}
+                        </div>
+                      ) : null}
                       {token.consumedAt ? (
                         <p className="text-xs text-on-surface-variant">
                           {t('qr.history.usedAt')}: {formatDateTime(token.consumedAt)}

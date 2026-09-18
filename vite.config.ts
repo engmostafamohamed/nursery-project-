@@ -4,9 +4,62 @@ import { defineConfig, loadEnv } from 'vite'
 import type { ViteDevServer } from 'vite'
 import react from '@vitejs/plugin-react'
 
-function xoDevLogPlugin(supabaseUrl: string, supabaseAnonKey: string) {
-  const databaseHealthPath = '/rest/v1/nurseries?select=id&limit=1'
+const DATABASE_HEALTH_PATH = '/rest/v1/nurseries?select=id&limit=1'
+const DATABASE_HEALTH_TIMEOUT_MS = 15_000
+const DATABASE_HEALTH_ATTEMPTS = 3
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+function formatHealthError(error: unknown) {
+  if (error instanceof Error && error.name === 'AbortError') {
+    return `Supabase database health check timed out after ${DATABASE_HEALTH_TIMEOUT_MS / 1000} seconds.`
+  }
+
+  return error instanceof Error ? error.message : String(error)
+}
+
+async function fetchSupabaseDatabaseHealth(supabaseUrl: string, supabaseAnonKey: string) {
+  let lastMessage = 'Supabase database health check failed.'
+
+  for (let attempt = 1; attempt <= DATABASE_HEALTH_ATTEMPTS; attempt += 1) {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), DATABASE_HEALTH_TIMEOUT_MS)
+
+    try {
+      const response = await fetch(`${supabaseUrl.replace(/\/+$/, '')}${DATABASE_HEALTH_PATH}`, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          apikey: supabaseAnonKey,
+          Authorization: `Bearer ${supabaseAnonKey}`,
+        },
+        cache: 'no-store',
+        signal: controller.signal,
+      })
+
+      if (response.ok) {
+        return { ok: true as const }
+      }
+
+      lastMessage =
+        response.status === 401
+          ? 'Supabase rejected VITE_SUPABASE_ANON_KEY with HTTP 401. Copy the publishable/anon key from the same Supabase project as VITE_SUPABASE_URL.'
+          : `Supabase database health check failed with HTTP ${response.status}.`
+    } catch (error) {
+      lastMessage = `Cannot connect to Supabase database at ${supabaseUrl}: ${formatHealthError(error)}`
+    } finally {
+      clearTimeout(timeout)
+    }
+
+    if (attempt < DATABASE_HEALTH_ATTEMPTS) {
+      await sleep(500 * attempt)
+    }
+  }
+
+  return { ok: false as const, message: lastMessage }
+}
+
+function xoDevLogPlugin(supabaseUrl: string, supabaseAnonKey: string) {
   return {
     name: 'xo-dev-log',
     configureServer(server: ViteDevServer) {
@@ -24,35 +77,14 @@ function xoDevLogPlugin(supabaseUrl: string, supabaseAnonKey: string) {
           return
         }
 
-        const controller = new AbortController()
-        const timeout = setTimeout(() => controller.abort(), 5000)
-
-        try {
-          const response = await fetch(`${supabaseUrl.replace(/\/+$/, '')}${databaseHealthPath}`, {
-            method: 'GET',
-            headers: {
-              apikey: supabaseAnonKey,
-              Authorization: `Bearer ${supabaseAnonKey}`,
-            },
-            signal: controller.signal,
-          })
-
-          if (!response.ok) {
-            const message = `Supabase database health check failed with HTTP ${response.status}.`
-            console.error(`[database] ${message}`)
-            sendHealth({ ok: false, message })
-            return
-          }
-
+        const result = await fetchSupabaseDatabaseHealth(supabaseUrl, supabaseAnonKey)
+        if (result.ok) {
           sendHealth({ ok: true })
-        } catch (error) {
-          const reason = error instanceof Error ? error.message : String(error)
-          const message = `Cannot connect to Supabase database at ${supabaseUrl}: ${reason}`
-          console.error(`[database] ${message}`)
-          sendHealth({ ok: false, message })
-        } finally {
-          clearTimeout(timeout)
+          return
         }
+
+        console.error(`[database] ${result.message}`)
+        sendHealth(result)
       })
     },
   }

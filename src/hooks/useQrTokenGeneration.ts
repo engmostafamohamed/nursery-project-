@@ -5,11 +5,19 @@ import { supabase } from '@/lib/supabase';
 export type QrTokenPurpose = 'parent' | 'delegate';
 
 export type QrTokenPayload = {
+  id: string | null;
   token: string;
   expires_at: string;
   expires_in: number;
   purpose: QrTokenPurpose;
   delegate_name: string | null;
+  pickup_person_full_name: string | null;
+  pickup_relationship: string | null;
+  pickup_identity_type: 'national_id' | 'passport' | 'other' | null;
+  pickup_identity_number: string | null;
+  pickup_identity_image_path: string | null;
+  pickup_notes: string | null;
+  require_id_capture: boolean;
   single_use: boolean;
 };
 
@@ -29,6 +37,13 @@ export function useQrTokenGeneration() {
       ttl_seconds?: number;
       purpose?: QrTokenPurpose;
       delegate_name?: string;
+      pickup_person_full_name?: string;
+      pickup_relationship?: string;
+      pickup_identity_type?: 'national_id' | 'passport' | 'other';
+      pickup_identity_number?: string;
+      pickup_identity_image_path?: string;
+      pickup_notes?: string;
+      require_id_capture?: boolean;
       single_use?: boolean;
       rotate?: boolean;
     }) => {
@@ -39,17 +54,32 @@ export function useQrTokenGeneration() {
           ...(args.ttl_seconds !== undefined ? { ttl_seconds: args.ttl_seconds } : {}),
           ...(args.purpose ? { purpose: args.purpose } : {}),
           ...(args.delegate_name ? { delegate_name: args.delegate_name } : {}),
+          ...(args.pickup_person_full_name ? { pickup_person_full_name: args.pickup_person_full_name } : {}),
+          ...(args.pickup_relationship ? { pickup_relationship: args.pickup_relationship } : {}),
+          ...(args.pickup_identity_type ? { pickup_identity_type: args.pickup_identity_type } : {}),
+          ...(args.pickup_identity_number ? { pickup_identity_number: args.pickup_identity_number } : {}),
+          ...(args.pickup_identity_image_path ? { pickup_identity_image_path: args.pickup_identity_image_path } : {}),
+          ...(args.pickup_notes ? { pickup_notes: args.pickup_notes } : {}),
+          ...(args.require_id_capture !== undefined ? { require_id_capture: args.require_id_capture } : {}),
           ...(args.single_use !== undefined ? { single_use: args.single_use } : {}),
           ...(args.rotate ? { rotate: true } : {}),
         },
       });
       if (error) throw error;
       const payload = data as {
+        id?: string | null;
         token?: string;
         expires_at?: string;
         expires_in?: number;
         purpose?: QrTokenPurpose;
         delegate_name?: string | null;
+        pickup_person_full_name?: string | null;
+        pickup_relationship?: string | null;
+        pickup_identity_type?: 'national_id' | 'passport' | 'other' | null;
+        pickup_identity_number?: string | null;
+        pickup_identity_image_path?: string | null;
+        pickup_notes?: string | null;
+        require_id_capture?: boolean | null;
         single_use?: boolean;
         error?: string;
       };
@@ -60,17 +90,28 @@ export function useQrTokenGeneration() {
         throw new Error('Invalid token response');
       }
       return {
+        id: payload.id ?? null,
         token: payload.token,
         expires_at: payload.expires_at,
         expires_in: payload.expires_in ?? 0,
         purpose: (payload.purpose ?? args.purpose ?? 'parent') as QrTokenPurpose,
         delegate_name: payload.delegate_name ?? null,
+        pickup_person_full_name: payload.pickup_person_full_name ?? null,
+        pickup_relationship: payload.pickup_relationship ?? null,
+        pickup_identity_type: payload.pickup_identity_type ?? null,
+        pickup_identity_number: payload.pickup_identity_number ?? null,
+        pickup_identity_image_path: payload.pickup_identity_image_path ?? null,
+        pickup_notes: payload.pickup_notes ?? null,
+        require_id_capture: payload.require_id_capture ?? args.require_id_capture ?? true,
         single_use: Boolean(payload.single_use ?? args.single_use),
       } satisfies QrTokenPayload;
     },
     onSuccess: (data, vars) => {
-      // One-time delegate QRs aren't part of any list query — skip cache wiring.
-      if (data.purpose === 'delegate') return;
+      // Keep the parent custom-QR list in sync after a delegate QR is created.
+      if (data.purpose === 'delegate') {
+        void qc.invalidateQueries({ queryKey: ['parent-issued-qr-tokens'] });
+        return;
+      }
       // Push the freshly-minted token straight into the admin-qr-tokens cache so
       // the row updates without waiting on a refetch round-trip (which can race
       // with PostgREST visibility right after the function commits).

@@ -148,12 +148,14 @@ export function AppRouter() {
               <Route path="daily-reports" element={<P.ParentDailyReportsPage />} />
               <Route path="quarterly-reports" element={<P.ParentQuarterlyReportsPage />} />
               <Route path="reports" element={<Navigate to="/parent/daily-reports" replace />} />
+              <Route path="children" element={<P.ParentChildrenPage />} />
               <Route path="milestones" element={<P.ParentMilestonesPage />} />
               <Route path="media" element={<P.ParentMediaGalleryPage />} />
               <Route path="attendance" element={<P.ParentAttendanceHistoryPage />} />
-              <Route path="profile" element={<P.ParentChildProfilePage />} />
+              <Route path="profile" element={<P.ParentProfilePage />} />
               <Route path="children/:childId/health" element={<P.ParentChildHealthPage />} />
               <Route path="child/:childId/qr" element={<P.ParentChildProfilePage />} />
+              <Route path="applications" element={<P.ParentApplicationsPage />} />
               <Route path="applications/:id" element={<P.ParentApplicationFormPage />} />
               <Route path="rewards" element={<P.ParentRewardsPage />} />
               <Route path="surveys" element={<P.ParentSurveysPage />} />

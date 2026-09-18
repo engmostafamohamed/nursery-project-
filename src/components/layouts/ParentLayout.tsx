@@ -17,6 +17,8 @@ import { ChatWidget } from '@/components/chat/ChatWidget';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useNurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
+import { parentDisplayNameFromProfile, useParentAccountProfile } from '@/hooks/useParentAccountProfile';
+import { parentNurseryLabel, useParentNursery } from '@/hooks/useParentNursery';
 import { useParentInAppNotifications } from '@/hooks/useParentInAppNotifications';
 import { useNotificationsCenter } from '@/hooks/useNotificationsCenter';
 import { useParentPushNotifications } from '@/hooks/useParentPushNotifications';
@@ -35,14 +37,14 @@ const primaryNavItems = [
 const secondaryNavItems = [
   { to: '/parent/inbox', key: 'inbox', icon: 'inbox' },
   { to: '/parent/chat', key: 'chat', icon: 'forum' },
-  { to: '/parent/qr-code', key: 'qrCode', icon: 'qr_code_2' },
+  { to: '/parent/children', key: 'children', icon: 'child_care' },
+  { to: '/parent/applications', key: 'applications', icon: 'assignment' },
   { to: '/parent/attendance', key: 'attendanceHistory', icon: 'history' },
   { to: '/parent/milestones', key: 'milestones', icon: 'trophy' },
   { to: '/parent/media', key: 'media', icon: 'photo_library' },
   { to: '/parent/rewards', key: 'rewards', icon: 'workspace_premium' },
   { to: '/parent/meals', key: 'meals', icon: 'restaurant' },
   { to: '/parent/library', key: 'library', icon: 'menu_book' },
-  { to: '/parent/profile', key: 'profile', icon: 'person' },
   { to: '/parent/invoices', key: 'invoices', icon: 'receipt_long' },
   { to: '/parent/payment-record', key: 'paymentRecord', icon: 'payments' },
   { to: '/parent/courses', key: 'courses', icon: 'school' },
@@ -55,13 +57,11 @@ export function ParentLayout() {
   const setHelpOpen = useHelpAiUiStore((s) => s.setHelpOpen);
   const { user } = useAuthSession();
   const { data: profile } = useUserProfile(user?.id);
+  const { data: parentAccount } = useParentAccountProfile(user?.id, profile?.nursery_id);
   const { data: languagePref = 'both' } = useNurseryLanguagePref(profile?.nursery_id);
-  const parentDisplayName = (() => {
-    const ar = profile?.name_ar?.trim() ?? '';
-    const en = profile?.name_en?.trim() ?? '';
-    const pick = i18n.language.startsWith('ar') ? ar || en : en || ar;
-    return pick || profile?.email || '—';
-  })();
+  const parentDisplayName = parentDisplayNameFromProfile(profile, parentAccount, i18n.language);
+  const { data: nursery } = useParentNursery(profile?.nursery_id);
+  const nurseryLabel = parentNurseryLabel(nursery, i18n.language);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { data: notifications = [] } = useNotificationsCenter(user?.id);
   const { data: inAppNotifications = [] } = useParentInAppNotifications(user?.id);
@@ -119,7 +119,7 @@ export function ParentLayout() {
   };
 
   return (
-    <div className="parent-shell min-h-screen w-full overflow-x-hidden bg-background pb-28 lg:ps-64 lg:pb-0">
+    <div className="parent-shell min-h-screen w-full overflow-x-hidden bg-background pb-28 pt-16 sm:pt-[4.25rem] lg:ps-64 lg:pb-0">
       {/* Desktop sidebar — uses the empty side space on wide screens. */}
       <aside className="no-print hidden lg:fixed lg:inset-y-0 lg:start-0 lg:z-40 lg:flex lg:w-64 lg:flex-col lg:border-e lg:border-outline-variant lg:bg-surface">
         <div className="flex items-center gap-2 border-b border-outline-variant px-5 py-4">
@@ -164,22 +164,10 @@ export function ParentLayout() {
           })}
         </nav>
         <div className="border-t border-outline-variant p-3">
-          <Link
-            to="/parent/profile"
-            className="flex items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-surface-container"
-          >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
-              {parentDisplayName.slice(0, 1).toUpperCase()}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium text-on-surface">{parentDisplayName}</span>
-              <span className="block text-xs text-on-surface-variant">{t('parent.atNursery')}</span>
-            </span>
-          </Link>
           <button
             type="button"
             onClick={() => void handleLogout()}
-            className="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-error transition-colors hover:bg-error/10"
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-error transition-colors hover:bg-error/10"
           >
             <span className="material-symbols-outlined text-xl" aria-hidden>logout</span>
             {t('common.logout')}
@@ -188,14 +176,18 @@ export function ParentLayout() {
       </aside>
 
       <OfflineIndicator />
-      <header className="no-print sticky top-0 z-30 border-b border-outline-variant bg-surface/90 shadow-sm backdrop-blur-xl">
+      <header className="no-print fixed inset-x-0 top-0 z-50 border-b border-outline-variant bg-surface/90 shadow-sm backdrop-blur-xl lg:start-64">
         <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-2 px-2 py-2.5 sm:px-4 sm:py-3 lg:max-w-none lg:px-8">
           <div className="flex min-w-0 items-center gap-2">
             <BackButton />
-            <UserMenu profilePath="/parent/profile" profileLabel={t('parent.nav.profile')} />
+            <UserMenu
+              profilePath="/parent/profile"
+              profileLabel={t('parent.nav.profile')}
+              displayNameOverride={parentDisplayName}
+            />
             <div className="hidden min-w-0 sm:block">
               <p className="truncate text-sm font-semibold text-on-surface">{parentDisplayName}</p>
-              <p className="text-xs text-on-surface-variant">{t('parent.atNursery')}</p>
+              <p className="truncate text-xs text-on-surface-variant">{nurseryLabel || t('parent.atNursery')}</p>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">

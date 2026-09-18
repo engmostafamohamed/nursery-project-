@@ -25,14 +25,26 @@ export function useParentDashboardChildren(parentId: string | undefined, nursery
 
       const linksRes = await supabase.from('parent_children').select('child_id').eq('parent_id', parentId);
       if (linksRes.error) throw linksRes.error;
-      const childIds = ((linksRes.data ?? []) as { child_id: string }[]).map((l) => l.child_id);
+      const applicationChildrenRes = await supabase
+        .from('applications')
+        .select('child_id')
+        .eq('parent_id', parentId)
+        .eq('nursery_id', nurseryId)
+        .eq('status', 'approved');
+      if (applicationChildrenRes.error) throw applicationChildrenRes.error;
+
+      const linkedChildIds = ((linksRes.data ?? []) as { child_id: string }[]).map((l) => l.child_id);
+      const approvedApplicationChildIds = ((applicationChildrenRes.data ?? []) as { child_id: string | null }[])
+        .map((row) => row.child_id)
+        .filter((id): id is string => Boolean(id));
+      const childIds = [...new Set([...linkedChildIds, ...approvedApplicationChildIds])];
       if (!childIds.length) return [];
 
       const childRes = await supabase
         .from('children')
         .select('id, full_name_ar, full_name_en, avatar_url')
-        .in('id', childIds)
-        .eq('status', 'active');
+        .eq('nursery_id', nurseryId)
+        .in('id', childIds);
       if (childRes.error) throw childRes.error;
       const children = (childRes.data ?? []) as Array<{
         id: string;

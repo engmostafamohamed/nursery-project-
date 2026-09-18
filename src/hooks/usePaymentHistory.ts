@@ -275,6 +275,9 @@ export function usePaymentHistory({ nurseryId, parentId, applicationId, fromDate
       });
     },
     enabled: Boolean(parentId || nurseryId || applicationId),
+    // Payment attempts arrive from parents at any time; do not serve a 5-minute-old copy.
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   const data = useMemo(() => query.data ?? [], [query.data]);

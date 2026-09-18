@@ -178,7 +178,7 @@ export function ParentPasswordResetCard({ profile }: { profile: UserRow | null |
   };
 
   return (
-    <section className="flex h-full min-h-[150px] rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
+    <section className="flex h-full min-h-[190px] rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
       <div className="flex w-full flex-col justify-between gap-4">
         <div className="flex min-w-0 gap-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
@@ -189,10 +189,17 @@ export function ParentPasswordResetCard({ profile }: { profile: UserRow | null |
             <p className="mt-1 max-w-prose text-sm leading-5 text-on-surface-variant">{t('parent.dashboard.passwordReset.subtitle')}</p>
           </div>
         </div>
-        <Button type="button" variant="outline" className="h-10 w-full justify-center rounded-md" onClick={() => handleOpenChange(true)}>
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 w-full justify-center rounded-lg px-4 sm:w-auto sm:min-w-44"
+            onClick={() => handleOpenChange(true)}
+          >
           <MaterialSymbol name="lock_reset" size="text-base" />
           <span>{t('parent.dashboard.passwordReset.open')}</span>
-        </Button>
+          </Button>
+        </div>
       </div>
 
       <Dialog open={open} onOpenChange={handleOpenChange}>

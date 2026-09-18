@@ -36,7 +36,9 @@ import { useParentDashboardSchedule } from '@/hooks/useParentDashboardSchedule';
 import { useParentEventPermissions } from '@/hooks/useParentEventPermissions';
 import { useParentInAppNotifications } from '@/hooks/useParentInAppNotifications';
 import { useParentInvoices } from '@/hooks/useParentInvoices';
+import { parentDisplayNameFromProfile, useParentAccountProfile } from '@/hooks/useParentAccountProfile';
 import { usePaymentHistory, type PaymentHistoryRow } from '@/hooks/usePaymentHistory';
+import { parentNurseryLabel, useParentNursery } from '@/hooks/useParentNursery';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { cn } from '@/lib/utils';
 
@@ -554,6 +556,8 @@ export function ParentDashboardPage() {
   const { user } = useAuthSession();
   const { data: profile } = useUserProfile(user?.id);
   const nurseryId = profile?.nursery_id ?? undefined;
+  const { data: parentNursery } = useParentNursery(nurseryId);
+  const { data: parentAccount } = useParentAccountProfile(user?.id, nurseryId);
   const { data: languagePref = 'both' } = useNurseryLanguagePref(profile?.nursery_id);
 
   const childrenQuery = useParentDashboardChildren(user?.id, nurseryId);
@@ -635,11 +639,7 @@ export function ParentDashboardPage() {
     [i18n.language],
   );
 
-  const parentName = (() => {
-    const ar = profile?.name_ar?.trim() ?? '';
-    const en = profile?.name_en?.trim() ?? '';
-    return i18n.language.startsWith('ar') ? ar || en : en || ar;
-  })();
+  const parentName = parentDisplayNameFromProfile(profile, parentAccount, i18n.language);
 
   const childInsights = useMemo(() => {
     return childRows.reduce<Record<string, ChildDashboardInsight>>((acc, child) => {
@@ -698,8 +698,8 @@ export function ParentDashboardPage() {
                 <span className="material-symbols-outlined text-xl sm:text-2xl" aria-hidden>waving_hand</span>
               </span>
               <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase text-primary">
-                  {t('parent.atNursery')}
+                <p className="truncate text-xs font-semibold uppercase text-primary">
+                  {parentNurseryLabel(parentNursery, i18n.language) || t('parent.atNursery')}
                 </p>
                 <h1 className="font-headline text-xl font-extrabold leading-tight text-on-surface sm:text-3xl">
                   {t('parent.dashboard.title')}
@@ -721,14 +721,14 @@ export function ParentDashboardPage() {
               label={t('parent.dashboard.stats.children', { defaultValue: 'Children' })}
               value={activeChildrenCount}
               tone="primary"
-              to="/parent/profile"
+              to="/parent/children"
             />
             <DashboardStatCard
               icon="assignment"
               label={t('parent.dashboard.stats.applications', { defaultValue: 'Applications' })}
               value={pendingApplicationsCount}
               tone={pendingApplicationsCount > 0 ? 'warning' : 'success'}
-              to={applicationRows[0] ? `/parent/applications/${String(applicationRows[0].id)}` : undefined}
+              to="/parent/applications"
             />
             <DashboardStatCard
               icon="payments"

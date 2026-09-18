@@ -37,7 +37,7 @@ export function useChildAttendanceHistory(params: { childId?: string; nurseryId?
 
       const { data: child, error: cErr } = await supabase
         .from('children')
-        .select('id, nursery_id, avatar_url, full_name_ar, full_name_en, class_id')
+        .select('id, nursery_id, avatar_url, full_name_ar, full_name_en, class_id, enrollment_date, created_at')
         .eq('id', params.childId)
         .eq('nursery_id', params.nurseryId)
         .maybeSingle();
@@ -67,8 +67,17 @@ export function useChildAttendanceHistory(params: { childId?: string; nurseryId?
     return map;
   }, [query.data?.records]);
 
+  // Days before the child joined the nursery are not attendance days.
+  const startDate = useMemo(() => {
+    const child = query.data?.child as { enrollment_date?: string | null; created_at?: string | null } | null | undefined;
+    if (!child) return null;
+    if (child.enrollment_date) return child.enrollment_date.slice(0, 10);
+    if (child.created_at) return toLocalDateString(new Date(child.created_at));
+    return null;
+  }, [query.data?.child]);
+
   const rows: DayAttendanceRow[] = useMemo(() => {
-    return dates.map((date) => {
+    return dates.filter((date) => !startDate || date >= startDate).map((date) => {
       const r = byDate.get(date);
       if (!r) {
         return { date, checkIn: null, checkOut: null, status: 'absent', latePickup: false, pickup: null };
@@ -81,7 +90,7 @@ export function useChildAttendanceHistory(params: { childId?: string; nurseryId?
       else if (checkIn) status = 'partial';
       return { date, checkIn, checkOut, status, latePickup: pickup?.isLatePickup ?? false, pickup };
     });
-  }, [dates, byDate]);
+  }, [dates, byDate, startDate]);
 
   const summary = useMemo(() => {
     const withIn = rows.filter((r) => r.checkIn);

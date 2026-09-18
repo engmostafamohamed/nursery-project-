@@ -14,6 +14,8 @@ export type ApplicationPaymentPackage = {
   includedHours: number | null;
 };
 
+export type ApplicationPackageBillingPeriod = 'monthly' | 'quarterly' | 'half_annual' | 'annual';
+
 export type ApplicationPackageInvoice = {
   id: string;
   invoiceNumber: string;
@@ -25,6 +27,9 @@ export type ApplicationPackageInvoice = {
   balanceDue: number;
   status: 'unpaid' | 'partial' | 'paid' | 'in_review' | 'cancelled' | 'overdue';
   dueDate: string;
+  billingPeriod: ApplicationPackageBillingPeriod;
+  billingMonths: number;
+  monthlyPrice: number;
 };
 
 type Params = {
@@ -54,6 +59,21 @@ function linePackageName(raw: unknown): string {
   if (typeof obj?.package_name_ar === 'string' && obj.package_name_ar.trim()) return obj.package_name_ar;
   const first = Array.isArray(obj?.items) ? (obj.items[0] as { description?: unknown } | undefined) : undefined;
   return typeof first?.description === 'string' ? first.description : '';
+}
+
+function lineBillingPeriod(raw: unknown): ApplicationPackageBillingPeriod {
+  const value = (raw as { billing_period?: unknown } | null)?.billing_period;
+  return value === 'quarterly' || value === 'half_annual' || value === 'annual' ? value : 'monthly';
+}
+
+function lineBillingMonths(raw: unknown): number {
+  const months = Number((raw as { billing_months?: unknown } | null)?.billing_months ?? 1);
+  return Number.isFinite(months) && months > 0 ? months : 1;
+}
+
+function lineMonthlyPrice(raw: unknown, amount: number, months: number): number {
+  const value = Number((raw as { monthly_price?: unknown } | null)?.monthly_price ?? amount / Math.max(1, months));
+  return Number.isFinite(value) ? value : amount;
 }
 
 export function useApplicationPackagePayment({ applicationId, parentId, nurseryId }: Params) {
@@ -162,17 +182,27 @@ export function useApplicationPackagePayment({ applicationId, parentId, nurseryI
         balanceDue,
         status,
         dueDate: invoice.due_date,
+        billingPeriod: lineBillingPeriod(invoice.line_items_json),
+        billingMonths: lineBillingMonths(invoice.line_items_json),
+        monthlyPrice: lineMonthlyPrice(invoice.line_items_json, amount, lineBillingMonths(invoice.line_items_json)),
       };
     },
     enabled: Boolean(applicationId && parentId && nurseryId),
   });
 
   const selectPackage = useMutation({
-    mutationFn: async (packageId: string) => {
+    mutationFn: async ({
+      packageId,
+      billingPeriod,
+    }: {
+      packageId: string;
+      billingPeriod?: ApplicationPackageBillingPeriod;
+    }) => {
       if (!applicationId) throw new Error('Missing application');
       const { data, error } = await supabase.rpc('select_application_payment_package' as never, {
         p_application_id: applicationId,
         p_package_id: packageId,
+        p_billing_period: billingPeriod ?? 'monthly',
       } as never);
       if (error) throw error;
       return data as string;
@@ -195,7 +225,8 @@ export function useApplicationPackagePayment({ applicationId, parentId, nurseryI
     selectedPackage,
     invoice: invoiceQuery.data ?? null,
     isLoading: packagesQuery.isLoading || invoiceQuery.isLoading,
-    selectPackage: selectPackage.mutateAsync,
+    selectPackage: (packageId: string, billingPeriod?: ApplicationPackageBillingPeriod) =>
+      selectPackage.mutateAsync({ packageId, billingPeriod }),
     isSelecting: selectPackage.isPending,
     refetch: invoiceQuery.refetch,
   };

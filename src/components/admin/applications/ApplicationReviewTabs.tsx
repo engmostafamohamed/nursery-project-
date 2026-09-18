@@ -49,18 +49,20 @@ function formatYesNo(t: (k: string) => string, v: boolean | null): string | null
   return v ? t('common.yes') : t('common.no');
 }
 
+// Each value sits on its own soft tile so it reads apart from the white card behind it.
 function Row({ label, value, mono }: { label: string; value: ReactNode; mono?: boolean }) {
+  const empty = value === null || value === undefined || value === '';
   return (
-    <div className="min-w-0 border-b border-outline-variant/60 py-3 last:border-b-0">
-      <dt className="text-[11px] font-semibold uppercase text-on-surface-variant">{label}</dt>
+    <div className="min-w-0 rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2">
+      <dt className="text-[11px] font-semibold uppercase tracking-wide text-on-surface-variant">{label}</dt>
       <dd
-        className={
-          value
-            ? `mt-1 break-words text-sm leading-6 text-on-surface ${mono ? 'font-mono text-xs' : ''}`
-            : 'mt-1 text-sm italic text-on-surface-variant/60'
-        }
+        className={cn(
+          'mt-0.5 break-words text-sm font-medium leading-6',
+          empty ? 'text-on-surface-variant' : 'text-on-surface',
+          mono && !empty && 'font-mono text-[13px]',
+        )}
       >
-        {value || '-'}
+        {empty ? '-' : value}
       </dd>
     </div>
   );
@@ -68,17 +70,17 @@ function Row({ label, value, mono }: { label: string; value: ReactNode; mono?: b
 
 function FieldGrid({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <dl className={cn('grid gap-x-8 sm:grid-cols-2', className)}>
+    <dl className={cn('grid gap-3 sm:grid-cols-2', className)}>
       {children}
     </dl>
   );
 }
 
-function Section({ title, icon, children }: { title: string; icon: string; children: ReactNode }) {
+function Section({ title, icon, children, className }: { title: string; icon: string; children: ReactNode; className?: string }) {
   return (
-    <section className="border-t border-outline-variant/70 px-4 py-5 first:border-t-0 sm:px-5">
-      <div className="mb-3 flex items-center gap-2">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+    <section className={cn('min-w-0', className)}>
+      <div className="mb-3 flex items-center gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
           <MaterialSymbol name={icon} size="text-lg" />
         </span>
         <h4 className="text-sm font-semibold text-on-surface">{title}</h4>
@@ -92,7 +94,7 @@ function ReviewTab({ value, icon, children }: { value: string; icon: string; chi
   return (
     <TabsTrigger
       value={value}
-      className="h-9 shrink-0 gap-2 rounded-md px-3 text-xs data-[state=active]:shadow-none"
+      className="h-10 shrink-0 gap-2 rounded-md border border-transparent px-3 text-xs font-semibold data-[state=active]:border-primary data-[state=active]:shadow-sm data-[state=inactive]:hover:bg-surface"
     >
       <MaterialSymbol name={icon} size="text-base" />
       <span>{children}</span>
@@ -102,7 +104,7 @@ function ReviewTab({ value, icon, children }: { value: string; icon: string; chi
 
 function ReviewPanel({ value, children }: { value: string; children: ReactNode }) {
   return (
-    <TabsContent value={value} className="pt-0">
+    <TabsContent value={value} className="space-y-6 p-4 pt-4 sm:p-5">
       {children}
     </TabsContent>
   );
@@ -139,9 +141,9 @@ export function ApplicationReviewTabs({ parentInfo, childInfo }: Props) {
   return (
     <Tabs
       defaultValue="child"
-      className="overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest shadow-sm"
+      className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm"
     >
-      <TabsList className="flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-none border-b border-outline-variant bg-transparent p-2">
+      <TabsList className="flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-none border-b border-outline-variant bg-surface-container-lowest p-2">
         <ReviewTab value="child" icon="child_care">{t('admin.applications.tabs.child')}</ReviewTab>
         <ReviewTab value="parents" icon="supervisor_account">{t('admin.applications.tabs.parents')}</ReviewTab>
         <ReviewTab value="family" icon="home">{t('admin.applications.tabs.family')}</ReviewTab>
@@ -168,7 +170,7 @@ export function ApplicationReviewTabs({ parentInfo, childInfo }: Props) {
       </ReviewPanel>
 
       <ReviewPanel value="parents">
-        <div className="grid lg:grid-cols-2 lg:divide-x lg:divide-outline-variant/70">
+        <div className="grid gap-6 lg:grid-cols-2">
           <Section title={t('signup.fatherInfo')} icon="man">
             <FieldGrid className="sm:grid-cols-1">
               <Row label={t('signup.fatherFullName')} value={readString(father, 'full_name')} />
@@ -224,7 +226,7 @@ export function ApplicationReviewTabs({ parentInfo, childInfo }: Props) {
       </ReviewPanel>
 
       <ReviewPanel value="dailyCare">
-        <div className="grid lg:grid-cols-2 lg:divide-x lg:divide-outline-variant/70">
+        <div className="grid gap-6 lg:grid-cols-2">
           <Section title={t('signup.mealsSection')} icon="restaurant">
             <FieldGrid className="sm:grid-cols-1">
               <Row label={t('signup.arrivalTime')} value={readString(dailyCare, 'arrival_time')} />
@@ -242,7 +244,7 @@ export function ApplicationReviewTabs({ parentInfo, childInfo }: Props) {
             </FieldGrid>
           </Section>
 
-          <div>
+          <div className="space-y-6">
             <Section title={t('signup.diaperSection')} icon="baby_changing_station">
               <FieldGrid className="sm:grid-cols-1">
                 <Row label={t('signup.diaperSupplyMethod')} value={readString(dailyCare, 'diaper_supply_method')} />
@@ -269,9 +271,9 @@ export function ApplicationReviewTabs({ parentInfo, childInfo }: Props) {
       </ReviewPanel>
 
       <ReviewPanel value="emergency">
-        <div className="grid lg:grid-cols-2 lg:divide-x lg:divide-outline-variant/70">
+        <div className="grid gap-6 lg:grid-cols-2">
           {emergencyContacts.length === 0 && (
-            <p className="px-5 py-6 text-sm text-on-surface-variant">{t('admin.applications.noEmergencyContacts')}</p>
+            <p className="text-sm text-on-surface-variant">{t('admin.applications.noEmergencyContacts')}</p>
           )}
           {emergencyContacts.map((ec, idx) => (
             <Section key={idx} title={`${t('signup.emergencyContact')} ${idx + 1}`} icon="emergency">
@@ -286,9 +288,9 @@ export function ApplicationReviewTabs({ parentInfo, childInfo }: Props) {
       </ReviewPanel>
 
       <ReviewPanel value="pickups">
-        <div className="grid lg:grid-cols-2 lg:divide-x lg:divide-outline-variant/70">
+        <div className="grid gap-6 lg:grid-cols-2">
           {pickups.length === 0 && (
-            <p className="px-5 py-6 text-sm text-on-surface-variant">{t('admin.applications.noPickups')}</p>
+            <p className="text-sm text-on-surface-variant">{t('admin.applications.noPickups')}</p>
           )}
           {pickups.map((p, idx) => (
             <Section key={idx} title={`${t('signup.pickupPerson')} ${idx + 1}`} icon="directions_car">
@@ -307,7 +309,7 @@ export function ApplicationReviewTabs({ parentInfo, childInfo }: Props) {
       <ReviewPanel value="medication">
         <Section title={t('admin.applications.tabs.medication')} icon="medication">
           {medicationIds.length === 0 ? (
-            <p className="text-sm italic text-on-surface-variant/60">{t('signup.review.medicationNone')}</p>
+            <p className="text-sm text-on-surface-variant">{t('signup.review.medicationNone')}</p>
           ) : (
             <ul className="grid gap-2 sm:grid-cols-2">
               {MEDICATION_CONSENT_OPTIONS.map((opt) => {
@@ -315,15 +317,15 @@ export function ApplicationReviewTabs({ parentInfo, childInfo }: Props) {
                 return (
                   <li
                     key={opt.id}
-                    className={`flex items-center gap-3 rounded-md border px-3 py-2 text-sm ${
+                    className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-medium ${
                       approved
-                        ? 'border-primary/50 bg-primary/5 text-on-surface'
-                        : 'border-outline-variant text-on-surface-variant/80'
+                        ? 'border-success/30 bg-success/10 text-on-surface'
+                        : 'border-outline-variant bg-surface-container-lowest text-on-surface-variant'
                     }`}
                   >
                     <MaterialSymbol
                       name={approved ? 'check_circle' : 'remove_circle_outline'}
-                      className={approved ? 'text-primary' : 'text-on-surface-variant/60'}
+                      className={approved ? 'text-success' : 'text-on-surface-variant/60'}
                     />
                     <span>{isArabic ? opt.labelAr : opt.labelEn}</span>
                   </li>

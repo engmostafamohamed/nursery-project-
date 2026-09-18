@@ -75,6 +75,11 @@ export function useSubmitInvoicePayment() {
       void queryClient.invalidateQueries({ queryKey: ['invoice-details'] });
       void queryClient.invalidateQueries({ queryKey: ['payment-history'] });
       void queryClient.invalidateQueries({ queryKey: ['application-package-invoice'] });
+      // A payment on an application invoice submits the application (DB trigger).
+      void queryClient.invalidateQueries({ queryKey: ['application-detail'] });
+      void queryClient.invalidateQueries({ queryKey: ['parent-applications'] });
+      void queryClient.invalidateQueries({ queryKey: ['parent-dashboard-feed'] });
+      void queryClient.invalidateQueries({ queryKey: ['parent-dashboard-children'] });
     },
   });
 }

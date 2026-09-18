@@ -14,7 +14,7 @@ import {
 export type MismatchReason = 'mismatch_photo' | 'mismatch_challenge' | 'no_id' | 'other';
 
 export type PickupConfirmDecision =
-  | { outcome: 'confirmed'; idPhotoFile: File }
+  | { outcome: 'confirmed'; idPhotoFile: File | null }
   | { outcome: 'mismatch'; reason: MismatchReason; note: string };
 
 type Props = {
@@ -23,6 +23,12 @@ type Props = {
   pickupPersonName: string | null;
   pickupRole: 'parent' | 'delegate';
   preUploadedPhotoUrl: string | null;
+  pickupRelationship?: string | null;
+  pickupIdentityType?: string | null;
+  pickupIdentityNumber?: string | null;
+  pickupIdentityImageUrl?: string | null;
+  pickupNotes?: string | null;
+  requireIdCapture?: boolean;
   onDecision: (decision: PickupConfirmDecision) => void;
   onCancel: () => void;
   busy?: boolean;
@@ -34,6 +40,12 @@ export function PickupIdentityConfirmDialog({
   pickupPersonName,
   pickupRole,
   preUploadedPhotoUrl,
+  pickupRelationship,
+  pickupIdentityType,
+  pickupIdentityNumber,
+  pickupIdentityImageUrl,
+  pickupNotes,
+  requireIdCapture = true,
   onDecision,
   onCancel,
   busy,
@@ -62,7 +74,7 @@ export function PickupIdentityConfirmDialog({
   };
 
   const handleConfirm = () => {
-    if (!idPhoto || busy) return;
+    if ((requireIdCapture && !idPhoto) || busy) return;
     onDecision({ outcome: 'confirmed', idPhotoFile: idPhoto });
   };
 
@@ -117,6 +129,26 @@ export function PickupIdentityConfirmDialog({
                 </div>
               </div>
 
+              {pickupRelationship || pickupIdentityType || pickupIdentityNumber || pickupNotes ? (
+                <div className="grid gap-2 rounded-2xl border border-outline-variant bg-surface-container-lowest p-3 text-sm">
+                  {pickupRelationship ? (
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-on-surface-variant">{t('qr.custom.fields.relationship', { defaultValue: 'Relationship' })}</span>
+                      <span className="font-semibold text-on-surface">{pickupRelationship}</span>
+                    </div>
+                  ) : null}
+                  {pickupIdentityType || pickupIdentityNumber ? (
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-on-surface-variant">{pickupIdentityType ?? t('qr.custom.fields.identityType', { defaultValue: 'ID type' })}</span>
+                      <span className="font-semibold text-on-surface">{pickupIdentityNumber ?? '-'}</span>
+                    </div>
+                  ) : null}
+                  {pickupNotes ? (
+                    <p className="text-xs leading-5 text-on-surface-variant">{pickupNotes}</p>
+                  ) : null}
+                </div>
+              ) : null}
+
               {preUploadedPhotoUrl ? (
                 <div>
                   <p className="mb-2 text-xs uppercase tracking-wide text-on-surface-variant">
@@ -133,6 +165,19 @@ export function PickupIdentityConfirmDialog({
                   {t('teacher.pickupVerify.noPhotoWarning')}
                 </div>
               )}
+
+              {pickupIdentityImageUrl ? (
+                <div>
+                  <p className="mb-2 text-xs uppercase tracking-wide text-on-surface-variant">
+                    {t('qr.custom.fields.identityImage', { defaultValue: 'ID / passport image' })}
+                  </p>
+                  <img
+                    src={pickupIdentityImageUrl}
+                    alt=""
+                    className="mx-auto h-44 w-full rounded-2xl border border-outline-variant object-cover"
+                  />
+                </div>
+              ) : null}
 
               <div>
                 <p className="mb-2 text-xs uppercase tracking-wide text-on-surface-variant">
@@ -180,6 +225,11 @@ export function PickupIdentityConfirmDialog({
                     {t('teacher.pickupVerify.captureIdButton')}
                   </Button>
                 )}
+                {!requireIdCapture ? (
+                  <p className="mt-2 text-xs text-on-surface-variant">
+                    {t('qr.custom.fields.liveCaptureOptional', { defaultValue: 'Live ID capture is optional for this QR.' })}
+                  </p>
+                ) : null}
               </div>
             </div>
 
@@ -195,7 +245,7 @@ export function PickupIdentityConfirmDialog({
                 </span>
                 {t('teacher.pickupVerify.reportMismatch')}
               </Button>
-              <Button type="button" onClick={handleConfirm} disabled={!idPhoto || busy}>
+              <Button type="button" onClick={handleConfirm} disabled={(requireIdCapture && !idPhoto) || busy}>
                 <span className="material-symbols-outlined me-1 text-base" aria-hidden>
                   check
                 </span>

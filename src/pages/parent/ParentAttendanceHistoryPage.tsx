@@ -16,9 +16,9 @@ import {
 
 import { ChildSelector, useParentChildren } from '@/components/parent/ChildSelector';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { FilterMenu, type FilterMenuOption } from '@/components/ui/FilterMenu';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Pagination } from '@/components/ui/Pagination';
-import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAllChildrenAttendanceSummary } from '@/hooks/useAllChildrenAttendanceSummary';
 import { useAuthSession } from '@/hooks/useAuthSession';
@@ -30,6 +30,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 
 type StatusFilter = 'all' | 'present' | 'partial' | 'absent' | 'late';
 type RangeFilter = '7' | '14' | '30';
+type AttendanceTableRow = DayAttendanceRow & { childId?: string };
 
 function formatDate(iso: string, locale: string): string {
   return new Date(`${iso}T12:00:00`).toLocaleDateString(locale, {
@@ -144,6 +145,20 @@ export function ParentAttendanceHistoryPage() {
     ? { rows: allReport.rows, summary: allReport.summary, isPending: allReport.isPending, child: null }
     : { rows: singleReport.rows, summary: singleReport.summary, isPending: singleReport.isPending, child: singleReport.child };
 
+  const statusOptions = useMemo<FilterMenuOption<StatusFilter>[]>(() => [
+    { value: 'all', label: t('common.all', { defaultValue: 'All' }), icon: 'tune' },
+    { value: 'present', label: t('parent.dashboard.analytics.present', { defaultValue: 'Present' }), icon: 'event_available' },
+    { value: 'partial', label: t('parent.attendanceHistory.partial', { defaultValue: 'Partial' }), icon: 'pending' },
+    { value: 'absent', label: t('parent.dashboard.analytics.absent', { defaultValue: 'Absent' }), icon: 'event_busy' },
+    { value: 'late', label: t('parent.attendanceHistory.lateBadge'), icon: 'schedule' },
+  ], [t]);
+
+  const rangeOptions = useMemo<FilterMenuOption<RangeFilter>[]>(() => [
+    { value: '7', label: t('parent.attendanceHistory.last7', { defaultValue: 'Last 7 days' }), icon: 'date_range' },
+    { value: '14', label: t('parent.attendanceHistory.last14', { defaultValue: 'Last 14 days' }), icon: 'calendar_month' },
+    { value: '30', label: t('parent.attendanceHistory.last30', { defaultValue: 'Last 30 days' }), icon: 'calendar_today' },
+  ], [t]);
+
   const childName = useMemo(() => {
     if (isAllMode) return t('parent.childSelector.allChildren');
     const c = children.find((x) => x.id === selectedChildId);
@@ -161,22 +176,43 @@ export function ParentAttendanceHistoryPage() {
     [rangeFilter, report.rows],
   );
 
+  const rangeDateSet = useMemo(
+    () => new Set(rangeRows.map((row) => row.date)),
+    [rangeRows],
+  );
+
+  const childNameById = useMemo(() => {
+    return children.reduce<Record<string, string>>((acc, child) => {
+      acc[child.id] = i18n.language === 'ar'
+        ? (child.nameAr?.trim() || child.nameEn)
+        : (child.nameEn?.trim() || child.nameAr);
+      return acc;
+    }, {});
+  }, [children, i18n.language]);
+
+  const rangeTableRows = useMemo<AttendanceTableRow[]>(() => {
+    if (isAllMode) {
+      return allReport.childRows.filter((row) => rangeDateSet.has(row.date));
+    }
+    return rangeRows.map((row) => ({ ...row, childId: selectedChildId || undefined }));
+  }, [allReport.childRows, isAllMode, rangeDateSet, rangeRows, selectedChildId]);
+
   const filteredRows = useMemo(() => {
-    if (statusFilter === 'all') return rangeRows;
-    if (statusFilter === 'late') return rangeRows.filter((row) => row.latePickup);
-    return rangeRows.filter((row) => row.status === statusFilter);
-  }, [rangeRows, statusFilter]);
+    if (statusFilter === 'all') return rangeTableRows;
+    if (statusFilter === 'late') return rangeTableRows.filter((row) => row.latePickup);
+    return rangeTableRows.filter((row) => row.status === statusFilter);
+  }, [rangeTableRows, statusFilter]);
 
   const metrics = useMemo(() => {
-    const schoolRows = rangeRows.filter((row) => {
+    const schoolRows = rangeTableRows.filter((row) => {
       const w = new Date(`${row.date}T12:00:00`).getDay();
       return w !== 0 && w !== 6;
     });
     const presentRows = schoolRows.filter((row) => row.checkIn);
     const absentRows = schoolRows.filter((row) => row.status === 'absent');
     const partialRows = schoolRows.filter((row) => row.status === 'partial');
-    const lateRows = rangeRows.filter((row) => row.latePickup);
-    const mins = rangeRows.filter((row) => row.checkIn).map((row) => minutesFromMidnight(row.checkIn!));
+    const lateRows = rangeTableRows.filter((row) => row.latePickup);
+    const mins = rangeTableRows.filter((row) => row.checkIn).map((row) => minutesFromMidnight(row.checkIn!));
     const avgMin = mins.length ? mins.reduce((a, b) => a + b, 0) / mins.length : null;
     const rate = schoolRows.length > 0 ? Math.min(100, Math.round((presentRows.length / schoolRows.length) * 1000) / 10) : 0;
     return {
@@ -188,18 +224,22 @@ export function ParentAttendanceHistoryPage() {
       avgIn: averageMinutesToTimeLabel(avgMin, i18n.language),
       totalSchoolDays: schoolRows.length,
     };
-  }, [i18n.language, rangeRows]);
+  }, [i18n.language, rangeTableRows]);
 
   const chartRows = useMemo(
     () =>
-      [...rangeRows].reverse().map((row) => ({
-        date: row.date,
-        label: formatChartDate(row.date, locale),
-        present: row.checkIn ? 1 : 0,
-        absent: row.status === 'absent' ? 1 : 0,
-        partial: row.status === 'partial' ? 1 : 0,
-      })),
-    [locale, rangeRows],
+      [...rangeRows].reverse().map((row) => {
+        const childRowsForDate = rangeTableRows.filter((childRow) => childRow.date === row.date);
+        const rows = isAllMode ? childRowsForDate : [row];
+        return {
+          date: row.date,
+          label: formatChartDate(row.date, locale),
+          present: rows.filter((item) => item.checkIn && item.status !== 'partial').length,
+          absent: rows.filter((item) => item.status === 'absent').length,
+          partial: rows.filter((item) => item.status === 'partial').length,
+        };
+      }),
+    [isAllMode, locale, rangeRows, rangeTableRows],
   );
 
   const pieRows = useMemo(
@@ -272,28 +312,18 @@ export function ParentAttendanceHistoryPage() {
                 showAllOption={true}
               />
             ) : null}
-            <label className="space-y-1">
-              <span className="text-xs font-semibold text-on-surface-variant">
-                {t('common.status', { defaultValue: 'Status' })}
-              </span>
-              <Select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}>
-                <option value="all">{t('common.all', { defaultValue: 'All' })}</option>
-                <option value="present">{t('parent.dashboard.analytics.present', { defaultValue: 'Present' })}</option>
-                <option value="partial">{t('parent.attendanceHistory.partial', { defaultValue: 'Partial' })}</option>
-                <option value="absent">{t('parent.dashboard.analytics.absent', { defaultValue: 'Absent' })}</option>
-                <option value="late">{t('parent.attendanceHistory.lateBadge')}</option>
-              </Select>
-            </label>
-            <label className="space-y-1">
-              <span className="text-xs font-semibold text-on-surface-variant">
-                {t('parent.attendanceHistory.period', { defaultValue: 'Period' })}
-              </span>
-              <Select value={rangeFilter} onChange={(event) => setRangeFilter(event.target.value as RangeFilter)}>
-                <option value="7">{t('parent.attendanceHistory.last7', { defaultValue: 'Last 7 days' })}</option>
-                <option value="14">{t('parent.attendanceHistory.last14', { defaultValue: 'Last 14 days' })}</option>
-                <option value="30">{t('parent.attendanceHistory.last30', { defaultValue: 'Last 30 days' })}</option>
-              </Select>
-            </label>
+            <FilterMenu
+              value={statusFilter}
+              options={statusOptions}
+              onChange={setStatusFilter}
+              label={t('common.status', { defaultValue: 'Status' })}
+            />
+            <FilterMenu
+              value={rangeFilter}
+              options={rangeOptions}
+              onChange={setRangeFilter}
+              label={t('parent.attendanceHistory.period', { defaultValue: 'Period' })}
+            />
           </div>
         </div>
 
@@ -451,6 +481,11 @@ export function ParentAttendanceHistoryPage() {
               <table className="w-full min-w-[760px] text-sm">
                 <thead className="bg-surface-container-lowest text-xs uppercase text-on-surface-variant">
                   <tr>
+                    {isAllMode ? (
+                      <th className="px-4 py-3 text-start font-semibold">
+                        {t('admin.children.childColumn', { defaultValue: 'Child' })}
+                      </th>
+                    ) : null}
                     <th className="px-4 py-3 text-start font-semibold">{t('parent.attendanceHistory.colDate')}</th>
                     <th className="px-4 py-3 text-start font-semibold">{t('common.status', { defaultValue: 'Status' })}</th>
                     <th className="px-4 py-3 text-start font-semibold">{t('parent.attendanceHistory.colCheckIn')}</th>
@@ -464,7 +499,12 @@ export function ParentAttendanceHistoryPage() {
                 </thead>
                 <tbody className="divide-y divide-outline-variant">
                   {pager.pageItems.map((row) => (
-                    <tr key={row.date} className="transition hover:bg-surface-container-lowest">
+                    <tr key={`${row.childId ?? 'child'}-${row.date}`} className="transition hover:bg-surface-container-lowest">
+                      {isAllMode ? (
+                        <td className="px-4 py-3 align-top font-semibold text-on-surface">
+                          {row.childId ? childNameById[row.childId] ?? '-' : '-'}
+                        </td>
+                      ) : null}
                       <td className="px-4 py-3 align-top font-medium text-on-surface">{formatDate(row.date, locale)}</td>
                       <td className="px-4 py-3 align-top"><StatusBadge row={row} /></td>
                       <td className="px-4 py-3 align-top text-on-surface-variant">{formatTime(row.checkIn)}</td>
@@ -502,7 +542,7 @@ export function ParentAttendanceHistoryPage() {
                   ))}
                   {pager.pageItems.length === 0 ? (
                     <tr>
-                      <td className="px-4 py-10 text-center text-sm text-on-surface-variant" colSpan={isAllMode ? 4 : 5}>
+                      <td className="px-4 py-10 text-center text-sm text-on-surface-variant" colSpan={isAllMode ? 5 : 5}>
                         {t('parent.attendanceHistory.noFilteredRecords', { defaultValue: 'No attendance records match these filters.' })}
                       </td>
                     </tr>

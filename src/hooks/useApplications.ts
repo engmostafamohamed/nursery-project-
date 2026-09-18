@@ -7,11 +7,59 @@ import { getOrCreateConversationId } from '@/lib/chat';
 import { supabase } from '@/lib/supabase';
 
 const requiredApplicationDocs = ['birth_certificate', 'vaccination_card', 'parent_id', 'proof_of_address'] as const;
+const reusableApplicationDocs = ['parent_id', 'proof_of_address'] as const;
 
 type AdminApplicationView = Record<string, unknown> & {
   parent_user: Record<string, unknown> | null;
   documents_count: number;
 };
+
+type JsonRecord = Record<string, unknown>;
+
+function isRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function hasValues(value: unknown): boolean {
+  return isRecord(value) && Object.values(value).some((entry) => {
+    if (entry === null || entry === undefined) return false;
+    if (typeof entry === 'string') return entry.trim().length > 0;
+    if (Array.isArray(entry)) return entry.length > 0;
+    if (typeof entry === 'object') return hasValues(entry);
+    return true;
+  });
+}
+
+function textFrom(record: JsonRecord, key: string) {
+  const value = record[key];
+  return typeof value === 'string' && value.trim() ? value.trim() : '';
+}
+
+function nextChildSeedFrom(sourceChildInfo: unknown): JsonRecord {
+  const source = isRecord(sourceChildInfo) ? sourceChildInfo : {};
+  const dailyCare = isRecord(source.daily_care_preferences) ? source.daily_care_preferences : undefined;
+  const emergencyContacts = Array.isArray(source.emergency_contacts) ? source.emergency_contacts : undefined;
+  const seed: JsonRecord = {
+    has_siblings: true,
+  };
+
+  for (const key of ['nationality', 'department', 'school_preference', 'school_admissions_plan', 'academic_year', 'home_address']) {
+    if (source[key] !== undefined && source[key] !== null && source[key] !== '') seed[key] = source[key];
+  }
+
+  if (dailyCare && hasValues(dailyCare)) seed.daily_care_preferences = dailyCare;
+  if (emergencyContacts?.length) seed.emergency_contacts = emergencyContacts;
+
+  const siblingAges = textFrom(source, 'sibling_ages');
+  const siblingDob = textFrom(source, 'dob');
+  if (siblingAges) {
+    seed.sibling_ages = siblingAges;
+  } else if (siblingDob) {
+    seed.sibling_ages = siblingDob;
+  }
+
+  return seed;
+}
 
 export function useApplications(params: { nurseryId?: string; applicationId?: string; parentId?: string }) {
   const qc = useQueryClient();
@@ -51,6 +99,9 @@ export function useApplications(params: { nurseryId?: string; applicationId?: st
       })) as AdminApplicationView[];
     },
     enabled: Boolean(params.nurseryId),
+    // Parents submit and pay while admins have this open; always refetch on open/focus.
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   const detailQuery = useQuery({
@@ -80,6 +131,8 @@ export function useApplications(params: { nurseryId?: string; applicationId?: st
       };
     },
     enabled: Boolean(params.applicationId),
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   const parentApplicationsQuery = useQuery({
@@ -97,6 +150,9 @@ export function useApplications(params: { nurseryId?: string; applicationId?: st
       return (res.data ?? []) as Array<Record<string, unknown>>;
     },
     enabled: Boolean(params.parentId),
+    // Status changes server-side (payment trigger, admin review); never show a stale list.
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   const createFromInquiry = useMutation({
@@ -159,15 +215,25 @@ export function useApplications(params: { nurseryId?: string; applicationId?: st
     }) => {
       const sourceRes = await supabase
         .from('applications')
-        .select('id, parent_info_json')
+        .select('id, parent_info_json, child_info_json')
         .eq('parent_id', payload.parentId)
         .eq('nursery_id', payload.nurseryId)
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle();
+        .order('updated_at', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(20);
       if (sourceRes.error) throw sourceRes.error;
 
-      const source = (sourceRes.data as { id: string; parent_info_json: Record<string, unknown> | null } | null) ?? null;
+      const sourceRows =
+        (sourceRes.data ?? []) as Array<{
+          id: string;
+          parent_info_json: JsonRecord | null;
+          child_info_json: JsonRecord | null;
+        }>;
+      const source =
+        sourceRows.find((row) => hasValues(row.parent_info_json) && hasValues(row.child_info_json)) ??
+        sourceRows.find((row) => hasValues(row.parent_info_json)) ??
+        sourceRows[0] ??
+        null;
       const fallbackParentInfo = {
         full_name: payload.parentProfile?.name_ar || payload.parentProfile?.name_en || '',
         email: payload.parentProfile?.email || '',
@@ -181,7 +247,7 @@ export function useApplications(params: { nurseryId?: string; applicationId?: st
           parent_id: payload.parentId,
           status: 'draft',
           parent_info_json: source?.parent_info_json ?? fallbackParentInfo,
-          child_info_json: {},
+          child_info_json: source ? nextChildSeedFrom(source.child_info_json) : {},
           terms_accepted: false,
         } as never)
         .select('id')
@@ -192,11 +258,16 @@ export function useApplications(params: { nurseryId?: string; applicationId?: st
       if (source?.id) {
         const docsRes = await supabase
           .from('application_documents')
-          .select('document_type, file_url')
+          .select('document_type, file_url, uploaded_at')
           .eq('application_id', source.id)
-          .in('document_type', ['parent_id', 'proof_of_address']);
+          .in('document_type', [...reusableApplicationDocs])
+          .order('uploaded_at', { ascending: false });
         if (docsRes.error) throw docsRes.error;
-        const docs = ((docsRes.data ?? []) as Array<{ document_type: string; file_url: string }>).map((doc) => ({
+        const docsByType = new Map<string, { document_type: string; file_url: string }>();
+        for (const doc of (docsRes.data ?? []) as Array<{ document_type: string; file_url: string }>) {
+          if (!docsByType.has(doc.document_type)) docsByType.set(doc.document_type, doc);
+        }
+        const docs = [...docsByType.values()].map((doc) => ({
           application_id: applicationId,
           document_type: doc.document_type,
           file_url: doc.file_url,

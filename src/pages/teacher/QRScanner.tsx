@@ -29,6 +29,13 @@ type VerifyPayload = {
   full_name_en: string;
   purpose?: 'parent' | 'delegate' | 'event';
   delegate_name?: string | null;
+  pickup_person_full_name?: string | null;
+  pickup_relationship?: string | null;
+  pickup_identity_type?: string | null;
+  pickup_identity_number?: string | null;
+  pickup_identity_image_path?: string | null;
+  pickup_notes?: string | null;
+  require_id_capture?: boolean | null;
   single_use?: boolean;
   issued_by?: string | null;
   // Event check-in tokens
@@ -51,6 +58,12 @@ type DialogState = {
   pickupPersonName: string | null;
   pickupRole: 'parent' | 'delegate';
   preUploadedPhotoUrl: string | null;
+  pickupRelationship: string | null;
+  pickupIdentityType: string | null;
+  pickupIdentityNumber: string | null;
+  pickupIdentityImageUrl: string | null;
+  pickupNotes: string | null;
+  requireIdCapture: boolean;
 };
 
 function randomSuffix(): string {
@@ -129,6 +142,16 @@ export function QRScannerPage() {
     },
     [],
   );
+
+  const createSignedStorageUrl = useCallback(async (storageRef: string | null | undefined): Promise<string | null> => {
+    if (!storageRef) return null;
+    const [bucket, ...pathParts] = storageRef.split(':');
+    const path = pathParts.join(':');
+    if (!bucket || !path) return storageRef;
+    const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, 60 * 30);
+    if (error) return null;
+    return data.signedUrl;
+  }, []);
 
   const logIncident = useCallback(
     async (args: { payload: VerifyPayload; reason: MismatchReason; note: string }) => {
@@ -226,10 +249,19 @@ export function QRScannerPage() {
           purpose: payload.purpose,
           delegateName: payload.delegate_name ?? null,
           issuedBy: payload.issued_by ?? null,
+          pickupPersonFullName: payload.pickup_person_full_name ?? null,
+          pickupRelationship: payload.pickup_relationship ?? null,
+          pickupIdentityType: payload.pickup_identity_type ?? null,
+          pickupIdentityNumber: payload.pickup_identity_number ?? null,
+          pickupIdentityImagePath: payload.pickup_identity_image_path ?? null,
+          pickupNotes: payload.pickup_notes ?? null,
+          requireIdCapture: payload.require_id_capture ?? true,
         };
 
         const name = childDisplayName(payload);
-        const delegate = payload.purpose === 'delegate' ? payload.delegate_name?.trim() : null;
+        const delegate = payload.purpose === 'delegate'
+          ? (payload.pickup_person_full_name ?? payload.delegate_name)?.trim()
+          : null;
 
         // ID verification is only meaningful on check-OUT (handing the child over).
         // Check-IN (drop-off) keeps the existing one-tap flow.
@@ -238,11 +270,18 @@ export function QRScannerPage() {
 
         if (isCheckout) {
           resolved = await resolvePickupIdentity(child.id, pickupCtx);
+          const identityImageUrl = await createSignedStorageUrl(payload.pickup_identity_image_path);
           const decision = await awaitDecision({
             childName: name,
             pickupPersonName: resolved.pickupPersonName,
             pickupRole: payload.purpose === 'delegate' ? 'delegate' : 'parent',
             preUploadedPhotoUrl: resolved.pickupPhotoUrl,
+            pickupRelationship: payload.pickup_relationship ?? null,
+            pickupIdentityType: payload.pickup_identity_type ?? null,
+            pickupIdentityNumber: payload.pickup_identity_number ?? null,
+            pickupIdentityImageUrl: identityImageUrl,
+            pickupNotes: payload.pickup_notes ?? null,
+            requireIdCapture: payload.require_id_capture ?? true,
           });
 
           if (!decision) {
@@ -263,11 +302,13 @@ export function QRScannerPage() {
 
           // confirmed — upload ID photo then proceed to toggle
           setDialogBusy(true);
-          try {
-            idPhotoPath = await uploadIdPhoto(child.nursery_id, child.id, decision.idPhotoFile);
-          } catch (uploadErr) {
-            settleDecision(null);
-            throw uploadErr;
+          if (decision.idPhotoFile) {
+            try {
+              idPhotoPath = await uploadIdPhoto(child.nursery_id, child.id, decision.idPhotoFile);
+            } catch (uploadErr) {
+              settleDecision(null);
+              throw uploadErr;
+            }
           }
           settleDecision(decision);
         }
@@ -330,6 +371,7 @@ export function QRScannerPage() {
       t,
       today,
       uploadIdPhoto,
+      createSignedStorageUrl,
       user?.id,
     ],
   );
@@ -369,6 +411,12 @@ export function QRScannerPage() {
           pickupPersonName={dialogState.pickupPersonName}
           pickupRole={dialogState.pickupRole}
           preUploadedPhotoUrl={dialogState.preUploadedPhotoUrl}
+          pickupRelationship={dialogState.pickupRelationship}
+          pickupIdentityType={dialogState.pickupIdentityType}
+          pickupIdentityNumber={dialogState.pickupIdentityNumber}
+          pickupIdentityImageUrl={dialogState.pickupIdentityImageUrl}
+          pickupNotes={dialogState.pickupNotes}
+          requireIdCapture={dialogState.requireIdCapture}
           busy={dialogBusy}
           onDecision={(d) => settleDecision(d)}
           onCancel={() => settleDecision(null)}

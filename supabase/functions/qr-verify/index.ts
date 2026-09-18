@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
     const admin = getAdminClient();
     const { data: tok, error: tokErr } = await admin
       .from('qr_tokens')
-      .select('id, child_id, nursery_id, event_id, expires_at, purpose, delegate_name, single_use, consumed_at, issued_by')
+      .select('id, child_id, nursery_id, event_id, expires_at, purpose, delegate_name, pickup_person_full_name, pickup_relationship, pickup_identity_type, pickup_identity_number, pickup_identity_image_path, pickup_notes, require_id_capture, single_use, consumed_at, issued_by')
       .eq('token', rawToken)
       .maybeSingle();
 
@@ -70,6 +70,13 @@ Deno.serve(async (req) => {
       expires_at: string;
       purpose: string | null;
       delegate_name: string | null;
+      pickup_person_full_name: string | null;
+      pickup_relationship: string | null;
+      pickup_identity_type: string | null;
+      pickup_identity_number: string | null;
+      pickup_identity_image_path: string | null;
+      pickup_notes: string | null;
+      require_id_capture: boolean | null;
       single_use: boolean | null;
       consumed_at: string | null;
       issued_by: string | null;
@@ -195,6 +202,13 @@ Deno.serve(async (req) => {
       full_name_en: child.full_name_en,
       purpose: row.purpose ?? 'parent',
       delegate_name: row.delegate_name,
+      pickup_person_full_name: row.pickup_person_full_name,
+      pickup_relationship: row.pickup_relationship,
+      pickup_identity_type: row.pickup_identity_type,
+      pickup_identity_number: row.pickup_identity_number,
+      pickup_identity_image_path: row.pickup_identity_image_path,
+      pickup_notes: row.pickup_notes,
+      require_id_capture: row.require_id_capture,
       single_use: Boolean(row.single_use),
       issued_by: row.issued_by,
     });

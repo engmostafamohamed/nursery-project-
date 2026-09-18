@@ -81,6 +81,9 @@ export function ParentPaymentPage() {
   const [searchParams] = useSearchParams();
   const isPreview = import.meta.env.DEV && searchParams.get('preview') === 'true';
   const qs = isPreview ? '?preview=true' : '';
+  // Only follow in-app parent routes so the param cannot redirect elsewhere.
+  const returnTo = searchParams.get('returnTo');
+  const safeReturnTo = returnTo && /^\/parent\/[^/]/.test(returnTo) ? returnTo : null;
   const { user } = useAuthSession();
   const { settings, nurseryId } = useSettings();
   const loyalty = useLoyalty({ parentId: user?.id, nurseryId: nurseryId ?? undefined, enabled: Boolean(settings.loyalty_enabled) });
@@ -195,7 +198,7 @@ export function ParentPaymentPage() {
       });
       await invoiceQuery.refetch();
       toast.success(t('payment.submittedForApproval'));
-      navigate(`/parent/invoices${qs}`);
+      navigate(safeReturnTo ?? `/parent/invoices${qs}`);
     } catch {
       toast.error(t('payment.errors.actionFailed'));
     } finally {
