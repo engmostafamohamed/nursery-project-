@@ -346,6 +346,22 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!nursery) return jsonResponse({ error: 'Invalid nursery' }, 400);
 
+    const { data: signupSettings, error: signupSettingsErr } = await admin
+      .from('nursery_settings')
+      .select('parent_registration_enabled')
+      .eq('nursery_id', body.nursery_id)
+      .maybeSingle();
+    if (signupSettingsErr) throw new Error(signupSettingsErr.message);
+    if (signupSettings?.parent_registration_enabled === false) {
+      return jsonResponse(
+        {
+          error: 'registration_closed',
+          error_message: 'Registration is currently closed for this nursery.',
+        },
+        403,
+      );
+    }
+
     let primaryUser: AuthUserRef;
 
     if (body.primary_auth_id) {

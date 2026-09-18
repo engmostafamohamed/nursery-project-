@@ -3,6 +3,7 @@ import type { NurserySettingsRow } from '@/types/tables/nursery_settings';
 export type SettingsKey = Exclude<keyof NurserySettingsRow, 'id' | 'nursery_id' | 'created_at' | 'updated_at'>;
 export type SettingsTabId =
   | 'operations'
+  | 'admissions'
   | 'eventsPermissions'
   | 'communication'
   | 'financial'
@@ -56,6 +57,7 @@ export const DEFAULT_SETTINGS: Record<SettingsKey, unknown> = {
   auto_payment_reminders_enabled: true,
   auto_permission_reminders_enabled: true,
   auto_monthly_teacher_reminders_enabled: true,
+  parent_registration_enabled: true,
   show_event_attendee_list: true,
   pricing_model: 'fixed',
   monthly_rate: null,
@@ -104,6 +106,13 @@ export const SETTINGS_TABS: SettingsTabConfig[] = [
       { key: 'late_pickup_fee_per_hour', type: 'number', min: 0, step: 0.01 },
       { key: 'absence_alert_time', type: 'time' },
       { key: 'end_of_day_checklist_time', type: 'time' },
+    ],
+  },
+  {
+    id: 'admissions',
+    labelKey: 'settings.tabs.admissions',
+    fields: [
+      { key: 'parent_registration_enabled', type: 'boolean' },
     ],
   },
   {

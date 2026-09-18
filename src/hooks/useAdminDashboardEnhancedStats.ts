@@ -17,6 +17,7 @@ export type AdminDashboardEnhancedStats = {
    * needs the split to say where the work actually is and where to link.
    */
   pendingBreakdown: { media: number; applications: number; payments: number };
+  applicationsThisMonth: number;
   revenueThisMonth: number;
 };
 
@@ -44,6 +45,7 @@ export function useAdminDashboardEnhancedStats(nurseryId: string | undefined) {
           attendanceRatePercent: 0,
           pendingApprovals: 0,
           pendingBreakdown: { media: 0, applications: 0, payments: 0 },
+          applicationsThisMonth: 0,
           revenueThisMonth: 0,
         };
       }
@@ -116,6 +118,14 @@ export function useAdminDashboardEnhancedStats(nurseryId: string | undefined) {
           .eq('status', 'pending_confirmation'),
       ]);
 
+      const appsThisMonthRes = await supabase
+        .from('applications')
+        .select('id')
+        .eq('nursery_id', nurseryId)
+        .gte('created_at', startThisIso);
+
+      if (appsThisMonthRes.error) throw appsThisMonthRes.error;
+
       const mediaPendingCount =
         mediaPend.status === 'fulfilled' && !mediaPend.value.error
           ? (mediaPend.value.data?.length ?? 0)
@@ -164,6 +174,7 @@ export function useAdminDashboardEnhancedStats(nurseryId: string | undefined) {
           applications: appsPendingCount,
           payments: paymentPendingCount,
         },
+        applicationsThisMonth: appsThisMonthRes.data?.length ?? 0,
         revenueThisMonth,
       };
     },

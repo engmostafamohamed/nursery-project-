@@ -182,6 +182,9 @@ function signupErrorMessage(error: unknown, t: (k: string, opts?: Record<string,
   if (/parent_email_already_exists|parent account already exists|already registered/i.test(message)) {
     return t('signup.parentEmailAlreadyExists');
   }
+  if (/registration_closed/i.test(message)) {
+    return t('signup.registrationClosed');
+  }
   if (/signupFilesTooLarge/i.test(message)) {
     return t('signup.filesTooLargeForSubmit');
   }

@@ -1120,6 +1120,17 @@
         "checkIn": "سجّل {{name}} حضوراً",
         "event": "فعالية جديدة: {{title}}"
       },
+      "registrationControlTitle": "نموذج تسجيل أولياء الأمور",
+      "registrationOpen": "مفتوح",
+      "registrationClosed": "مغلق",
+      "registrationOpenHint": "يمكن لأولياء الأمور اختيار هذه الحضانة من نموذج التسجيل العام.",
+      "registrationClosedHint": "هذه الحضانة مخفية من نموذج التسجيل العام ويتم منع الطلبات الجديدة.",
+      "registrationApplicationsThisMonth": "طلبات هذا الشهر",
+      "disableRegistration": "إيقاف النموذج",
+      "enableRegistration": "تفعيل النموذج",
+      "editRegistrationSettings": "تعديل الإعدادات",
+      "registrationOpenedToast": "تم فتح تسجيل أولياء الأمور.",
+      "registrationClosedToast": "تم إغلاق تسجيل أولياء الأمور.",
       "statPendingApprovalsHint": "طلبات تسجيل {{applications}} · مدفوعات {{payments}} · وسائط {{media}}"
     },
     "attendance": {
@@ -4661,6 +4672,7 @@
     },
     "tabs": {
       "operations": "العمليات",
+      "admissions": "القبول والتسجيل",
       "eventsPermissions": "الفعاليات والموافقات",
       "communication": "التواصل",
       "financial": "المالية",
@@ -4771,6 +4783,10 @@
       "auto_monthly_teacher_reminders_enabled": {
         "label": "تذكيرات المعلمين الشهرية",
         "helper": "إرسال التذكيرات المهيأة لكل معلم في بداية كل شهر."
+      },
+      "parent_registration_enabled": {
+        "label": "نموذج تسجيل أولياء الأمور",
+        "helper": "إظهار هذه الحضانة في نموذج التسجيل العام والسماح بإرسال طلبات تسجيل أطفال جديدة."
       },
       "pricing_model": {
         "label": "نموذج التسعير",
@@ -5363,6 +5379,7 @@
     "authCooldown": "يرجى الانتظار بضع ثوانٍ قبل محاولة التسجيل مرة أخرى.",
     "emailRateLimit": "تم إرسال عدد كبير من رسائل التسجيل. يرجى الانتظار بضع دقائق ثم المحاولة مرة أخرى.",
     "parentEmailAlreadyExists": "هذا البريد الإلكتروني مسجل بالفعل. استخدم بريدًا مختلفًا، أو احذف الحساب الجزئي من Supabase Auth إذا كان ناتجًا عن محاولة تسجيل فاشلة.",
+    "registrationClosed": "التسجيل مغلق حاليًا لهذه الحضانة. يرجى التواصل مع إدارة الحضانة.",
     "filesTooLargeForSubmit": "حجم الصور أو الملفات كبير جدًا للإرسال. استخدم صورًا أصغر أو ارفع صور JPG بدل PNG/PDF ثم حاول مرة أخرى.",
     "edgeFunctionRequestFailed": "تعذر الوصول إلى خدمة التسجيل. تأكد أن Verify JWT مغلق لدالة parent-signup-complete وأن الدالة منشورة على Supabase، ثم جرّب مرة أخرى.",
     "draftKeptAfterError": "بيانات النموذج ما زالت محفوظة. انتظر قليلًا ثم اضغط إرسال مرة أخرى.",

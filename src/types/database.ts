@@ -172,6 +172,14 @@ export type Database = {
         id: string;
         name_en: string | null;
         name_ar: string | null;
+        city: string | null;
+        opens_at: string | null;
+        closes_at: string | null;
+        working_days: unknown;
+        language_pref: string | null;
+        lead_sources: unknown;
+        departments: unknown;
+        standard_start_time: string | null;
       }>;
     };
     Functions: {

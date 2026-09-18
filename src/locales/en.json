@@ -1109,6 +1109,17 @@
         "checkIn": "{{name}} checked in",
         "event": "New event: {{title}}"
       },
+      "registrationControlTitle": "Parent registration form",
+      "registrationOpen": "Open",
+      "registrationClosed": "Closed",
+      "registrationOpenHint": "Parents can choose this nursery on the public signup form.",
+      "registrationClosedHint": "This nursery is hidden from public signup and new submissions are blocked.",
+      "registrationApplicationsThisMonth": "Applications this month",
+      "disableRegistration": "Disable form",
+      "enableRegistration": "Enable form",
+      "editRegistrationSettings": "Edit settings",
+      "registrationOpenedToast": "Parent registration is now open.",
+      "registrationClosedToast": "Parent registration is now closed.",
       "statPendingApprovalsHint": "Applications {{applications}} · Payments {{payments}} · Media {{media}}"
     },
     "attendance": {
@@ -4649,6 +4660,7 @@
     },
     "tabs": {
       "operations": "Operations",
+      "admissions": "Admissions",
       "eventsPermissions": "Events & Permissions",
       "communication": "Communication",
       "financial": "Financial",
@@ -4759,6 +4771,10 @@
       "auto_monthly_teacher_reminders_enabled": {
         "label": "Monthly teacher reminders",
         "helper": "Send each teacher their configured reminders at the start of every month."
+      },
+      "parent_registration_enabled": {
+        "label": "Parent registration form",
+        "helper": "Show this nursery in the public parent signup form and allow new child registration submissions."
       },
       "pricing_model": {
         "label": "Pricing model",
@@ -5351,6 +5367,7 @@
     "authCooldown": "Please wait a few seconds before trying registration again.",
     "emailRateLimit": "Too many registration emails were sent. Please wait a few minutes before trying again.",
     "parentEmailAlreadyExists": "This email is already registered. Use a different email, or delete the partial account from Supabase Auth if it came from a failed signup attempt.",
+    "registrationClosed": "Registration is currently closed for this nursery. Please contact the nursery admin.",
     "filesTooLargeForSubmit": "The selected photos or files are too large to submit. Use smaller images or upload JPG photos instead of PNG/PDF, then try again.",
     "edgeFunctionRequestFailed": "Could not reach the registration service. Make sure Verify JWT is off for parent-signup-complete and the function is deployed on Supabase, then try again.",
     "draftKeptAfterError": "Your form data is still saved. Please wait, then press Submit again.",

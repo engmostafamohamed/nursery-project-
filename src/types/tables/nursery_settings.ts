@@ -17,6 +17,7 @@ export interface NurserySettingsRow {
   auto_payment_reminders_enabled: boolean | null;
   auto_permission_reminders_enabled: boolean | null;
   auto_monthly_teacher_reminders_enabled: boolean | null;
+  parent_registration_enabled: boolean | null;
   show_event_attendee_list: boolean | null;
   pricing_model: 'fixed' | 'per_child' | 'hourly' | 'hybrid' | null;
   monthly_rate: string | null;
