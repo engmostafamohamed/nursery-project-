@@ -14,6 +14,12 @@ type AdminApplicationView = Record<string, unknown> & {
   documents_count: number;
 };
 
+type ApplicationDetail = {
+  application: Record<string, unknown>;
+  documents: Array<Record<string, unknown>>;
+  parent_user: Record<string, unknown> | null;
+};
+
 type JsonRecord = Record<string, unknown>;
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -395,10 +401,48 @@ export function useApplications(params: { nurseryId?: string; applicationId?: st
         application_id: payload.applicationId,
         document_type: payload.documentType,
         file_url: path,
-      } as never);
+      } as never).select('*').single();
+      if (res.error) throw res.error;
+      return res.data as Record<string, unknown>;
+    },
+    onSuccess: (document, variables) => {
+      qc.setQueryData<ApplicationDetail | null>(['application-detail', variables.applicationId], (current) => {
+        if (!current) return current;
+        const documentId = String(document.id ?? '');
+        return {
+          ...current,
+          documents: [
+            document,
+            ...current.documents.filter((doc) => String(doc.id ?? '') !== documentId),
+          ],
+        };
+      });
+      void qc.invalidateQueries({ queryKey: ['application-detail', variables.applicationId] });
+    },
+  });
+
+  const deleteDocumentType = useMutation({
+    mutationFn: async (payload: {
+      applicationId: string;
+      documentType: 'birth_certificate' | 'vaccination_card' | 'parent_id' | 'proof_of_address' | 'medical_report' | 'other';
+    }) => {
+      const res = await supabase
+        .from('application_documents')
+        .delete()
+        .eq('application_id', payload.applicationId)
+        .eq('document_type', payload.documentType);
       if (res.error) throw res.error;
     },
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ['application-detail'] }),
+    onSuccess: (_result, variables) => {
+      qc.setQueryData<ApplicationDetail | null>(['application-detail', variables.applicationId], (current) => {
+        if (!current) return current;
+        return {
+          ...current,
+          documents: current.documents.filter((doc) => String(doc.document_type ?? '') !== variables.documentType),
+        };
+      });
+      void qc.invalidateQueries({ queryKey: ['application-detail', variables.applicationId] });
+    },
   });
 
   const verifyDocument = useMutation({
@@ -573,6 +617,7 @@ export function useApplications(params: { nurseryId?: string; applicationId?: st
     saveApplicationDraft: saveApplicationDraft.mutateAsync,
     submitApplication: submitApplication.mutateAsync,
     uploadDocument: uploadDocument.mutateAsync,
+    deleteDocumentType: deleteDocumentType.mutateAsync,
     verifyDocument: verifyDocument.mutateAsync,
     updateApplicationStatus: updateApplicationStatus.mutateAsync,
     activateEnrollment: activateEnrollmentMutation.mutateAsync,

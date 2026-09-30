@@ -2,6 +2,7 @@ import type { NurserySettingsRow } from '@/types/tables/nursery_settings';
 
 export type SettingsKey = Exclude<keyof NurserySettingsRow, 'id' | 'nursery_id' | 'created_at' | 'updated_at'>;
 export type SettingsTabId =
+  | 'profile'
   | 'operations'
   | 'admissions'
   | 'eventsPermissions'
@@ -97,6 +98,13 @@ export const DEFAULT_SETTINGS: Record<SettingsKey, unknown> = {
 
 export const SETTINGS_TABS: SettingsTabConfig[] = [
   {
+    // Nursery identity/branding fields live on the nurseries table, not nursery_settings,
+    // so NurseryProfileForm manages its own data and save — this tab has no generic fields.
+    id: 'profile',
+    labelKey: 'settings.tabs.profile',
+    fields: [],
+  },
+  {
     id: 'operations',
     labelKey: 'settings.tabs.operations',
     fields: [
@@ -111,9 +119,7 @@ export const SETTINGS_TABS: SettingsTabConfig[] = [
   {
     id: 'admissions',
     labelKey: 'settings.tabs.admissions',
-    fields: [
-      { key: 'parent_registration_enabled', type: 'boolean' },
-    ],
+    fields: [],
   },
   {
     id: 'eventsPermissions',

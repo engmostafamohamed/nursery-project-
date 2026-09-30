@@ -4,11 +4,12 @@ import { LanguageToggle } from '@/components/LanguageToggle';
 import { Button } from '@/components/ui/button';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 
-import { SIGNUP_STEPS, type SignUpStep } from '@/features/parent-signup/parentSignUpTypes';
+import type { SignUpStep } from '@/features/parent-signup/parentSignUpTypes';
 
 import { SignupStepNav } from './SignupStepNav';
 
 type Props = {
+  steps: readonly SignUpStep[];
   currentIndex: number;
   furthestReached: number;
   errorSteps: Set<SignUpStep>;
@@ -21,6 +22,7 @@ type Props = {
 };
 
 export function SignupShell({
+  steps,
   currentIndex,
   furthestReached,
   errorSteps,
@@ -32,7 +34,7 @@ export function SignupShell({
   children,
 }: Props) {
   const { t } = useTranslation();
-  const currentStep = SIGNUP_STEPS[currentIndex];
+  const currentStep = steps[currentIndex] ?? steps[steps.length - 1];
 
   return (
     <div className="min-h-screen bg-background">
@@ -48,7 +50,7 @@ export function SignupShell({
                 {t('signup.title')}
               </p>
               <p className="hidden text-xs text-on-surface-variant sm:block">
-                {t('signup.stepOf', { current: currentIndex + 1, total: SIGNUP_STEPS.length })}
+                {t('signup.stepOf', { current: currentIndex + 1, total: steps.length })}
                 {' — '}
                 {t(`signup.steps.${currentStep}`)}
               </p>
@@ -71,7 +73,7 @@ export function SignupShell({
         <div className="h-1 w-full bg-outline-variant/40 lg:hidden">
           <div
             className="h-full bg-primary transition-all duration-300"
-            style={{ width: `${((currentIndex + 1) / SIGNUP_STEPS.length) * 100}%` }}
+            style={{ width: `${((currentIndex + 1) / steps.length) * 100}%` }}
           />
         </div>
       </header>
@@ -81,6 +83,7 @@ export function SignupShell({
         <aside className="lg:sticky lg:top-[84px] lg:h-[calc(100vh-100px)] lg:self-start">
           <div className="rounded-2xl bg-surface-container-lowest p-4 shadow-sm lg:h-full">
             <SignupStepNav
+              steps={steps}
               currentIndex={currentIndex}
               furthestReached={furthestReached}
               errorSteps={errorSteps}

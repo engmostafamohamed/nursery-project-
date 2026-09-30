@@ -22,6 +22,7 @@ import {
   type CoverageType,
   type PackageInput,
   type PackageRow,
+  type ValidityUnit,
 } from '@/hooks/useAdminPackages';
 
 const EMPTY_FORM: PackageInput = {
@@ -33,6 +34,8 @@ const EMPTY_FORM: PackageInput = {
   included_hours: null,
   price: 0,
   active: true,
+  validity_value: null,
+  validity_unit: null,
 };
 
 function ManageChildrenDialog({
@@ -191,6 +194,8 @@ export function AdminPackagesPage() {
       included_hours: p.included_hours,
       price: p.price,
       active: p.active,
+      validity_value: p.validity_value,
+      validity_unit: p.validity_unit,
     });
     setDialogOpen(true);
   };
@@ -204,9 +209,15 @@ export function AdminPackagesPage() {
       toast.error(t('packages.errorNoHours'));
       return;
     }
+    if (form.validity_unit && (!form.validity_value || form.validity_value <= 0)) {
+      toast.error(t('packages.errorNoValidityValue'));
+      return;
+    }
     const payload: PackageInput = {
       ...form,
       included_hours: form.coverage_type === 'hours_quota' ? form.included_hours : null,
+      validity_value: form.validity_unit ? form.validity_value : null,
+      validity_unit: form.validity_value ? form.validity_unit : null,
     };
     try {
       if (editingId) await update.mutateAsync({ id: editingId, input: payload });
@@ -268,6 +279,10 @@ export function AdminPackagesPage() {
                     : t('packages.typeQuota', { hours: p.included_hours ?? 0 })}
                   {' · '}
                   {t('packages.priceLabel', { price: p.price })}
+                  {' · '}
+                  {p.validity_value && p.validity_unit
+                    ? t('packages.validityLabel', { value: p.validity_value, unit: t(`packages.validityUnit.${p.validity_unit}`) })
+                    : t('packages.validityNever')}
                   {' · '}
                   {t('packages.assignedCount', { count: p.assigned_count })}
                 </p>
@@ -381,6 +396,46 @@ export function AdminPackagesPage() {
                   onChange={(e) => setForm((f) => ({ ...f, price: Number(e.target.value) || 0 }))}
                   className="h-10 w-full rounded-xl border border-outline-variant bg-surface px-3 text-sm outline-none focus:ring-1 focus:ring-primary"
                 />
+              </label>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-on-surface-variant">
+                  {t('packages.fieldValidityValue')}
+                </span>
+                <input
+                  type="number"
+                  min={1}
+                  placeholder={t('packages.validityNever')}
+                  value={form.validity_value ?? ''}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      validity_value: e.target.value ? Number(e.target.value) : null,
+                    }))
+                  }
+                  className="h-10 w-full rounded-xl border border-outline-variant bg-surface px-3 text-sm outline-none focus:ring-1 focus:ring-primary"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-on-surface-variant">
+                  {t('packages.fieldValidityUnit')}
+                </span>
+                <select
+                  value={form.validity_unit ?? ''}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      validity_unit: (e.target.value || null) as ValidityUnit | null,
+                    }))
+                  }
+                  className="h-10 w-full rounded-xl border border-outline-variant bg-surface px-3 text-sm outline-none focus:ring-1 focus:ring-primary"
+                >
+                  <option value="">{t('packages.validityNever')}</option>
+                  <option value="months">{t('packages.validityUnit.months')}</option>
+                  <option value="years">{t('packages.validityUnit.years')}</option>
+                </select>
               </label>
             </div>
 

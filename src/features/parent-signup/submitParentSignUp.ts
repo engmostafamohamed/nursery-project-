@@ -3,6 +3,10 @@ import { compressImageForUpload } from '@/lib/imageCompression';
 
 import type { ParentSignUpFileBundle } from './parentSignUpFiles';
 import type { ParentSignUpFormValues } from './parentSignUpValidation';
+import {
+  buildRegistrationAnswers,
+  type RegistrationTemplatePayload,
+} from './registrationTemplates';
 
 const MAX_TOTAL_FILE_PAYLOAD_BYTES = 4.5 * 1024 * 1024;
 
@@ -13,6 +17,41 @@ const SCHOOL_PREFERENCES = ['british', 'american', 'national', 'ib', 'french', '
 
 function schoolPreferenceOrNull(value: string): string | null {
   return (SCHOOL_PREFERENCES as readonly string[]).includes(value) ? value : null;
+}
+
+// children.gender and family.marital_status are also CHECK-constrained. The registration
+// template editor lets admins relabel/reorder these choices, so a value that doesn't match
+// the DB's allowed set (a stale draft, or a custom option that isn't a real enum value) is
+// dropped instead of failing the insert.
+const CHILD_GENDERS = ['male', 'female'] as const;
+const MARITAL_STATUSES = ['married', 'divorced', 'separated', 'widowed', 'single'] as const;
+
+function childGenderOrNull(value: string): string | null {
+  return (CHILD_GENDERS as readonly string[]).includes(value) ? value : null;
+}
+
+function maritalStatusOrNull(value: string): string | null {
+  return (MARITAL_STATUSES as readonly string[]).includes(value) ? value : null;
+}
+
+function isTemplateFieldActive(template: RegistrationTemplatePayload | null | undefined, fieldKey: string, fallback = true) {
+  const question = template?.questions.find((item) => item.fieldKey === fieldKey);
+  return question ? question.active : fallback;
+}
+
+function filesForTemplate(files: ParentSignUpFileBundle, template: RegistrationTemplatePayload | null | undefined): ParentSignUpFileBundle {
+  return {
+    childPhoto: isTemplateFieldActive(template, 'childPhoto') ? files.childPhoto : null,
+    fatherIdPhoto: isTemplateFieldActive(template, 'fatherIdPhoto') ? files.fatherIdPhoto : null,
+    motherIdPhoto: isTemplateFieldActive(template, 'motherIdPhoto') ? files.motherIdPhoto : null,
+    birthCertificate: isTemplateFieldActive(template, 'birthCertificate') ? files.birthCertificate : null,
+    vaccinationCard: isTemplateFieldActive(template, 'vaccinationCard') ? files.vaccinationCard : null,
+    proofOfAddress: isTemplateFieldActive(template, 'proofOfAddress') ? files.proofOfAddress : null,
+    medicalReport: isTemplateFieldActive(template, 'medicalReport') ? files.medicalReport : null,
+    otherDocument: isTemplateFieldActive(template, 'otherDocument') ? files.otherDocument : null,
+    pickupPerson1Photo: isTemplateFieldActive(template, 'pickupPerson1Photo') ? files.pickupPerson1Photo : null,
+    pickupPerson2Photo: isTemplateFieldActive(template, 'pickupPerson2Photo') ? files.pickupPerson2Photo : null,
+  };
 }
 
 type SignupFilePayload = {
@@ -46,6 +85,9 @@ async function filesToPayload(files: ParentSignUpFileBundle) {
     motherIdPhoto: await fileToPayload(files.motherIdPhoto),
     birthCertificate: await fileToPayload(files.birthCertificate),
     vaccinationCard: await fileToPayload(files.vaccinationCard),
+    proofOfAddress: await fileToPayload(files.proofOfAddress),
+    medicalReport: await fileToPayload(files.medicalReport),
+    otherDocument: await fileToPayload(files.otherDocument),
     pickupPerson1Photo: await fileToPayload(files.pickupPerson1Photo),
     pickupPerson2Photo: await fileToPayload(files.pickupPerson2Photo),
   };
@@ -99,13 +141,16 @@ async function invokeParentSignupComplete(body: unknown) {
 export async function submitParentSignUp(
   v: ParentSignUpFormValues,
   files: ParentSignUpFileBundle,
+  registrationTemplate?: RegistrationTemplatePayload | null,
+  customRegistrationAnswers: Record<string, unknown> = {},
 ): Promise<{ success: boolean }> {
   // The family gets one account (username + password). A parent block is sent when
   // their name is filled — the emails on it are contact details, not credentials.
   const hasFather = v.fatherFullName.trim().length > 0;
   const hasMother = v.motherFullName.trim().length > 0;
+  const visibleFiles = filesForTemplate(files, registrationTemplate);
 
-  const filePayload = await filesToPayload(files);
+  const filePayload = await filesToPayload(visibleFiles);
 
   // Staff screens read food_allergies as one line, so flatten the picked list.
   const allergySummary = v.hasAllergy
@@ -129,6 +174,42 @@ export async function submitParentSignUp(
   // (snack type, nursery meal preference, time between meals, unfinished-snack
   // action, diaper change schedule) are no longer collected at all.
   const yesNo = (value: string) => (value === 'Yes' ? true : value === 'No' ? false : null);
+  const pickup1Active = [
+    'pickupPerson1Name',
+    'pickupPerson1Phone',
+    'pickupPerson1Relation',
+    'pickupPerson1Authorization',
+    'pickupPerson1Photo',
+  ].some((fieldKey) => isTemplateFieldActive(registrationTemplate, fieldKey));
+  const pickup2Active = [
+    'pickupPerson2Name',
+    'pickupPerson2Phone',
+    'pickupPerson2Relation',
+    'pickupPerson2Authorization',
+    'pickupPerson2Photo',
+  ].some((fieldKey) => isTemplateFieldActive(registrationTemplate, fieldKey));
+  const pickups = [
+    pickup1Active && (v.pickupPerson1Name.trim() || v.pickupPerson1Phone.trim() || visibleFiles.pickupPerson1Photo)
+      ? {
+          slot: 1,
+          name: v.pickupPerson1Name.trim(),
+          phone: v.pickupPerson1Phone.trim(),
+          relation: v.pickupPerson1Relation.trim() || null,
+          authorization: v.pickupPerson1Authorization,
+          photo_path: null,
+        }
+      : null,
+    pickup2Active && (v.pickupPerson2Name.trim() || v.pickupPerson2Phone.trim() || visibleFiles.pickupPerson2Photo)
+      ? {
+          slot: 2,
+          name: v.pickupPerson2Name.trim(),
+          phone: v.pickupPerson2Phone.trim(),
+          relation: v.pickupPerson2Relation.trim() || null,
+          authorization: v.pickupPerson2Authorization,
+          photo_path: null,
+        }
+      : null,
+  ].filter((pickup): pickup is NonNullable<typeof pickup> => Boolean(pickup));
 
   const dailyCarePreferences = {
     arrival_time: v.arrivalTime || null,
@@ -170,7 +251,7 @@ export async function submitParentSignUp(
         last_name: v.childLastName.trim(),
         nickname: v.childNickname.trim() || null,
         dob: v.childDob,
-        gender: v.childGender || null,
+        gender: childGenderOrNull(v.childGender),
         nationality: v.childNationality.trim() || null,
         department: v.department || null,
         school_preference: schoolPreferenceOrNull(v.schoolPreference),
@@ -186,7 +267,7 @@ export async function submitParentSignUp(
         home_address: v.address || null,
       },
       family: {
-        marital_status: v.maritalStatus || null,
+        marital_status: maritalStatusOrNull(v.maritalStatus),
         address: v.address || null,
         referral_source: v.referralSource || null,
       },
@@ -208,27 +289,24 @@ export async function submitParentSignUp(
             id_photo_path: null,
           }
         : null,
-      pickups: [
-        {
-          name: v.pickupPerson1Name.trim(),
-          phone: v.pickupPerson1Phone.trim(),
-          relation: v.pickupPerson1Relation.trim() || null,
-          authorization: v.pickupPerson1Authorization,
-          photo_path: null,
-        },
-        {
-          name: v.pickupPerson2Name.trim(),
-          phone: v.pickupPerson2Phone.trim(),
-          relation: v.pickupPerson2Relation.trim() || null,
-          authorization: v.pickupPerson2Authorization,
-          photo_path: null,
-        },
-      ],
+      pickups,
       consents: {
         health_policy: v.agreeHealthPolicy,
         financial_agreement: v.agreeFinancialAgreement,
         policies: v.agreePolicies,
         info_accuracy: v.agreeInfoAccuracy,
+      },
+      registration_template: registrationTemplate
+        ? {
+            id: registrationTemplate.id,
+            name: registrationTemplate.name,
+            version: registrationTemplate.version,
+            questions: registrationTemplate.questions,
+          }
+        : null,
+      registration_answers: {
+        ...buildRegistrationAnswers(registrationTemplate ?? null, v, visibleFiles),
+        ...customRegistrationAnswers,
       },
   });
 

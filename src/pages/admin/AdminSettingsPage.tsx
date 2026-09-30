@@ -4,6 +4,8 @@ import { toast } from 'sonner';
 
 import { SettingsCategoryForm } from '@/components/admin/settings/SettingsCategoryForm';
 import { NurseryProfileForm } from '@/components/admin/settings/NurseryProfileForm';
+import { ParentRegistrationTemplatesEditor } from '@/components/admin/settings/ParentRegistrationTemplatesEditor';
+import { TuitionPackagesEditor } from '@/components/admin/settings/TuitionPackagesEditor';
 import { TenantExportCard } from '@/components/admin/settings/TenantExportCard';
 import { HelpAiPreferencesCard } from '@/components/settings/HelpAiPreferencesCard';
 import {
@@ -104,7 +106,7 @@ export function AdminSettingsPage() {
     try {
       await updateSettings(pickTabValues(activeTab, draft));
       toast.success(t('settings.messages.saved'));
-    } catch (error) {
+    } catch {
       toast.error(t('settings.messages.saveError'));
     }
   };
@@ -139,7 +141,6 @@ export function AdminSettingsPage() {
 
   return (
     <div className="space-y-6">
-    {profile?.nursery_id ? <NurseryProfileForm nurseryId={profile.nursery_id} /> : null}
     <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
       <aside className="space-y-2 rounded-2xl border border-outline-variant bg-surface-container-lowest p-3">
         <h1 className="px-2 text-base font-semibold text-on-surface">{t('settings.title')}</h1>
@@ -157,22 +158,41 @@ export function AdminSettingsPage() {
         ))}
       </aside>
 
-      <section className="space-y-3">
-        <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3">
-          <p className="text-sm font-semibold text-on-surface">{t(tabConfig.labelKey)}</p>
-          {dirty ? (
-            <p className="mt-1 text-xs text-error">{t('settings.messages.unsaved')}</p>
-          ) : null}
-        </div>
-        <SettingsCategoryForm
-          fields={tabConfig.fields}
-          values={draft}
-          t={t}
-          onChange={onFieldChange}
-          onSave={saveActiveTab}
-          onReset={() => setShowResetConfirm(true)}
-          isSaving={isSaving}
-        />
+      {/* min-w-0: without it, a grid item won't shrink below its content's natural width,
+          so a wide child (like the templates editor's step tabs) forces this whole column —
+          and the page — wider instead of scrolling within its own container. */}
+      <section className="min-w-0 space-y-3">
+        {activeTab === 'profile' ? (
+          profile?.nursery_id ? <NurseryProfileForm nurseryId={profile.nursery_id} /> : null
+        ) : (
+          <>
+            {tabConfig.fields.length > 0 ? (
+              <>
+                <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3">
+                  <p className="text-sm font-semibold text-on-surface">{t(tabConfig.labelKey)}</p>
+                  {dirty ? (
+                    <p className="mt-1 text-xs text-error">{t('settings.messages.unsaved')}</p>
+                  ) : null}
+                </div>
+                <SettingsCategoryForm
+                  fields={tabConfig.fields}
+                  values={draft}
+                  t={t}
+                  onChange={onFieldChange}
+                  onSave={saveActiveTab}
+                  onReset={() => setShowResetConfirm(true)}
+                  isSaving={isSaving}
+                />
+              </>
+            ) : null}
+            {activeTab === 'admissions' ? (
+              <ParentRegistrationTemplatesEditor nurseryId={profile?.nursery_id} />
+            ) : null}
+            {activeTab === 'financial' ? (
+              <TuitionPackagesEditor nurseryId={profile?.nursery_id} />
+            ) : null}
+          </>
+        )}
       </section>
 
       <Dialog open={Boolean(confirmSwitchTab)} onOpenChange={(open) => !open && setConfirmSwitchTab(null)}>

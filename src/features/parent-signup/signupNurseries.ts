@@ -15,10 +15,11 @@ export type SignupNursery = {
   lead_sources: unknown;
   departments: unknown;
   standard_start_time: string | null;
+  active_registration_template: unknown;
 };
 
 const NURSERY_COLUMNS =
-  'id, name_en, name_ar, city, opens_at, closes_at, working_days, language_pref, lead_sources, departments, standard_start_time';
+  'id, name_en, name_ar, city, opens_at, closes_at, working_days, language_pref, lead_sources, departments, standard_start_time, active_registration_template';
 
 /** Postgres `time` comes back as HH:MM:SS; <input type="time"> wants HH:MM. */
 export function toTimeInputValue(value: string | null): string {

@@ -9,6 +9,7 @@ export const packageAssignmentsKey = (packageId: string | null | undefined) =>
   ['admin-package-assignments', packageId] as const;
 
 export type CoverageType = 'unlimited' | 'hours_quota';
+export type ValidityUnit = 'months' | 'years';
 
 export type PackageRow = {
   id: string;
@@ -21,6 +22,9 @@ export type PackageRow = {
   included_hours: number | null;
   price: number;
   active: boolean;
+  /** How long this package stays active once assigned; null on either means "never expires". */
+  validity_value: number | null;
+  validity_unit: ValidityUnit | null;
   created_at: string;
   assigned_count: number;
 };
@@ -34,6 +38,8 @@ export type PackageInput = {
   included_hours: number | null;
   price: number;
   active: boolean;
+  validity_value: number | null;
+  validity_unit: ValidityUnit | null;
 };
 
 export type PackageAssignment = {
@@ -56,7 +62,7 @@ export function useAdminPackages(nurseryId: string | null | undefined) {
       const { data, error } = await supabase
         .from('packages')
         .select(
-          'id, nursery_id, name_ar, name_en, description_ar, description_en, coverage_type, included_hours, price, active, created_at',
+          'id, nursery_id, name_ar, name_en, description_ar, description_en, coverage_type, included_hours, price, active, validity_value, validity_unit, created_at',
         )
         .eq('nursery_id', nurseryId)
         .order('created_at', { ascending: false });

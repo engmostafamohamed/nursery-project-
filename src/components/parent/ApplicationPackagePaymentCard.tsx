@@ -194,11 +194,14 @@ export function ApplicationPackagePaymentCard({
                   <span className="flex items-start justify-between gap-3">
                     <span className="min-w-0">
                       <span className="block text-sm font-semibold text-on-surface">{packageName(pkg, isAr)}</span>
-                      <span className="mt-1 block text-xs text-on-surface-variant">
-                        {pkg.coverageType === 'hours_quota'
-                          ? t('packages.typeQuota', { hours: pkg.includedHours ?? 0 })
-                          : t('packages.typeUnlimited')}
-                      </span>
+                      {pkg.dailyHours ? (
+                        <span className="mt-1 block text-xs text-on-surface-variant">
+                          {t('applications.paymentPackage.dailyHours', {
+                            hours: pkg.dailyHours,
+                            defaultValue: '{{hours}} hours/day',
+                          })}
+                        </span>
+                      ) : null}
                     </span>
                     <span
                       className={cn(
@@ -213,6 +216,21 @@ export function ApplicationPackagePaymentCard({
                   </span>
                   {description ? (
                     <span className="mt-3 line-clamp-2 text-xs leading-5 text-on-surface-variant">{description}</span>
+                  ) : null}
+                  {pkg.featuresJson.length ? (
+                    <ul className="mt-2 space-y-1">
+                      {pkg.featuresJson.slice(0, 4).map((feature, index) => {
+                        const text = isAr ? feature.ar || feature.en : feature.en || feature.ar;
+                        return text ? (
+                          <li key={index} className="flex items-start gap-1.5 text-xs leading-5 text-on-surface-variant">
+                            <span className="material-symbols-outlined mt-0.5 text-sm text-success" aria-hidden>
+                              check
+                            </span>
+                            <span className="line-clamp-1">{text}</span>
+                          </li>
+                        ) : null;
+                      })}
+                    </ul>
                   ) : null}
                   <span className="mt-auto pt-4 text-lg font-semibold text-on-surface">
                     {t('invoice.egpAmount', { amount: total.toFixed(2) })}

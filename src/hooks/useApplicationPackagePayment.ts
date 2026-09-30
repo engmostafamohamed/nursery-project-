@@ -10,8 +10,8 @@ export type ApplicationPaymentPackage = {
   descriptionAr: string | null;
   descriptionEn: string | null;
   price: number;
-  coverageType: 'unlimited' | 'hours_quota';
-  includedHours: number | null;
+  dailyHours: number | null;
+  featuresJson: Array<{ ar: string; en: string }>;
 };
 
 export type ApplicationPackageBillingPeriod = 'monthly' | 'quarterly' | 'half_annual' | 'annual';
@@ -84,8 +84,8 @@ export function useApplicationPackagePayment({ applicationId, parentId, nurseryI
     queryFn: async (): Promise<ApplicationPaymentPackage[]> => {
       if (!nurseryId) return [];
       const { data, error } = await supabase
-        .from('packages')
-        .select('id, name_ar, name_en, description_ar, description_en, coverage_type, included_hours, price')
+        .from('tuition_packages')
+        .select('id, name_ar, name_en, description_ar, description_en, daily_hours, features_json, price')
         .eq('nursery_id', nurseryId)
         .eq('active', true)
         .order('price', { ascending: true });
@@ -96,8 +96,8 @@ export function useApplicationPackagePayment({ applicationId, parentId, nurseryI
         name_en: string;
         description_ar: string | null;
         description_en: string | null;
-        coverage_type: 'unlimited' | 'hours_quota';
-        included_hours: number | null;
+        daily_hours: number | null;
+        features_json: unknown;
         price: string | number;
       }>).map((row) => ({
         id: row.id,
@@ -105,8 +105,12 @@ export function useApplicationPackagePayment({ applicationId, parentId, nurseryI
         nameEn: row.name_en,
         descriptionAr: row.description_ar,
         descriptionEn: row.description_en,
-        coverageType: row.coverage_type,
-        includedHours: row.included_hours,
+        dailyHours: row.daily_hours,
+        featuresJson: Array.isArray(row.features_json)
+          ? (row.features_json as Array<{ ar?: unknown; en?: unknown }>)
+              .filter((item) => item && typeof item === 'object')
+              .map((item) => ({ ar: String(item.ar ?? ''), en: String(item.en ?? '') }))
+          : [],
         price: money(row.price),
       }));
     },

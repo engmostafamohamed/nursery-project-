@@ -7,7 +7,13 @@ ALTER TABLE public.nursery_settings
 COMMENT ON COLUMN public.nursery_settings.parent_registration_enabled IS
   'When false, this nursery is hidden from public parent signup and the signup Edge Function rejects new submissions.';
 
-CREATE OR REPLACE VIEW public.signup_nursery_options AS
+-- CREATE OR REPLACE cannot drop/reorder columns from an existing view, and the
+-- remote view's live column set may not match this file's history exactly
+-- (see 20260818130000_signup_nursery_options_departments.sql for the same
+-- issue), so drop it first.
+DROP VIEW IF EXISTS public.signup_nursery_options;
+
+CREATE VIEW public.signup_nursery_options AS
 SELECT
   n.id,
   n.name_en,

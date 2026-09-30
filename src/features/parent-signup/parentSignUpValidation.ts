@@ -13,11 +13,6 @@ const optionalPhone = z
   .string()
   .refine((value) => !value.trim() || /^\d+$/.test(value.trim()), 'signup.phoneDigitsOnly')
   .refine((value) => !value.trim() || phonePattern.test(value.trim()), 'signup.invalidPhone');
-const requiredPhone = z
-  .string()
-  .min(1, 'signup.requiredField')
-  .refine((value) => /^\d+$/.test(value.trim()), 'signup.phoneDigitsOnly')
-  .refine((value) => phonePattern.test(value.trim()), 'signup.invalidPhone');
 const emergencyContactSchema = z.object({
   name: z.string(),
   phone: optionalPhone,
@@ -25,18 +20,17 @@ const emergencyContactSchema = z.object({
 });
 const childDob = z
   .string()
-  .min(1, 'signup.requiredField')
-  .refine((value) => isValidIsoDate(value), 'signup.invalidDate')
-  .refine((value) => isChildAgeValid(value), 'signup.childAgeRange');
+  .refine((value) => !value.trim() || isValidIsoDate(value), 'signup.invalidDate')
+  .refine((value) => !value.trim() || isChildAgeValid(value), 'signup.childAgeRange');
 
 export const parentSignUpBaseSchema = z.object({
-  nurseryId: z.string().min(1),
-  childFirstName: z.string().min(1),
-  childMiddleName: z.string().min(1),
-  childLastName: z.string().min(1),
-  childNickname: z.string().min(1),
+  nurseryId: z.string(),
+  childFirstName: z.string(),
+  childMiddleName: z.string(),
+  childLastName: z.string(),
+  childNickname: z.string(),
   childDob,
-  childNationality: z.string().min(1),
+  childNationality: z.string(),
   childGender: z.string(),
 
   fatherFullName: z.string(),
@@ -51,8 +45,12 @@ export const parentSignUpBaseSchema = z.object({
 
   // One login for the family. Supabase Auth needs an email, so signup mints
   // <username>@parents.xo.local; the emails above stay as contact details only.
-  username: z.string().regex(/^[a-zA-Z0-9._-]{4,32}$/, 'signup.usernameInvalid'),
-  password: z.string().min(8, 'signup.passwordTooShort'),
+  username: z
+    .string()
+    .refine((value) => !value.trim() || /^[a-zA-Z0-9._-]{4,32}$/.test(value.trim()), 'signup.usernameInvalid'),
+  password: z
+    .string()
+    .refine((value) => !value.trim() || value.trim().length >= 8, 'signup.passwordTooShort'),
 
   maritalStatus: z.string(),
   address: z.string(),
@@ -76,12 +74,12 @@ export const parentSignUpBaseSchema = z.object({
   // until the parent starts filling it, then it must be complete.
   emergencyContacts: z.array(emergencyContactSchema).min(2),
 
-  pickupPerson1Name: z.string().min(1),
-  pickupPerson1Phone: requiredPhone,
+  pickupPerson1Name: z.string(),
+  pickupPerson1Phone: optionalPhone,
   pickupPerson1Relation: z.string(),
   pickupPerson1Authorization: z.string(),
-  pickupPerson2Name: z.string().min(1),
-  pickupPerson2Phone: requiredPhone,
+  pickupPerson2Name: z.string(),
+  pickupPerson2Phone: optionalPhone,
   pickupPerson2Relation: z.string(),
   pickupPerson2Authorization: z.string(),
 
@@ -110,9 +108,8 @@ export const parentSignUpBaseSchema = z.object({
   agreeInfoAccuracy: z.boolean(),
 }).superRefine((data, ctx) => {
   data.emergencyContacts.forEach((contact, index) => {
-    const isRequiredContact = index < 2;
     const hasAnyValue = Boolean(contact.name.trim() || contact.phone.trim() || contact.relationship.trim());
-    if (!isRequiredContact && !hasAnyValue) return;
+    if (!hasAnyValue) return;
 
     if (!contact.name.trim()) {
       ctx.addIssue({
@@ -142,14 +139,6 @@ export const parentSignUpBaseSchema = z.object({
       code: z.ZodIssueCode.custom,
       message: 'signup.requiredField',
       path: ['napTimePreference'],
-    });
-  }
-
-  if (data.napTimePreference === 'Yes' && !data.maxNapTime.trim()) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'signup.requiredField',
-      path: ['maxNapTime'],
     });
   }
 

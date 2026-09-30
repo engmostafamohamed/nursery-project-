@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
@@ -23,6 +24,7 @@ type Props = {
   totalOutstanding?: number;
   upcomingEventsCount?: number;
   childInsights?: Record<string, ChildInsight>;
+  leadingCard?: ReactNode;
 };
 
 function formatClock(iso: string | null, locale: string): string {
@@ -78,6 +80,7 @@ export function ParentChildSummaryCards({
   totalOutstanding,
   upcomingEventsCount,
   childInsights = {},
+  leadingCard,
 }: Props) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
@@ -93,9 +96,12 @@ export function ParentChildSummaryCards({
 
   if (!rows.length) {
     return (
-      <p className="rounded-xl border border-outline-variant bg-surface-container-low px-4 py-6 text-center text-sm text-on-surface-variant">
-        {t('parent.dashboard.noChildren')}
-      </p>
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))]">
+        {leadingCard}
+        <p className="flex min-h-[360px] items-center justify-center rounded-2xl border border-outline-variant bg-surface-container-low px-4 py-6 text-center text-sm text-on-surface-variant shadow-sm sm:min-h-[460px] sm:rounded-xl">
+          {t('parent.dashboard.noChildren')}
+        </p>
+      </div>
     );
   }
 
@@ -125,6 +131,7 @@ export function ParentChildSummaryCards({
       ) : null}
 
       <div className="grid grid-cols-1 gap-3 sm:gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))]">
+        {leadingCard}
         {rows.map((child) => {
           const name = locale === 'ar' ? child.nameAr : child.nameEn;
           const initials = getUserInitials(name, '');

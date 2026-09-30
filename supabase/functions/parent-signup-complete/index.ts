@@ -13,6 +13,7 @@ type ParentPayload = {
 };
 
 type PickupPayload = {
+  slot?: 1 | 2 | null;
   name: string;
   phone: string;
   relation: string | null;
@@ -32,6 +33,9 @@ type SignupFilesPayload = {
   motherIdPhoto: SignupFilePayload | null;
   birthCertificate: SignupFilePayload | null;
   vaccinationCard: SignupFilePayload | null;
+  proofOfAddress: SignupFilePayload | null;
+  medicalReport: SignupFilePayload | null;
+  otherDocument: SignupFilePayload | null;
   pickupPerson1Photo: SignupFilePayload | null;
   pickupPerson2Photo: SignupFilePayload | null;
 };
@@ -90,6 +94,13 @@ type Body = {
     policies: boolean;
     info_accuracy: boolean;
   };
+  registration_template?: {
+    id: string;
+    name: string;
+    version: number;
+    questions: unknown[];
+  } | null;
+  registration_answers?: Record<string, unknown> | null;
 };
 
 class SignupHttpError extends Error {
@@ -235,6 +246,9 @@ async function createApplicationDocuments(
     { documentType: 'birth_certificate', file: files?.birthCertificate, name: 'birth-certificate' },
     { documentType: 'vaccination_card', file: files?.vaccinationCard, name: 'vaccination-card' },
     { documentType: 'parent_id', file: parentIdFile, name: 'parent-id' },
+    { documentType: 'proof_of_address', file: files?.proofOfAddress, name: 'proof-of-address' },
+    { documentType: 'medical_report', file: files?.medicalReport, name: 'medical-report' },
+    { documentType: 'other', file: files?.otherDocument, name: 'other-document' },
   ];
 
   for (const doc of docs) {
@@ -500,15 +514,18 @@ Deno.serve(async (req) => {
     }
 
     if (body.pickups.length > 0) {
-      const rows = body.pickups.map((p, idx) => ({
+      const rows = body.pickups.map((p, idx) => {
+        const slot = p.slot === 1 || p.slot === 2 ? p.slot : idx + 1;
+        return {
         child_id: childId,
         name: p.name,
         phone: p.phone,
         relation: p.relation,
-        photo_url: idx === 0 ? uploaded.pickup1PhotoPath : uploaded.pickup2PhotoPath,
+        photo_url: slot === 1 ? uploaded.pickup1PhotoPath : uploaded.pickup2PhotoPath,
         authorization_level: p.authorization || 'anytime',
         active: true,
-      }));
+        };
+      });
       const { error: puErr } = await admin.from('authorized_pickups').insert(rows as never);
       if (puErr) throw new Error(puErr.message);
     }
@@ -530,6 +547,9 @@ Deno.serve(async (req) => {
         pickups: body.pickups,
       },
       child_info_json: body.child,
+      registration_template_id: body.registration_template?.id ?? null,
+      registration_template_snapshot: body.registration_template ?? null,
+      registration_answers_json: body.registration_answers ?? {},
       terms_accepted:
         body.consents.health_policy &&
         body.consents.financial_agreement &&

@@ -14,10 +14,12 @@ import {
 
 type Props = {
   form: UseFormReturn<ParentSignUpFormValues>;
+  t?: (key: string, options?: Record<string, unknown>) => string;
 };
 
-export function StepMedicationConsents({ form }: Props) {
+export function StepMedicationConsents({ form, t: textOverride }: Props) {
   const { t, i18n } = useTranslation();
+  const text = textOverride ?? t;
   const isArabic = i18n.language === 'ar';
   const selected = (form.watch('medicationConsents') ?? []) as MedicationConsentId[];
 
@@ -40,8 +42,8 @@ export function StepMedicationConsents({ form }: Props) {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h3 className="text-lg font-semibold text-on-surface">{t('signup.medicationConsents.title')}</h3>
-        <p className="text-sm text-on-surface-variant">{t('signup.medicationConsents.description')}</p>
+        <h3 className="text-lg font-semibold text-on-surface">{text('signup.medicationConsents.title')}</h3>
+        <p className="text-sm text-on-surface-variant">{text('signup.medicationConsents.description')}</p>
       </div>
 
       <div className="flex items-center justify-between rounded-xl bg-primary/5 px-4 py-2 text-xs">
@@ -89,7 +91,7 @@ export function StepMedicationConsents({ form }: Props) {
 
       <div className="flex items-start gap-3 rounded-xl bg-surface-container px-4 py-3 text-xs text-on-surface-variant">
         <MaterialSymbol name="info" size="text-lg" className="text-primary" />
-        <p>{t('signup.medicationConsents.disclaimer')}</p>
+        <p>{text('signup.medicationConsents.disclaimer')}</p>
       </div>
     </div>
   );

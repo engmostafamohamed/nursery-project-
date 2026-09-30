@@ -10,6 +10,7 @@ export const SIGNUP_STEPS = [
   'dailyCare',
   'pickups',
   'medicationConsents',
+  'documents',
   'consents',
   'review',
 ] as const;
@@ -29,6 +30,7 @@ export const STEP_FIELDS: Record<SignUpStep, string[]> = {
     'pickupPerson2Name', 'pickupPerson2Phone',
   ],
   medicationConsents: [],
+  documents: [],
   consents: ['agreeHealthPolicy', 'agreeFinancialAgreement', 'agreePolicies', 'agreeInfoAccuracy'],
   review: [],
 };

@@ -3,11 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { cn } from '@/lib/utils';
 
-import { SIGNUP_STEPS, type SignUpStep } from '@/features/parent-signup/parentSignUpTypes';
+import type { SignUpStep } from '@/features/parent-signup/parentSignUpTypes';
 
 type StepStatus = 'done' | 'current' | 'upcoming' | 'error';
 
 type Props = {
+  steps: readonly SignUpStep[];
   currentIndex: number;
   furthestReached: number;
   errorSteps: Set<SignUpStep>;
@@ -24,6 +25,7 @@ function statusOf(idx: number, currentIndex: number, furthestReached: number, ha
 }
 
 export function SignupStepNav({
+  steps,
   currentIndex,
   furthestReached,
   errorSteps,
@@ -36,7 +38,7 @@ export function SignupStepNav({
   return (
     <nav aria-label={t('signup.nav.ariaLabel')} className="flex h-full flex-col justify-between gap-4">
       <ol className="space-y-1">
-        {SIGNUP_STEPS.map((step, idx) => {
+        {steps.map((step, idx) => {
           const status = statusOf(idx, currentIndex, furthestReached, errorSteps.has(step));
           const disabled = idx > furthestReached;
           return (

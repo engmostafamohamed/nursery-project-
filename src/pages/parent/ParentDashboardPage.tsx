@@ -357,6 +357,53 @@ function admissionStatusUi(status: string) {
   return { icon: 'edit_document', tone: 'primary' as const, className: 'bg-primary/10 text-primary border-primary/30' };
 }
 
+function ParentDashboardApplicationsCard({
+  isLoading,
+  applicationRows,
+  t,
+}: {
+  isLoading: boolean;
+  applicationRows: Record<string, unknown>[];
+  t: (key: string, options?: Record<string, unknown>) => string;
+}) {
+  return (
+    <article className="flex min-h-[360px] flex-col rounded-2xl border border-outline-variant bg-surface p-3 shadow-sm sm:min-h-[460px] sm:rounded-xl sm:p-4">
+      {isLoading ? (
+        <p className="text-sm text-on-surface-variant">{t('common.loading')}</p>
+      ) : applicationRows.length === 0 ? (
+        <p className="flex flex-1 items-center justify-center text-center text-sm text-on-surface-variant">
+          {t('parent.dashboard.noApplications')}
+        </p>
+      ) : (
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pe-1">
+          {applicationRows.map((row) => {
+            const id = String(row.id);
+            const status = String(row.status ?? 'draft');
+            const submittedAt = row.submitted_at ? new Date(String(row.submitted_at)).toLocaleDateString() : '-';
+            return (
+              <Link
+                key={id}
+                to={`/parent/applications/${id}`}
+                className="block rounded-xl border border-outline-variant bg-surface-container-lowest p-3 text-foreground transition-all hover:border-primary hover:shadow-sm sm:rounded-lg"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-on-surface">{applicationChildName(row)}</p>
+                    <p className="mt-1 text-xs text-on-surface-variant">{t('applications.submittedAt')}: {submittedAt}</p>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary">
+                    {t(`applications.statuses.${status}`, { defaultValue: status })}
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </article>
+  );
+}
+
 function ParentAdmissionCyclePanel({
   application,
   isLoading,
@@ -568,7 +615,7 @@ export function ParentDashboardPage() {
   const paymentHistory = usePaymentHistory({ parentId: user?.id, nurseryId, limit: 5 });
   const eventPermissionsQuery = useParentEventPermissions(user?.id);
   const applications = useApplications({ parentId: user?.id, nurseryId });
-  const applicationRows = useMemo(() => applications.parentApplications.slice(0, 3), [applications.parentApplications]);
+  const applicationRows = useMemo(() => applications.parentApplications, [applications.parentApplications]);
   const highlightedApplication = useMemo(
     () =>
       applications.parentApplications.find((row) => !['approved', 'rejected'].includes(String(row.status ?? 'draft'))) ??
@@ -783,54 +830,26 @@ export function ParentDashboardPage() {
         />
       </section>
 
-      <section className="grid items-stretch gap-4 sm:gap-5 xl:grid-cols-2">
-        <div className="flex min-w-0 flex-col gap-3">
+      <section className="space-y-3">
+        <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))]">
           <SectionHeading icon="assignment">{t('parent.dashboard.sectionApplications')}</SectionHeading>
-          <div className="h-full rounded-2xl border border-outline-variant bg-surface p-3 shadow-sm sm:rounded-xl sm:p-4">
-            {applications.isLoading ? (
-              <p className="text-sm text-on-surface-variant">{t('common.loading')}</p>
-            ) : applicationRows.length === 0 ? (
-              <p className="text-sm text-on-surface-variant">{t('parent.dashboard.noApplications')}</p>
-            ) : (
-              <div className="grid gap-3">
-                {applicationRows.map((row) => {
-                  const id = String(row.id);
-                  const status = String(row.status ?? 'draft');
-                  const submittedAt = row.submitted_at ? new Date(String(row.submitted_at)).toLocaleDateString() : '-';
-                  return (
-                    <Link
-                      key={id}
-                      to={`/parent/applications/${id}`}
-                      className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3 text-foreground transition-all hover:border-primary hover:shadow-sm sm:rounded-lg sm:p-4"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-on-surface">{applicationChildName(row)}</p>
-                          <p className="mt-1 text-xs text-on-surface-variant">{t('applications.submittedAt')}: {submittedAt}</p>
-                        </div>
-                        <span className="shrink-0 rounded-full bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary">
-                          {t(`applications.statuses.${status}`, { defaultValue: status })}
-                        </span>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="flex min-w-0 flex-col gap-3">
           <SectionHeading icon="child_care">{t('parent.dashboard.sectionChildren')}</SectionHeading>
-          <ParentChildSummaryCards
-            children={childRows}
-            unreadTotal={unreadTotal}
-            isLoading={showChildSkeleton}
-            totalOutstanding={totalOutstanding}
-            upcomingEventsCount={upcomingEventsCount}
-            childInsights={childInsights}
-          />
         </div>
+        <ParentChildSummaryCards
+          leadingCard={
+            <ParentDashboardApplicationsCard
+              isLoading={applications.isLoading}
+              applicationRows={applicationRows}
+              t={t}
+            />
+          }
+          children={childRows}
+          unreadTotal={unreadTotal}
+          isLoading={showChildSkeleton}
+          totalOutstanding={totalOutstanding}
+          upcomingEventsCount={upcomingEventsCount}
+          childInsights={childInsights}
+        />
       </section>
 
       <section className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-12">

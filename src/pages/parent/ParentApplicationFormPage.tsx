@@ -5,12 +5,14 @@ import { toast } from 'sonner';
 
 import { ApplicationDocumentPreview } from '@/components/applications/ApplicationDocumentPreview';
 import { PaymentHistoryTable } from '@/components/financial/PaymentHistoryTable';
+import { ApplicationExtraHoursPackageCard } from '@/components/parent/ApplicationExtraHoursPackageCard';
 import { ApplicationPackagePaymentCard } from '@/components/parent/ApplicationPackagePaymentCard';
 import { ApplicationSteps } from '@/components/parent/ApplicationSteps';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useApplications } from '@/hooks/useApplications';
+import { useApplicationExtraHoursPackage } from '@/hooks/useApplicationExtraHoursPackage';
 import { useApplicationPackagePayment, type ApplicationPackageBillingPeriod } from '@/hooks/useApplicationPackagePayment';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useParentAccountProfile, type ParentAccountProfile } from '@/hooks/useParentAccountProfile';
@@ -23,6 +25,7 @@ import { isChildAgeValid, isValidIsoDate } from '@/lib/onboardingDateBounds';
 import { cn } from '@/lib/utils';
 
 const requiredDocs = ['birth_certificate', 'vaccination_card', 'parent_id', 'proof_of_address'] as const;
+const applicationDocumentTypes = [...requiredDocs, 'medical_report', 'other'] as const;
 const requiredParentFields = ['full_name', 'email', 'phone', 'address', 'emergency_contact'] as const;
 const requiredChildFields = ['first_name', 'middle_name', 'last_name', 'nickname', 'dob', 'nationality'] as const;
 type ApplicationWorkspaceTab = 'information' | 'packages' | 'payments';
@@ -43,15 +46,35 @@ const applicationStepIcons = [
 ];
 
 function latestDocumentsByType(docs: Array<Record<string, unknown>>) {
+  const uploadedAt = (doc: Record<string, unknown>) => {
+    const time = new Date(String(doc.uploaded_at ?? '')).getTime();
+    return Number.isFinite(time) ? time : -Infinity;
+  };
+  const hasFile = (doc: Record<string, unknown>) => typeof doc.file_url === 'string' && doc.file_url.trim().length > 0;
+
   return docs.reduce<Record<string, Record<string, unknown>>>((acc, doc) => {
     const type = String(doc.document_type ?? '');
     if (!type) return acc;
     const current = acc[type];
-    const currentTime = current ? new Date(String(current.uploaded_at ?? '')).getTime() : -Infinity;
-    const nextTime = new Date(String(doc.uploaded_at ?? '')).getTime();
-    if (!current || nextTime >= currentTime) acc[type] = doc;
+    if (!current) {
+      acc[type] = doc;
+      return acc;
+    }
+
+    const docHasFile = hasFile(doc);
+    const currentHasFile = hasFile(current);
+    if (docHasFile !== currentHasFile) {
+      if (docHasFile) acc[type] = doc;
+      return acc;
+    }
+
+    if (uploadedAt(doc) > uploadedAt(current)) acc[type] = doc;
     return acc;
   }, {});
+}
+
+function hasDocumentFile(doc: Record<string, unknown> | undefined) {
+  return typeof doc?.file_url === 'string' && doc.file_url.trim().length > 0;
 }
 
 function readApplicationName(childInfo: Record<string, unknown>) {
@@ -247,20 +270,24 @@ function DocumentUploadTile({
   uploaded,
   disabled,
   canUploadDocuments,
+  canRemoveDocuments,
   onFile,
+  onRemove,
 }: {
   docType: string;
   required: boolean;
   uploaded: boolean;
   disabled: boolean;
   canUploadDocuments: boolean;
+  canRemoveDocuments: boolean;
   onFile: (file: File) => void;
+  onRemove: () => void;
 }) {
   const { t } = useTranslation();
   return (
-    <label
+    <div
       className={cn(
-        'group flex min-h-36 cursor-pointer flex-col justify-between rounded-lg border p-4 text-sm transition',
+        'group flex min-h-36 flex-col justify-between rounded-lg border p-4 text-sm transition',
         uploaded
           ? 'border-success/40 bg-success/5'
           : required
@@ -305,22 +332,44 @@ function DocumentUploadTile({
               : t('applications.optionalBadge', { defaultValue: 'Optional' })}
         </span>
       </span>
-      <span className="mt-4 inline-flex h-10 items-center justify-center gap-2 rounded-md border border-primary/30 bg-surface px-3 text-sm font-semibold text-primary shadow-sm group-hover:bg-primary group-hover:text-primary-foreground">
-        <span className="material-symbols-outlined text-base" aria-hidden>{uploaded ? 'sync' : 'add'}</span>
-        {uploaded ? t('applications.replaceDocument', { defaultValue: 'Replace file' }) : t('applications.uploadDocument', { defaultValue: 'Upload file' })}
-      </span>
-      <input
-        className="sr-only"
-        type="file"
-        accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
-        disabled={disabled}
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) onFile(file);
-          e.currentTarget.value = '';
-        }}
-      />
-    </label>
+      <div className={cn('mt-4 grid gap-2', uploaded && canRemoveDocuments && 'sm:grid-cols-[minmax(0,1fr)_auto]')}>
+        <label
+          className={cn(
+            'inline-flex h-10 items-center justify-center gap-2 rounded-md border bg-surface px-3 text-sm font-semibold shadow-sm transition',
+            disabled ? 'cursor-not-allowed opacity-70' : 'cursor-pointer',
+            uploaded
+              ? 'border-success/40 text-success hover:bg-success hover:text-white'
+              : 'border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground',
+          )}
+        >
+          <span className="material-symbols-outlined text-base" aria-hidden>{uploaded ? 'check_circle' : 'add'}</span>
+          {uploaded
+            ? t('applications.uploadedReplaceDocument', { defaultValue: 'Uploaded - Replace file' })
+            : t('applications.uploadDocument', { defaultValue: 'Upload file' })}
+          <input
+            className="sr-only"
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
+            disabled={disabled}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) onFile(file);
+              e.currentTarget.value = '';
+            }}
+          />
+        </label>
+        {uploaded && canRemoveDocuments ? (
+          <button
+            type="button"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-error/30 bg-surface px-3 text-sm font-semibold text-error shadow-sm transition hover:bg-error hover:text-white"
+            onClick={onRemove}
+          >
+            <span className="material-symbols-outlined text-base" aria-hidden>delete</span>
+            {t('applications.removeDocument', { defaultValue: 'Remove' })}
+          </button>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
@@ -975,6 +1024,12 @@ export function ParentApplicationFormPage() {
     parentId: user?.id,
     nurseryId: typeof app?.nursery_id === 'string' ? app.nursery_id : undefined,
   });
+  const extraHoursPackage = useApplicationExtraHoursPackage({
+    applicationId: id,
+    nurseryId: typeof app?.nursery_id === 'string' ? app.nursery_id : undefined,
+  });
+  const selectedExtraHoursPackageId =
+    typeof app?.extra_hours_package_id === 'string' ? app.extra_hours_package_id : null;
   const previousChildInfo = useMemo(() => {
     const previousApplication = apps.parentApplications.find((row) => {
       if (String(row.id ?? '') === id) return false;
@@ -991,6 +1046,10 @@ export function ParentApplicationFormPage() {
   const [childForm, setChildForm] = useState({
     ...childFormFromApplication(childInfo, previousChildInfo),
   });
+  const [localUploadedDocs, setLocalUploadedDocs] = useState<{
+    applicationId: string;
+    byType: Record<string, Record<string, unknown>>;
+  } | null>(null);
 
   useEffect(() => {
     if (!app) return;
@@ -1000,16 +1059,40 @@ export function ParentApplicationFormPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [app?.id, parentAccount.data?.sourceApplicationId, previousChildInfo]);
 
+  const localDocsForApplication = useMemo(
+    () => {
+      const uploadedDocs = localUploadedDocs;
+      if (!uploadedDocs || uploadedDocs.applicationId !== id) return [];
+      return Object.values(uploadedDocs.byType);
+    },
+    [id, localUploadedDocs],
+  );
+  const effectiveDocs = useMemo(() => {
+    if (!localDocsForApplication.length) return docs;
+    const remoteIds = new Set(docs.map((doc) => String(doc.id ?? '')).filter(Boolean));
+    const localOnlyDocs = localDocsForApplication.filter((doc) => {
+      const docId = String(doc.id ?? '');
+      return !docId || !remoteIds.has(docId);
+    });
+    return localOnlyDocs.length ? [...localOnlyDocs, ...docs] : docs;
+  }, [docs, localDocsForApplication]);
+
   const missingRequired = useMemo(
     () => {
-      const latestDocs = latestDocumentsByType(docs);
-      return requiredDocs.filter((d) => !latestDocs[d]?.file_url);
+      const latestDocs = latestDocumentsByType(effectiveDocs);
+      return requiredDocs.filter((d) => !hasDocumentFile(latestDocs[d]));
     },
-    [docs],
+    [effectiveDocs],
   );
-  const latestDocs = useMemo(() => latestDocumentsByType(docs), [docs]);
+  const latestDocs = useMemo(() => latestDocumentsByType(effectiveDocs), [effectiveDocs]);
   const visibleDocs = useMemo(
-    () => Object.values(latestDocs).sort((a, b) => +new Date(String(b.uploaded_at ?? '')) - +new Date(String(a.uploaded_at ?? ''))),
+    () => Object.values(latestDocs)
+      .filter(hasDocumentFile)
+      .sort((a, b) => {
+        const aTime = new Date(String(a.uploaded_at ?? '')).getTime();
+        const bTime = new Date(String(b.uploaded_at ?? '')).getTime();
+        return (Number.isFinite(bTime) ? bTime : -Infinity) - (Number.isFinite(aTime) ? aTime : -Infinity);
+      }),
     [latestDocs],
   );
   const missingParentFields = useMemo(
@@ -1035,9 +1118,10 @@ export function ParentApplicationFormPage() {
   if (!app) return <p className="text-sm text-on-surface-variant">{t('applications.notFound')}</p>;
   const canEditApplication = status === 'draft';
   const canUploadDocuments = status === 'draft' || status === 'documents_pending';
+  const canRemoveDocuments = status === 'draft';
   const canSubmitApplication = status === 'draft' || status === 'documents_pending';
   const reviewedAt = typeof app.reviewed_at === 'string' ? app.reviewed_at : null;
-  const hasRequestedUpload = status !== 'documents_pending' || !reviewedAt || docs.some((doc) => {
+  const hasRequestedUpload = status !== 'documents_pending' || !reviewedAt || effectiveDocs.some((doc) => {
     const uploadedAt = new Date(String(doc.uploaded_at ?? '')).getTime();
     return Number.isFinite(uploadedAt) && uploadedAt > new Date(reviewedAt).getTime();
   });
@@ -1109,6 +1193,22 @@ export function ParentApplicationFormPage() {
     status !== 'rejected' &&
     !packageInvoice?.paidAmount &&
     !packageInvoice?.pendingAmount;
+  // Extra hours has no invoice/payment gate of its own — it's a free, optional pick
+  // right up until the application is finally decided.
+  const canChooseExtraHours = isInformationComplete && status !== 'approved' && status !== 'rejected';
+
+  const selectExtraHoursPackage = async (packageId: string | null) => {
+    try {
+      await extraHoursPackage.selectPackage(packageId);
+      toast.success(
+        packageId
+          ? t('applications.extraHoursPackage.selected', { defaultValue: 'Extra hours package selected.' })
+          : t('applications.extraHoursPackage.cleared', { defaultValue: 'Extra hours package removed.' }),
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('applications.paymentPackage.selectFailed', { defaultValue: 'Could not update the selection.' }));
+    }
+  };
 
   const selectPackage = async (packageId: string, billingPeriod: ApplicationPackageBillingPeriod) => {
     if (!isInformationComplete) {
@@ -1687,22 +1787,49 @@ export function ParentApplicationFormPage() {
                     body={t('applications.documentsHelp', { defaultValue: 'Upload required files as PDF or image files.' })}
                   />
                   <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
-                    {[...requiredDocs, 'medical_report', 'other'].map((docType) => (
+                    {applicationDocumentTypes.map((docType) => (
                       <DocumentUploadTile
                         key={docType}
                         docType={docType}
                         required={requiredDocs.includes(docType as (typeof requiredDocs)[number])}
-                        uploaded={Boolean(latestDocs[docType]?.file_url)}
+                        uploaded={hasDocumentFile(latestDocs[docType])}
                         disabled={!canUploadDocuments}
                         canUploadDocuments={canUploadDocuments}
+                        canRemoveDocuments={canRemoveDocuments}
                         onFile={(file) => {
                           if (!app.nursery_id) return;
+                          const applicationId = String(id);
                           void apps.uploadDocument({
                             nurseryId: String(app.nursery_id),
-                            applicationId: String(id),
-                            documentType: docType as 'birth_certificate' | 'vaccination_card' | 'parent_id' | 'proof_of_address' | 'medical_report' | 'other',
+                            applicationId,
+                            documentType: docType,
                             file,
-                          }).then(() => toast.success(t('applications.documentUploaded')));
+                          }).then((document) => {
+                            setLocalUploadedDocs((current) => ({
+                              applicationId,
+                              byType: {
+                                ...(current?.applicationId === applicationId ? current.byType : {}),
+                                [docType]: document,
+                              },
+                            }));
+                            toast.success(t('applications.documentUploaded'));
+                          });
+                        }}
+                        onRemove={() => {
+                          const applicationId = String(id);
+                          void apps.deleteDocumentType({
+                            applicationId,
+                            documentType: docType,
+                          }).then(() => {
+                            setLocalUploadedDocs((current) => {
+                              if (current?.applicationId !== applicationId) return current;
+                              const { [docType]: _removed, ...byType } = current.byType;
+                              return { applicationId, byType };
+                            });
+                            toast.success(t('applications.documentRemoved', { defaultValue: 'Document removed.' }));
+                          }).catch((error) => {
+                            toast.error(error instanceof Error ? error.message : t('payment.errors.actionFailed'));
+                          });
                         }}
                       />
                     ))}
@@ -1807,17 +1934,27 @@ export function ParentApplicationFormPage() {
 
       {activeTab === 'packages' ? (
         isInformationComplete || packageInvoice ? (
-          <ApplicationPackagePaymentCard
-            packages={applicationPackagePayment.packages}
-            invoice={applicationPackagePayment.invoice}
-            isLoading={applicationPackagePayment.isLoading}
-            isSelecting={applicationPackagePayment.isSelecting || selectingPackage}
-            canChoose={canChoosePackage}
-            payLink={payLink}
-            termsAccepted={terms}
-            onTermsChange={setTerms}
-            onSelect={selectPackage}
-          />
+          <div className="space-y-4">
+            <ApplicationPackagePaymentCard
+              packages={applicationPackagePayment.packages}
+              invoice={applicationPackagePayment.invoice}
+              isLoading={applicationPackagePayment.isLoading}
+              isSelecting={applicationPackagePayment.isSelecting || selectingPackage}
+              canChoose={canChoosePackage}
+              payLink={payLink}
+              termsAccepted={terms}
+              onTermsChange={setTerms}
+              onSelect={selectPackage}
+            />
+            <ApplicationExtraHoursPackageCard
+              packages={extraHoursPackage.packages}
+              selectedPackageId={selectedExtraHoursPackageId}
+              isLoading={extraHoursPackage.isLoading}
+              isSelecting={extraHoursPackage.isSelecting}
+              canChoose={canChooseExtraHours}
+              onSelect={selectExtraHoursPackage}
+            />
+          </div>
         ) : (
           <section className="rounded-xl border border-outline-variant bg-surface px-4 py-8 shadow-sm sm:px-6">
             <div className="mx-auto flex max-w-md flex-col items-center text-center">

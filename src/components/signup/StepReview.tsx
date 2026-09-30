@@ -153,6 +153,14 @@ export function StepReview({ values, files, onJumpTo }: Props) {
               ? values.siblingAges || t('common.yes')
               : t('common.no'),
           },
+        ]}
+      />
+
+      <Section
+        title={t('signup.steps.health')}
+        icon="health_and_safety"
+        onEdit={() => jump('health')}
+        rows={[
           {
             label: t('signup.hasAllergy'),
             value: values.hasAllergy ? allergySummary(values, preferArabic) : t('common.no'),
@@ -181,12 +189,17 @@ export function StepReview({ values, files, onJumpTo }: Props) {
       />
 
       <Section
-        title={t('signup.steps.health')}
-        icon="health_and_safety"
-        onEdit={() => jump('health')}
+        title={t('signup.steps.documents')}
+        icon="folder_open"
+        onEdit={() => jump('documents')}
         rows={[
           { label: t('signup.birthCertificate'), value: fileName(files.birthCertificate) },
           { label: t('signup.vaccinationCard'), value: fileName(files.vaccinationCard) },
+          { label: t('signup.fatherIdPhoto'), value: fileName(files.fatherIdPhoto) },
+          { label: t('signup.motherIdPhoto'), value: fileName(files.motherIdPhoto) },
+          { label: t('signup.proofOfAddress'), value: fileName(files.proofOfAddress) },
+          { label: t('signup.medicalReport'), value: fileName(files.medicalReport) },
+          { label: t('signup.otherDocument'), value: fileName(files.otherDocument) },
         ]}
       />
 

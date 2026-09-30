@@ -29,8 +29,10 @@ export function SettingsCategoryForm({
 }: Props) {
   const renderField = (field: SettingsField) => {
     const value = values[field.key] ?? '';
-    const label = t(`settings.fields.${String(field.key)}.label`);
-    const helper = t(`settings.fields.${String(field.key)}.helper`);
+    const labelKey = `settings.fields.${String(field.key)}.label`;
+    const helperKey = `settings.fields.${String(field.key)}.helper`;
+    const label = t(labelKey);
+    const helper = t(helperKey);
 
     if (field.type === 'boolean') {
       return (
