@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 
 import { ChildAvatarUpload } from '@/components/admin/ChildAvatarUpload';
+import { ChildBillingTab } from '@/components/admin/children/ChildBillingTab';
 import { ApplicationDocumentPreview } from '@/components/applications/ApplicationDocumentPreview';
 import { ChildQrCodeCard, type ChildQrInput } from '@/components/qr/ChildQrCodeCard';
 import { Button } from '@/components/ui/button';
@@ -119,7 +120,7 @@ type ChildRecordPayload = {
   selectedPackage: PackageSummary | null;
 };
 
-type ChildRecordTab = 'overview' | 'parents' | 'care' | 'health' | 'emergency' | 'documents' | 'tools';
+type ChildRecordTab = 'overview' | 'parents' | 'care' | 'health' | 'emergency' | 'billing' | 'documents' | 'tools';
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -392,6 +393,7 @@ export function AdminChildRecordPage() {
     { id: 'care', icon: 'restaurant', label: tk('tabCare', 'Daily care') },
     { id: 'health', icon: 'health_and_safety', label: tk('tabHealth', 'Health') },
     { id: 'emergency', icon: 'emergency', label: tk('tabEmergency', 'Emergency & Pickup'), count: emergencyContacts.length + applicationPickups.length + pickups.length },
+    { id: 'billing', icon: 'payments', label: tk('tabBilling', 'Billing') },
     { id: 'documents', icon: 'folder_open', label: tk('tabDocuments', 'Documents'), count: documents.length },
     { id: 'tools', icon: 'qr_code_2', label: tk('tabTools', 'Photo & QR') },
   ];
@@ -779,6 +781,10 @@ export function AdminChildRecordPage() {
             )}
           </Section>
         </div>
+      ) : null}
+
+      {tab === 'billing' ? (
+        <ChildBillingTab childId={child.id} nurseryId={child.nursery_id} />
       ) : null}
 
       {tab === 'documents' ? (

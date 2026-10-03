@@ -259,6 +259,24 @@
   background-clip: content-box;
 }
 
+.step-tabs-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--border-strong) / 0.35) transparent;
+}
+.step-tabs-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+.step-tabs-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.step-tabs-scroll::-webkit-scrollbar-thumb {
+  background: rgb(var(--border-strong) / 0.35);
+  border-radius: 999px;
+}
+.step-tabs-scroll:hover::-webkit-scrollbar-thumb {
+  background: rgb(var(--border-strong) / 0.55);
+}
+
 .btn-gradient {
   background: linear-gradient(
     135deg,

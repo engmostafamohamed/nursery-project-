@@ -13,6 +13,11 @@ import {
 } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { FormSection } from '@/components/admin/settings/FormSection';
+import { PackageDealPicker } from '@/components/admin/settings/PackageDealPicker';
+import { TuitionPackagesEditor } from '@/components/admin/settings/TuitionPackagesEditor';
+import { useAdminDeals, isDealCurrentlyActive } from '@/hooks/useAdminDeals';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useNurseryChildrenPicker } from '@/hooks/useNurseryChildrenPicker';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -36,6 +41,7 @@ const EMPTY_FORM: PackageInput = {
   active: true,
   validity_value: null,
   validity_unit: null,
+  deal_id: null,
 };
 
 function ManageChildrenDialog({
@@ -163,7 +169,8 @@ export function AdminPackagesPage() {
   const { data: profile } = useUserProfile(user?.id);
   const nurseryId = profile?.nursery_id ?? null;
 
-  const { query, create, update, remove } = useAdminPackages(nurseryId);
+  const { query, create, update } = useAdminPackages(nurseryId);
+  const { query: dealsQuery } = useAdminDeals(nurseryId);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<PackageInput>(EMPTY_FORM);
@@ -196,6 +203,7 @@ export function AdminPackagesPage() {
       active: p.active,
       validity_value: p.validity_value,
       validity_unit: p.validity_unit,
+      deal_id: p.deal_id,
     });
     setDialogOpen(true);
   };
@@ -229,95 +237,141 @@ export function AdminPackagesPage() {
     }
   };
 
+  const toggleActive = async (p: PackageRow) => {
+    try {
+      await update.mutateAsync({
+        id: p.id,
+        input: {
+          name_ar: p.name_ar,
+          name_en: p.name_en,
+          description_ar: p.description_ar,
+          description_en: p.description_en,
+          coverage_type: p.coverage_type,
+          included_hours: p.included_hours,
+          price: p.price,
+          active: !p.active,
+          validity_value: p.validity_value,
+          validity_unit: p.validity_unit,
+          deal_id: p.deal_id,
+        },
+      });
+      toast.success(p.active ? t('packages.deactivated') : t('packages.activated'));
+    } catch {
+      toast.error(t('packages.saveFailed'));
+    }
+  };
+
   return (
     <div className="space-y-6 p-4">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-on-surface">{t('packages.title')}</h1>
-          <p className="mt-1 max-w-2xl text-sm text-on-surface-variant">{t('packages.subtitle')}</p>
-        </div>
-        <Button type="button" onClick={openCreate}>
-          <span className="material-symbols-outlined me-1 text-base" aria-hidden>
-            add
-          </span>
-          {t('packages.addButton')}
-        </Button>
-      </header>
+      <div>
+        <h1 className="text-xl font-semibold text-on-surface">{t('packages.pageTitle')}</h1>
+        <p className="mt-1 max-w-2xl text-sm text-on-surface-variant">{t('packages.pageSubtitle')}</p>
+      </div>
 
-      {query.isPending ? (
-        <LoadingSkeleton />
-      ) : rows.length === 0 ? (
-        <EmptyState
-          icon="package_2"
-          title={t('packages.emptyTitle')}
-          description={t('packages.emptyDescription')}
-        />
-      ) : (
-        <div className="space-y-3">
-          {rows.map((p) => (
-            <div
-              key={p.id}
-              className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4"
-            >
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-on-surface">{name(p)}</p>
-                  <span
-                    className={
-                      'rounded-full border px-2 py-0.5 text-xs font-medium ' +
-                      (p.active
-                        ? 'border-success/30 bg-success/10 text-success'
-                        : 'border-outline-variant bg-surface-container text-on-surface-variant')
-                    }
-                  >
-                    {p.active ? t('packages.active') : t('packages.inactive')}
-                  </span>
-                </div>
-                <p className="mt-1 text-xs text-on-surface-variant">
-                  {p.coverage_type === 'unlimited'
-                    ? t('packages.typeUnlimited')
-                    : t('packages.typeQuota', { hours: p.included_hours ?? 0 })}
-                  {' · '}
-                  {t('packages.priceLabel', { price: p.price })}
-                  {' · '}
-                  {p.validity_value && p.validity_unit
-                    ? t('packages.validityLabel', { value: p.validity_value, unit: t(`packages.validityUnit.${p.validity_unit}`) })
-                    : t('packages.validityNever')}
-                  {' · '}
-                  {t('packages.assignedCount', { count: p.assigned_count })}
-                </p>
-              </div>
-              <div className="flex shrink-0 flex-wrap gap-2">
-                <Button type="button" variant="outline" size="sm" onClick={() => setManagePkg(p)}>
-                  {t('packages.manageChildren')}
-                </Button>
-                <Button type="button" variant="outline" size="sm" onClick={() => openEdit(p)}>
-                  {t('common.edit')}
-                </Button>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  disabled={remove.isPending}
-                  onClick={async () => {
-                    try {
-                      await remove.mutateAsync(p.id);
-                      toast.success(t('packages.deleted'));
-                    } catch {
-                      toast.error(t('packages.saveFailed'));
-                    }
-                  }}
-                >
-                  {t('common.delete')}
-                </Button>
-              </div>
+      <Tabs defaultValue="fixed">
+        <TabsList>
+          <TabsTrigger value="fixed">{t('packages.tabFixed')}</TabsTrigger>
+          <TabsTrigger value="hours">{t('packages.tabHours')}</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="fixed">
+          <TuitionPackagesEditor nurseryId={nurseryId} />
+        </TabsContent>
+
+        <TabsContent value="hours" className="space-y-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold text-on-surface">{t('packages.title')}</h2>
+              <p className="mt-0.5 text-xs text-on-surface-variant">{t('packages.subtitle')}</p>
             </div>
-          ))}
-        </div>
-      )}
+            <Button type="button" onClick={openCreate}>
+              <span className="material-symbols-outlined me-1 text-base" aria-hidden>
+                add
+              </span>
+              {t('packages.addButton')}
+            </Button>
+          </div>
+
+          {query.isPending ? (
+            <LoadingSkeleton />
+          ) : rows.length === 0 ? (
+            <EmptyState
+              icon="package_2"
+              title={t('packages.emptyTitle')}
+              description={t('packages.emptyDescription')}
+            />
+          ) : (
+            <div className="space-y-3">
+              {rows.map((p) => (
+                <div
+                  key={p.id}
+                  className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-on-surface">{name(p)}</p>
+                      <span
+                        className={
+                          'rounded-full border px-2 py-0.5 text-xs font-medium ' +
+                          (p.active
+                            ? 'border-success/30 bg-success/10 text-success'
+                            : 'border-outline-variant bg-surface-container text-on-surface-variant')
+                        }
+                      >
+                        {p.active ? t('packages.active') : t('packages.inactive')}
+                      </span>
+                      {(() => {
+                        const deal = (dealsQuery.data ?? []).find((d) => d.id === p.deal_id);
+                        if (!deal || !isDealCurrentlyActive(deal)) return null;
+                        return (
+                          <span className="rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
+                            {deal.discount_type === 'percentage'
+                              ? `${deal.discount_value}% off`
+                              : `EGP ${deal.discount_value} off`}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                    <p className="mt-1 text-xs text-on-surface-variant">
+                      {p.coverage_type === 'unlimited'
+                        ? t('packages.typeUnlimited')
+                        : t('packages.typeQuota', { hours: p.included_hours ?? 0 })}
+                      {' · '}
+                      {t('packages.priceLabel', { price: p.price })}
+                      {' · '}
+                      {p.validity_value && p.validity_unit
+                        ? t('packages.validityLabel', { value: p.validity_value, unit: t(`packages.validityUnit.${p.validity_unit}`) })
+                        : t('packages.validityNever')}
+                      {' · '}
+                      {t('packages.assignedCount', { count: p.assigned_count })}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 flex-wrap gap-2">
+                    <Button type="button" variant="outline" size="sm" onClick={() => setManagePkg(p)}>
+                      {t('packages.manageChildren')}
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => openEdit(p)}>
+                      {t('common.edit')}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={update.isPending}
+                      onClick={() => void toggleActive(p)}
+                    >
+                      {p.active ? t('packages.deactivate') : t('packages.activate')}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={dialogOpen} onOpenChange={(o) => !busy && setDialogOpen(o)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
               {editingId ? t('packages.editTitle') : t('packages.addTitle')}
@@ -325,154 +379,172 @@ export function AdminPackagesPage() {
             <DialogDescription>{t('packages.formHint')}</DialogDescription>
           </DialogHeader>
 
-          <div className="mt-4 space-y-3">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="mt-4 max-h-[70vh] space-y-4 overflow-y-auto pe-1">
+            <FormSection title="Package name" icon="badge">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-1 block text-xs font-medium text-on-surface-variant">
+                    {t('packages.fieldNameEn')}
+                  </span>
+                  <input
+                    value={form.name_en}
+                    onChange={(e) => setForm((f) => ({ ...f, name_en: e.target.value }))}
+                    className="h-10 w-full rounded-xl border border-outline-variant bg-surface px-3 text-sm outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-xs font-medium text-on-surface-variant">
+                    {t('packages.fieldNameAr')}
+                  </span>
+                  <input
+                    dir="rtl"
+                    value={form.name_ar}
+                    onChange={(e) => setForm((f) => ({ ...f, name_ar: e.target.value }))}
+                    className="h-10 w-full rounded-xl border border-outline-variant bg-surface px-3 text-sm outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </label>
+              </div>
+            </FormSection>
+
+            <FormSection title="Coverage & price" icon="payments">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <label className="block">
+                  <span className="mb-1 block text-xs font-medium text-on-surface-variant">
+                    {t('packages.fieldType')}
+                  </span>
+                  <select
+                    value={form.coverage_type}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, coverage_type: e.target.value as CoverageType }))
+                    }
+                    className="h-10 w-full rounded-xl border border-outline-variant bg-surface px-3 text-sm outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    <option value="unlimited">{t('packages.optUnlimited')}</option>
+                    <option value="hours_quota">{t('packages.optQuota')}</option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-xs font-medium text-on-surface-variant">
+                    {t('packages.fieldHours')}
+                  </span>
+                  <input
+                    type="number"
+                    min={0}
+                    disabled={form.coverage_type !== 'hours_quota'}
+                    value={form.included_hours ?? ''}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        included_hours: e.target.value ? Number(e.target.value) : null,
+                      }))
+                    }
+                    className="h-10 w-full rounded-xl border border-outline-variant bg-surface px-3 text-sm outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-xs font-medium text-on-surface-variant">
+                    {t('packages.fieldPrice')}
+                  </span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={form.price}
+                    onChange={(e) => setForm((f) => ({ ...f, price: Number(e.target.value) || 0 }))}
+                    className="h-10 w-full rounded-xl border border-outline-variant bg-surface px-3 text-sm outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-1 block text-xs font-medium text-on-surface-variant">
+                    {t('packages.fieldValidityValue')}
+                  </span>
+                  <input
+                    type="number"
+                    min={1}
+                    placeholder={t('packages.validityNever')}
+                    value={form.validity_value ?? ''}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        validity_value: e.target.value ? Number(e.target.value) : null,
+                      }))
+                    }
+                    className="h-10 w-full rounded-xl border border-outline-variant bg-surface px-3 text-sm outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-xs font-medium text-on-surface-variant">
+                    {t('packages.fieldValidityUnit')}
+                  </span>
+                  <select
+                    value={form.validity_unit ?? ''}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        validity_unit: (e.target.value || null) as ValidityUnit | null,
+                      }))
+                    }
+                    className="h-10 w-full rounded-xl border border-outline-variant bg-surface px-3 text-sm outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    <option value="">{t('packages.validityNever')}</option>
+                    <option value="months">{t('packages.validityUnit.months')}</option>
+                    <option value="years">{t('packages.validityUnit.years')}</option>
+                  </select>
+                </label>
+              </div>
+
+              <label className="flex items-center gap-2 border-t border-outline-variant pt-3 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.active}
+                  onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))}
+                />
+                {t('packages.fieldActive')}
+              </label>
+            </FormSection>
+
+            <FormSection
+              title="Deal / discount"
+              description="Optional — assign an existing offer or create a one-off discount just for this package."
+              icon="sell"
+            >
+              <PackageDealPicker
+                nurseryId={nurseryId}
+                dealId={form.deal_id}
+                onChange={(deal_id) => setForm((f) => ({ ...f, deal_id }))}
+              />
+            </FormSection>
+
+            <FormSection title="Description" icon="description">
               <label className="block">
                 <span className="mb-1 block text-xs font-medium text-on-surface-variant">
-                  {t('packages.fieldNameEn')}
+                  {t('packages.fieldDescEn')}
                 </span>
-                <input
-                  value={form.name_en}
-                  onChange={(e) => setForm((f) => ({ ...f, name_en: e.target.value }))}
-                  className="h-10 w-full rounded-xl border border-outline-variant bg-surface px-3 text-sm outline-none focus:ring-1 focus:ring-primary"
+                <textarea
+                  value={form.description_en ?? ''}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, description_en: e.target.value || null }))
+                  }
+                  className="min-h-[60px] w-full rounded-xl border border-outline-variant bg-surface p-3 text-sm outline-none focus:ring-1 focus:ring-primary"
                 />
               </label>
               <label className="block">
                 <span className="mb-1 block text-xs font-medium text-on-surface-variant">
-                  {t('packages.fieldNameAr')}
+                  {t('packages.fieldDescAr')}
                 </span>
-                <input
+                <textarea
                   dir="rtl"
-                  value={form.name_ar}
-                  onChange={(e) => setForm((f) => ({ ...f, name_ar: e.target.value }))}
-                  className="h-10 w-full rounded-xl border border-outline-variant bg-surface px-3 text-sm outline-none focus:ring-1 focus:ring-primary"
+                  value={form.description_ar ?? ''}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, description_ar: e.target.value || null }))
+                  }
+                  className="min-h-[60px] w-full rounded-xl border border-outline-variant bg-surface p-3 text-sm outline-none focus:ring-1 focus:ring-primary"
                 />
               </label>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-on-surface-variant">
-                  {t('packages.fieldType')}
-                </span>
-                <select
-                  value={form.coverage_type}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, coverage_type: e.target.value as CoverageType }))
-                  }
-                  className="h-10 w-full rounded-xl border border-outline-variant bg-surface px-3 text-sm outline-none focus:ring-1 focus:ring-primary"
-                >
-                  <option value="unlimited">{t('packages.optUnlimited')}</option>
-                  <option value="hours_quota">{t('packages.optQuota')}</option>
-                </select>
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-on-surface-variant">
-                  {t('packages.fieldHours')}
-                </span>
-                <input
-                  type="number"
-                  min={0}
-                  disabled={form.coverage_type !== 'hours_quota'}
-                  value={form.included_hours ?? ''}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      included_hours: e.target.value ? Number(e.target.value) : null,
-                    }))
-                  }
-                  className="h-10 w-full rounded-xl border border-outline-variant bg-surface px-3 text-sm outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
-                />
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-on-surface-variant">
-                  {t('packages.fieldPrice')}
-                </span>
-                <input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={form.price}
-                  onChange={(e) => setForm((f) => ({ ...f, price: Number(e.target.value) || 0 }))}
-                  className="h-10 w-full rounded-xl border border-outline-variant bg-surface px-3 text-sm outline-none focus:ring-1 focus:ring-primary"
-                />
-              </label>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-on-surface-variant">
-                  {t('packages.fieldValidityValue')}
-                </span>
-                <input
-                  type="number"
-                  min={1}
-                  placeholder={t('packages.validityNever')}
-                  value={form.validity_value ?? ''}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      validity_value: e.target.value ? Number(e.target.value) : null,
-                    }))
-                  }
-                  className="h-10 w-full rounded-xl border border-outline-variant bg-surface px-3 text-sm outline-none focus:ring-1 focus:ring-primary"
-                />
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-on-surface-variant">
-                  {t('packages.fieldValidityUnit')}
-                </span>
-                <select
-                  value={form.validity_unit ?? ''}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      validity_unit: (e.target.value || null) as ValidityUnit | null,
-                    }))
-                  }
-                  className="h-10 w-full rounded-xl border border-outline-variant bg-surface px-3 text-sm outline-none focus:ring-1 focus:ring-primary"
-                >
-                  <option value="">{t('packages.validityNever')}</option>
-                  <option value="months">{t('packages.validityUnit.months')}</option>
-                  <option value="years">{t('packages.validityUnit.years')}</option>
-                </select>
-              </label>
-            </div>
-
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium text-on-surface-variant">
-                {t('packages.fieldDescEn')}
-              </span>
-              <textarea
-                value={form.description_en ?? ''}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, description_en: e.target.value || null }))
-                }
-                className="min-h-[60px] w-full rounded-xl border border-outline-variant bg-surface p-3 text-sm outline-none focus:ring-1 focus:ring-primary"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium text-on-surface-variant">
-                {t('packages.fieldDescAr')}
-              </span>
-              <textarea
-                dir="rtl"
-                value={form.description_ar ?? ''}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, description_ar: e.target.value || null }))
-                }
-                className="min-h-[60px] w-full rounded-xl border border-outline-variant bg-surface p-3 text-sm outline-none focus:ring-1 focus:ring-primary"
-              />
-            </label>
-
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={form.active}
-                onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))}
-              />
-              {t('packages.fieldActive')}
-            </label>
+            </FormSection>
           </div>
 
           <DialogFooter className="mt-5">

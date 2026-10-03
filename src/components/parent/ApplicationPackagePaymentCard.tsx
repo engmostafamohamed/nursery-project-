@@ -4,10 +4,13 @@ import { Link } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import type {
-  ApplicationPackageBillingPeriod,
-  ApplicationPaymentPackage,
-  ApplicationPackageInvoice,
+import { DiscountCountdown } from '@/components/parent/DiscountCountdown';
+import {
+  computePackageBillingQuote,
+  isApplicationDealActive,
+  type ApplicationPackageBillingPeriod,
+  type ApplicationPaymentPackage,
+  type ApplicationPackageInvoice,
 } from '@/hooks/useApplicationPackagePayment';
 import { cn } from '@/lib/utils';
 
@@ -87,7 +90,8 @@ export function ApplicationPackagePaymentCard({
   const selectionDisabled = !canChoose || isSelecting || paymentStarted;
   // Something staged that the invoice does not reflect yet (new invoice, or a different package/period).
   const hasPendingChange = Boolean(activePackage) && (activeId !== selectedId || billingPeriod !== invoice?.billingPeriod);
-  const pendingTotal = activePackage ? activePackage.price * billingOption.months : 0;
+  const pendingQuote = activePackage ? computePackageBillingQuote(activePackage, billingPeriod) : null;
+  const pendingTotal = pendingQuote?.total ?? 0;
 
   const resetDraft = () => {
     setDraftPackageId(null);
@@ -176,7 +180,8 @@ export function ApplicationPackagePaymentCard({
             {packages.map((pkg) => {
               const active = pkg.id === activeId;
               const description = packageDescription(pkg, isAr);
-              const total = pkg.price * billingOption.months;
+              const quote = computePackageBillingQuote(pkg, billingPeriod);
+              const dealLive = Boolean(pkg.deal && isApplicationDealActive(pkg.deal));
               return (
                 <button
                   key={pkg.id}
@@ -191,6 +196,22 @@ export function ApplicationPackagePaymentCard({
                       : 'border-outline-variant bg-surface-container-lowest hover:border-primary hover:bg-primary/5',
                   )}
                 >
+                  {dealLive ? (
+                    <span className="mb-2 flex flex-wrap items-center gap-1.5">
+                      <Badge variant="error">
+                        {pkg.deal?.discountType === 'percentage'
+                          ? t('applications.paymentPackage.dealPercentOff', {
+                              value: pkg.deal.discountValue,
+                              defaultValue: '{{value}}% OFF',
+                            })
+                          : t('applications.paymentPackage.dealAmountOff', {
+                              value: pkg.deal?.discountValue.toFixed(2),
+                              defaultValue: 'EGP {{value}} OFF',
+                            })}
+                      </Badge>
+                      <DiscountCountdown endsAt={pkg.deal?.endsAt ?? null} />
+                    </span>
+                  ) : null}
                   <span className="flex items-start justify-between gap-3">
                     <span className="min-w-0">
                       <span className="block text-sm font-semibold text-on-surface">{packageName(pkg, isAr)}</span>
@@ -232,8 +253,15 @@ export function ApplicationPackagePaymentCard({
                       })}
                     </ul>
                   ) : null}
-                  <span className="mt-auto pt-4 text-lg font-semibold text-on-surface">
-                    {t('invoice.egpAmount', { amount: total.toFixed(2) })}
+                  <span className="mt-auto flex flex-wrap items-baseline gap-2 pt-4">
+                    {quote.discountAmount > 0 ? (
+                      <span className="text-xs text-on-surface-variant line-through">
+                        {t('invoice.egpAmount', { amount: quote.subtotal.toFixed(2) })}
+                      </span>
+                    ) : null}
+                    <span className={cn('text-lg font-semibold', quote.discountAmount > 0 ? 'text-error' : 'text-on-surface')}>
+                      {t('invoice.egpAmount', { amount: quote.total.toFixed(2) })}
+                    </span>
                   </span>
                   <span className="mt-1 text-xs text-on-surface-variant">
                     {t('applications.paymentPackage.monthlyPrice', {
@@ -271,22 +299,33 @@ export function ApplicationPackagePaymentCard({
                   <p className="mt-1 text-xs text-on-surface-variant">
                     {t(billingOption.labelKey, { defaultValue: billingOption.defaultLabel })}
                   </p>
+                  {pendingQuote?.dealApplied ? (
+                    <div className="mt-2">
+                      <DiscountCountdown endsAt={activePackage.deal?.endsAt ?? null} />
+                    </div>
+                  ) : null}
                 </div>
                 <dl className="grid gap-2">
                   <div className="flex justify-between gap-3">
                     <dt className="text-on-surface-variant">
-                      {t('applications.paymentPackage.monthlyBase', { defaultValue: 'Monthly package price' })}
-                    </dt>
-                    <dd className="font-medium text-on-surface">
-                      {t('invoice.egpAmount', { amount: activePackage.price.toFixed(2) })}
-                    </dd>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <dt className="text-on-surface-variant">
                       {t('applications.paymentPackage.months', { defaultValue: 'Months' })}
                     </dt>
-                    <dd className="font-medium text-on-surface">{billingOption.months}</dd>
+                    <dd className="font-medium text-on-surface">{pendingQuote?.billingMonths ?? billingOption.months}</dd>
                   </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-on-surface-variant">{t('invoice.details.subtotal', { defaultValue: 'Subtotal' })}</dt>
+                    <dd className="font-medium text-on-surface">
+                      {t('invoice.egpAmount', { amount: (pendingQuote?.subtotal ?? 0).toFixed(2) })}
+                    </dd>
+                  </div>
+                  {pendingQuote && pendingQuote.discountAmount > 0 ? (
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-error">{t('applications.paymentPackage.discount', { defaultValue: 'Discount' })}</dt>
+                      <dd className="font-medium text-error">
+                        -{t('invoice.egpAmount', { amount: pendingQuote.discountAmount.toFixed(2) })}
+                      </dd>
+                    </div>
+                  ) : null}
                   <div className="flex justify-between gap-3 border-t border-outline-variant pt-2">
                     <dt className="font-semibold text-on-surface">{t('invoice.details.total')}</dt>
                     <dd className="font-semibold text-on-surface">{t('invoice.egpAmount', { amount: pendingTotal.toFixed(2) })}</dd>
@@ -360,6 +399,11 @@ export function ApplicationPackagePaymentCard({
                       },
                     )}
                   </p>
+                  {invoice.discountAmount > 0 && selectedPackage?.deal?.endsAt ? (
+                    <div className="mt-2">
+                      <DiscountCountdown endsAt={selectedPackage.deal.endsAt} />
+                    </div>
+                  ) : null}
                 </div>
                 <dl className="grid gap-2">
                   <div className="flex justify-between gap-3">
@@ -370,6 +414,20 @@ export function ApplicationPackagePaymentCard({
                       {t('invoice.egpAmount', { amount: invoice.monthlyPrice.toFixed(2) })}
                     </dd>
                   </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-on-surface-variant">{t('invoice.details.subtotal', { defaultValue: 'Subtotal' })}</dt>
+                    <dd className="font-medium text-on-surface">
+                      {t('invoice.egpAmount', { amount: invoice.subtotal.toFixed(2) })}
+                    </dd>
+                  </div>
+                  {invoice.discountAmount > 0 ? (
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-error">{t('applications.paymentPackage.discount', { defaultValue: 'Discount' })}</dt>
+                      <dd className="font-medium text-error">
+                        -{t('invoice.egpAmount', { amount: invoice.discountAmount.toFixed(2) })}
+                      </dd>
+                    </div>
+                  ) : null}
                   <div className="flex justify-between gap-3">
                     <dt className="text-on-surface-variant">{t('invoice.details.total')}</dt>
                     <dd className="font-medium text-on-surface">{t('invoice.egpAmount', { amount: invoice.amount.toFixed(2) })}</dd>

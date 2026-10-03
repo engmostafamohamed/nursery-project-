@@ -157,6 +157,7 @@ function templateFieldOptions(
  * active built-in field, or an active custom question the admin added for it. When no
  * template has loaded yet, every built-in field falls back to active, so nothing hides. */
 function stepHasActiveContent(step: SignUpStep, template: RegistrationTemplatePayload | null | undefined) {
+  if (template?.stepsMeta?.[step as (typeof REGISTRATION_TEMPLATE_STEPS)[number]]?.hidden) return false;
   const knownKeys = KNOWN_FIELD_KEYS_BY_STEP[step as (typeof REGISTRATION_TEMPLATE_STEPS)[number]] ?? [];
   if (knownKeys.some((key) => isTemplateFieldActive(template, key))) return true;
   return (template?.questions ?? []).some((question) => question.active && !question.fieldKey && question.step === step);

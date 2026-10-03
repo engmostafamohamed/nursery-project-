@@ -174,9 +174,13 @@ export function SettingsCategoryForm({
     );
   };
 
+  const visibleFields = fields.filter(
+    (field) => !field.showWhen || field.showWhen.in.includes(String(values[field.showWhen.key])),
+  );
+
   return (
     <div className="space-y-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
-      {fields.map((field) => (
+      {visibleFields.map((field) => (
         <div key={String(field.key)}>{renderField(field)}</div>
       ))}
       <div className="flex flex-wrap justify-end gap-2 pt-2">

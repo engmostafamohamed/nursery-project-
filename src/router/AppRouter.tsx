@@ -100,6 +100,7 @@ export function AppRouter() {
               <Route path="teacher-reminders" element={<P.AdminTeacherRemindersPage />} />
               <Route path="reminders" element={<P.RemindersPage />} />
               <Route path="packages" element={<P.AdminPackagesPage />} />
+              <Route path="deals" element={<P.AdminDealsPage />} />
               <Route path="reports" element={<P.AdminReportsPage />} />
               <Route path="reports/quarterly" element={<P.AdminReportsPage />} />
               <Route path="staff/onboarding" element={<P.AdminStaffOnboardingPage />} />

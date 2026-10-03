@@ -132,6 +132,9 @@ export const AdminTeacherRemindersPage = lazy(() =>
 export const AdminPackagesPage = lazy(() =>
   import('@/pages/admin/AdminPackagesPage').then((m) => ({ default: m.AdminPackagesPage })),
 );
+export const AdminDealsPage = lazy(() =>
+  import('@/pages/admin/AdminDealsPage').then((m) => ({ default: m.AdminDealsPage })),
+);
 export const AdminReportsPage = lazy(() =>
   import('@/pages/admin/AdminReportsPage').then((m) => ({ default: m.AdminReportsPage })),
 );

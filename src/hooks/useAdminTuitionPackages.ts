@@ -20,6 +20,9 @@ export type TuitionPackageRow = {
   price: number;
   active: boolean;
   created_at: string;
+  deal_id: string | null;
+  /** Children currently on an active child_tuition_subscriptions row for this package. */
+  subscribed_count: number;
 };
 
 export type TuitionPackageInput = {
@@ -31,6 +34,7 @@ export type TuitionPackageInput = {
   features_json: TuitionFeature[];
   price: number;
   active: boolean;
+  deal_id: string | null;
 };
 
 function normalizeFeatures(value: unknown): TuitionFeature[] {
@@ -51,25 +55,45 @@ export function useAdminTuitionPackages(nurseryId: string | null | undefined) {
       if (!nurseryId) return [];
       const { data, error } = await supabase
         .from('tuition_packages')
-        .select('id, nursery_id, name_ar, name_en, description_ar, description_en, daily_hours, features_json, price, active, created_at')
+        .select('id, nursery_id, name_ar, name_en, description_ar, description_en, daily_hours, features_json, price, active, created_at, deal_id')
         .eq('nursery_id', nurseryId)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
-        ...(row as Omit<TuitionPackageRow, 'features_json'>),
+      const rows = (data ?? []) as Array<Record<string, unknown>>;
+      const ids = rows.map((row) => row.id as string);
+
+      const countMap = new Map<string, number>();
+      if (ids.length) {
+        const { data: subs } = await supabase
+          .from('child_tuition_subscriptions')
+          .select('tuition_package_id')
+          .eq('status', 'active')
+          .in('tuition_package_id', ids);
+        for (const row of (subs ?? []) as { tuition_package_id: string | null }[]) {
+          if (!row.tuition_package_id) continue;
+          countMap.set(row.tuition_package_id, (countMap.get(row.tuition_package_id) ?? 0) + 1);
+        }
+      }
+
+      return rows.map((row) => ({
+        ...(row as Omit<TuitionPackageRow, 'features_json' | 'subscribed_count'>),
         features_json: normalizeFeatures(row.features_json),
+        subscribed_count: countMap.get(row.id as string) ?? 0,
       })) as TuitionPackageRow[];
     },
     enabled: Boolean(nurseryId),
   });
 
   const create = useMutation({
-    mutationFn: async (input: TuitionPackageInput) => {
+    mutationFn: async (input: TuitionPackageInput): Promise<string> => {
       if (!nurseryId) throw new Error('Missing nursery');
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('tuition_packages')
-        .insert({ ...input, nursery_id: nurseryId } as never);
+        .insert({ ...input, nursery_id: nurseryId } as never)
+        .select('id')
+        .single();
       if (error) throw error;
+      return String((data as { id: string }).id);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: key }),
   });
@@ -82,19 +106,14 @@ export function useAdminTuitionPackages(nurseryId: string | null | undefined) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: key }),
   });
 
-  const remove = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('tuition_packages').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: key }),
-  });
-
   useEffect(() => {
     if (!nurseryId) return;
     const channel = supabase
       .channel(`admin-tuition-packages-${nurseryId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tuition_packages' }, () =>
+        void queryClient.invalidateQueries({ queryKey: key }),
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'child_tuition_subscriptions' }, () =>
         void queryClient.invalidateQueries({ queryKey: key }),
       )
       .subscribe();
@@ -103,5 +122,5 @@ export function useAdminTuitionPackages(nurseryId: string | null | undefined) {
     };
   }, [nurseryId, queryClient, key]);
 
-  return { query, create, update, remove };
+  return { query, create, update };
 }

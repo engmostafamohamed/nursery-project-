@@ -26,6 +26,7 @@ export type PackageRow = {
   validity_value: number | null;
   validity_unit: ValidityUnit | null;
   created_at: string;
+  deal_id: string | null;
   assigned_count: number;
 };
 
@@ -40,6 +41,7 @@ export type PackageInput = {
   active: boolean;
   validity_value: number | null;
   validity_unit: ValidityUnit | null;
+  deal_id: string | null;
 };
 
 export type PackageAssignment = {
@@ -62,7 +64,7 @@ export function useAdminPackages(nurseryId: string | null | undefined) {
       const { data, error } = await supabase
         .from('packages')
         .select(
-          'id, nursery_id, name_ar, name_en, description_ar, description_en, coverage_type, included_hours, price, active, validity_value, validity_unit, created_at',
+          'id, nursery_id, name_ar, name_en, description_ar, description_en, coverage_type, included_hours, price, active, validity_value, validity_unit, created_at, deal_id',
         )
         .eq('nursery_id', nurseryId)
         .order('created_at', { ascending: false });
@@ -106,14 +108,6 @@ export function useAdminPackages(nurseryId: string | null | undefined) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: key }),
   });
 
-  const remove = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('packages').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: key }),
-  });
-
   useEffect(() => {
     if (!nurseryId) return;
     const channel = supabase
@@ -130,7 +124,7 @@ export function useAdminPackages(nurseryId: string | null | undefined) {
     };
   }, [nurseryId, queryClient, key]);
 
-  return { query, create, update, remove };
+  return { query, create, update };
 }
 
 export function usePackageAssignments(

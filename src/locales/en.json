@@ -927,8 +927,11 @@
       "events": "Events",
       "courses": "Courses",
       "packages": "Packages",
+      "deals": "Deals & Discounts",
       "reports": "Reports",
-      "brandSubtitle": "Admin"
+      "brandSubtitle": "Admin",
+      "collapseSidebar": "Collapse sidebar",
+      "expandSidebar": "Expand sidebar"
     },
     "classes": {
       "list": {
@@ -2428,6 +2431,7 @@
     "sectionSchedule": "Today & schedule",
     "sectionFeed": "Recent updates",
     "sectionFinancial": "Payments",
+    "sectionBilling": "Tuition & extra hours",
     "sectionApplications": "Applications",
     "sectionNurseryChat": "Message nursery",
     "noApplications": "No application forms found yet.",
@@ -3728,7 +3732,11 @@
       "goToPackages": "Go to packages",
       "selectedToast": "Package selected. Pay all or part of it - the application is sent for review automatically.",
       "selectFailed": "Could not select the package. Please try again.",
-      "payHint": "Pay all or part of the package price now. The application is sent for review as soon as your payment is submitted."
+      "payHint": "Pay all or part of the package price now. The application is sent for review as soon as your payment is submitted.",
+      "discount": "Discount",
+      "dealPercentOff": "{{value}}% OFF",
+      "dealAmountOff": "EGP {{value}} OFF",
+      "dealEndsIn": "Ends in {{time}}"
     },
     "extraHoursPackage": {
       "title": "Extra hours",
@@ -3737,7 +3745,11 @@
       "none": "Don't add extra hours",
       "noneHint": "Late-pickup fees apply as usual.",
       "selected": "Extra hours package selected.",
-      "cleared": "Extra hours package removed."
+      "cleared": "Extra hours package removed.",
+      "discount": "Discount",
+      "dealPercentOff": "{{value}}% OFF",
+      "dealAmountOff": "EGP {{value}} OFF",
+      "dealEndsIn": "Ends in {{time}}"
     },
     "steps": {
       "parentInfo": "Parent Info",
@@ -4254,6 +4266,10 @@
     }
   },
   "packages": {
+    "pageTitle": "Packages",
+    "pageSubtitle": "Manage the nursery's fixed tuition packages and prepaid extra-hours packages.",
+    "tabFixed": "Fixed packages",
+    "tabHours": "Hours packages",
     "title": "Packages",
     "subtitle": "Create prepaid extra-hours packages and assign children. Late-pickup fees are waived or deducted against the child's active package.",
     "addButton": "New package",
@@ -4300,7 +4316,10 @@
     },
     "saved": "Package saved.",
     "saveFailed": "Could not save. Please try again.",
-    "deleted": "Package deleted."
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "activated": "Package activated.",
+    "deactivated": "Package deactivated."
   },
   "teacherReminders": {
     "title": "Teacher monthly reminders",

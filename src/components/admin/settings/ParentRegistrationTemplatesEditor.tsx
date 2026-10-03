@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -11,15 +11,14 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
-import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/lib/supabase';
 import {
   DEFAULT_PARENT_REGISTRATION_QUESTIONS,
   REGISTRATION_QUESTION_TYPES,
   SYSTEM_ALWAYS_ACTIVE_REGISTRATION_FIELD_KEYS,
+  SYSTEM_LIST_DRIVEN_REGISTRATION_FIELD_KEYS,
   SYSTEM_REQUIRED_REGISTRATION_FIELD_KEYS,
   deriveStepOrder,
   moveQuestionInStep,
@@ -27,6 +26,8 @@ import {
   type RegistrationQuestionType,
   type RegistrationTemplateQuestion,
   type RegistrationTemplateStep,
+  type RegistrationTemplateStepMeta,
+  type RegistrationTemplateStepsMeta,
 } from '@/features/parent-signup/registrationTemplates';
 import { cn } from '@/lib/utils';
 
@@ -38,6 +39,7 @@ type TemplateRow = {
   status: 'draft' | 'review' | 'active' | 'archived';
   is_active: boolean;
   questions_json: RegistrationTemplateQuestion[];
+  steps_json: RegistrationTemplateStepsMeta;
   created_from_template_id: string | null;
   created_at: string;
   updated_at: string;
@@ -52,6 +54,7 @@ type Draft = {
   name: string;
   status: TemplateRow['status'];
   questions_json: RegistrationTemplateQuestion[];
+  steps_json: RegistrationTemplateStepsMeta;
 };
 
 const queryKey = (nurseryId: string | undefined) => ['parent-registration-templates', nurseryId];
@@ -83,6 +86,30 @@ const STEP_ICONS: Record<RegistrationTemplateStep, string> = {
   documents: 'description',
   consents: 'fact_check',
 };
+
+/** Curated icon choices for the step icon picker — the current defaults above, plus a
+ * broader set of icons admins can pick to personalize a step's tab. */
+const STEP_ICON_CHOICES = [
+  'child_care', 'family_restroom', 'diversity_1', 'diversity_3', 'groups',
+  'school', 'backpack', 'menu_book',
+  'health_and_safety', 'emergency', 'medication', 'vaccines', 'local_hospital',
+  'wb_sunny', 'bedtime', 'restaurant', 'water_drop',
+  'directions_walk', 'directions_car', 'badge', 'contact_phone',
+  'description', 'fact_check', 'checklist', 'assignment', 'folder', 'event',
+  'star', 'favorite', 'shield', 'verified', 'task_alt', 'celebration', 'pets', 'home',
+];
+
+function stepLabel(step: RegistrationTemplateStep, stepsMeta: RegistrationTemplateStepsMeta): string {
+  return stepsMeta[step]?.label?.trim() || STEP_LABELS[step];
+}
+
+function stepIcon(step: RegistrationTemplateStep, stepsMeta: RegistrationTemplateStepsMeta): string {
+  return stepsMeta[step]?.icon || STEP_ICONS[step];
+}
+
+function isStepHidden(step: RegistrationTemplateStep, stepsMeta: RegistrationTemplateStepsMeta): boolean {
+  return Boolean(stepsMeta[step]?.hidden);
+}
 
 const QUESTION_TYPE_ICON: Record<RegistrationQuestionType, string> = {
   short_text: 'short_text',
@@ -135,6 +162,10 @@ function normalizeQuestions(value: unknown): RegistrationTemplateQuestion[] {
     : [];
 }
 
+function normalizeStepsMeta(value: unknown): RegistrationTemplateStepsMeta {
+  return value && typeof value === 'object' && !Array.isArray(value) ? (value as RegistrationTemplateStepsMeta) : {};
+}
+
 function isSystemRequiredQuestion(question: RegistrationTemplateQuestion) {
   return SYSTEM_REQUIRED_REGISTRATION_FIELD_KEYS.includes(question.fieldKey as (typeof SYSTEM_REQUIRED_REGISTRATION_FIELD_KEYS)[number]);
 }
@@ -143,10 +174,64 @@ function isSystemAlwaysActiveQuestion(question: RegistrationTemplateQuestion) {
   return SYSTEM_ALWAYS_ACTIVE_REGISTRATION_FIELD_KEYS.includes(question.fieldKey as (typeof SYSTEM_ALWAYS_ACTIVE_REGISTRATION_FIELD_KEYS)[number]);
 }
 
+/** This field's widget and choices come from live system data (e.g. the real nursery list),
+ * not from this question's type/options/validation — editing those here has no effect on what
+ * parents actually see, so the editor locks them instead of pretending they do something. */
+function isSystemListDrivenQuestion(question: RegistrationTemplateQuestion) {
+  return SYSTEM_LIST_DRIVEN_REGISTRATION_FIELD_KEYS.includes(question.fieldKey as (typeof SYSTEM_LIST_DRIVEN_REGISTRATION_FIELD_KEYS)[number]);
+}
+
 /** A step with nothing active in it won't actually appear on the live signup form —
  * surfacing that here keeps the editor honest about what parents will see. */
 function stepHasActiveQuestions(step: RegistrationTemplateStep, questions: RegistrationTemplateQuestion[]) {
   return questions.some((question) => question.step === step && question.active);
+}
+
+/** A custom-styled stand-in for the native `<select>` — scoped to this file so the rest of
+ * the app's `<Select>` usages (several of which spread react-hook-form's `register()` onto a
+ * real `<select>` element) are untouched. Matches the Template picker dropdown above it. */
+function InlineSelect<T extends string>({
+  value,
+  disabled,
+  options,
+  onChange,
+  className,
+}: {
+  value: T;
+  disabled?: boolean;
+  options: { value: T; label: string; disabled?: boolean }[];
+  onChange: (value: T) => void;
+  className?: string;
+}) {
+  const current = options.find((option) => option.value === value);
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={disabled}
+          className={cn('h-12 w-full justify-between bg-surface-container-lowest font-normal', className)}
+        >
+          <span className="truncate">{current?.label ?? value}</span>
+          <MaterialSymbol name="expand_more" size="text-base" className="shrink-0 text-on-surface-variant" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width] min-w-[160px]">
+        {options.map((option) => (
+          <DropdownMenuItem
+            key={option.value}
+            disabled={option.disabled}
+            onSelect={() => onChange(option.value)}
+            className={cn('justify-between', option.value === value && 'bg-primary/5 font-medium text-primary')}
+          >
+            {option.label}
+            {option.value === value ? <MaterialSymbol name="check" size="text-base" /> : null}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 function QuestionCard({
@@ -174,6 +259,7 @@ function QuestionCard({
 }) {
   const systemRequired = isSystemRequiredQuestion(question);
   const systemAlwaysActive = isSystemAlwaysActiveQuestion(question);
+  const systemListDriven = isSystemListDrivenQuestion(question);
   const isChoiceType = question.type === 'single_choice' || question.type === 'multi_choice';
   const isActive = systemAlwaysActive || question.active;
   const isRequired = systemRequired || question.required;
@@ -252,15 +338,19 @@ function QuestionCard({
             </div>
             <div className="min-w-[160px] flex-1 space-y-1.5">
               <Label>Answer type</Label>
-              <Select
-                value={question.type}
-                disabled={locked}
-                onChange={(e) => onChange({ type: e.target.value as RegistrationQuestionType })}
-              >
-                {REGISTRATION_QUESTION_TYPES.map((type) => (
-                  <option key={type} value={type}>{type.replace('_', ' ')}</option>
-                ))}
-              </Select>
+              {systemListDriven ? (
+                <div className="flex h-12 items-center gap-2 rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface-variant">
+                  <MaterialSymbol name="lock" size="text-base" className="shrink-0" />
+                  Managed by the nursery list
+                </div>
+              ) : (
+                <InlineSelect
+                  value={question.type}
+                  disabled={locked}
+                  onChange={(type) => onChange({ type })}
+                  options={REGISTRATION_QUESTION_TYPES.map((type) => ({ value: type, label: type.replace('_', ' ') }))}
+                />
+              )}
             </div>
           </div>
 
@@ -293,66 +383,104 @@ function QuestionCard({
             />
           </div>
 
-          {isChoiceType ? (
+          {systemListDriven ? (
+            <div className="flex items-start gap-2.5 rounded-xl border border-outline-variant bg-surface-container-lowest p-3 text-xs text-on-surface-variant">
+              <MaterialSymbol name="info" size="text-base" className="mt-0.5 shrink-0" />
+              <p>
+                This question&apos;s choices always come from your live nursery list — answer options and validation
+                aren&apos;t shown here because they&apos;d have no effect on what parents see.
+              </p>
+            </div>
+          ) : isChoiceType ? (
+            // Min/max length, numeric range, and regex all check a free-typed value — none of
+            // them mean anything once the answer can only be one of the options below, so
+            // Validation is skipped entirely here rather than showing controls that do nothing.
             <div className="space-y-1.5">
               <Label>Answer options</Label>
-              <Textarea
-                value={(question.options ?? []).join('\n')}
-                disabled={locked}
-                className="min-h-20"
-                placeholder={'One option per line'}
-                onChange={(e) =>
-                  onChange({ options: e.target.value.split('\n').map((option) => option.trim()).filter(Boolean) })
-                }
-              />
-              <p className="text-xs text-on-surface-variant">One option per line.</p>
+              <div className="space-y-2">
+                {(question.options ?? []).map((option, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Input
+                      value={option}
+                      disabled={locked}
+                      placeholder={`Option ${index + 1}`}
+                      onChange={(e) => {
+                        const next = [...(question.options ?? [])];
+                        next[index] = e.target.value;
+                        onChange({ options: next });
+                      }}
+                    />
+                    <button
+                      type="button"
+                      disabled={locked}
+                      onClick={() => onChange({ options: (question.options ?? []).filter((_, i) => i !== index) })}
+                      title="Remove option"
+                      aria-label="Remove option"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-high hover:text-error disabled:pointer-events-none disabled:opacity-40"
+                    >
+                      <MaterialSymbol name="close" size="text-base" />
+                    </button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={locked}
+                  onClick={() => onChange({ options: [...(question.options ?? []), ''] })}
+                >
+                  <MaterialSymbol name="add" size="text-base" />
+                  Add option
+                </Button>
+              </div>
+              <p className="text-xs text-on-surface-variant">This is what parents choose from.</p>
             </div>
-          ) : null}
-
-          <div className="space-y-1.5">
-            <Label>Validation</Label>
-            <div className="flex flex-wrap gap-3">
-              <Input
-                type="number"
-                disabled={locked}
-                placeholder="Min length"
-                className="w-28"
-                value={question.validation?.minLength ?? ''}
-                onChange={(e) => onChange({ validation: { ...question.validation, minLength: e.target.value ? Number(e.target.value) : null } })}
-              />
-              <Input
-                type="number"
-                disabled={locked}
-                placeholder="Max length"
-                className="w-28"
-                value={question.validation?.maxLength ?? ''}
-                onChange={(e) => onChange({ validation: { ...question.validation, maxLength: e.target.value ? Number(e.target.value) : null } })}
-              />
-              <Input
-                type="number"
-                disabled={locked}
-                placeholder="Min"
-                className="w-24"
-                value={question.validation?.min ?? ''}
-                onChange={(e) => onChange({ validation: { ...question.validation, min: e.target.value ? Number(e.target.value) : null } })}
-              />
-              <Input
-                type="number"
-                disabled={locked}
-                placeholder="Max"
-                className="w-24"
-                value={question.validation?.max ?? ''}
-                onChange={(e) => onChange({ validation: { ...question.validation, max: e.target.value ? Number(e.target.value) : null } })}
-              />
-              <Input
-                disabled={locked}
-                placeholder="Regex pattern"
-                className="min-w-[160px] flex-1"
-                value={question.validation?.pattern ?? ''}
-                onChange={(e) => onChange({ validation: { ...question.validation, pattern: e.target.value || null } })}
-              />
+          ) : (
+            <div className="space-y-1.5">
+              <Label>Validation</Label>
+              <div className="flex flex-wrap gap-3">
+                <Input
+                  type="number"
+                  disabled={locked}
+                  placeholder="Min length"
+                  className="w-28"
+                  value={question.validation?.minLength ?? ''}
+                  onChange={(e) => onChange({ validation: { ...question.validation, minLength: e.target.value ? Number(e.target.value) : null } })}
+                />
+                <Input
+                  type="number"
+                  disabled={locked}
+                  placeholder="Max length"
+                  className="w-28"
+                  value={question.validation?.maxLength ?? ''}
+                  onChange={(e) => onChange({ validation: { ...question.validation, maxLength: e.target.value ? Number(e.target.value) : null } })}
+                />
+                <Input
+                  type="number"
+                  disabled={locked}
+                  placeholder="Min"
+                  className="w-24"
+                  value={question.validation?.min ?? ''}
+                  onChange={(e) => onChange({ validation: { ...question.validation, min: e.target.value ? Number(e.target.value) : null } })}
+                />
+                <Input
+                  type="number"
+                  disabled={locked}
+                  placeholder="Max"
+                  className="w-24"
+                  value={question.validation?.max ?? ''}
+                  onChange={(e) => onChange({ validation: { ...question.validation, max: e.target.value ? Number(e.target.value) : null } })}
+                />
+                <Input
+                  disabled={locked}
+                  placeholder="Regex pattern"
+                  className="min-w-[160px] flex-1"
+                  value={question.validation?.pattern ?? ''}
+                  onChange={(e) => onChange({ validation: { ...question.validation, pattern: e.target.value || null } })}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="flex justify-end border-t border-outline-variant pt-3">
             <Button
@@ -371,6 +499,51 @@ function QuestionCard({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function StepIconPicker({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: string;
+  disabled: boolean;
+  onChange: (icon: string) => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          disabled={disabled}
+          title="Change step icon"
+          aria-label="Change step icon"
+          className="h-10 w-10 shrink-0"
+        >
+          <MaterialSymbol name={value} size="text-lg" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-64 p-2">
+        <p className="mb-1.5 px-1 text-xs font-medium text-on-surface-variant">Choose an icon</p>
+        <div className="grid grid-cols-6 gap-1">
+          {STEP_ICON_CHOICES.map((icon) => (
+            <DropdownMenuItem
+              key={icon}
+              onSelect={() => onChange(icon)}
+              className={cn(
+                'flex h-9 w-9 items-center justify-center rounded-md p-0',
+                icon === value ? 'bg-primary/15 text-primary' : 'text-on-surface-variant',
+              )}
+            >
+              <MaterialSymbol name={icon} size="text-lg" />
+            </DropdownMenuItem>
+          ))}
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -402,8 +575,9 @@ export function ParentRegistrationTemplatesEditor({ nurseryId }: { nurseryId?: s
       if (error) throw error;
 
       const rows = ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
-        ...(row as Omit<TemplateRow, 'questions_json'>),
+        ...(row as Omit<TemplateRow, 'questions_json' | 'steps_json'>),
         questions_json: normalizeQuestions(row.questions_json),
+        steps_json: normalizeStepsMeta(row.steps_json),
       })) as TemplateRow[];
 
       const ids = rows.map((row) => row.id);
@@ -436,7 +610,13 @@ export function ParentRegistrationTemplatesEditor({ nurseryId }: { nurseryId?: s
   useEffect(() => {
     setDraft(
       selected
-        ? { id: selected.id, name: selected.name, status: selected.status, questions_json: selected.questions_json }
+        ? {
+            id: selected.id,
+            name: selected.name,
+            status: selected.status,
+            questions_json: selected.questions_json,
+            steps_json: selected.steps_json,
+          }
         : null,
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -447,7 +627,8 @@ export function ParentRegistrationTemplatesEditor({ nurseryId }: { nurseryId?: s
       selected &&
       (draft.name !== selected.name ||
         draft.status !== selected.status ||
-        JSON.stringify(draft.questions_json) !== JSON.stringify(selected.questions_json)),
+        JSON.stringify(draft.questions_json) !== JSON.stringify(selected.questions_json) ||
+        JSON.stringify(draft.steps_json) !== JSON.stringify(selected.steps_json)),
   );
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: queryKey(nurseryId ?? undefined) });
@@ -506,6 +687,7 @@ export function ParentRegistrationTemplatesEditor({ nurseryId }: { nurseryId?: s
           status: 'draft',
           is_active: false,
           questions_json: source.questions_json,
+          steps_json: source.steps_json,
           created_from_template_id: source.id,
         } as never)
         .select('id')
@@ -534,7 +716,12 @@ export function ParentRegistrationTemplatesEditor({ nurseryId }: { nurseryId?: s
   const persistDraft = useMutation({
     mutationFn: async (statusOverride: TemplateRow['status'] | undefined) => {
       if (!draft) throw new Error('Nothing to save');
-      const payload = { name: draft.name, status: statusOverride ?? draft.status, questions_json: draft.questions_json };
+      const payload = {
+        name: draft.name,
+        status: statusOverride ?? draft.status,
+        questions_json: draft.questions_json,
+        steps_json: draft.steps_json,
+      };
       const { error } = await supabase.from('parent_registration_templates').update(payload as never).eq('id', draft.id);
       if (error) throw error;
       return payload.status;
@@ -565,7 +752,13 @@ export function ParentRegistrationTemplatesEditor({ nurseryId }: { nurseryId?: s
 
   const discardChanges = () => {
     if (!selected) return;
-    setDraft({ id: selected.id, name: selected.name, status: selected.status, questions_json: selected.questions_json });
+    setDraft({
+      id: selected.id,
+      name: selected.name,
+      status: selected.status,
+      questions_json: selected.questions_json,
+      steps_json: selected.steps_json,
+    });
   };
 
   const selectTemplate = async (id: string) => {
@@ -691,9 +884,47 @@ export function ParentRegistrationTemplatesEditor({ nurseryId }: { nurseryId?: s
     setDraft((prev) => (prev ? { ...prev, questions_json: moveStepOrder(prev.questions_json, step, direction) } : prev));
   };
 
-  if (!nurseryId) return null;
+  const updateStepMeta = (step: RegistrationTemplateStep, patch: Partial<RegistrationTemplateStepMeta>) => {
+    if (!draft || locked) return;
+    setDraft((prev) => {
+      if (!prev) return prev;
+      const next: RegistrationTemplateStepMeta = { ...prev.steps_json[step], ...patch };
+      if (!next.label?.trim()) delete next.label;
+      if (!next.icon) delete next.icon;
+      if (!next.hidden) delete next.hidden;
+      const steps_json = { ...prev.steps_json };
+      if (Object.keys(next).length) steps_json[step] = next;
+      else delete steps_json[step];
+      return { ...prev, steps_json };
+    });
+  };
+
+  const resetStepMeta = (step: RegistrationTemplateStep) => {
+    if (!draft || locked) return;
+    setDraft((prev) => {
+      if (!prev) return prev;
+      const steps_json = { ...prev.steps_json };
+      delete steps_json[step];
+      return { ...prev, steps_json };
+    });
+  };
 
   const stepOrder = draft ? deriveStepOrder(draft.questions_json) : [];
+
+  // Reordering a step shifts its position within the (horizontally scrollable) tab strip —
+  // without this, the strip's scroll position stays put, so the tabs visible in the old
+  // scroll window can silently change out from under the admin, looking like a step vanished.
+  const tabsScrollRef = useRef<HTMLDivElement>(null);
+  const stepOrderKey = stepOrder.join(',');
+  useEffect(() => {
+    const container = tabsScrollRef.current;
+    if (!container) return;
+    const active = container.querySelector<HTMLElement>('[data-state="active"]');
+    active?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+  }, [stepOrderKey]);
+
+  if (!nurseryId) return null;
+
   const lifecycleActionsDisabledTitle = isDirty ? 'Save your changes first.' : undefined;
 
   return (
@@ -730,7 +961,7 @@ export function ParentRegistrationTemplatesEditor({ nurseryId }: { nurseryId?: s
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full justify-between font-normal"
+                  className="w-full justify-between bg-surface font-normal"
                   disabled={createTemplate.isPending}
                 >
                   <span className="flex min-w-0 items-center gap-2">
@@ -807,19 +1038,20 @@ export function ParentRegistrationTemplatesEditor({ nurseryId }: { nurseryId?: s
                   </div>
                   <div className="min-w-[160px] max-w-[220px] flex-1 space-y-1.5">
                     <Label>Status</Label>
-                    <Select
+                    <InlineSelect
                       value={draft.status}
                       disabled={locked}
-                      onChange={(e) => setDraft((prev) => (prev ? { ...prev, status: e.target.value as TemplateRow['status'] } : prev))}
-                    >
-                      <option value="draft">{STATUS_LABELS.draft}</option>
-                      <option value="review">{STATUS_LABELS.review}</option>
-                      {/* Active can only be reached through the Activate button below, which
-                          also deactivates whichever template was previously live — picking
-                          it here would skip that and leave two templates reading "Active". */}
-                      <option value="active" disabled>{STATUS_LABELS.active}</option>
-                      <option value="archived">{STATUS_LABELS.archived}</option>
-                    </Select>
+                      onChange={(status) => setDraft((prev) => (prev ? { ...prev, status } : prev))}
+                      options={[
+                        { value: 'draft', label: STATUS_LABELS.draft },
+                        { value: 'review', label: STATUS_LABELS.review },
+                        // Active can only be reached through the Activate button below, which
+                        // also deactivates whichever template was previously live — picking
+                        // it here would skip that and leave two templates reading "Active".
+                        { value: 'active', label: STATUS_LABELS.active, disabled: true },
+                        { value: 'archived', label: STATUS_LABELS.archived },
+                      ]}
+                    />
                   </div>
                   {selected.usedCount > 0 ? (
                     <div className="min-w-[160px] max-w-[220px] flex-1 space-y-1.5">
@@ -909,16 +1141,20 @@ export function ParentRegistrationTemplatesEditor({ nurseryId }: { nurseryId?: s
                 <Tabs defaultValue={stepOrder[0]}>
                   {/* Full width of this card (not the page) — each step gets an even share
                       instead of the row being sized to content with space left over. */}
-                  <div className="-mx-1 overflow-x-auto px-1 pb-1">
-                    <TabsList className="flex w-full">
+                  <div ref={tabsScrollRef} className="step-tabs-scroll -mx-1 overflow-x-auto px-1 pb-1">
+                    <TabsList className="flex w-full justify-start gap-1">
                       {stepOrder.map((step) => {
-                        const visible = stepHasActiveQuestions(step, draft.questions_json);
+                        const explicitlyHidden = isStepHidden(step, draft.steps_json);
+                        const visible = !explicitlyHidden && stepHasActiveQuestions(step, draft.questions_json);
                         return (
-                          <TabsTrigger key={step} value={step} className="min-w-0 flex-1 justify-center gap-1.5">
-                            <MaterialSymbol name={STEP_ICONS[step]} size="text-base" />
-                            <span className="truncate">{STEP_LABELS[step]}</span>
+                          <TabsTrigger key={step} value={step} className="shrink-0 gap-1.5 whitespace-nowrap">
+                            <MaterialSymbol name={stepIcon(step, draft.steps_json)} size="text-base" />
+                            <span>{stepLabel(step, draft.steps_json)}</span>
                             {!visible ? (
-                              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-on-surface-variant/50" title="Hidden on the live form — no active questions" />
+                              <span
+                                className="h-1.5 w-1.5 shrink-0 rounded-full bg-on-surface-variant/50"
+                                title={explicitlyHidden ? 'Hidden from parents' : 'Hidden on the live form — no active questions'}
+                              />
                             ) : null}
                           </TabsTrigger>
                         );
@@ -928,36 +1164,75 @@ export function ParentRegistrationTemplatesEditor({ nurseryId }: { nurseryId?: s
 
                   {stepOrder.map((step, stepPos) => {
                     const questions = draft.questions_json.filter((question) => question.step === step);
-                    const visible = stepHasActiveQuestions(step, draft.questions_json);
+                    const explicitlyHidden = isStepHidden(step, draft.steps_json);
+                    const visible = !explicitlyHidden && stepHasActiveQuestions(step, draft.questions_json);
                     const activeCount = questions.filter((q) => q.active).length;
+                    const stepMeta = draft.steps_json[step];
+                    const isCustomized = Boolean(stepMeta?.label || stepMeta?.icon);
                     return (
                       <TabsContent key={step} value={step} className="space-y-3">
-                        <div className="flex items-center gap-1">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            disabled={locked || stepPos === 0}
-                            title="Move step earlier"
-                            onClick={() => moveStep(step, 'up')}
-                          >
-                            <MaterialSymbol name="chevron_left" size="text-base" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            disabled={locked || stepPos === stepOrder.length - 1}
-                            title="Move step later"
-                            onClick={() => moveStep(step, 'down')}
-                          >
-                            <MaterialSymbol name="chevron_right" size="text-base" />
-                          </Button>
-                          <p className="ms-1 text-xs text-on-surface-variant">
-                            {visible ? `${activeCount} active question${activeCount === 1 ? '' : 's'}` : 'Hidden on the live form — nothing active in this step'}
-                          </p>
+                        <div className="space-y-2.5 rounded-xl border border-outline-variant bg-surface-container-lowest p-2.5">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <StepIconPicker
+                              value={stepIcon(step, draft.steps_json)}
+                              disabled={locked}
+                              onChange={(icon) => updateStepMeta(step, { icon })}
+                            />
+                            <Input
+                              value={stepMeta?.label ?? ''}
+                              disabled={locked}
+                              placeholder={STEP_LABELS[step]}
+                              className="h-10 min-w-[140px] flex-1"
+                              onChange={(e) => updateStepMeta(step, { label: e.target.value })}
+                            />
+                            {isCustomized ? (
+                              <Button type="button" variant="ghost" size="sm" disabled={locked} onClick={() => resetStepMeta(step)}>
+                                Reset
+                              </Button>
+                            ) : null}
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-1">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              disabled={locked || stepPos === 0}
+                              title="Move step earlier"
+                              onClick={() => moveStep(step, 'up')}
+                            >
+                              <MaterialSymbol name="chevron_left" size="text-base" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              disabled={locked || stepPos === stepOrder.length - 1}
+                              title="Move step later"
+                              onClick={() => moveStep(step, 'down')}
+                            >
+                              <MaterialSymbol name="chevron_right" size="text-base" />
+                            </Button>
+
+                            <label className="ms-2 flex items-center gap-2 text-sm text-on-surface">
+                              <Checkbox
+                                checked={explicitlyHidden}
+                                disabled={locked}
+                                onCheckedChange={(checked) => updateStepMeta(step, { hidden: checked === true })}
+                              />
+                              Hide from parents
+                            </label>
+
+                            <p className="ms-auto text-xs text-on-surface-variant">
+                              {explicitlyHidden
+                                ? "Hidden — parents won't see this step"
+                                : visible
+                                  ? `${activeCount} active question${activeCount === 1 ? '' : 's'}`
+                                  : 'Hidden on the live form — nothing active in this step'}
+                            </p>
+                          </div>
                         </div>
 
                         {questions.length ? (

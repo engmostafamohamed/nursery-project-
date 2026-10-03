@@ -60,7 +60,12 @@ export function TabsTrigger({ value, className, children, ...props }: TabsTrigge
           : 'text-on-surface-variant hover:bg-surface-container',
         className,
       )}
-      onClick={() => ctx.setValue(value)}
+      onClick={(e) => {
+        ctx.setValue(value);
+        // Keeps the newly-selected tab in view inside a horizontally (or vertically)
+        // scrollable strip — a no-op when the strip already shows the whole tab.
+        e.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+      }}
       {...props}
     >
       {children}

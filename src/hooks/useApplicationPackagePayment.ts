@@ -3,6 +3,25 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
 
+export type ApplicationPackageDeal = {
+  id: string;
+  nameAr: string;
+  nameEn: string;
+  discountType: 'percentage' | 'fixed_amount';
+  discountValue: number;
+  startsAt: string | null;
+  endsAt: string | null;
+  active: boolean;
+};
+
+export type ApplicationPackageBillingPeriod = 'monthly' | 'quarterly' | 'half_annual' | 'annual';
+
+export type ApplicationPackageBillingPeriodOption = {
+  billingPeriod: ApplicationPackageBillingPeriod;
+  durationMonths: number;
+  price: number;
+};
+
 export type ApplicationPaymentPackage = {
   id: string;
   nameAr: string;
@@ -12,9 +31,58 @@ export type ApplicationPaymentPackage = {
   price: number;
   dailyHours: number | null;
   featuresJson: Array<{ ar: string; en: string }>;
+  deal: ApplicationPackageDeal | null;
+  billingPeriods: ApplicationPackageBillingPeriodOption[];
 };
 
-export type ApplicationPackageBillingPeriod = 'monthly' | 'quarterly' | 'half_annual' | 'annual';
+const DEFAULT_BILLING_MONTHS: Record<ApplicationPackageBillingPeriod, number> = {
+  monthly: 1,
+  quarterly: 3,
+  half_annual: 6,
+  annual: 12,
+};
+
+/** Whether a deal is currently claimable: active and inside its optional start/end window. */
+export function isApplicationDealActive(deal: Pick<ApplicationPackageDeal, 'active' | 'startsAt' | 'endsAt'>): boolean {
+  if (!deal.active) return false;
+  const now = Date.now();
+  if (deal.startsAt && new Date(deal.startsAt).getTime() > now) return false;
+  if (deal.endsAt && new Date(deal.endsAt).getTime() <= now) return false;
+  return true;
+}
+
+export type PackageBillingQuote = {
+  billingMonths: number;
+  subtotal: number;
+  discountAmount: number;
+  total: number;
+  dealApplied: boolean;
+};
+
+/**
+ * Mirrors `select_application_payment_package`'s own pricing math exactly, so the preview a
+ * parent sees before choosing a package matches the invoice it actually creates — including
+ * reading the real per-period price instead of a stale price × months guess.
+ */
+export function computePackageBillingQuote(
+  pkg: Pick<ApplicationPaymentPackage, 'price' | 'billingPeriods' | 'deal'>,
+  billingPeriod: ApplicationPackageBillingPeriod,
+): PackageBillingQuote {
+  const period = pkg.billingPeriods.find((p) => p.billingPeriod === billingPeriod);
+  const billingMonths = period?.durationMonths ?? DEFAULT_BILLING_MONTHS[billingPeriod];
+  const subtotal = period ? period.price : pkg.price * billingMonths;
+  const dealApplied = Boolean(pkg.deal && isApplicationDealActive(pkg.deal));
+  let discountAmount = 0;
+  if (dealApplied && pkg.deal) {
+    discountAmount =
+      pkg.deal.discountType === 'percentage'
+        ? Math.round(subtotal * pkg.deal.discountValue) / 100
+        : pkg.deal.discountValue;
+    discountAmount = Math.min(discountAmount, subtotal);
+  }
+  const total = Math.max(subtotal - discountAmount, 0);
+  return { billingMonths, subtotal, discountAmount, total, dealApplied };
+}
 
 export type ApplicationPackageInvoice = {
   id: string;
@@ -30,6 +98,8 @@ export type ApplicationPackageInvoice = {
   billingPeriod: ApplicationPackageBillingPeriod;
   billingMonths: number;
   monthlyPrice: number;
+  subtotal: number;
+  discountAmount: number;
 };
 
 type Params = {
@@ -76,6 +146,16 @@ function lineMonthlyPrice(raw: unknown, amount: number, months: number): number 
   return Number.isFinite(value) ? value : amount;
 }
 
+function lineSubtotal(raw: unknown, amount: number): number {
+  const value = Number((raw as { subtotal?: unknown } | null)?.subtotal ?? amount);
+  return Number.isFinite(value) ? value : amount;
+}
+
+function lineDiscountAmount(raw: unknown): number {
+  const value = Number((raw as { discount_amount?: unknown } | null)?.discount_amount ?? 0);
+  return Number.isFinite(value) ? value : 0;
+}
+
 export function useApplicationPackagePayment({ applicationId, parentId, nurseryId }: Params) {
   const queryClient = useQueryClient();
 
@@ -85,11 +165,31 @@ export function useApplicationPackagePayment({ applicationId, parentId, nurseryI
       if (!nurseryId) return [];
       const { data, error } = await supabase
         .from('tuition_packages')
-        .select('id, name_ar, name_en, description_ar, description_en, daily_hours, features_json, price')
+        .select(
+          `id, name_ar, name_en, description_ar, description_en, daily_hours, features_json, price,
+          deals (id, name_ar, name_en, discount_type, discount_value, starts_at, ends_at, active),
+          tuition_package_billing_periods (billing_period, duration_months, price, active)`,
+        )
         .eq('nursery_id', nurseryId)
         .eq('active', true)
         .order('price', { ascending: true });
       if (error) throw error;
+      type DealRow = {
+        id: string;
+        name_ar: string;
+        name_en: string;
+        discount_type: 'percentage' | 'fixed_amount';
+        discount_value: string | number;
+        starts_at: string | null;
+        ends_at: string | null;
+        active: boolean;
+      };
+      type PeriodRow = {
+        billing_period: string;
+        duration_months: number;
+        price: string | number;
+        active: boolean;
+      };
       return ((data ?? []) as Array<{
         id: string;
         name_ar: string;
@@ -99,20 +199,44 @@ export function useApplicationPackagePayment({ applicationId, parentId, nurseryI
         daily_hours: number | null;
         features_json: unknown;
         price: string | number;
-      }>).map((row) => ({
-        id: row.id,
-        nameAr: row.name_ar,
-        nameEn: row.name_en,
-        descriptionAr: row.description_ar,
-        descriptionEn: row.description_en,
-        dailyHours: row.daily_hours,
-        featuresJson: Array.isArray(row.features_json)
-          ? (row.features_json as Array<{ ar?: unknown; en?: unknown }>)
-              .filter((item) => item && typeof item === 'object')
-              .map((item) => ({ ar: String(item.ar ?? ''), en: String(item.en ?? '') }))
-          : [],
-        price: money(row.price),
-      }));
+        deals: DealRow | DealRow[] | null;
+        tuition_package_billing_periods: PeriodRow[] | null;
+      }>).map((row) => {
+        const dealRow = Array.isArray(row.deals) ? row.deals[0] : row.deals;
+        return {
+          id: row.id,
+          nameAr: row.name_ar,
+          nameEn: row.name_en,
+          descriptionAr: row.description_ar,
+          descriptionEn: row.description_en,
+          dailyHours: row.daily_hours,
+          featuresJson: Array.isArray(row.features_json)
+            ? (row.features_json as Array<{ ar?: unknown; en?: unknown }>)
+                .filter((item) => item && typeof item === 'object')
+                .map((item) => ({ ar: String(item.ar ?? ''), en: String(item.en ?? '') }))
+            : [],
+          price: money(row.price),
+          deal: dealRow
+            ? {
+                id: dealRow.id,
+                nameAr: dealRow.name_ar,
+                nameEn: dealRow.name_en,
+                discountType: dealRow.discount_type,
+                discountValue: money(dealRow.discount_value),
+                startsAt: dealRow.starts_at,
+                endsAt: dealRow.ends_at,
+                active: dealRow.active,
+              }
+            : null,
+          billingPeriods: (row.tuition_package_billing_periods ?? [])
+            .filter((p) => p.active && ['monthly', 'quarterly', 'half_annual', 'annual'].includes(p.billing_period))
+            .map((p) => ({
+              billingPeriod: p.billing_period as ApplicationPackageBillingPeriod,
+              durationMonths: p.duration_months,
+              price: money(p.price),
+            })),
+        };
+      });
     },
     enabled: Boolean(nurseryId),
   });
@@ -189,6 +313,8 @@ export function useApplicationPackagePayment({ applicationId, parentId, nurseryI
         billingPeriod: lineBillingPeriod(invoice.line_items_json),
         billingMonths: lineBillingMonths(invoice.line_items_json),
         monthlyPrice: lineMonthlyPrice(invoice.line_items_json, amount, lineBillingMonths(invoice.line_items_json)),
+        subtotal: lineSubtotal(invoice.line_items_json, amount),
+        discountAmount: lineDiscountAmount(invoice.line_items_json),
       };
     },
     enabled: Boolean(applicationId && parentId && nurseryId),

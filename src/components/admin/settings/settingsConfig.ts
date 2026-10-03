@@ -33,6 +33,8 @@ export interface SettingsField {
   max?: number;
   step?: number;
   options?: string[];
+  /** Field only renders while another field's current value is one of `in`. Omit to always show. */
+  showWhen?: { key: SettingsKey; in: string[] };
 }
 
 export interface SettingsTabConfig {
@@ -149,9 +151,9 @@ export const SETTINGS_TABS: SettingsTabConfig[] = [
     labelKey: 'settings.tabs.financial',
     fields: [
       { key: 'pricing_model', type: 'select', options: ['fixed', 'per_child', 'hourly', 'hybrid'] },
-      { key: 'monthly_rate', type: 'number', min: 0, step: 0.01 },
-      { key: 'per_child_rate', type: 'number', min: 0, step: 0.01 },
-      { key: 'hourly_rate', type: 'number', min: 0, step: 0.01 },
+      { key: 'monthly_rate', type: 'number', min: 0, step: 0.01, showWhen: { key: 'pricing_model', in: ['fixed', 'hybrid'] } },
+      { key: 'per_child_rate', type: 'number', min: 0, step: 0.01, showWhen: { key: 'pricing_model', in: ['per_child', 'hybrid'] } },
+      { key: 'hourly_rate', type: 'number', min: 0, step: 0.01, showWhen: { key: 'pricing_model', in: ['hourly', 'hybrid'] } },
       { key: 'invoice_due_days', type: 'number', min: 0 },
       { key: 'late_payment_fee_percentage', type: 'number', min: 0, max: 100, step: 0.01 },
       { key: 'sibling_discount_2nd_child_percentage', type: 'number', min: 0, max: 100, step: 0.01 },

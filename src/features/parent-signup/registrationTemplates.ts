@@ -52,11 +52,24 @@ export type RegistrationTemplateQuestion = {
   options?: string[];
 };
 
+/** Per-step display customization an admin can set on a template: a custom tab name/icon
+ * in the admin editor, and an explicit "hidden" flag the live signup form honors as a
+ * cleaner alternative to deactivating every question in a step. The custom name/icon are
+ * cosmetic to the admin editor only — parents still see the step's translated name. */
+export type RegistrationTemplateStepMeta = {
+  label?: string;
+  icon?: string;
+  hidden?: boolean;
+};
+
+export type RegistrationTemplateStepsMeta = Partial<Record<RegistrationTemplateStep, RegistrationTemplateStepMeta>>;
+
 export type RegistrationTemplatePayload = {
   id: string;
   name: string;
   version: number;
   questions: RegistrationTemplateQuestion[];
+  stepsMeta?: RegistrationTemplateStepsMeta;
 };
 
 export type RegistrationTemplateAnswerMap = Record<string, unknown>;
@@ -76,6 +89,13 @@ export const SYSTEM_ALWAYS_ACTIVE_REGISTRATION_FIELD_KEYS = [
   'motherFullName',
   'motherMobile',
 ] as const;
+
+/** Fields whose live widget and choices are wired directly to system data (e.g. the real
+ * nursery list), not to this question's `type`/`options`/`validation` — the signup page
+ * renders these with their own dedicated component instead of the generic question renderer.
+ * Editing those properties for one of these fields in the template editor has no effect on
+ * what parents see, so the editor should lock/hide them rather than imply they do something. */
+export const SYSTEM_LIST_DRIVEN_REGISTRATION_FIELD_KEYS = ['nurseryId'] as const;
 
 const q = (
   id: string,
@@ -266,7 +286,11 @@ export function normalizeRegistrationTemplate(value: unknown): RegistrationTempl
   const id = typeof record.id === 'string' ? record.id : '';
   const name = typeof record.name === 'string' ? record.name : 'Parent Registration';
   const version = Number(record.version ?? 1);
-  return id ? { id, name, version: Number.isFinite(version) ? version : 1, questions } : null;
+  const stepsMeta =
+    record.steps && typeof record.steps === 'object' && !Array.isArray(record.steps)
+      ? (record.steps as RegistrationTemplateStepsMeta)
+      : undefined;
+  return id ? { id, name, version: Number.isFinite(version) ? version : 1, questions, stepsMeta } : null;
 }
 
 export function buildRegistrationAnswers(

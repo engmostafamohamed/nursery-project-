@@ -114,40 +114,32 @@ export async function teacherAttendanceToggle(
 ): Promise<TeacherAttendanceToggleResult> {
   const now = new Date();
   if (existing?.check_in && !existing.check_out) {
+    // Atomically sets check_out and finalizes the day's late-pickup billing server-side —
+    // replaces the old client-orchestrated "set checkout, then separately call
+    // package_apply_extra_hours" sequence. This RPC shares its billing math with the
+    // automatic late-pickup sweep (apply_attendance_late_charge), so a child who was already
+    // provisionally charged by the sweep gets that charge corrected/finalized here rather
+    // than double-billed.
+    const { data: billingRaw, error: billingError } = await supabase.rpc(
+      'record_attendance_checkout_billing' as never,
+      {
+        p_attendance_id: existing.id,
+        p_checkout_at: now.toISOString(),
+      } as never,
+    );
+    if (billingError) throw billingError;
+    const billingResult = (billingRaw ?? {}) as {
+      late_pickup?: boolean;
+      extra_hours?: number;
+      extra_fee?: number;
+    };
+    const billing = {
+      latePickup: billingResult.late_pickup ?? false,
+      extraHours: billingResult.extra_hours ?? 0,
+      extraFee: billingResult.extra_fee ?? 0,
+      lateMinutes: 0,
+    };
     const window = await loadAttendanceWindow(child.nursery_id);
-    const billing = computeLatePickup(now, existing.attendance_date, window);
-
-    // Apply the child's active package to the late-pickup fee. The RPC returns
-    // how many extra hours the package covers and consumes quota atomically.
-    if (billing.latePickup && billing.extraHours > 0) {
-      const { data: coveredRaw } = await supabase.rpc(
-        'package_apply_extra_hours' as never,
-        {
-          p_child_id: child.id,
-          p_extra_hours: billing.extraHours,
-          p_consume: true,
-        } as never,
-      );
-      let covered = typeof coveredRaw === 'number' ? coveredRaw : Number(coveredRaw ?? 0);
-
-      // Legacy fallback: pre-package children flagged via enrollment JSON.
-      if (covered <= 0) {
-        const { data: rawChildData } = await supabase
-          .from('children')
-          .select('enrollment_extended_json')
-          .eq('id', child.id)
-          .single();
-        const childData = rawChildData as {
-          enrollment_extended_json: Record<string, unknown> | null;
-        } | null;
-        if (childData?.enrollment_extended_json?.has_prepaid_extra_hours === true) {
-          covered = billing.extraHours;
-        }
-      }
-
-      const chargeableHours = Math.max(0, billing.extraHours - covered);
-      billing.extraFee = Number((chargeableHours * window.feePerHour).toFixed(2));
-    }
 
     // Resolve who picked up + their photo for the notification.
     const { pickupPersonName, pickupPhotoUrl } =
@@ -155,7 +147,6 @@ export async function teacherAttendanceToggle(
 
     const scanLog: Record<string, unknown> = {
       late_pickup: billing.latePickup,
-      late_minutes: billing.lateMinutes,
       extra_hours: billing.extraHours,
       extra_fee: billing.extraFee,
       end_time: window.endTime,
@@ -180,13 +171,11 @@ export async function teacherAttendanceToggle(
         method: pickup.idPhotoPath ? 'photo+id_capture' : 'photo_only',
       };
     }
+    // check_out/extra_hours are already set by the RPC above — this only attaches the
+    // pickup-identity metadata the RPC doesn't know about.
     const { error } = await supabase
       .from('attendance_records')
-      .update({
-        check_out: now.toISOString(),
-        extra_hours: billing.extraHours,
-        qr_scan_log: scanLog,
-      } as never)
+      .update({ qr_scan_log: scanLog } as never)
       .eq('id', existing.id);
     if (error) throw error;
 

@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { ChatPanel } from '@/components/chat/ChatPanel';
 import { PaymentHistoryTable } from '@/components/financial/PaymentHistoryTable';
 import { FinancialSummaryCard } from '@/components/parent/FinancialSummaryCard';
+import { ParentChildBillingCard } from '@/components/parent/ParentChildBillingCard';
 import { ParentAdminInboxSection } from '@/components/parent/ParentAdminInboxSection';
 import { ParentChildSummaryCards } from '@/components/parent/ParentChildSummaryCards';
 import { ParentDashboardFeedList } from '@/components/parent/ParentDashboardFeedList';
@@ -31,6 +32,7 @@ import { useApplications } from '@/hooks/useApplications';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useNurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
 import { useParentDashboardChildren, type ParentDashboardChildCard } from '@/hooks/useParentDashboardChildren';
+import { useParentChildBilling } from '@/hooks/useParentChildBilling';
 import { useParentDashboardFeed, type ParentDashboardFeedItem } from '@/hooks/useParentDashboardFeed';
 import { useParentDashboardSchedule } from '@/hooks/useParentDashboardSchedule';
 import { useParentEventPermissions } from '@/hooks/useParentEventPermissions';
@@ -640,6 +642,7 @@ export function ParentDashboardPage() {
   const activeChildrenCount = childRows.length;
   const childIds = useMemo(() => childRows.map((child) => child.id), [childRows]);
   const attendanceSummary = useAllChildrenAttendanceSummary({ childIds, nurseryId });
+  const childBillingQuery = useParentChildBilling(childIds);
 
   const unreadTotal = useMemo(
     () => (notifQuery.data ?? []).filter((n) => !n.read).length,
@@ -851,6 +854,25 @@ export function ParentDashboardPage() {
           childInsights={childInsights}
         />
       </section>
+
+      {childRows.length > 0 ? (
+        <section className="space-y-3">
+          <SectionHeading icon="payments">
+            {t('parent.dashboard.sectionBilling', { defaultValue: 'Tuition & extra hours' })}
+          </SectionHeading>
+          <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))]">
+            {childRows.map((child) => (
+              <ParentChildBillingCard
+                key={child.id}
+                childId={child.id}
+                childName={child.nameEn || child.nameAr}
+                parentId={user?.id}
+                billing={childBillingQuery.data?.[child.id]}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-12">
         <div className="space-y-3 xl:col-span-7">

@@ -33,6 +33,16 @@ import { useHelpAiUiStore } from '@/store/useHelpAiUiStore';
  * Admin chrome: sidebar uses logical start/end spacing — Wave 6 RTL review (icons + nav).
  * Routes below must match exactly so child paths (e.g. /staff/onboarding) don’t highlight the parent link.
  */
+const SIDEBAR_COLLAPSED_KEY = 'xo-admin-sidebar-collapsed';
+
+function readStoredSidebarCollapsed(): boolean {
+  try {
+    return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 const NAV_LINK_END_PATHS = new Set([
   '/admin',
   '/admin/children',
@@ -65,6 +75,7 @@ const navItems: NavItem[] = [
   { to: '/admin/events', key: 'events', icon: 'event', feature: 'event_calendar' },
   { to: '/admin/courses', key: 'courses', icon: 'school' },
   { to: '/admin/packages', key: 'packages', icon: 'package_2' },
+  { to: '/admin/deals', key: 'deals', icon: 'sell' },
   { to: '/admin/reports', key: 'reports', icon: 'grading', feature: 'daily_reports' },
   { to: '/admin/chat', key: 'chat', icon: 'forum' },
   { to: '/admin/messages/broadcast', key: 'broadcastComposer', icon: 'campaign', feature: 'broadcast_messages' },
@@ -156,6 +167,23 @@ export function AdminLayout() {
   );
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(readStoredSidebarCollapsed);
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? '1' : '0');
+      } catch {
+        // Private browsing / storage disabled — the toggle still works for this session.
+      }
+      return next;
+    });
+  };
+  // While pinned mini, hovering (or tabbing focus into) the rail temporarily shows the full
+  // sidebar — same as VS Code/Notion's collapsed-rail peek. It only affects the sidebar's own
+  // width/content, never the page's content margin below, so nothing reflows while peeking.
+  const [peeking, setPeeking] = useState(false);
+  const showExpanded = !collapsed || peeking;
   const { data: notifications = [] } = useNotificationsCenter(user?.id);
   const { data: inAppNotifications = [] } = useAdminInAppNotifications(user?.id);
   const mediaPendingQuery = useQuery({
@@ -218,13 +246,42 @@ export function AdminLayout() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <OfflineIndicator />
-      <aside className="no-print fixed start-0 top-0 z-40 flex h-dvh max-h-dvh w-64 flex-col overflow-hidden bg-primary p-4 shadow-lg">
-        <div className="mb-4 shrink-0 flex items-center gap-3 rounded-2xl bg-white/10 p-2">
+      <aside
+        onMouseEnter={() => setPeeking(true)}
+        onMouseLeave={() => setPeeking(false)}
+        onFocus={() => setPeeking(true)}
+        onBlur={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setPeeking(false);
+        }}
+        className={cn(
+          'no-print fixed start-0 top-0 z-40 flex h-dvh max-h-dvh flex-col overflow-hidden bg-primary p-4 shadow-lg transition-[width] duration-200',
+          showExpanded ? 'w-64' : 'w-20',
+        )}
+      >
+        <div
+          className={cn(
+            'mb-4 shrink-0 flex items-center gap-3 rounded-2xl bg-white/10 p-2',
+            !showExpanded && 'flex-col gap-2',
+          )}
+        >
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/20 text-sm font-bold text-white">XO</div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-white" title={brandTitle}>{brandTitle}</p>
-            <p className="text-xs text-white/70">{t('admin.nav.brandSubtitle')}</p>
-          </div>
+          {showExpanded ? (
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-white" title={brandTitle}>{brandTitle}</p>
+              <p className="text-xs text-white/70">{t('admin.nav.brandSubtitle')}</p>
+            </div>
+          ) : null}
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            title={t(collapsed ? 'admin.nav.expandSidebar' : 'admin.nav.collapseSidebar')}
+            aria-label={t(collapsed ? 'admin.nav.expandSidebar' : 'admin.nav.collapseSidebar')}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+          >
+            <span className="material-symbols-outlined text-lg" aria-hidden>
+              {collapsed ? 'left_panel_open' : 'left_panel_close'}
+            </span>
+          </button>
         </div>
         <nav
           className="admin-sidebar-scroll min-h-0 flex-1 space-y-1.5 overflow-y-auto overflow-x-hidden overscroll-y-contain pe-1"
@@ -235,9 +292,12 @@ export function AdminLayout() {
               key={item.key}
               to={item.to}
               end={NAV_LINK_END_PATHS.has(item.to)}
+              title={!showExpanded ? t(`admin.nav.${item.key}`) : undefined}
+              aria-label={!showExpanded ? t(`admin.nav.${item.key}`) : undefined}
               className={({ isActive }) =>
                 cn(
-                  'group flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors',
+                  'group relative flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors',
+                  !showExpanded && 'justify-center px-0',
                   isActive
                     ? 'active bg-white/15 text-white shadow-sm ring-1 ring-white/20'
                     : 'text-white/70 hover:bg-white/10 hover:text-white',
@@ -245,50 +305,68 @@ export function AdminLayout() {
               }
             >
               <span className="material-symbols-outlined shrink-0 text-base opacity-90" aria-hidden>{item.icon}</span>
-              <span className="min-w-0 truncate">{t(`admin.nav.${item.key}`)}</span>
-              {item.key === 'admissions' && admissionsPending > 0 ? (
-                <span className="rounded-full bg-white px-1.5 text-[10px] font-bold leading-5 text-primary shadow-sm">
-                  {admissionsPending}
-                </span>
+              {showExpanded ? (
+                <>
+                  <span className="min-w-0 truncate">{t(`admin.nav.${item.key}`)}</span>
+                  {item.key === 'admissions' && admissionsPending > 0 ? (
+                    <span className="rounded-full bg-white px-1.5 text-[10px] font-bold leading-5 text-primary shadow-sm">
+                      {admissionsPending}
+                    </span>
+                  ) : null}
+                  {item.key === 'notifications' && inAppUnreadCount > 0 ? (
+                    <span className="rounded-full bg-white px-1.5 text-[10px] font-bold leading-5 text-primary shadow-sm">
+                      {inAppUnreadCount}
+                    </span>
+                  ) : null}
+                  <span className="ms-auto h-1.5 w-1.5 rounded-full bg-white opacity-0 transition-opacity group-[.active]:opacity-80" />
+                </>
+              ) : item.key === 'admissions' && admissionsPending > 0 ? (
+                <span className="absolute end-1.5 top-1.5 h-2 w-2 rounded-full bg-white" />
               ) : null}
-              {item.key === 'notifications' && inAppUnreadCount > 0 ? (
-                <span className="rounded-full bg-white px-1.5 text-[10px] font-bold leading-5 text-primary shadow-sm">
-                  {inAppUnreadCount}
-                </span>
-              ) : null}
-              <span className="ms-auto h-1.5 w-1.5 rounded-full bg-white opacity-0 transition-opacity group-[.active]:opacity-80" />
             </NavLink>
           ))}
           <div className="mt-3 border-t border-white/15 pt-3">
             <button
               type="button"
-              className="flex min-h-11 w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+              className={cn(
+                'flex min-h-11 w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white',
+                !showExpanded && 'justify-center px-0',
+              )}
               aria-expanded={moreOpen}
+              title={!showExpanded ? t('admin.nav.more') : undefined}
+              aria-label={!showExpanded ? t('admin.nav.more') : undefined}
               onClick={() => setMoreOpen((prev) => !prev)}
             >
               <span className="flex min-w-0 items-center gap-2">
                 <span className="material-symbols-outlined shrink-0 text-base" aria-hidden>menu</span>
-                <span className="truncate">{t('admin.nav.more')}</span>
+                {showExpanded ? <span className="truncate">{t('admin.nav.more')}</span> : null}
               </span>
-              <span className="material-symbols-outlined shrink-0 text-base" aria-hidden>
-                {moreOpen ? 'expand_less' : 'expand_more'}
-              </span>
+              {showExpanded ? (
+                <span className="material-symbols-outlined shrink-0 text-base" aria-hidden>
+                  {moreOpen ? 'expand_less' : 'expand_more'}
+                </span>
+              ) : null}
             </button>
             {moreOpen ? (
               <div className="mt-2 space-y-3">
                 {visibleMoreGroups.map((group) => (
                   <div key={group.titleKey} className="space-y-1">
-                    <p className="px-3 text-[11px] uppercase tracking-wide text-white/50">
-                      {t(`admin.nav.${group.titleKey}`)}
-                    </p>
+                    {showExpanded ? (
+                      <p className="px-3 text-[11px] uppercase tracking-wide text-white/50">
+                        {t(`admin.nav.${group.titleKey}`)}
+                      </p>
+                    ) : null}
                     {group.items.map((item) => (
                       <NavLink
                         key={item.key}
                         to={item.to}
                         end={NAV_LINK_END_PATHS.has(item.to)}
+                        title={!showExpanded ? t(`admin.nav.${item.key}`) : undefined}
+                        aria-label={!showExpanded ? t(`admin.nav.${item.key}`) : undefined}
                         className={({ isActive }) =>
                           cn(
                             'flex min-h-10 items-center gap-2 rounded-xl px-3 py-2 text-sm transition-colors',
+                            !showExpanded && 'justify-center px-0',
                             isActive
                               ? 'bg-white/15 text-white ring-1 ring-white/15'
                               : 'text-white/60 hover:bg-white/10 hover:text-white',
@@ -296,11 +374,15 @@ export function AdminLayout() {
                         }
                       >
                         <span className="material-symbols-outlined shrink-0 text-base" aria-hidden>{item.icon}</span>
-                        <span className="min-w-0 truncate">{t(`admin.nav.${item.key}`)}</span>
-                        {item.key === 'mediaApproval' && mediaPending > 0 ? (
-                          <span className="rounded-full bg-white px-1.5 text-[10px] font-bold leading-5 text-primary shadow-sm">
-                            {mediaPending}
-                          </span>
+                        {showExpanded ? (
+                          <>
+                            <span className="min-w-0 truncate">{t(`admin.nav.${item.key}`)}</span>
+                            {item.key === 'mediaApproval' && mediaPending > 0 ? (
+                              <span className="rounded-full bg-white px-1.5 text-[10px] font-bold leading-5 text-primary shadow-sm">
+                                {mediaPending}
+                              </span>
+                            ) : null}
+                          </>
                         ) : null}
                       </NavLink>
                     ))}
@@ -315,34 +397,42 @@ export function AdminLayout() {
             <Button
               type="button"
               variant="outline"
-              className="w-full min-h-11 border-white/30 bg-white/10 text-white hover:bg-white/20"
+              title={!showExpanded ? t('help.resources') : undefined}
+              aria-label={!showExpanded ? t('help.resources') : undefined}
+              className={cn('w-full min-h-11 border-white/30 bg-white/10 text-white hover:bg-white/20', !showExpanded && 'px-0')}
               onClick={() => setHelpOpen(true)}
             >
-              <span className="material-symbols-outlined me-2 text-base" aria-hidden>
+              <span className={cn('material-symbols-outlined text-base', showExpanded && 'me-2')} aria-hidden>
                 school
               </span>
-              {t('help.resources')}
+              {showExpanded ? t('help.resources') : null}
             </Button>
           ) : null}
-          <Button className="w-full bg-white/20 text-white hover:bg-white/30">
-            <span className="material-symbols-outlined me-2 text-base" aria-hidden>add_circle</span>
-            {t('admin.addNewEntry')}
+          <Button
+            title={!showExpanded ? t('admin.addNewEntry') : undefined}
+            aria-label={!showExpanded ? t('admin.addNewEntry') : undefined}
+            className={cn('w-full bg-white/20 text-white hover:bg-white/30', !showExpanded && 'px-0')}
+          >
+            <span className={cn('material-symbols-outlined text-base', showExpanded && 'me-2')} aria-hidden>add_circle</span>
+            {showExpanded ? t('admin.addNewEntry') : null}
           </Button>
-          <div className="flex items-center gap-3">
-            <Avatar>
+          <div className={cn('flex items-center gap-3', !showExpanded && 'justify-center')}>
+            <Avatar title={!showExpanded ? (displayName || t('admin.userMenu.fallbackName')) : undefined}>
               <AvatarFallback className="bg-white/20 text-xs font-semibold text-white">{sidebarInitials}</AvatarFallback>
             </Avatar>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-white">
-                {displayName || t('admin.userMenu.fallbackName')}
-              </p>
-              <p className="truncate text-xs text-white/60">{accountEmail || '—'}</p>
-            </div>
+            {showExpanded ? (
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-white">
+                  {displayName || t('admin.userMenu.fallbackName')}
+                </p>
+                <p className="truncate text-xs text-white/60">{accountEmail || '—'}</p>
+              </div>
+            ) : null}
           </div>
         </div>
       </aside>
 
-      <div className="ms-64 min-h-screen">
+      <div className={cn('min-h-screen transition-[margin] duration-200', collapsed ? 'ms-20' : 'ms-64')}>
         <header className="no-print sticky top-0 z-30 border-b border-border bg-surface/80 backdrop-blur-xl">
           <div className="flex items-center gap-3 px-8 py-4">
             <BackButton />

@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
-import type { ApplicationExtraHoursPackage } from '@/hooks/useApplicationExtraHoursPackage';
+import { DiscountCountdown } from '@/components/parent/DiscountCountdown';
+import { computeExtraHoursDisplayPrice, type ApplicationExtraHoursPackage } from '@/hooks/useApplicationExtraHoursPackage';
 import { cn } from '@/lib/utils';
 
 type Props = {
@@ -94,6 +95,7 @@ export function ApplicationExtraHoursPackageCard({
 
         {packages.map((pkg) => {
           const active = pkg.id === selectedPackageId;
+          const { discountAmount, displayPrice, dealApplied } = computeExtraHoursDisplayPrice(pkg);
           return (
             <button
               key={pkg.id}
@@ -108,6 +110,22 @@ export function ApplicationExtraHoursPackageCard({
                   : 'border-outline-variant bg-surface-container-lowest hover:border-primary hover:bg-primary/5',
               )}
             >
+              {dealApplied ? (
+                <span className="mb-2 flex flex-wrap items-center gap-1.5">
+                  <Badge variant="error">
+                    {pkg.deal?.discountType === 'percentage'
+                      ? t('applications.extraHoursPackage.dealPercentOff', {
+                          value: pkg.deal.discountValue,
+                          defaultValue: '{{value}}% OFF',
+                        })
+                      : t('applications.extraHoursPackage.dealAmountOff', {
+                          value: pkg.deal?.discountValue.toFixed(2),
+                          defaultValue: 'EGP {{value}} OFF',
+                        })}
+                  </Badge>
+                  <DiscountCountdown endsAt={pkg.deal?.endsAt ?? null} />
+                </span>
+              ) : null}
               <span className="flex items-start justify-between gap-3">
                 <span className="min-w-0">
                   <span className="block font-semibold text-on-surface">{packageName(pkg, isAr)}</span>
@@ -126,8 +144,15 @@ export function ApplicationExtraHoursPackageCard({
                   <span className="material-symbols-outlined text-base" aria-hidden>{active ? 'check' : 'add'}</span>
                 </span>
               </span>
-              <span className="mt-auto pt-3 text-sm font-semibold text-on-surface">
-                {t('invoice.egpAmount', { amount: pkg.price.toFixed(2) })}
+              <span className="mt-auto flex flex-wrap items-baseline gap-2 pt-3">
+                {discountAmount > 0 ? (
+                  <span className="text-xs text-on-surface-variant line-through">
+                    {t('invoice.egpAmount', { amount: pkg.price.toFixed(2) })}
+                  </span>
+                ) : null}
+                <span className={cn('text-sm font-semibold', discountAmount > 0 ? 'text-error' : 'text-on-surface')}>
+                  {t('invoice.egpAmount', { amount: displayPrice.toFixed(2) })}
+                </span>
               </span>
               <span className="mt-1 text-xs text-on-surface-variant">{validityLabel(pkg, t)}</span>
             </button>
