@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { adminDealsKey } from '@/hooks/useAdminDeals';
 import { supabase } from '@/lib/supabase';
 
 export const packagesKey = (nurseryId: string | null | undefined) =>
@@ -89,23 +90,44 @@ export function useAdminPackages(nurseryId: string | null | undefined) {
     enabled: Boolean(nurseryId),
   });
 
+  const PACKAGE_COLUMNS =
+    'id, nursery_id, name_ar, name_en, description_ar, description_en, coverage_type, included_hours, price, active, validity_value, validity_unit, created_at, deal_id';
+
   const create = useMutation({
-    mutationFn: async (input: PackageInput) => {
+    mutationFn: async (input: PackageInput): Promise<PackageRow> => {
       if (!nurseryId) throw new Error('Missing nursery');
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('packages')
-        .insert({ ...input, nursery_id: nurseryId } as never);
+        .insert({ ...input, nursery_id: nurseryId } as never)
+        .select(PACKAGE_COLUMNS)
+        .single();
       if (error) throw error;
+      return { ...(data as Omit<PackageRow, 'assigned_count'>), assigned_count: 0 };
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: key }),
+    // Write the new row straight into the cache instead of only invalidating — invalidation
+    // only *schedules* a background refetch, so the list could still momentarily render the
+    // old (pre-create) data right after this mutation resolves, looking like nothing happened
+    // until the page is refreshed.
+    onSuccess: (created) => {
+      queryClient.setQueryData<PackageRow[]>(key, (old) => [created, ...(old ?? [])]);
+      // A deal's assigned_count is computed by cross-referencing packages, which lives in a
+      // separate query cache — it has no way to know this package just picked up a deal_id.
+      if (created.deal_id) void queryClient.invalidateQueries({ queryKey: adminDealsKey(nurseryId) });
+    },
   });
 
   const update = useMutation({
-    mutationFn: async ({ id, input }: { id: string; input: PackageInput }) => {
-      const { error } = await supabase.from('packages').update(input as never).eq('id', id);
+    mutationFn: async ({ id, input }: { id: string; input: PackageInput }): Promise<Omit<PackageRow, 'assigned_count'>> => {
+      const { data, error } = await supabase.from('packages').update(input as never).eq('id', id).select(PACKAGE_COLUMNS).single();
       if (error) throw error;
+      return data as Omit<PackageRow, 'assigned_count'>;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: key }),
+    onSuccess: (updated) => {
+      queryClient.setQueryData<PackageRow[]>(key, (old) => (old ?? []).map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
+      // An edit may have assigned, switched, or cleared a deal — always refresh deals'
+      // assigned_count rather than trying to diff the previous deal_id.
+      void queryClient.invalidateQueries({ queryKey: adminDealsKey(nurseryId) });
+    },
   });
 
   useEffect(() => {

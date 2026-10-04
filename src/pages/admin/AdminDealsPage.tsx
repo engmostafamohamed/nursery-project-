@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
@@ -14,11 +15,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { FilterMenu } from '@/components/ui/FilterMenu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
-import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -29,6 +30,7 @@ import {
   type DealInput,
   type DealRow,
 } from '@/hooks/useAdminDeals';
+import { formatQueryError } from '@/lib/utils';
 
 const EMPTY_FORM: DealInput = {
   name_ar: '',
@@ -77,6 +79,9 @@ function validitySummary(deal: Pick<DealRow, 'starts_at' | 'ends_at' | 'active'>
   return 'No expiry';
 }
 
+type StatusFilter = 'all' | 'live' | 'inactive';
+type TypeFilter = 'all' | DealDiscountType;
+
 export function AdminDealsPage() {
   const { user } = useAuthSession();
   const { data: profile } = useUserProfile(user?.id);
@@ -86,9 +91,50 @@ export function AdminDealsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<DealInput>(EMPTY_FORM);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
+  const [endsFrom, setEndsFrom] = useState('');
+  const [endsTo, setEndsTo] = useState('');
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
-  const rows = query.data ?? [];
+  const rows = useMemo(() => query.data ?? [], [query.data]);
   const busy = create.isPending || update.isPending;
+
+  const filteredRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return rows.filter((deal) => {
+      const live = isDealCurrentlyActive(deal);
+      if (statusFilter === 'live' && !live) return false;
+      if (statusFilter === 'inactive' && live) return false;
+      if (typeFilter !== 'all' && deal.discount_type !== typeFilter) return false;
+      if (q && !`${deal.name_en} ${deal.name_ar}`.toLowerCase().includes(q)) return false;
+      if (endsFrom || endsTo) {
+        if (!deal.ends_at) return false;
+        const endsMs = new Date(deal.ends_at).getTime();
+        if (endsFrom && endsMs < new Date(endsFrom).getTime()) return false;
+        if (endsTo && endsMs > new Date(`${endsTo}T23:59:59`).getTime()) return false;
+      }
+      return true;
+    });
+  }, [rows, search, statusFilter, typeFilter, endsFrom, endsTo]);
+
+  const hasActiveFilters = Boolean(search || statusFilter !== 'all' || typeFilter !== 'all' || endsFrom || endsTo);
+  const clearFilters = () => {
+    setSearch('');
+    setStatusFilter('all');
+    setTypeFilter('all');
+    setEndsFrom('');
+    setEndsTo('');
+  };
+
+  const toggleExpanded = (id: string) =>
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   const openCreate = () => {
     setEditingId(null);
@@ -131,7 +177,7 @@ export function AdminDealsPage() {
       toast.success('Deal saved.');
       setDialogOpen(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not save the deal.');
+      toast.error('Could not save the deal.', { description: formatQueryError(error) });
     }
   };
 
@@ -140,7 +186,7 @@ export function AdminDealsPage() {
       await toggleActive.mutateAsync({ id: deal.id, active: !deal.active });
       toast.success(deal.active ? 'Deal deactivated.' : 'Deal activated.');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not update the deal.');
+      toast.error('Could not update the deal.', { description: formatQueryError(error) });
     }
   };
 
@@ -177,43 +223,174 @@ export function AdminDealsPage() {
         />
       ) : (
         <div className="space-y-3">
-          {rows.map((deal) => {
-            const live = isDealCurrentlyActive(deal);
-            return (
-              <div
-                key={deal.id}
-                className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4"
-              >
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-sm font-semibold text-on-surface">{deal.name_en || deal.name_ar}</span>
-                    <Badge variant={live ? 'success' : 'secondary'}>{live ? 'Live' : validitySummary(deal)}</Badge>
-                  </div>
-                  <p className="mt-1 text-xs text-on-surface-variant">
-                    {discountSummary(deal)}
-                    {' · '}
-                    {live ? validitySummary(deal) : null}
-                    {live ? ' · ' : null}
-                    {deal.assigned_count} {deal.assigned_count === 1 ? 'package' : 'packages'}
-                  </p>
-                </div>
-                <div className="flex shrink-0 flex-wrap gap-2">
-                  <Button type="button" variant="outline" size="sm" onClick={() => openEdit(deal)}>
-                    Edit
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={toggleActive.isPending}
-                    onClick={() => void handleToggleActive(deal)}
-                  >
-                    {deal.active ? 'Deactivate' : 'Activate'}
-                  </Button>
-                </div>
+          <div className="flex flex-wrap items-end gap-3 rounded-xl border border-outline-variant bg-surface p-3 shadow-sm">
+            <div className="min-w-[180px] flex-1 space-y-1">
+              <Label className="text-xs font-semibold text-on-surface-variant">Search</Label>
+              <Input className="h-11" placeholder="Deal name…" value={search} onChange={(e) => setSearch(e.target.value)} />
+            </div>
+            <FilterMenu<StatusFilter>
+              className="w-48"
+              label="Status"
+              icon="toggle_on"
+              value={statusFilter}
+              onChange={setStatusFilter}
+              options={[
+                { value: 'all', label: 'All statuses' },
+                { value: 'live', label: 'Live only' },
+                { value: 'inactive', label: 'Inactive / expired' },
+              ]}
+            />
+            <FilterMenu<TypeFilter>
+              className="w-52"
+              label="Discount type"
+              icon="sell"
+              value={typeFilter}
+              onChange={setTypeFilter}
+              options={[
+                { value: 'all', label: 'All types' },
+                { value: 'percentage', label: 'Percentage off' },
+                { value: 'fixed_amount', label: 'Fixed amount off' },
+              ]}
+            />
+            <div className="w-40 space-y-1">
+              <Label className="text-xs font-semibold text-on-surface-variant">Ends after</Label>
+              <Input className="h-11" type="date" value={endsFrom} onChange={(e) => setEndsFrom(e.target.value)} />
+            </div>
+            <div className="w-40 space-y-1">
+              <Label className="text-xs font-semibold text-on-surface-variant">Ends before</Label>
+              <Input className="h-11" type="date" value={endsTo} onChange={(e) => setEndsTo(e.target.value)} />
+            </div>
+            {hasActiveFilters ? (
+              <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
+                <MaterialSymbol name="close" size="text-base" />
+                Clear filters
+              </Button>
+            ) : null}
+          </div>
+
+          {filteredRows.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-outline-variant p-6 text-center text-sm text-on-surface-variant">
+              No deals match these filters.
+            </p>
+          ) : (
+            <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[920px] text-sm">
+                  <thead className="bg-surface-container-lowest text-xs uppercase text-on-surface-variant">
+                    <tr>
+                      <th className="px-4 py-3 text-start font-semibold">Deal</th>
+                      <th className="px-4 py-3 text-start font-semibold">Discount</th>
+                      <th className="px-4 py-3 text-start font-semibold">Status</th>
+                      <th className="px-4 py-3 text-start font-semibold">Window</th>
+                      <th className="px-4 py-3 text-start font-semibold">Packages</th>
+                      <th className="px-4 py-3 text-start font-semibold">Children</th>
+                      <th className="px-4 py-3 text-end font-semibold">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-outline-variant">
+                    {filteredRows.map((deal) => {
+                      const live = isDealCurrentlyActive(deal);
+                      const expanded = expandedIds.has(deal.id);
+                      return (
+                        <Fragment key={deal.id}>
+                          <tr className="bg-surface transition hover:bg-surface-container-lowest">
+                            <td className="max-w-[220px] px-4 py-4 align-top">
+                              <p className="truncate font-semibold text-on-surface">{deal.name_en || deal.name_ar}</p>
+                              {deal.description_en || deal.description_ar ? (
+                                <p className="mt-0.5 truncate text-xs text-on-surface-variant">
+                                  {deal.description_en || deal.description_ar}
+                                </p>
+                              ) : null}
+                            </td>
+                            <td className="px-4 py-4 align-top font-medium text-on-surface">{discountSummary(deal)}</td>
+                            <td className="px-4 py-4 align-top">
+                              <Badge variant={live ? 'success' : 'secondary'}>{live ? 'Live' : validitySummary(deal)}</Badge>
+                            </td>
+                            <td className="px-4 py-4 align-top text-xs text-on-surface-variant">
+                              {deal.starts_at ? <>From {fmtDateTime(deal.starts_at)}<br /></> : null}
+                              {deal.ends_at ? <>Until {fmtDateTime(deal.ends_at)}</> : 'No expiry'}
+                            </td>
+                            <td className="px-4 py-4 align-top">
+                              {deal.assigned_packages.length === 0 ? (
+                                <span className="text-xs text-on-surface-variant">Not assigned</span>
+                              ) : (
+                                <div className="flex max-w-[220px] flex-wrap gap-1">
+                                  {deal.assigned_packages.map((p) => (
+                                    <Link
+                                      key={p.id}
+                                      to="/admin/packages"
+                                      title="Open Packages to edit this one"
+                                      className="inline-flex items-center gap-1 rounded-full border border-outline-variant bg-surface-container-lowest px-2 py-0.5 text-xs text-on-surface hover:border-primary hover:text-primary"
+                                    >
+                                      <MaterialSymbol name={p.kind === 'tuition' ? 'payments' : 'schedule'} size="text-xs" />
+                                      {p.nameEn || p.nameAr}
+                                    </Link>
+                                  ))}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-4 py-4 align-top">
+                              {deal.children_count === 0 ? (
+                                <span className="text-xs text-on-surface-variant">0</span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleExpanded(deal.id)}
+                                  className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-xs font-medium text-primary hover:bg-primary/10"
+                                >
+                                  <MaterialSymbol name="groups" size="text-xs" />
+                                  {deal.children_count}
+                                  <MaterialSymbol name={expanded ? 'expand_less' : 'expand_more'} size="text-xs" />
+                                </button>
+                              )}
+                            </td>
+                            <td className="px-4 py-4 align-top">
+                              <div className="flex justify-end gap-2">
+                                <Button type="button" variant="outline" size="sm" onClick={() => openEdit(deal)}>
+                                  Edit
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={toggleActive.isPending}
+                                  onClick={() => void handleToggleActive(deal)}
+                                >
+                                  {deal.active ? 'Deactivate' : 'Activate'}
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                          {expanded ? (
+                            <tr className="bg-surface-container-lowest">
+                              <td colSpan={7} className="px-4 py-3">
+                                <p className="mb-1.5 text-xs font-semibold uppercase text-on-surface-variant">
+                                  Children using this discount
+                                </p>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {deal.assigned_packages.flatMap((p) =>
+                                    p.children.map((c) => (
+                                      <span
+                                        key={`${p.id}-${c.id}`}
+                                        className="inline-flex items-center gap-1 rounded-full border border-outline-variant bg-surface px-2 py-0.5 text-xs text-on-surface"
+                                      >
+                                        {c.nameEn || c.nameAr}
+                                        <span className="text-on-surface-variant">· {p.nameEn || p.nameAr}</span>
+                                      </span>
+                                    )),
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ) : null}
+                        </Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-            );
-          })}
+            </section>
+          )}
         </div>
       )}
 
@@ -246,13 +423,14 @@ export function AdminDealsPage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label>Discount type</Label>
-                  <Select
+                  <FilterMenu<DealDiscountType>
                     value={form.discount_type}
-                    onChange={(e) => setForm((f) => ({ ...f, discount_type: e.target.value as DealDiscountType }))}
-                  >
-                    <option value="percentage">Percentage off</option>
-                    <option value="fixed_amount">Fixed amount off (EGP)</option>
-                  </Select>
+                    onChange={(discount_type) => setForm((f) => ({ ...f, discount_type }))}
+                    options={[
+                      { value: 'percentage', label: 'Percentage off', icon: 'percent' },
+                      { value: 'fixed_amount', label: 'Fixed amount off (EGP)', icon: 'payments' },
+                    ]}
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label>{form.discount_type === 'percentage' ? 'Discount (%)' : 'Discount (EGP)'}</Label>

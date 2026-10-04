@@ -12,15 +12,20 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { FilterMenu } from '@/components/ui/FilterMenu';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
+import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FormSection } from '@/components/admin/settings/FormSection';
 import { PackageDealPicker } from '@/components/admin/settings/PackageDealPicker';
 import { TuitionPackagesEditor } from '@/components/admin/settings/TuitionPackagesEditor';
-import { useAdminDeals, isDealCurrentlyActive } from '@/hooks/useAdminDeals';
+import { useAdminDeals, isDealCurrentlyActive, applyDealToPrice } from '@/hooks/useAdminDeals';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useNurseryChildrenPicker } from '@/hooks/useNurseryChildrenPicker';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { formatQueryError } from '@/lib/utils';
 import {
   useAdminPackages,
   usePackageAssignments,
@@ -176,7 +181,33 @@ export function AdminPackagesPage() {
   const [form, setForm] = useState<PackageInput>(EMPTY_FORM);
   const [managePkg, setManagePkg] = useState<PackageRow | null>(null);
 
-  const rows = query.data ?? [];
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [coverageFilter, setCoverageFilter] = useState<'all' | CoverageType>('all');
+  const [dealFilter, setDealFilter] = useState<'all' | 'with' | 'without'>('all');
+
+  const rows = useMemo(() => query.data ?? [], [query.data]);
+
+  const filteredRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return rows.filter((p) => {
+      if (statusFilter === 'active' && !p.active) return false;
+      if (statusFilter === 'inactive' && p.active) return false;
+      if (coverageFilter !== 'all' && p.coverage_type !== coverageFilter) return false;
+      if (dealFilter === 'with' && !p.deal_id) return false;
+      if (dealFilter === 'without' && p.deal_id) return false;
+      if (q && !`${p.name_en} ${p.name_ar}`.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [rows, search, statusFilter, coverageFilter, dealFilter]);
+
+  const hasActiveFilters = Boolean(search || statusFilter !== 'all' || coverageFilter !== 'all' || dealFilter !== 'all');
+  const clearFilters = () => {
+    setSearch('');
+    setStatusFilter('all');
+    setCoverageFilter('all');
+    setDealFilter('all');
+  };
   const busy = create.isPending || update.isPending;
 
   const name = useMemo(
@@ -232,8 +263,8 @@ export function AdminPackagesPage() {
       else await create.mutateAsync(payload);
       toast.success(t('packages.saved'));
       setDialogOpen(false);
-    } catch {
-      toast.error(t('packages.saveFailed'));
+    } catch (error) {
+      toast.error(t('packages.saveFailed'), { description: formatQueryError(error) });
     }
   };
 
@@ -256,8 +287,8 @@ export function AdminPackagesPage() {
         },
       });
       toast.success(p.active ? t('packages.deactivated') : t('packages.activated'));
-    } catch {
-      toast.error(t('packages.saveFailed'));
+    } catch (error) {
+      toast.error(t('packages.saveFailed'), { description: formatQueryError(error) });
     }
   };
 
@@ -302,69 +333,150 @@ export function AdminPackagesPage() {
             />
           ) : (
             <div className="space-y-3">
-              {rows.map((p) => (
-                <div
-                  key={p.id}
-                  className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4"
-                >
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-on-surface">{name(p)}</p>
-                      <span
-                        className={
-                          'rounded-full border px-2 py-0.5 text-xs font-medium ' +
-                          (p.active
-                            ? 'border-success/30 bg-success/10 text-success'
-                            : 'border-outline-variant bg-surface-container text-on-surface-variant')
-                        }
-                      >
-                        {p.active ? t('packages.active') : t('packages.inactive')}
-                      </span>
-                      {(() => {
-                        const deal = (dealsQuery.data ?? []).find((d) => d.id === p.deal_id);
-                        if (!deal || !isDealCurrentlyActive(deal)) return null;
-                        return (
-                          <span className="rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
-                            {deal.discount_type === 'percentage'
-                              ? `${deal.discount_value}% off`
-                              : `EGP ${deal.discount_value} off`}
-                          </span>
-                        );
-                      })()}
-                    </div>
-                    <p className="mt-1 text-xs text-on-surface-variant">
-                      {p.coverage_type === 'unlimited'
-                        ? t('packages.typeUnlimited')
-                        : t('packages.typeQuota', { hours: p.included_hours ?? 0 })}
-                      {' · '}
-                      {t('packages.priceLabel', { price: p.price })}
-                      {' · '}
-                      {p.validity_value && p.validity_unit
-                        ? t('packages.validityLabel', { value: p.validity_value, unit: t(`packages.validityUnit.${p.validity_unit}`) })
-                        : t('packages.validityNever')}
-                      {' · '}
-                      {t('packages.assignedCount', { count: p.assigned_count })}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 flex-wrap gap-2">
-                    <Button type="button" variant="outline" size="sm" onClick={() => setManagePkg(p)}>
-                      {t('packages.manageChildren')}
-                    </Button>
-                    <Button type="button" variant="outline" size="sm" onClick={() => openEdit(p)}>
-                      {t('common.edit')}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={update.isPending}
-                      onClick={() => void toggleActive(p)}
-                    >
-                      {p.active ? t('packages.deactivate') : t('packages.activate')}
-                    </Button>
-                  </div>
-                </div>
-              ))}
+            <div className="flex flex-wrap items-end gap-3 rounded-xl border border-outline-variant bg-surface p-3 shadow-sm">
+              <div className="min-w-[180px] flex-1 space-y-1">
+                <Label className="text-xs font-semibold text-on-surface-variant">Search</Label>
+                <Input className="h-11" placeholder="Package name…" value={search} onChange={(e) => setSearch(e.target.value)} />
+              </div>
+              <FilterMenu<typeof statusFilter>
+                className="w-48"
+                label="Status"
+                icon="toggle_on"
+                value={statusFilter}
+                onChange={setStatusFilter}
+                options={[
+                  { value: 'all', label: 'All statuses' },
+                  { value: 'active', label: t('packages.active') },
+                  { value: 'inactive', label: t('packages.inactive') },
+                ]}
+              />
+              <FilterMenu<typeof coverageFilter>
+                className="w-52"
+                label={t('packages.fieldType')}
+                icon="schedule"
+                value={coverageFilter}
+                onChange={setCoverageFilter}
+                options={[
+                  { value: 'all', label: 'All types' },
+                  { value: 'unlimited', label: t('packages.optUnlimited') },
+                  { value: 'hours_quota', label: t('packages.optQuota') },
+                ]}
+              />
+              <FilterMenu<typeof dealFilter>
+                className="w-52"
+                label="Discount"
+                icon="sell"
+                value={dealFilter}
+                onChange={setDealFilter}
+                options={[
+                  { value: 'all', label: 'All packages' },
+                  { value: 'with', label: 'With a discount' },
+                  { value: 'without', label: 'Without a discount' },
+                ]}
+              />
+              {hasActiveFilters ? (
+                <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
+                  <MaterialSymbol name="close" size="text-base" />
+                  Clear filters
+                </Button>
+              ) : null}
+            </div>
+
+            {filteredRows.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-outline-variant p-6 text-center text-sm text-on-surface-variant">
+                No packages match these filters.
+              </p>
+            ) : (
+            <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[920px] text-sm">
+                  <thead className="bg-surface-container-lowest text-xs uppercase text-on-surface-variant">
+                    <tr>
+                      <th className="px-4 py-3 text-start font-semibold">{t('packages.fieldNameEn')}</th>
+                      <th className="px-4 py-3 text-start font-semibold">{t('packages.fieldPrice')}</th>
+                      <th className="px-4 py-3 text-start font-semibold">{t('packages.fieldType')}</th>
+                      <th className="px-4 py-3 text-start font-semibold">{t('packages.fieldValidityValue')}</th>
+                      <th className="px-4 py-3 text-start font-semibold">Assigned</th>
+                      <th className="px-4 py-3 text-start font-semibold">{t('packages.active')}</th>
+                      <th className="px-4 py-3 text-end font-semibold">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-outline-variant">
+                    {filteredRows.map((p) => {
+                      const deal = (dealsQuery.data ?? []).find((d) => d.id === p.deal_id);
+                      const live = deal ? isDealCurrentlyActive(deal) : false;
+                      const discounted = deal ? applyDealToPrice(p.price, deal) : p.price;
+                      return (
+                        <tr key={p.id} className="bg-surface transition hover:bg-surface-container-lowest">
+                          <td className="max-w-[220px] px-4 py-4 align-top">
+                            <p className="truncate font-semibold text-on-surface">{name(p)}</p>
+                          </td>
+                          <td className="px-4 py-4 align-top">
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                              <span className={live ? 'text-sm text-on-surface-variant line-through' : 'text-sm font-medium text-on-surface'}>
+                                {t('packages.priceLabel', { price: p.price })}
+                              </span>
+                              {live ? <span className="text-sm font-semibold text-error">EGP {discounted.toFixed(2)}</span> : null}
+                            </div>
+                            {deal ? (
+                              <span className="mt-1 inline-flex items-center gap-1 rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
+                                {deal.name_en || deal.name_ar}
+                                {' · '}
+                                {deal.discount_type === 'percentage' ? `${deal.discount_value}%` : `EGP ${deal.discount_value}`} off
+                                {!live ? ' (inactive)' : ''}
+                              </span>
+                            ) : null}
+                          </td>
+                          <td className="px-4 py-4 align-top text-xs text-on-surface-variant">
+                            {p.coverage_type === 'unlimited'
+                              ? t('packages.typeUnlimited')
+                              : t('packages.typeQuota', { hours: p.included_hours ?? 0 })}
+                          </td>
+                          <td className="px-4 py-4 align-top text-xs text-on-surface-variant">
+                            {p.validity_value && p.validity_unit
+                              ? t('packages.validityLabel', { value: p.validity_value, unit: t(`packages.validityUnit.${p.validity_unit}`) })
+                              : t('packages.validityNever')}
+                          </td>
+                          <td className="px-4 py-4 align-top text-on-surface">{t('packages.assignedCount', { count: p.assigned_count })}</td>
+                          <td className="px-4 py-4 align-top">
+                            <span
+                              className={
+                                'rounded-full border px-2 py-0.5 text-xs font-medium ' +
+                                (p.active
+                                  ? 'border-success/30 bg-success/10 text-success'
+                                  : 'border-outline-variant bg-surface-container text-on-surface-variant')
+                              }
+                            >
+                              {p.active ? t('packages.active') : t('packages.inactive')}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 align-top">
+                            <div className="flex flex-wrap justify-end gap-2">
+                              <Button type="button" variant="outline" size="sm" onClick={() => setManagePkg(p)}>
+                                {t('packages.manageChildren')}
+                              </Button>
+                              <Button type="button" variant="outline" size="sm" onClick={() => openEdit(p)}>
+                                {t('common.edit')}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                disabled={update.isPending}
+                                onClick={() => void toggleActive(p)}
+                              >
+                                {p.active ? t('packages.deactivate') : t('packages.activate')}
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+            )}
             </div>
           )}
         </TabsContent>

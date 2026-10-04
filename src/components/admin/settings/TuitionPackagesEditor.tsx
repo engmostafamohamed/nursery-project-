@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,7 @@ import {
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { FilterMenu } from '@/components/ui/FilterMenu';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
@@ -31,8 +32,9 @@ import {
   type BillingPeriodKind,
   type BillingPeriodRowState,
 } from '@/hooks/useAdminTuitionBillingPeriods';
-import { isDealCurrentlyActive, useAdminDeals } from '@/hooks/useAdminDeals';
+import { applyDealToPrice, isDealCurrentlyActive, useAdminDeals } from '@/hooks/useAdminDeals';
 import { useNurserySettings } from '@/hooks/useNurserySettings';
+import { formatQueryError } from '@/lib/utils';
 import { FormSection } from './FormSection';
 import { PackageDealPicker } from './PackageDealPicker';
 import { TuitionPackageBillingPeriodsEditor } from './TuitionPackageBillingPeriodsEditor';
@@ -85,8 +87,31 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
   const [periodRows, setPeriodRows] = useState<Record<BillingPeriodKind, BillingPeriodRowState> | null>(null);
   const { query: periodsQuery, upsert: upsertPeriod } = useAdminTuitionBillingPeriods(editingId);
 
-  const rows = query.data ?? [];
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [dealFilter, setDealFilter] = useState<'all' | 'with' | 'without'>('all');
+
+  const rows = useMemo(() => query.data ?? [], [query.data]);
   const busy = create.isPending || update.isPending || upsertPeriod.isPending;
+
+  const filteredRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return rows.filter((pkg) => {
+      if (statusFilter === 'active' && !pkg.active) return false;
+      if (statusFilter === 'inactive' && pkg.active) return false;
+      if (dealFilter === 'with' && !pkg.deal_id) return false;
+      if (dealFilter === 'without' && pkg.deal_id) return false;
+      if (q && !`${pkg.name_en} ${pkg.name_ar}`.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [rows, search, statusFilter, dealFilter]);
+
+  const hasActiveFilters = Boolean(search || statusFilter !== 'all' || dealFilter !== 'all');
+  const clearFilters = () => {
+    setSearch('');
+    setStatusFilter('all');
+    setDealFilter('all');
+  };
 
   // Load the existing periods once editing an existing package (openCreate sets periodRows
   // directly and synchronously, so this only matters for edit).
@@ -166,7 +191,7 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
       features_json: form.features_json.filter((feature) => feature.ar.trim() || feature.en.trim()),
     });
     try {
-      const packageId = editingId ?? (await create.mutateAsync(payload));
+      const packageId = editingId ?? (await create.mutateAsync(payload)).id;
       if (editingId) await update.mutateAsync({ id: editingId, input: payload });
 
       // Save the package and its billing periods together in one Save click — periods were
@@ -192,7 +217,7 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
       toast.success('Tuition package saved.');
       setDialogOpen(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not save the package.');
+      toast.error('Could not save the package.', { description: formatQueryError(error) });
     }
   };
 
@@ -216,7 +241,7 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
       });
       toast.success(pkg.active ? 'Package deactivated.' : 'Package activated.');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not update the package.');
+      toast.error('Could not update the package.', { description: formatQueryError(error) });
     }
   };
 
@@ -256,65 +281,130 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
           }
         />
       ) : (
-        <div className="space-y-2">
-          {rows.map((pkg) => (
-            <div
-              key={pkg.id}
-              className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-outline-variant bg-surface p-3"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="font-semibold text-on-surface">{pkg.name_en || pkg.name_ar}</span>
-                  <Badge variant={pkg.active ? 'success' : 'secondary'}>{pkg.active ? 'Active' : 'Inactive'}</Badge>
-                  {hoursRangeLabel ? (
-                    <Badge variant="outline">
-                      <MaterialSymbol name="schedule" size="text-xs" className="me-1" />
-                      {hoursRangeLabel}
-                    </Badge>
-                  ) : null}
-                  <Badge variant="outline">
-                    <MaterialSymbol name="groups" size="text-xs" className="me-1" />
-                    {pkg.subscribed_count} {pkg.subscribed_count === 1 ? 'child' : 'children'}
-                  </Badge>
-                  {(() => {
-                    const deal = (dealsQuery.data ?? []).find((d) => d.id === pkg.deal_id);
-                    if (!deal || !isDealCurrentlyActive(deal)) return null;
-                    return (
-                      <Badge variant="warning">
-                        <MaterialSymbol name="sell" size="text-xs" className="me-1" />
-                        {deal.discount_type === 'percentage' ? `${deal.discount_value}% off` : `EGP ${deal.discount_value} off`}
-                      </Badge>
-                    );
-                  })()}
-                </div>
-                <p className="mt-1 text-sm font-medium text-on-surface">EGP {pkg.price.toFixed(2)}</p>
-                {pkg.features_json.length ? (
-                  <ul className="mt-1.5 space-y-0.5">
-                    {pkg.features_json.map((feature, index) => (
-                      <li key={index} className="flex items-start gap-1.5 text-xs text-on-surface-variant">
-                        <MaterialSymbol name="check_small" size="text-sm" className="mt-0.5 shrink-0" />
-                        <span>{feature.en || feature.ar}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-              </div>
-              <div className="flex shrink-0 gap-2">
-                <Button type="button" variant="outline" size="sm" onClick={() => openEdit(pkg)}>
-                  Edit
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={update.isPending}
-                  onClick={() => void toggleActive(pkg)}
-                >
-                  {pkg.active ? 'Deactivate' : 'Activate'}
-                </Button>
-              </div>
-            </div>
-          ))}
+        <div className="space-y-3">
+        <div className="flex flex-wrap items-end gap-3 rounded-xl border border-outline-variant bg-surface p-3 shadow-sm">
+          <div className="min-w-[180px] flex-1 space-y-1">
+            <Label className="text-xs font-semibold text-on-surface-variant">Search</Label>
+            <Input className="h-11" placeholder="Package name…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          </div>
+          <FilterMenu<typeof statusFilter>
+            className="w-48"
+            label="Status"
+            icon="toggle_on"
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={[
+              { value: 'all', label: 'All statuses' },
+              { value: 'active', label: 'Active' },
+              { value: 'inactive', label: 'Inactive' },
+            ]}
+          />
+          <FilterMenu<typeof dealFilter>
+            className="w-52"
+            label="Discount"
+            icon="sell"
+            value={dealFilter}
+            onChange={setDealFilter}
+            options={[
+              { value: 'all', label: 'All packages' },
+              { value: 'with', label: 'With a discount' },
+              { value: 'without', label: 'Without a discount' },
+            ]}
+          />
+          {hasActiveFilters ? (
+            <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
+              <MaterialSymbol name="close" size="text-base" />
+              Clear filters
+            </Button>
+          ) : null}
+        </div>
+
+        {filteredRows.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-outline-variant p-6 text-center text-sm text-on-surface-variant">
+            No packages match these filters.
+          </p>
+        ) : (
+        <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[920px] text-sm">
+              <thead className="bg-surface-container-lowest text-xs uppercase text-on-surface-variant">
+                <tr>
+                  <th className="px-4 py-3 text-start font-semibold">Package</th>
+                  <th className="px-4 py-3 text-start font-semibold">Price</th>
+                  <th className="px-4 py-3 text-start font-semibold">Hours</th>
+                  <th className="px-4 py-3 text-start font-semibold">Children</th>
+                  <th className="px-4 py-3 text-start font-semibold">Status</th>
+                  <th className="px-4 py-3 text-end font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-outline-variant">
+                {filteredRows.map((pkg) => {
+                  const deal = (dealsQuery.data ?? []).find((d) => d.id === pkg.deal_id);
+                  const live = deal ? isDealCurrentlyActive(deal) : false;
+                  const discounted = deal ? applyDealToPrice(pkg.price, deal) : pkg.price;
+                  return (
+                    <tr key={pkg.id} className="bg-surface transition hover:bg-surface-container-lowest">
+                      <td className="max-w-[260px] px-4 py-4 align-top">
+                        <p className="truncate font-semibold text-on-surface">{pkg.name_en || pkg.name_ar}</p>
+                        {pkg.features_json.length ? (
+                          <ul className="mt-1 space-y-0.5">
+                            {pkg.features_json.slice(0, 3).map((feature, index) => (
+                              <li key={index} className="flex items-start gap-1.5 text-xs text-on-surface-variant">
+                                <MaterialSymbol name="check_small" size="text-sm" className="mt-0.5 shrink-0" />
+                                <span className="truncate">{feature.en || feature.ar}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </td>
+                      <td className="px-4 py-4 align-top">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <span className={live ? 'text-sm text-on-surface-variant line-through' : 'text-sm font-medium text-on-surface'}>
+                            EGP {pkg.price.toFixed(2)}
+                          </span>
+                          {live ? <span className="text-sm font-semibold text-error">EGP {discounted.toFixed(2)}</span> : null}
+                        </div>
+                        {deal ? (
+                          <Badge variant={live ? 'warning' : 'secondary'} className="mt-1">
+                            <MaterialSymbol name="sell" size="text-xs" className="me-1" />
+                            {deal.name_en || deal.name_ar}
+                            {' · '}
+                            {deal.discount_type === 'percentage' ? `${deal.discount_value}%` : `EGP ${deal.discount_value}`} off
+                            {!live ? ' (inactive)' : ''}
+                          </Badge>
+                        ) : null}
+                      </td>
+                      <td className="px-4 py-4 align-top text-xs text-on-surface-variant">{hoursRangeLabel ?? '—'}</td>
+                      <td className="px-4 py-4 align-top text-on-surface">
+                        {pkg.subscribed_count} {pkg.subscribed_count === 1 ? 'child' : 'children'}
+                      </td>
+                      <td className="px-4 py-4 align-top">
+                        <Badge variant={pkg.active ? 'success' : 'secondary'}>{pkg.active ? 'Active' : 'Inactive'}</Badge>
+                      </td>
+                      <td className="px-4 py-4 align-top">
+                        <div className="flex justify-end gap-2">
+                          <Button type="button" variant="outline" size="sm" onClick={() => openEdit(pkg)}>
+                            Edit
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={update.isPending}
+                            onClick={() => void toggleActive(pkg)}
+                          >
+                            {pkg.active ? 'Deactivate' : 'Activate'}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+        )}
         </div>
       )}
 

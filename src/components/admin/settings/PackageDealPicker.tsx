@@ -2,15 +2,16 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { FilterMenu } from '@/components/ui/FilterMenu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
-import { Select } from '@/components/ui/select';
 import {
   isDealCurrentlyActive,
   useAdminDeals,
   type DealDiscountType,
 } from '@/hooks/useAdminDeals';
+import { formatQueryError } from '@/lib/utils';
 
 const CUSTOM_FORM_DEFAULT = { discount_type: 'percentage' as DealDiscountType, discount_value: 10, ends_at: '' };
 
@@ -41,7 +42,7 @@ export function PackageDealPicker({
     }
     try {
       const endsAt = customForm.ends_at ? new Date(customForm.ends_at).toISOString() : null;
-      const id = await create.mutateAsync({
+      const created = await create.mutateAsync({
         name_ar: 'خصم مخصص',
         name_en: 'Custom discount',
         description_ar: null,
@@ -52,12 +53,12 @@ export function PackageDealPicker({
         ends_at: endsAt,
         active: true,
       });
-      onChange(id);
+      onChange(created.id);
       setCreatingCustom(false);
       setCustomForm(CUSTOM_FORM_DEFAULT);
       toast.success('Custom discount created and assigned.');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not create the discount.');
+      toast.error('Could not create the discount.', { description: formatQueryError(error) });
     }
   };
 
@@ -66,16 +67,37 @@ export function PackageDealPicker({
       <div className="space-y-2.5">
         <div className="space-y-1.5">
           <Label>Assign an existing deal</Label>
-          <Select value={dealId ?? ''} onChange={(e) => onChange(e.target.value || null)}>
-            <option value="">No discount</option>
-            {deals.map((deal) => (
-              <option key={deal.id} value={deal.id}>
-                {(deal.name_en || deal.name_ar) +
-                  (deal.discount_type === 'percentage' ? ` — ${deal.discount_value}% off` : ` — EGP ${deal.discount_value} off`) +
-                  (isDealCurrentlyActive(deal) ? '' : ' (inactive)')}
-              </option>
-            ))}
-          </Select>
+          {query.isLoading ? (
+            <p className="flex h-12 items-center gap-2 rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface-variant">
+              <MaterialSymbol name="progress_activity" size="text-base" className="animate-spin" />
+              Loading deals…
+            </p>
+          ) : query.isError ? (
+            <p className="flex items-start gap-1.5 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-xs leading-5 text-error">
+              <MaterialSymbol name="error" size="text-sm" className="mt-0.5 shrink-0" />
+              Could not load deals: {formatQueryError(query.error)}
+            </p>
+          ) : (
+            <FilterMenu<string>
+              value={dealId ?? ''}
+              onChange={(value) => onChange(value || null)}
+              options={[
+                { value: '', label: 'No discount' },
+                ...deals.map((deal) => ({
+                  value: deal.id,
+                  label:
+                    (deal.name_en || deal.name_ar) +
+                    (deal.discount_type === 'percentage' ? ` — ${deal.discount_value}% off` : ` — EGP ${deal.discount_value} off`) +
+                    (isDealCurrentlyActive(deal) ? '' : ' (inactive)'),
+                })),
+              ]}
+            />
+          )}
+          {!query.isLoading && !query.isError && deals.length === 0 ? (
+            <p className="text-xs text-on-surface-variant">
+              No deals created yet — create one below, or from the Deals &amp; Discounts page.
+            </p>
+          ) : null}
         </div>
         {selectedDeal && !isDealCurrentlyActive(selectedDeal) ? (
           <p className="flex items-start gap-1.5 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs leading-5 text-warning">
@@ -102,15 +124,14 @@ export function PackageDealPicker({
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label>Discount type</Label>
-          <Select
+          <FilterMenu<DealDiscountType>
             value={customForm.discount_type}
-            onChange={(e) =>
-              setCustomForm((f) => ({ ...f, discount_type: e.target.value as DealDiscountType }))
-            }
-          >
-            <option value="percentage">Percentage off</option>
-            <option value="fixed_amount">Fixed amount off (EGP)</option>
-          </Select>
+            onChange={(discount_type) => setCustomForm((f) => ({ ...f, discount_type }))}
+            options={[
+              { value: 'percentage', label: 'Percentage off', icon: 'percent' },
+              { value: 'fixed_amount', label: 'Fixed amount off (EGP)', icon: 'payments' },
+            ]}
+          />
         </div>
         <div className="space-y-1.5">
           <Label>{customForm.discount_type === 'percentage' ? 'Discount (%)' : 'Discount (EGP)'}</Label>
