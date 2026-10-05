@@ -1,4 +1,4 @@
-import { Children, cloneElement, isValidElement, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Children, cloneElement, createContext, isValidElement, useContext, useEffect, useMemo, useState, type FocusEventHandler, type ReactNode } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -11,6 +11,7 @@ import { ApplicationSteps } from '@/components/parent/ApplicationSteps';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { useApplications } from '@/hooks/useApplications';
 import { useApplicationExtraHoursPackage } from '@/hooks/useApplicationExtraHoursPackage';
 import { useApplicationPackagePayment, type ApplicationPackageBillingPeriod } from '@/hooks/useApplicationPackagePayment';
@@ -21,7 +22,9 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { NAP_DURATION_VALUES } from '@/features/parent-signup/parentSignUpValidation';
 import { MEDICATION_CONSENT_OPTIONS } from '@/lib/admissions/medicationConsentOptions';
 import { ALLERGY_OPTIONS, OTHER_ALLERGY_VALUE, allergyLabel } from '@/lib/allergies';
-import { isChildAgeValid, isValidIsoDate } from '@/lib/onboardingDateBounds';
+import { nationalityOptions } from '@/lib/nationalities';
+import { childDateOfBirthBounds, isChildAgeValid, isValidIsoDate } from '@/lib/onboardingDateBounds';
+import { egyptianMobilePattern } from '@/lib/phoneValidation';
 import { cn } from '@/lib/utils';
 
 const requiredDocs = ['birth_certificate', 'vaccination_card', 'parent_id', 'proof_of_address'] as const;
@@ -154,15 +157,34 @@ function PanelHeader({ icon, title, body }: { icon: string; title: string; body?
   );
 }
 
+type FieldValidation = {
+  errorFor: (name: string) => string | undefined;
+  onFieldFocus: (name: string) => void;
+  onFieldBlur: (name: string) => void;
+};
+
+const FieldValidationContext = createContext<FieldValidation | null>(null);
+
+function FieldErrorText({ error }: { error?: string }) {
+  return error ? <p className="text-xs font-medium text-error" data-field-invalid="true">{error}</p> : null;
+}
+
 function FormField({
   label,
   children,
   className,
+  hint,
+  name,
 }: {
   label: string;
   children: ReactNode;
   className?: string;
+  hint?: string;
+  /** Validated field name; its error (from FieldValidationContext) shows under the control. */
+  name?: string;
 }) {
+  const validation = useContext(FieldValidationContext);
+  const error = name ? validation?.errorFor(name) : undefined;
   const childList = Children.toArray(children);
   const filled = childList.some((child) => {
     if (!isValidElement<{ value?: unknown }>(child)) return false;
@@ -175,9 +197,22 @@ function FormField({
     ? 'border-primary/40 bg-primary-container/35 text-on-surface shadow-sm ring-1 ring-primary/10'
     : 'border-outline-variant bg-surface/95 text-on-surface shadow-sm';
   const styledChildren = Children.map(children, (child) => {
-    if (!isValidElement<{ className?: string }>(child)) return child;
+    if (!isValidElement<{ className?: string; onFocus?: FocusEventHandler; onBlur?: FocusEventHandler; 'aria-invalid'?: boolean }>(child)) return child;
     return cloneElement(child, {
-      className: cn(controlClassName, child.props.className),
+      className: cn(controlClassName, child.props.className, error && 'border-error ring-1 ring-error/30'),
+      'aria-invalid': error ? true : undefined,
+      ...(name && validation
+        ? {
+            onFocus: (event) => {
+              child.props.onFocus?.(event);
+              validation.onFieldFocus(name);
+            },
+            onBlur: (event) => {
+              child.props.onBlur?.(event);
+              validation.onFieldBlur(name);
+            },
+          }
+        : {}),
     });
   });
 
@@ -185,6 +220,7 @@ function FormField({
     <div className={cn('space-y-2', className)}>
       <Label className="flex min-h-10 items-end text-sm font-semibold leading-5 text-on-surface">{label}</Label>
       {styledChildren}
+      {error ? <FieldErrorText error={error} /> : hint ? <p className="text-xs text-on-surface-variant">{hint}</p> : null}
     </div>
   );
 }
@@ -456,6 +492,7 @@ function stepCardClassName(_stepNumber?: number) {
 }
 
 type JsonRecord = Record<string, unknown>;
+const EMPTY_RECORD: JsonRecord = {};
 type UserProfileInfo = {
   name_ar?: string | null;
   name_en?: string | null;
@@ -740,7 +777,7 @@ function parentRequiredValue(form: ParentApplicationParentForm, field: (typeof r
 }
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const phonePattern = /^\d{11}$/;
+const phonePattern = egyptianMobilePattern;
 const nationalIdPattern = /^\d{14}$/;
 const digitsOnly = (value: string) => value.replace(/\D/g, '');
 const phoneInputProps = {
@@ -782,81 +819,98 @@ function isOptionalNationalIdValid(value: string) {
   return !hasText(value) || nationalIdPattern.test(value.trim());
 }
 
-function hasCompleteParentDetails(form: ParentApplicationParentForm) {
-  const fatherStarted = hasText(form.father_full_name) || hasText(form.father_mobile) || hasText(form.father_email) || hasText(form.father_national_id);
-  const motherStarted = hasText(form.mother_full_name) || hasText(form.mother_mobile) || hasText(form.mother_email) || hasText(form.mother_national_id);
-  const fatherComplete = hasText(form.father_full_name) &&
-    isPhoneValid(form.father_mobile) &&
-    isOptionalEmailValid(form.father_email) &&
-    isOptionalNationalIdValid(form.father_national_id);
-  const motherComplete = hasText(form.mother_full_name) &&
-    isPhoneValid(form.mother_mobile) &&
-    isOptionalEmailValid(form.mother_email) &&
-    isOptionalNationalIdValid(form.mother_national_id);
+/** Field name → i18n key of the message shown under that field. */
+type FieldErrors = Record<string, string>;
 
-  // Email is required at submission (see requiredParentFields), so require it here too.
-  const hasEmail = hasText(parentRequiredValue(form, 'email'));
+/**
+ * Per-field validation for one application step. A step is complete exactly when this
+ * returns no errors, so the inline messages and the Next/submit gates can't disagree.
+ */
+function applicationStepFieldErrors(step: number, parentForm: ParentApplicationParentForm, childForm: ParentApplicationChildForm): FieldErrors {
+  const errors: FieldErrors = {};
+  const requireText = (field: string, value: string) => {
+    if (!hasText(value)) errors[field] = 'signup.requiredField';
+  };
+  const requirePhone = (field: string, value: string) => {
+    if (!hasText(value)) errors[field] = 'signup.requiredField';
+    else if (!isPhoneValid(value)) errors[field] = 'signup.invalidPhone';
+  };
 
-  return hasEmail &&
-    (fatherComplete || motherComplete) &&
-    (!fatherStarted || fatherComplete) &&
-    (!motherStarted || motherComplete);
-}
-
-function hasCompleteEmergency(name: string, phone: string, relationship: string) {
-  return hasText(name) && isPhoneValid(phone) && hasText(relationship);
+  if (step === 1) {
+    const parents = (['father', 'mother'] as const).map((prefix) => ({
+      prefix,
+      started: hasText(parentForm[`${prefix}_full_name`]) || hasText(parentForm[`${prefix}_mobile`]) ||
+        hasText(parentForm[`${prefix}_email`]) || hasText(parentForm[`${prefix}_national_id`]),
+    }));
+    const noneStarted = parents.every((parent) => !parent.started);
+    // One complete parent is enough; with neither started, point at the father's fields.
+    const checked = noneStarted ? [parents[0]] : parents.filter((parent) => parent.started);
+    for (const { prefix } of checked) {
+      if (noneStarted) {
+        errors[`${prefix}_full_name`] = 'signup.oneParentRequired';
+        errors[`${prefix}_mobile`] = 'signup.oneParentRequired';
+      } else {
+        requireText(`${prefix}_full_name`, parentForm[`${prefix}_full_name`]);
+        requirePhone(`${prefix}_mobile`, parentForm[`${prefix}_mobile`]);
+      }
+      if (!isOptionalEmailValid(parentForm[`${prefix}_email`])) errors[`${prefix}_email`] = 'signup.invalidEmail';
+      if (!isOptionalNationalIdValid(parentForm[`${prefix}_national_id`])) errors[`${prefix}_national_id`] = 'signup.invalidNationalId';
+    }
+    // Email is required at submission (see requiredParentFields), so require it here too.
+    if (!hasText(parentRequiredValue(parentForm, 'email'))) {
+      for (const { prefix } of checked) errors[`${prefix}_email`] = 'signup.requiredField';
+    }
+  }
+  if (step === 2) {
+    requireText('address', parentForm.address);
+    requireText('emergency_contact', parentForm.emergency_contact);
+    if (childForm.has_siblings) requireText('sibling_ages', childForm.sibling_ages);
+  }
+  if (step === 3) {
+    requireText('first_name', childForm.first_name);
+    requireText('middle_name', childForm.middle_name);
+    requireText('last_name', childForm.last_name);
+    requireText('nickname', childForm.nickname);
+    requireText('nationality', childForm.nationality);
+    if (!hasText(childForm.dob)) errors.dob = 'signup.requiredField';
+    else if (!isValidIsoDate(childForm.dob)) errors.dob = 'signup.invalidDate';
+    else if (!isChildAgeValid(childForm.dob)) errors.dob = 'signup.childAgeRange';
+  }
+  if (step === 5) {
+    if (childForm.has_allergy) {
+      if (childForm.allergy_types.length === 0) errors.allergy_types = 'signup.allergyTypeRequired';
+      if (childForm.allergy_types.includes(OTHER_ALLERGY_VALUE)) requireText('allergy_details', childForm.allergy_details);
+    }
+    if (childForm.has_medical_condition) requireText('medical_conditions', childForm.medical_conditions);
+  }
+  if (step === 6) {
+    for (const n of [1, 2] as const) {
+      requireText(`emergency_${n}_name`, childForm[`emergency_${n}_name`]);
+      requirePhone(`emergency_${n}_phone`, childForm[`emergency_${n}_phone`]);
+      requireText(`emergency_${n}_relationship`, childForm[`emergency_${n}_relationship`]);
+    }
+  }
+  if (step === 7) {
+    if (childForm.nap_time_preference !== 'Yes' && childForm.nap_time_preference !== 'No') {
+      errors.nap_time_preference = 'signup.requiredField';
+    } else if (
+      childForm.nap_time_preference === 'Yes' &&
+      !NAP_DURATION_VALUES.includes(childForm.max_nap_time as (typeof NAP_DURATION_VALUES)[number])
+    ) {
+      errors.max_nap_time = 'signup.requiredField';
+    }
+  }
+  if (step === 8) {
+    for (const n of [1, 2] as const) {
+      requireText(`pickup_${n}_name`, parentForm[`pickup_${n}_name`]);
+      requirePhone(`pickup_${n}_phone`, parentForm[`pickup_${n}_phone`]);
+    }
+  }
+  return errors;
 }
 
 function hasCompleteApplicationStep(step: number, parentForm: ParentApplicationParentForm, childForm: ParentApplicationChildForm) {
-  if (step === 1) return hasCompleteParentDetails(parentForm);
-  if (step === 2) {
-    return hasText(parentForm.address) &&
-      hasText(parentForm.emergency_contact) &&
-      (!childForm.has_siblings || hasText(childForm.sibling_ages));
-  }
-  if (step === 3) {
-    return hasText(childForm.first_name) &&
-      hasText(childForm.middle_name) &&
-      hasText(childForm.last_name) &&
-      hasText(childForm.nickname) &&
-      hasText(childForm.nationality) &&
-      isValidIsoDate(childForm.dob) &&
-      isChildAgeValid(childForm.dob);
-  }
-  if (step === 5) {
-    const allergyComplete = !childForm.has_allergy ||
-      (childForm.allergy_types.length > 0 &&
-        (!childForm.allergy_types.includes(OTHER_ALLERGY_VALUE) || hasText(childForm.allergy_details)));
-    const medicalComplete = !childForm.has_medical_condition || hasText(childForm.medical_conditions);
-    return allergyComplete && medicalComplete;
-  }
-  if (step === 6) {
-    return hasCompleteEmergency(childForm.emergency_1_name, childForm.emergency_1_phone, childForm.emergency_1_relationship) &&
-      hasCompleteEmergency(childForm.emergency_2_name, childForm.emergency_2_phone, childForm.emergency_2_relationship);
-  }
-  if (step === 7) {
-    if (childForm.nap_time_preference !== 'Yes' && childForm.nap_time_preference !== 'No') return false;
-    return childForm.nap_time_preference !== 'Yes' ||
-      NAP_DURATION_VALUES.includes(childForm.max_nap_time as (typeof NAP_DURATION_VALUES)[number]);
-  }
-  if (step === 8) {
-    return hasText(parentForm.pickup_1_name) &&
-      isPhoneValid(parentForm.pickup_1_phone) &&
-      hasText(parentForm.pickup_2_name) &&
-      isPhoneValid(parentForm.pickup_2_phone);
-  }
-  return true;
-}
-
-function applicationStepValidationMessage(step: number) {
-  if (step === 1) return 'Complete at least one parent with a valid 11-digit mobile and a valid email. National ID must be 14 digits when entered.';
-  if (step === 2) return 'Complete the home address, emergency contact, and sibling ages when the child has siblings.';
-  if (step === 3) return 'Complete child name, nickname, valid birth date, and nationality.';
-  if (step === 5) return 'Complete allergy and medical condition details when selected.';
-  if (step === 6) return 'Complete the first two emergency contacts with valid 11-digit phone numbers.';
-  if (step === 7) return 'Select nap preference and a valid max nap time when nap is accepted.';
-  if (step === 8) return 'Complete both pickup people with valid 11-digit phone numbers.';
-  return 'Complete required fields before continuing.';
+  return Object.keys(applicationStepFieldErrors(step, parentForm, childForm)).length === 0;
 }
 
 function mergeParentInfo(parentInfo: JsonRecord, form: ParentApplicationParentForm): JsonRecord {
@@ -989,7 +1043,7 @@ function mergeChildInfo(childInfo: JsonRecord, form: ParentApplicationChildForm)
 }
 
 export function ParentApplicationFormPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const { user } = useAuthSession();
@@ -1037,7 +1091,8 @@ export function ParentApplicationFormPage() {
       return arrayRecordAt(previousInfo, 'emergency_contacts').length > 0;
     });
 
-    return (previousApplication?.child_info_json as JsonRecord | undefined) ?? {};
+    // A shared empty record keeps this stable across refetches, so the form below isn't re-seeded (wiping unsaved typing).
+    return (previousApplication?.child_info_json as JsonRecord | undefined) ?? EMPTY_RECORD;
   }, [apps.parentApplications, id]);
 
   const [parentForm, setParentForm] = useState({
@@ -1109,9 +1164,28 @@ export function ParentApplicationFormPage() {
     }
     return null;
   }, [childForm, parentForm]);
+  const fieldErrors = useMemo(() => {
+    const errors: FieldErrors = {};
+    for (let candidate = 1; candidate <= 8; candidate += 1) {
+      Object.assign(errors, applicationStepFieldErrors(candidate, parentForm, childForm));
+    }
+    return errors;
+  }, [childForm, parentForm]);
+  // Fields the parent has left (blur) or that Next/submit flagged; their errors show even when empty.
+  const [revealedFields, setRevealedFields] = useState<ReadonlySet<string>>(() => new Set());
+  const [focusedField, setFocusedField] = useState<string | null>(null);
   // First step the parent still has to finish (form data, then required documents) before a package can be chosen.
   const firstIncompleteInformationStep = firstInvalidInformationStep ?? (missingRequired.length > 0 ? 10 : null);
   const isInformationComplete = firstIncompleteInformationStep === null;
+  const childDobBounds = childDateOfBirthBounds();
+  const childNationalityOptions = useMemo(() => {
+    const options = nationalityOptions(i18n.language.startsWith('ar'));
+    // Older applications stored nationality as free text; keep that value selectable so it still shows.
+    const current = childForm.nationality.trim();
+    return current && !options.some((option) => option.value === current)
+      ? [{ value: current, label: current }, ...options]
+      : options;
+  }, [childForm.nationality, i18n.language]);
 
   if (!id) return null;
   if (apps.isLoading) return <p className="text-sm text-on-surface-variant">{t('common.loading')}</p>;
@@ -1135,6 +1209,8 @@ export function ParentApplicationFormPage() {
   const statusUi = statusPresentation(status, t);
   const packageInvoice = applicationPackagePayment.invoice;
   const hasSubmittedPackagePayment = Boolean(packageInvoice && (packageInvoice.pendingAmount > 0 || packageInvoice.paidAmount > 0));
+  // Submit stays locked until a package is chosen (and paid in full or part) and the terms are accepted.
+  const isSubmitReady = terms && hasSubmittedPackagePayment;
   const nextPaymentDate = packageInvoice?.dueDate ? new Date(packageInvoice.dueDate).toLocaleDateString() : '-';
   const balanceLabel = packageInvoice
     ? t('invoice.egpAmount', { amount: packageInvoice.balanceDue.toFixed(2) })
@@ -1158,11 +1234,50 @@ export function ParentApplicationFormPage() {
   const setChildField = <K extends keyof ParentApplicationChildForm>(field: K, value: ParentApplicationChildForm[K]) => {
     setChildForm((prev) => ({ ...prev, [field]: value }));
   };
+  const isFieldFilled = (name: string) => {
+    const value: unknown = name in parentForm
+      ? parentForm[name as keyof ParentApplicationParentForm]
+      : childForm[name as keyof ParentApplicationChildForm];
+    if (typeof value === 'string') return hasText(value);
+    if (Array.isArray(value)) return value.length > 0;
+    return Boolean(value);
+  };
+  const revealField = (name: string) => {
+    setRevealedFields((prev) => (prev.has(name) ? prev : new Set(prev).add(name)));
+  };
+  const fieldValidation: FieldValidation = {
+    errorFor: (name) => {
+      const messageKey = fieldErrors[name];
+      if (!messageKey || !canEditApplication) return undefined;
+      // Wait until the parent leaves a field before judging it, but show saved bad values right away.
+      const visible = revealedFields.has(name) || (isFieldFilled(name) && focusedField !== name);
+      return visible ? t(messageKey) : undefined;
+    },
+    onFieldFocus: (name) => {
+      setFocusedField(name);
+      // Editing a value that was already there (e.g. a saved bad phone): keep its error visible while fixing it.
+      if (isFieldFilled(name)) revealField(name);
+    },
+    onFieldBlur: (name) => {
+      setFocusedField((current) => (current === name ? null : current));
+      revealField(name);
+    },
+  };
+  /** Shows every error of `target` under its field and scrolls to the first one. Returns false when the step is valid. */
+  const revealStepErrors = (target: number) => {
+    const names = Object.keys(applicationStepFieldErrors(target, parentForm, childForm));
+    if (names.length === 0) return false;
+    setRevealedFields((prev) => new Set([...prev, ...names]));
+    requestAnimationFrame(() => {
+      const firstError = document.querySelector('[data-field-invalid="true"]');
+      const field = firstError?.parentElement;
+      field?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      field?.querySelector<HTMLElement>('input, textarea, button')?.focus({ preventScroll: true });
+    });
+    return true;
+  };
   const goToNextStep = () => {
-    if (!hasCompleteApplicationStep(step, parentForm, childForm)) {
-      toast.error(applicationStepValidationMessage(step));
-      return;
-    }
+    if (revealStepErrors(step)) return;
     setStep((s) => Math.min(APPLICATION_STEP_COUNT, s + 1));
   };
   const draftUpdates = () => ({
@@ -1185,6 +1300,7 @@ export function ParentApplicationFormPage() {
   const goToFirstIncompleteStep = () => {
     setStep(firstIncompleteInformationStep ?? 1);
     setActiveTab('information');
+    if (firstInvalidInformationStep !== null) revealStepErrors(firstInvalidInformationStep);
   };
   const payReturnTo = encodeURIComponent(`/parent/applications/${id}?tab=packages`);
   const payLink = packageInvoice ? `/parent/invoices/${packageInvoice.id}/pay?returnTo=${payReturnTo}` : null;
@@ -1245,8 +1361,8 @@ export function ParentApplicationFormPage() {
   const submitApplication = async () => {
     if (!isApplicationComplete) {
       if (firstInvalidInformationStep !== null) {
-        toast.error(applicationStepValidationMessage(firstInvalidInformationStep));
         setStep(firstInvalidInformationStep);
+        revealStepErrors(firstInvalidInformationStep);
         return;
       }
       if (missingParentFields.length || missingChildFields.length) {
@@ -1367,7 +1483,7 @@ export function ParentApplicationFormPage() {
       />
 
       {activeTab === 'information' ? (
-        <>
+        <FieldValidationContext.Provider value={fieldValidation}>
           <div className="grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
             <ApplicationSteps
               step={step}
@@ -1383,19 +1499,19 @@ export function ParentApplicationFormPage() {
                   <div className="grid gap-4">
                     <div className={cn(nestedCardClassName, 'grid gap-4 md:grid-cols-2')}>
                       <h3 className="md:col-span-2 text-sm font-semibold text-on-surface">{t('signup.fatherInfo', { defaultValue: 'Father information' })}</h3>
-                      <FormField label={t('signup.fatherFullName')}><Input value={parentForm.father_full_name} onChange={(e) => setParentField('father_full_name', e.target.value)} /></FormField>
+                      <FormField name="father_full_name" label={t('signup.fatherFullName')}><Input value={parentForm.father_full_name} onChange={(e) => setParentField('father_full_name', e.target.value)} /></FormField>
                       <FormField label={t('signup.fatherJob')}><Input value={parentForm.father_job} onChange={(e) => setParentField('father_job', e.target.value)} /></FormField>
-                      <FormField label={t('signup.fatherMobile')}><Input {...phoneInputProps} value={parentForm.father_mobile} onChange={(e) => setParentField('father_mobile', digitsOnly(e.target.value))} /></FormField>
-                      <FormField label={t('signup.fatherEmail')}><Input type="email" value={parentForm.father_email} onChange={(e) => setParentField('father_email', e.target.value)} /></FormField>
-                      <FormField label={t('applications.nationalId', { defaultValue: 'National ID' })} className="md:col-span-2"><Input {...nationalIdInputProps} value={parentForm.father_national_id} onChange={(e) => setParentField('father_national_id', digitsOnly(e.target.value))} /></FormField>
+                      <FormField name="father_mobile" label={t('signup.fatherMobile')}><Input {...phoneInputProps} value={parentForm.father_mobile} onChange={(e) => setParentField('father_mobile', digitsOnly(e.target.value))} /></FormField>
+                      <FormField name="father_email" label={t('signup.fatherEmail')}><Input type="email" value={parentForm.father_email} onChange={(e) => setParentField('father_email', e.target.value)} /></FormField>
+                      <FormField name="father_national_id" label={t('applications.nationalId', { defaultValue: 'National ID' })} className="md:col-span-2"><Input {...nationalIdInputProps} value={parentForm.father_national_id} onChange={(e) => setParentField('father_national_id', digitsOnly(e.target.value))} /></FormField>
                     </div>
                     <div className={cn(nestedCardClassName, 'grid gap-4 md:grid-cols-2')}>
                       <h3 className="md:col-span-2 text-sm font-semibold text-on-surface">{t('signup.motherInfo', { defaultValue: 'Mother information' })}</h3>
-                      <FormField label={t('signup.motherFullName')}><Input value={parentForm.mother_full_name} onChange={(e) => setParentField('mother_full_name', e.target.value)} /></FormField>
+                      <FormField name="mother_full_name" label={t('signup.motherFullName')}><Input value={parentForm.mother_full_name} onChange={(e) => setParentField('mother_full_name', e.target.value)} /></FormField>
                       <FormField label={t('signup.motherJob')}><Input value={parentForm.mother_job} onChange={(e) => setParentField('mother_job', e.target.value)} /></FormField>
-                      <FormField label={t('signup.motherMobile')}><Input {...phoneInputProps} value={parentForm.mother_mobile} onChange={(e) => setParentField('mother_mobile', digitsOnly(e.target.value))} /></FormField>
-                      <FormField label={t('signup.motherEmail')}><Input type="email" value={parentForm.mother_email} onChange={(e) => setParentField('mother_email', e.target.value)} /></FormField>
-                      <FormField label={t('applications.nationalId', { defaultValue: 'National ID' })} className="md:col-span-2"><Input {...nationalIdInputProps} value={parentForm.mother_national_id} onChange={(e) => setParentField('mother_national_id', digitsOnly(e.target.value))} /></FormField>
+                      <FormField name="mother_mobile" label={t('signup.motherMobile')}><Input {...phoneInputProps} value={parentForm.mother_mobile} onChange={(e) => setParentField('mother_mobile', digitsOnly(e.target.value))} /></FormField>
+                      <FormField name="mother_email" label={t('signup.motherEmail')}><Input type="email" value={parentForm.mother_email} onChange={(e) => setParentField('mother_email', e.target.value)} /></FormField>
+                      <FormField name="mother_national_id" label={t('applications.nationalId', { defaultValue: 'National ID' })} className="md:col-span-2"><Input {...nationalIdInputProps} value={parentForm.mother_national_id} onChange={(e) => setParentField('mother_national_id', digitsOnly(e.target.value))} /></FormField>
                     </div>
                   </div>
                 </fieldset>
@@ -1406,14 +1522,14 @@ export function ParentApplicationFormPage() {
                   <PanelHeader icon="home" title={applicationStepLabels[1]} />
                   <div className="grid gap-4 md:grid-cols-2">
                     <FormField label={t('signup.maritalStatus')}><Input value={parentForm.marital_status} onChange={(e) => setParentField('marital_status', e.target.value)} /></FormField>
-                    <FormField label={t('applications.address')}><Input value={parentForm.address} onChange={(e) => setParentField('address', e.target.value)} /></FormField>
-                    <FormField label={t('applications.emergencyContact')} className="md:col-span-2"><Input value={parentForm.emergency_contact} onChange={(e) => setParentField('emergency_contact', e.target.value)} /></FormField>
+                    <FormField name="address" label={t('applications.address')}><Input value={parentForm.address} onChange={(e) => setParentField('address', e.target.value)} /></FormField>
+                    <FormField name="emergency_contact" label={t('applications.emergencyContact')} className="md:col-span-2"><Input value={parentForm.emergency_contact} onChange={(e) => setParentField('emergency_contact', e.target.value)} /></FormField>
                     <div className="flex items-center gap-2 md:col-span-2">
                       <input type="checkbox" checked={childForm.has_siblings} onChange={(e) => setChildField('has_siblings', e.target.checked)} />
                       <Label>{t('signup.hasSiblings', { defaultValue: 'Has siblings' })}</Label>
                     </div>
                     {childForm.has_siblings ? (
-                      <FormField label={t('signup.siblingAges')} className="md:col-span-2"><Input value={childForm.sibling_ages} onChange={(e) => setChildField('sibling_ages', e.target.value)} /></FormField>
+                      <FormField name="sibling_ages" label={t('signup.siblingAges')} className="md:col-span-2"><Input value={childForm.sibling_ages} onChange={(e) => setChildField('sibling_ages', e.target.value)} /></FormField>
                     ) : null}
                   </div>
                 </fieldset>
@@ -1423,11 +1539,11 @@ export function ParentApplicationFormPage() {
                 <fieldset disabled={!canEditApplication} className={stepCardClassName(3)}>
                   <PanelHeader icon="child_care" title={applicationStepLabels[2]} body={t('applications.newChildInfoHint', { defaultValue: 'Parent and family data is already copied. Add the new child details here.' })} />
                   <div className="grid gap-4 md:grid-cols-2">
-                    <FormField label={t('signup.childFirstName')}><Input value={childForm.first_name} onChange={(e) => setChildField('first_name', e.target.value)} /></FormField>
-                    <FormField label={t('signup.childMiddleName')}><Input value={childForm.middle_name} onChange={(e) => setChildField('middle_name', e.target.value)} /></FormField>
-                    <FormField label={t('signup.childLastName')}><Input value={childForm.last_name} onChange={(e) => setChildField('last_name', e.target.value)} /></FormField>
-                    <FormField label={t('signup.childNickname')}><Input value={childForm.nickname} onChange={(e) => setChildField('nickname', e.target.value)} /></FormField>
-                    <FormField label={t('applications.childDob')}><Input type="date" value={childForm.dob} onChange={(e) => setChildField('dob', e.target.value)} /></FormField>
+                    <FormField name="first_name" label={t('signup.childFirstName')}><Input value={childForm.first_name} onChange={(e) => setChildField('first_name', e.target.value)} /></FormField>
+                    <FormField name="middle_name" label={t('signup.childMiddleName')}><Input value={childForm.middle_name} onChange={(e) => setChildField('middle_name', e.target.value)} /></FormField>
+                    <FormField name="last_name" label={t('signup.childLastName')}><Input value={childForm.last_name} onChange={(e) => setChildField('last_name', e.target.value)} /></FormField>
+                    <FormField name="nickname" label={t('signup.childNickname')}><Input value={childForm.nickname} onChange={(e) => setChildField('nickname', e.target.value)} /></FormField>
+                    <FormField name="dob" label={t('applications.childDob')} hint={t('signup.childAgeRange')}><Input type="date" min={childDobBounds.min} max={childDobBounds.max} value={childForm.dob} onChange={(e) => setChildField('dob', e.target.value)} /></FormField>
                     <FormField label={t('applications.gender')}>
                       <StyledSelect
                         value={childForm.gender}
@@ -1439,7 +1555,15 @@ export function ParentApplicationFormPage() {
                         ]}
                       />
                     </FormField>
-                    <FormField label={t('signup.childNationality')} className="md:col-span-2"><Input value={childForm.nationality} onChange={(e) => setChildField('nationality', e.target.value)} /></FormField>
+                    <FormField name="nationality" label={t('signup.childNationality')} className="md:col-span-2">
+                      <SearchableSelect
+                        name="nationality"
+                        value={childForm.nationality}
+                        onChange={(value) => setChildField('nationality', value)}
+                        options={childNationalityOptions}
+                        searchPlaceholder={t('signup.nationalitySearch')}
+                      />
+                    </FormField>
                   </div>
                 </fieldset>
               ) : null}
@@ -1530,8 +1654,9 @@ export function ParentApplicationFormPage() {
                               );
                             })}
                           </div>
+                          <FieldErrorText error={fieldValidation.errorFor('allergy_types')} />
                           {childForm.allergy_types.includes(OTHER_ALLERGY_VALUE) ? (
-                            <FormField label={t('signup.allergyDetails')}><Input value={childForm.allergy_details} onChange={(e) => setChildField('allergy_details', e.target.value)} /></FormField>
+                            <FormField name="allergy_details" label={t('signup.allergyDetails')}><Input value={childForm.allergy_details} onChange={(e) => setChildField('allergy_details', e.target.value)} /></FormField>
                           ) : null}
                           <FormField label={t('applications.allergies')}><textarea className={textareaClassName} value={childForm.allergies} onChange={(e) => setChildField('allergies', e.target.value)} /></FormField>
                         </>
@@ -1550,7 +1675,7 @@ export function ParentApplicationFormPage() {
                         {t('signup.hasMedicalCondition')}
                       </label>
                       {childForm.has_medical_condition ? (
-                        <FormField label={t('applications.medicalConditions')}><textarea className={textareaClassName} value={childForm.medical_conditions} onChange={(e) => setChildField('medical_conditions', e.target.value)} /></FormField>
+                        <FormField name="medical_conditions" label={t('applications.medicalConditions')}><textarea className={textareaClassName} value={childForm.medical_conditions} onChange={(e) => setChildField('medical_conditions', e.target.value)} /></FormField>
                       ) : null}
                     </div>
                     <FormField label={t('applications.specialNeeds')} className="lg:col-span-2"><textarea className={textareaClassName} value={childForm.special_needs} onChange={(e) => setChildField('special_needs', e.target.value)} /></FormField>
@@ -1564,14 +1689,14 @@ export function ParentApplicationFormPage() {
                   <PanelHeader icon="emergency" title={applicationStepLabels[5]} />
                   <div className="grid gap-4">
                     <div className={cn(nestedCardClassName, 'grid gap-4 md:grid-cols-2')}>
-                      <FormField label={`${t('signup.contactName')} 1`}><Input value={childForm.emergency_1_name} onChange={(e) => setChildField('emergency_1_name', e.target.value)} /></FormField>
-                      <FormField label={t('signup.contactPhone')}><Input {...phoneInputProps} value={childForm.emergency_1_phone} onChange={(e) => setChildField('emergency_1_phone', digitsOnly(e.target.value))} /></FormField>
-                      <FormField label={t('signup.contactRelationship')} className="md:col-span-2"><Input value={childForm.emergency_1_relationship} onChange={(e) => setChildField('emergency_1_relationship', e.target.value)} /></FormField>
+                      <FormField name="emergency_1_name" label={`${t('signup.contactName')} 1`}><Input value={childForm.emergency_1_name} onChange={(e) => setChildField('emergency_1_name', e.target.value)} /></FormField>
+                      <FormField name="emergency_1_phone" label={t('signup.contactPhone')}><Input {...phoneInputProps} value={childForm.emergency_1_phone} onChange={(e) => setChildField('emergency_1_phone', digitsOnly(e.target.value))} /></FormField>
+                      <FormField name="emergency_1_relationship" label={t('signup.contactRelationship')} className="md:col-span-2"><Input value={childForm.emergency_1_relationship} onChange={(e) => setChildField('emergency_1_relationship', e.target.value)} /></FormField>
                     </div>
                     <div className={cn(nestedCardClassName, 'grid gap-4 md:grid-cols-2')}>
-                      <FormField label={`${t('signup.contactName')} 2`}><Input value={childForm.emergency_2_name} onChange={(e) => setChildField('emergency_2_name', e.target.value)} /></FormField>
-                      <FormField label={t('signup.contactPhone')}><Input {...phoneInputProps} value={childForm.emergency_2_phone} onChange={(e) => setChildField('emergency_2_phone', digitsOnly(e.target.value))} /></FormField>
-                      <FormField label={t('signup.contactRelationship')} className="md:col-span-2"><Input value={childForm.emergency_2_relationship} onChange={(e) => setChildField('emergency_2_relationship', e.target.value)} /></FormField>
+                      <FormField name="emergency_2_name" label={`${t('signup.contactName')} 2`}><Input value={childForm.emergency_2_name} onChange={(e) => setChildField('emergency_2_name', e.target.value)} /></FormField>
+                      <FormField name="emergency_2_phone" label={t('signup.contactPhone')}><Input {...phoneInputProps} value={childForm.emergency_2_phone} onChange={(e) => setChildField('emergency_2_phone', digitsOnly(e.target.value))} /></FormField>
+                      <FormField name="emergency_2_relationship" label={t('signup.contactRelationship')} className="md:col-span-2"><Input value={childForm.emergency_2_relationship} onChange={(e) => setChildField('emergency_2_relationship', e.target.value)} /></FormField>
                     </div>
                   </div>
                 </fieldset>
@@ -1631,7 +1756,7 @@ export function ParentApplicationFormPage() {
                         ]}
                       />
                     </FormField>
-                    <FormField label={t('signup.napTimePreference')}>
+                    <FormField name="nap_time_preference" label={t('signup.napTimePreference')}>
                       <StyledSelect
                         value={childForm.nap_time_preference}
                         onChange={(value) => {
@@ -1646,7 +1771,7 @@ export function ParentApplicationFormPage() {
                       />
                     </FormField>
                     {childForm.nap_time_preference === 'Yes' ? (
-                      <FormField label={t('signup.maxNapTime')}>
+                      <FormField name="max_nap_time" label={t('signup.maxNapTime')}>
                         <StyledSelect
                           value={childForm.max_nap_time}
                           onChange={(value) => setChildField('max_nap_time', value)}
@@ -1671,8 +1796,8 @@ export function ParentApplicationFormPage() {
                   <PanelHeader icon="directions_car" title={applicationStepLabels[7]} />
                   <div className="grid gap-4 xl:grid-cols-2">
                     <div className={cn(nestedCardClassName, 'grid gap-4 md:grid-cols-2')}>
-                      <FormField label={`${t('signup.pickupName')} 1`}><Input value={parentForm.pickup_1_name} onChange={(e) => setParentField('pickup_1_name', e.target.value)} /></FormField>
-                      <FormField label={t('signup.pickupPhone')}><Input {...phoneInputProps} value={parentForm.pickup_1_phone} onChange={(e) => setParentField('pickup_1_phone', digitsOnly(e.target.value))} /></FormField>
+                      <FormField name="pickup_1_name" label={`${t('signup.pickupName')} 1`}><Input value={parentForm.pickup_1_name} onChange={(e) => setParentField('pickup_1_name', e.target.value)} /></FormField>
+                      <FormField name="pickup_1_phone" label={t('signup.pickupPhone')}><Input {...phoneInputProps} value={parentForm.pickup_1_phone} onChange={(e) => setParentField('pickup_1_phone', digitsOnly(e.target.value))} /></FormField>
                       <FormField label={t('signup.pickupRelation')}><Input value={parentForm.pickup_1_relation} onChange={(e) => setParentField('pickup_1_relation', e.target.value)} /></FormField>
                       <FormField label={t('signup.pickupAuthorization')}>
                         <StyledSelect
@@ -1687,8 +1812,8 @@ export function ParentApplicationFormPage() {
                       </FormField>
                     </div>
                     <div className={cn(nestedCardClassName, 'grid gap-4 md:grid-cols-2')}>
-                      <FormField label={`${t('signup.pickupName')} 2`}><Input value={parentForm.pickup_2_name} onChange={(e) => setParentField('pickup_2_name', e.target.value)} /></FormField>
-                      <FormField label={t('signup.pickupPhone')}><Input {...phoneInputProps} value={parentForm.pickup_2_phone} onChange={(e) => setParentField('pickup_2_phone', digitsOnly(e.target.value))} /></FormField>
+                      <FormField name="pickup_2_name" label={`${t('signup.pickupName')} 2`}><Input value={parentForm.pickup_2_name} onChange={(e) => setParentField('pickup_2_name', e.target.value)} /></FormField>
+                      <FormField name="pickup_2_phone" label={t('signup.pickupPhone')}><Input {...phoneInputProps} value={parentForm.pickup_2_phone} onChange={(e) => setParentField('pickup_2_phone', digitsOnly(e.target.value))} /></FormField>
                       <FormField label={t('signup.pickupRelation')}><Input value={parentForm.pickup_2_relation} onChange={(e) => setParentField('pickup_2_relation', e.target.value)} /></FormField>
                       <FormField label={t('signup.pickupAuthorization')}>
                         <StyledSelect
@@ -1900,7 +2025,14 @@ export function ParentApplicationFormPage() {
                       </div>
                     ) : null}
                   </div>
-                  <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} />{t('applications.termsAccept')}</label>
+                  <div className="space-y-1">
+                    <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} />{t('applications.termsAccept')}</label>
+                    {!terms ? (
+                      <p className="text-xs font-medium text-warning">
+                        {t('applications.submitTermsValidation', { defaultValue: 'Please accept the terms before submitting.' })}
+                      </p>
+                    ) : null}
+                  </div>
                 </fieldset>
               ) : null}
             </div>
@@ -1921,7 +2053,7 @@ export function ParentApplicationFormPage() {
                 <Button onClick={goToNextStep}>{t('common.next')}</Button>
               ) : (
                 <Button
-                  disabled={!canSubmitApplication || submittingApplication}
+                  disabled={!canSubmitApplication || !isSubmitReady || submittingApplication}
                   onClick={() => void submitApplication()}
                 >
                   {submittingApplication ? t('common.saving') : t('applications.submit')}
@@ -1929,7 +2061,7 @@ export function ParentApplicationFormPage() {
               )}
             </div>
           </div>
-        </>
+        </FieldValidationContext.Provider>
       ) : null}
 
       {activeTab === 'packages' ? (

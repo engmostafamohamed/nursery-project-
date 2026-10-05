@@ -25,6 +25,7 @@ export type PickupContext = {
   pickupIdentityType?: string | null;
   pickupIdentityNumber?: string | null;
   pickupIdentityImagePath?: string | null;
+  pickupIdentityBackImagePath?: string | null;
   pickupNotes?: string | null;
   requireIdCapture?: boolean;
   /** uuid of the user who minted the QR (parent) — used to look up their photo. */
@@ -160,6 +161,7 @@ export async function teacherAttendanceToggle(
       pickup_identity_type: pickup.pickupIdentityType ?? null,
       pickup_identity_number: pickup.pickupIdentityNumber ?? null,
       pickup_identity_image_path: pickup.pickupIdentityImagePath ?? null,
+      pickup_identity_back_image_path: pickup.pickupIdentityBackImagePath ?? null,
       pickup_notes: pickup.pickupNotes ?? null,
       require_id_capture: pickup.requireIdCapture ?? true,
     };

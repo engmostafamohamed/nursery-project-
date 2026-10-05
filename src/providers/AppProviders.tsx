@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { ThemeProvider } from '@/components/theme-provider';
 import { AuthProvider } from '@/providers/AuthProvider';
 import { DatabaseConnectionGate } from '@/providers/DatabaseConnectionGate';
+import { RealtimeQuerySync } from '@/providers/RealtimeQuerySync';
 import { handleFailedRequest } from '@/lib/sessionExpiry';
 
 const queryClient = new QueryClient({
@@ -36,7 +37,10 @@ export function AppProviders({ children }: { children: ReactNode }) {
       <BrowserRouter>
         <DatabaseConnectionGate>
           <ThemeProvider>
-            <AuthProvider>{children}</AuthProvider>
+            <AuthProvider>
+              <RealtimeQuerySync />
+              {children}
+            </AuthProvider>
           </ThemeProvider>
         </DatabaseConnectionGate>
       </BrowserRouter>

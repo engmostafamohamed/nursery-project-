@@ -34,6 +34,7 @@ type VerifyPayload = {
   pickup_identity_type?: string | null;
   pickup_identity_number?: string | null;
   pickup_identity_image_path?: string | null;
+  pickup_identity_back_image_path?: string | null;
   pickup_notes?: string | null;
   require_id_capture?: boolean | null;
   single_use?: boolean;
@@ -62,6 +63,7 @@ type DialogState = {
   pickupIdentityType: string | null;
   pickupIdentityNumber: string | null;
   pickupIdentityImageUrl: string | null;
+  pickupIdentityBackImageUrl: string | null;
   pickupNotes: string | null;
   requireIdCapture: boolean;
 };
@@ -254,6 +256,7 @@ export function QRScannerPage() {
           pickupIdentityType: payload.pickup_identity_type ?? null,
           pickupIdentityNumber: payload.pickup_identity_number ?? null,
           pickupIdentityImagePath: payload.pickup_identity_image_path ?? null,
+          pickupIdentityBackImagePath: payload.pickup_identity_back_image_path ?? null,
           pickupNotes: payload.pickup_notes ?? null,
           requireIdCapture: payload.require_id_capture ?? true,
         };
@@ -270,7 +273,10 @@ export function QRScannerPage() {
 
         if (isCheckout) {
           resolved = await resolvePickupIdentity(child.id, pickupCtx);
-          const identityImageUrl = await createSignedStorageUrl(payload.pickup_identity_image_path);
+          const [identityImageUrl, identityBackImageUrl] = await Promise.all([
+            createSignedStorageUrl(payload.pickup_identity_image_path),
+            createSignedStorageUrl(payload.pickup_identity_back_image_path),
+          ]);
           const decision = await awaitDecision({
             childName: name,
             pickupPersonName: resolved.pickupPersonName,
@@ -280,6 +286,7 @@ export function QRScannerPage() {
             pickupIdentityType: payload.pickup_identity_type ?? null,
             pickupIdentityNumber: payload.pickup_identity_number ?? null,
             pickupIdentityImageUrl: identityImageUrl,
+            pickupIdentityBackImageUrl: identityBackImageUrl,
             pickupNotes: payload.pickup_notes ?? null,
             requireIdCapture: payload.require_id_capture ?? true,
           });
@@ -415,6 +422,7 @@ export function QRScannerPage() {
           pickupIdentityType={dialogState.pickupIdentityType}
           pickupIdentityNumber={dialogState.pickupIdentityNumber}
           pickupIdentityImageUrl={dialogState.pickupIdentityImageUrl}
+          pickupIdentityBackImageUrl={dialogState.pickupIdentityBackImageUrl}
           pickupNotes={dialogState.pickupNotes}
           requireIdCapture={dialogState.requireIdCapture}
           busy={dialogBusy}

@@ -20,6 +20,7 @@ import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { childDateOfBirthBounds, isChildAgeValid } from '@/lib/onboardingDateBounds';
 import { nationalityOptions } from '@/lib/nationalities';
 import { ALLERGY_OPTIONS, OTHER_ALLERGY_VALUE, allergyLabel } from '@/lib/allergies';
+import { egyptianMobilePattern } from '@/lib/phoneValidation';
 import { cn } from '@/lib/utils';
 
 import { parentSignUpDefaults } from '@/features/parent-signup/parentSignUpDefaults';
@@ -71,7 +72,7 @@ function Field({ label, error, required, children }: { label: string; error?: st
 
 const requiredTextFilled = (value: unknown) => typeof value === 'string' && value.trim().length > 0;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const phonePattern = /^\d{11}$/;
+const phonePattern = egyptianMobilePattern;
 const digitsOnly = (value: string) => value.replace(/\D/g, '');
 const handlePhoneInput = (event: FormEvent<HTMLInputElement>) => {
   const value = event.currentTarget.value;

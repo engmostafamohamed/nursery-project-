@@ -27,6 +27,8 @@ type Props = {
   pickupIdentityType?: string | null;
   pickupIdentityNumber?: string | null;
   pickupIdentityImageUrl?: string | null;
+  /** Back of a national ID card; with it, the image above is the card's front. */
+  pickupIdentityBackImageUrl?: string | null;
   pickupNotes?: string | null;
   requireIdCapture?: boolean;
   onDecision: (decision: PickupConfirmDecision) => void;
@@ -44,6 +46,7 @@ export function PickupIdentityConfirmDialog({
   pickupIdentityType,
   pickupIdentityNumber,
   pickupIdentityImageUrl,
+  pickupIdentityBackImageUrl,
   pickupNotes,
   requireIdCapture = true,
   onDecision,
@@ -166,7 +169,23 @@ export function PickupIdentityConfirmDialog({
                 </div>
               )}
 
-              {pickupIdentityImageUrl ? (
+              {pickupIdentityImageUrl && pickupIdentityBackImageUrl ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {[
+                    { url: pickupIdentityImageUrl, label: t('qr.custom.fields.identityFront') },
+                    { url: pickupIdentityBackImageUrl, label: t('qr.custom.fields.identityBack') },
+                  ].map((side) => (
+                    <div key={side.label}>
+                      <p className="mb-2 text-xs uppercase tracking-wide text-on-surface-variant">{side.label}</p>
+                      <img
+                        src={side.url}
+                        alt=""
+                        className="mx-auto h-36 w-full rounded-2xl border border-outline-variant object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : pickupIdentityImageUrl ? (
                 <div>
                   <p className="mb-2 text-xs uppercase tracking-wide text-on-surface-variant">
                     {t('qr.custom.fields.identityImage', { defaultValue: 'ID / passport image' })}

@@ -13,6 +13,72 @@ const DELEGATE_MAX_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 const EXTENDED_TTL_ROLES = new Set(['parent', 'branch_admin', 'chain_super_admin', 'xo_super_admin']);
 
+type PickupDetailsBody = {
+  pickup_person_full_name?: string;
+  pickup_relationship?: string;
+  pickup_identity_type?: 'national_id' | 'passport' | 'other';
+  pickup_identity_number?: string;
+  pickup_identity_image_path?: string;
+  pickup_identity_back_image_path?: string;
+  pickup_notes?: string;
+  require_id_capture?: boolean;
+};
+
+const NATIONAL_ID_NUMBER = /^\d{14}$/;
+
+/** Trims and bounds the custom-QR pickup person fields shared by create and edit. */
+function readPickupDetails(body: PickupDetailsBody, fallbackFullName: string) {
+  const isNationalId = body.pickup_identity_type === 'national_id';
+  return {
+    fullName:
+      typeof body.pickup_person_full_name === 'string'
+        ? body.pickup_person_full_name.trim().slice(0, 120)
+        : fallbackFullName,
+    relationship:
+      typeof body.pickup_relationship === 'string' ? body.pickup_relationship.trim().slice(0, 60) : '',
+    identityType:
+      body.pickup_identity_type === 'passport' || body.pickup_identity_type === 'other'
+        ? body.pickup_identity_type
+        : body.pickup_identity_type === 'national_id'
+          ? 'national_id'
+          : null,
+    identityNumber:
+      typeof body.pickup_identity_number === 'string' ? body.pickup_identity_number.trim().slice(0, 80) : '',
+    identityImagePath:
+      typeof body.pickup_identity_image_path === 'string' ? body.pickup_identity_image_path.trim().slice(0, 500) : '',
+    // Only a national ID card has a back side; ignore one sent for other ID types.
+    identityBackImagePath:
+      isNationalId && typeof body.pickup_identity_back_image_path === 'string'
+        ? body.pickup_identity_back_image_path.trim().slice(0, 500)
+        : '',
+    notes: typeof body.pickup_notes === 'string' ? body.pickup_notes.trim().slice(0, 300) : '',
+    requireIdCapture: body.require_id_capture !== false,
+  };
+}
+
+/** Error message when custom-QR pickup details are incomplete or point outside the nursery, else null. */
+function pickupDetailsError(details: ReturnType<typeof readPickupDetails>, nurseryId: string): string | null {
+  if (!details.fullName) return 'pickup_person_full_name is required for custom pickup QRs';
+  if (!details.identityType || !details.identityNumber) {
+    return 'identity type and number are required for custom pickup QRs';
+  }
+  if (details.identityType === 'national_id' && !NATIONAL_ID_NUMBER.test(details.identityNumber)) {
+    return 'national ID number must be exactly 14 digits';
+  }
+  if (!details.identityImagePath) return 'identity image is required for custom pickup QRs';
+  if (details.identityType === 'national_id' && !details.identityBackImagePath) {
+    return 'both sides of the national ID card are required';
+  }
+  const nurseryPrefix = `application-documents:${nurseryId}/`;
+  if (
+    !details.identityImagePath.startsWith(nurseryPrefix) ||
+    (details.identityBackImagePath && !details.identityBackImagePath.startsWith(nurseryPrefix))
+  ) {
+    return 'identity image path is invalid for this nursery';
+  }
+  return null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -43,24 +109,18 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'Unauthorized' }, 401);
     }
 
-    const body = (await req.json()) as {
+    const body = (await req.json()) as PickupDetailsBody & {
       child_id?: string;
       nursery_id?: string;
       ttl_seconds?: number;
       purpose?: 'parent' | 'delegate';
       delegate_name?: string;
-      pickup_person_full_name?: string;
-      pickup_relationship?: string;
-      pickup_identity_type?: 'national_id' | 'passport' | 'other';
-      pickup_identity_number?: string;
-      pickup_identity_image_path?: string;
-      pickup_notes?: string;
-      require_id_capture?: boolean;
       single_use?: boolean;
       rotate?: boolean;
       revoke_token_id?: string;
       rotate_token_id?: string;
       status_token_id?: string;
+      edit_token_id?: string;
       status?: 'active' | 'inactive';
     };
 
@@ -206,6 +266,74 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Edit path: change the pickup person's details on a custom QR the caller issued
+    // (and its expiry, while it is active). The token string is kept, so an already
+    // shared or printed QR keeps working and staff see the new details at the gate.
+    if (typeof body.edit_token_id === 'string' && body.edit_token_id.length > 0) {
+      const admin = getAdminClient();
+      const { data: tokenRow, error: lookupErr } = await admin
+        .from('qr_tokens')
+        .select('id, issued_by, nursery_id, purpose, consumed_at, expires_at')
+        .eq('id', body.edit_token_id)
+        .maybeSingle();
+      if (lookupErr) {
+        return jsonResponse({ error: lookupErr.message }, 500);
+      }
+
+      const row = tokenRow as {
+        id: string;
+        issued_by: string | null;
+        nursery_id: string;
+        purpose: string | null;
+        consumed_at: string | null;
+        expires_at: string;
+      } | null;
+      if (!row) return jsonResponse({ error: 'Token not found' }, 404);
+      if (row.issued_by !== authData.user.id) {
+        return jsonResponse({ error: 'You can only edit tokens you issued' }, 403);
+      }
+      if (row.purpose !== 'delegate') {
+        return jsonResponse({ error: 'Only custom pickup QRs can be edited' }, 400);
+      }
+      if (row.consumed_at) {
+        return jsonResponse({ error: 'Used QR codes cannot be edited. Generate a new code with the same data.' }, 400);
+      }
+
+      const details = readPickupDetails(body, '');
+      const detailsError = pickupDetailsError(details, row.nursery_id);
+      if (detailsError) return jsonResponse({ error: detailsError }, 400);
+
+      const updates: Record<string, unknown> = {
+        delegate_name: details.fullName.slice(0, 80),
+        pickup_person_full_name: details.fullName,
+        pickup_relationship: details.relationship || null,
+        pickup_identity_type: details.identityType,
+        pickup_identity_number: details.identityNumber,
+        pickup_identity_image_path: details.identityImagePath,
+        pickup_identity_back_image_path: details.identityBackImagePath || null,
+        pickup_notes: details.notes || null,
+        require_id_capture: details.requireIdCapture,
+      };
+      // Reactivating an inactive QR goes through the status path (it enforces the active limit).
+      const isActive = new Date(row.expires_at).getTime() > Date.now();
+      if (isActive && typeof body.ttl_seconds === 'number' && Number.isFinite(body.ttl_seconds)) {
+        const ttl = Math.min(Math.max(Math.floor(body.ttl_seconds), MIN_TTL_SECONDS), DELEGATE_MAX_TTL_SECONDS);
+        updates.expires_at = new Date(Date.now() + ttl * 1000).toISOString();
+      }
+
+      const { error: updateErr } = await admin
+        .from('qr_tokens')
+        .update(updates as never)
+        .eq('id', row.id);
+      if (updateErr) return jsonResponse({ error: updateErr.message }, 500);
+
+      return jsonResponse({
+        edited: true,
+        id: row.id,
+        expires_at: (updates.expires_at as string | undefined) ?? row.expires_at,
+      });
+    }
+
     const { child_id, nursery_id } = body;
     if (!child_id || !nursery_id) {
       return jsonResponse({ error: 'child_id and nursery_id are required' }, 400);
@@ -216,39 +344,21 @@ Deno.serve(async (req) => {
     if (purpose === 'delegate' && !delegateName) {
       return jsonResponse({ error: 'delegate_name is required for delegate QRs' }, 400);
     }
-    const pickupPersonFullName =
-      typeof body.pickup_person_full_name === 'string'
-        ? body.pickup_person_full_name.trim().slice(0, 120)
-        : delegateName;
-    const pickupRelationship =
-      typeof body.pickup_relationship === 'string' ? body.pickup_relationship.trim().slice(0, 60) : '';
-    const pickupIdentityType =
-      body.pickup_identity_type === 'passport' || body.pickup_identity_type === 'other'
-        ? body.pickup_identity_type
-        : body.pickup_identity_type === 'national_id'
-          ? 'national_id'
-          : null;
-    const pickupIdentityNumber =
-      typeof body.pickup_identity_number === 'string' ? body.pickup_identity_number.trim().slice(0, 80) : '';
-    const pickupIdentityImagePath =
-      typeof body.pickup_identity_image_path === 'string' ? body.pickup_identity_image_path.trim().slice(0, 500) : '';
-    const pickupNotes =
-      typeof body.pickup_notes === 'string' ? body.pickup_notes.trim().slice(0, 300) : '';
-    const requireIdCapture = body.require_id_capture !== false;
+    const details = readPickupDetails(body, delegateName);
+    const {
+      fullName: pickupPersonFullName,
+      relationship: pickupRelationship,
+      identityType: pickupIdentityType,
+      identityNumber: pickupIdentityNumber,
+      identityImagePath: pickupIdentityImagePath,
+      identityBackImagePath: pickupIdentityBackImagePath,
+      notes: pickupNotes,
+      requireIdCapture,
+    } = details;
 
     if (purpose === 'delegate') {
-      if (!pickupPersonFullName) {
-        return jsonResponse({ error: 'pickup_person_full_name is required for custom pickup QRs' }, 400);
-      }
-      if (!pickupIdentityType || !pickupIdentityNumber) {
-        return jsonResponse({ error: 'identity type and number are required for custom pickup QRs' }, 400);
-      }
-      if (!pickupIdentityImagePath) {
-        return jsonResponse({ error: 'identity image is required for custom pickup QRs' }, 400);
-      }
-      if (!pickupIdentityImagePath.startsWith(`application-documents:${nursery_id}/`)) {
-        return jsonResponse({ error: 'identity image path is invalid for this nursery' }, 400);
-      }
+      const detailsError = pickupDetailsError(details, nursery_id);
+      if (detailsError) return jsonResponse({ error: detailsError }, 400);
     }
     const singleUse = purpose === 'delegate' ? true : Boolean(body.single_use);
     const rotate = Boolean(body.rotate);
@@ -409,6 +519,7 @@ Deno.serve(async (req) => {
       pickup_identity_type: purpose === 'delegate' ? pickupIdentityType : null,
       pickup_identity_number: purpose === 'delegate' ? pickupIdentityNumber : null,
       pickup_identity_image_path: purpose === 'delegate' ? pickupIdentityImagePath : null,
+      pickup_identity_back_image_path: purpose === 'delegate' ? pickupIdentityBackImagePath || null : null,
       pickup_notes: purpose === 'delegate' ? pickupNotes || null : null,
       require_id_capture: requireIdCapture,
       single_use: singleUse,
@@ -432,6 +543,7 @@ Deno.serve(async (req) => {
       pickup_identity_type: purpose === 'delegate' ? pickupIdentityType : null,
       pickup_identity_number: purpose === 'delegate' ? pickupIdentityNumber : null,
       pickup_identity_image_path: purpose === 'delegate' ? pickupIdentityImagePath : null,
+      pickup_identity_back_image_path: purpose === 'delegate' ? pickupIdentityBackImagePath || null : null,
       pickup_notes: purpose === 'delegate' ? pickupNotes || null : null,
       require_id_capture: requireIdCapture,
       single_use: singleUse,

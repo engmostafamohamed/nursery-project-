@@ -22,6 +22,8 @@ export type IssuedQrToken = {
   pickupIdentityType: string | null;
   pickupIdentityNumber: string | null;
   pickupIdentityImagePath: string | null;
+  /** Back of a national ID card; null for passports/other IDs and older QRs. */
+  pickupIdentityBackImagePath: string | null;
   pickupNotes: string | null;
   requireIdCapture: boolean;
   singleUse: boolean;
@@ -68,7 +70,7 @@ export function useParentIssuedQrTokens(parentId: string | undefined) {
       if (!parentId) return [];
       const res = await supabase
         .from('qr_tokens')
-        .select('id, token, child_id, purpose, delegate_name, pickup_person_full_name, pickup_relationship, pickup_identity_type, pickup_identity_number, pickup_identity_image_path, pickup_notes, require_id_capture, single_use, created_at, expires_at, consumed_at')
+        .select('id, token, child_id, purpose, delegate_name, pickup_person_full_name, pickup_relationship, pickup_identity_type, pickup_identity_number, pickup_identity_image_path, pickup_identity_back_image_path, pickup_notes, require_id_capture, single_use, created_at, expires_at, consumed_at')
         .eq('issued_by', parentId)
         .order('created_at', { ascending: false })
         .limit(100);
@@ -84,6 +86,7 @@ export function useParentIssuedQrTokens(parentId: string | undefined) {
         pickup_identity_type: string | null;
         pickup_identity_number: string | null;
         pickup_identity_image_path: string | null;
+        pickup_identity_back_image_path: string | null;
         pickup_notes: string | null;
         require_id_capture: boolean | null;
         single_use: boolean | null;
@@ -107,6 +110,7 @@ export function useParentIssuedQrTokens(parentId: string | undefined) {
           pickupIdentityType: r.pickup_identity_type,
           pickupIdentityNumber: r.pickup_identity_number,
           pickupIdentityImagePath: r.pickup_identity_image_path,
+          pickupIdentityBackImagePath: r.pickup_identity_back_image_path,
           pickupNotes: r.pickup_notes,
           requireIdCapture: r.require_id_capture !== false,
           singleUse,
@@ -188,6 +192,51 @@ export function useParentIssuedQrTokens(parentId: string | undefined) {
     },
   });
 
+  const editToken = useMutation({
+    mutationFn: async (args: {
+      tokenId: string;
+      childId: string;
+      nurseryId: string;
+      pickupPersonFullName: string;
+      pickupRelationship: string;
+      pickupIdentityType: 'national_id' | 'passport' | 'other';
+      pickupIdentityNumber: string;
+      pickupIdentityImagePath: string;
+      /** Back of the card; required (and only kept) for a national ID. */
+      pickupIdentityBackImagePath: string | null;
+      pickupNotes: string;
+      requireIdCapture: boolean;
+      /** New validity for an active QR; omitted keeps the current expiry. */
+      ttlSeconds?: number;
+    }) => {
+      // The token string is kept, so a QR already shared or printed stays valid.
+      const { data, error } = await supabase.functions.invoke('qr-token', {
+        body: {
+          edit_token_id: args.tokenId,
+          child_id: args.childId,
+          nursery_id: args.nurseryId,
+          pickup_person_full_name: args.pickupPersonFullName,
+          pickup_relationship: args.pickupRelationship,
+          pickup_identity_type: args.pickupIdentityType,
+          pickup_identity_number: args.pickupIdentityNumber,
+          pickup_identity_image_path: args.pickupIdentityImagePath,
+          ...(args.pickupIdentityBackImagePath ? { pickup_identity_back_image_path: args.pickupIdentityBackImagePath } : {}),
+          pickup_notes: args.pickupNotes,
+          require_id_capture: args.requireIdCapture,
+          ...(args.ttlSeconds !== undefined ? { ttl_seconds: args.ttlSeconds } : {}),
+        },
+      });
+      if (error) throw error;
+      const payload = data as { error?: string; edited?: boolean; expires_at?: string };
+      if (payload?.error) throw new Error(payload.error);
+      if (!payload?.edited) throw new Error('Could not edit QR');
+      return payload;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey });
+    },
+  });
+
   const groupedByStatus = useMemo(() => {
     const groups: Record<IssuedQrStatus, IssuedQrToken[]> = {
       active: [],
@@ -209,6 +258,8 @@ export function useParentIssuedQrTokens(parentId: string | undefined) {
     isUpdatingStatus: updateStatus.isPending,
     rotateToken: rotateToken.mutateAsync,
     isRotating: rotateToken.isPending,
+    editToken: editToken.mutateAsync,
+    isEditing: editToken.isPending,
     isFarFutureExpiry: isFarFuture,
   };
 }

@@ -17,6 +17,7 @@ type Props = {
   id?: string;
   name?: string;
   disabled?: boolean;
+  className?: string;
 };
 
 /**
@@ -34,6 +35,7 @@ export function SearchableSelect({
   id,
   name,
   disabled,
+  className,
 }: Props) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -74,6 +76,7 @@ export function SearchableSelect({
           'flex h-11 w-full items-center justify-between gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 text-start text-sm',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30',
           disabled && 'cursor-not-allowed opacity-60',
+          className,
         )}
       >
         <span className={cn('truncate', !selected && 'text-on-surface-variant')}>

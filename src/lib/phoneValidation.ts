@@ -1,3 +1,6 @@
+/** Egyptian mobile: 11 digits on a 010 / 011 / 012 / 015 network prefix. */
+export const egyptianMobilePattern = /^01[0125]\d{8}$/;
+
 /**
  * International mobile (simpler Egypt-centric UX):
  * - + then 8–15 digits (E.164-style), or

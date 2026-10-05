@@ -2,10 +2,11 @@ import { z } from 'zod';
 
 import { MEDICATION_CONSENT_IDS } from '@/lib/admissions/medicationConsentOptions';
 import { isChildAgeValid, isValidIsoDate } from '@/lib/onboardingDateBounds';
+import { egyptianMobilePattern } from '@/lib/phoneValidation';
 
 const medicationConsentIdSchema = z.enum(MEDICATION_CONSENT_IDS);
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const phonePattern = /^\d{11}$/;
+const phonePattern = egyptianMobilePattern;
 export const NAP_DURATION_VALUES = ['0.5', '1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5'] as const;
 
 const optionalEmail = z.string().refine((value) => !value.trim() || emailPattern.test(value.trim()), 'signup.invalidEmail');

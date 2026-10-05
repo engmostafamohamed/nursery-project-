@@ -16,6 +16,7 @@ export type QrTokenPayload = {
   pickup_identity_type: 'national_id' | 'passport' | 'other' | null;
   pickup_identity_number: string | null;
   pickup_identity_image_path: string | null;
+  pickup_identity_back_image_path: string | null;
   pickup_notes: string | null;
   require_id_capture: boolean;
   single_use: boolean;
@@ -42,6 +43,7 @@ export function useQrTokenGeneration() {
       pickup_identity_type?: 'national_id' | 'passport' | 'other';
       pickup_identity_number?: string;
       pickup_identity_image_path?: string;
+      pickup_identity_back_image_path?: string;
       pickup_notes?: string;
       require_id_capture?: boolean;
       single_use?: boolean;
@@ -59,6 +61,7 @@ export function useQrTokenGeneration() {
           ...(args.pickup_identity_type ? { pickup_identity_type: args.pickup_identity_type } : {}),
           ...(args.pickup_identity_number ? { pickup_identity_number: args.pickup_identity_number } : {}),
           ...(args.pickup_identity_image_path ? { pickup_identity_image_path: args.pickup_identity_image_path } : {}),
+          ...(args.pickup_identity_back_image_path ? { pickup_identity_back_image_path: args.pickup_identity_back_image_path } : {}),
           ...(args.pickup_notes ? { pickup_notes: args.pickup_notes } : {}),
           ...(args.require_id_capture !== undefined ? { require_id_capture: args.require_id_capture } : {}),
           ...(args.single_use !== undefined ? { single_use: args.single_use } : {}),
@@ -78,6 +81,7 @@ export function useQrTokenGeneration() {
         pickup_identity_type?: 'national_id' | 'passport' | 'other' | null;
         pickup_identity_number?: string | null;
         pickup_identity_image_path?: string | null;
+        pickup_identity_back_image_path?: string | null;
         pickup_notes?: string | null;
         require_id_capture?: boolean | null;
         single_use?: boolean;
@@ -101,6 +105,7 @@ export function useQrTokenGeneration() {
         pickup_identity_type: payload.pickup_identity_type ?? null,
         pickup_identity_number: payload.pickup_identity_number ?? null,
         pickup_identity_image_path: payload.pickup_identity_image_path ?? null,
+        pickup_identity_back_image_path: payload.pickup_identity_back_image_path ?? null,
         pickup_notes: payload.pickup_notes ?? null,
         require_id_capture: payload.require_id_capture ?? args.require_id_capture ?? true,
         single_use: Boolean(payload.single_use ?? args.single_use),

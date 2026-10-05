@@ -1,9 +1,20 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { jsPDF } from 'jspdf';
 import { QRCodeCanvas, QRCodeSVG } from 'qrcode.react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
+import { CustomQrEditForm, type CustomQrEditValues } from '@/components/qr/CustomQrEditForm';
+import { IdentityImageField } from '@/components/qr/IdentityImageField';
+import {
+  identityNumberErrorKey,
+  identityNumberInputProps,
+  isIdentityType,
+  needsBackImage,
+  normalizeIdentityNumberInput,
+  type IdentityType,
+} from '@/components/qr/pickupIdentity';
+import { QrExpiryDatePrompt } from '@/components/qr/QrExpiryDatePrompt';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -15,6 +26,7 @@ import { useParentIssuedQrTokens, type IssuedQrToken } from '@/hooks/useParentIs
 import { useQrTokenGeneration, type QrTokenPayload } from '@/hooks/useQrTokenGeneration';
 import { addCalendarDaysYmd, getNurseryCalendarDateString } from '@/lib/nurseryDay';
 import { supabase } from '@/lib/supabase';
+import { cn } from '@/lib/utils';
 
 type Props = {
   childId: string;
@@ -25,7 +37,6 @@ type Props = {
 const MAX_DAYS_AHEAD = 7;
 const MAX_ACTIVE_CUSTOM_QRS = 3;
 
-type IdentityType = 'national_id' | 'passport' | 'other';
 type RelationshipType = 'driver' | 'grandparent' | 'aunt_uncle' | 'family_friend' | 'nanny' | 'other';
 
 function randomSuffix(): string {
@@ -73,10 +84,21 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;');
 }
 
+/**
+ * Whether a saved QR's data still meets today's rules (e.g. a 14-digit national ID with both card
+ * sides), so a new QR can be issued from it.
+ */
+function canRegenerateFrom(token: IssuedQrToken): boolean {
+  if (!token.pickupPersonFullName || !isIdentityType(token.pickupIdentityType) || !token.pickupIdentityImagePath) {
+    return false;
+  }
+  if (identityNumberErrorKey(token.pickupIdentityType, token.pickupIdentityNumber ?? '')) return false;
+  return !needsBackImage(token.pickupIdentityType) || Boolean(token.pickupIdentityBackImagePath);
+}
+
 export function DelegatePickupQrCard({ childId, nurseryId, childDisplayName }: Props) {
   const { t } = useTranslation();
   const { user } = useAuthSession();
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const generate = useQrTokenGeneration();
   const {
     tokens,
@@ -87,14 +109,19 @@ export function DelegatePickupQrCard({ childId, nurseryId, childDisplayName }: P
     isUpdatingStatus,
     rotateToken,
     isRotating,
+    editToken,
+    isEditing,
   } = useParentIssuedQrTokens(user?.id);
 
   const [fullName, setFullName] = useState('');
   const [relationship, setRelationship] = useState<RelationshipType>('driver');
   const [identityType, setIdentityType] = useState<IdentityType>('national_id');
   const [identityNumber, setIdentityNumber] = useState('');
+  const [identityNumberTouched, setIdentityNumberTouched] = useState(false);
+  // Front of a national ID card, or the single passport / other ID image.
   const [identityImage, setIdentityImage] = useState<File | null>(null);
-  const [identityPreviewUrl, setIdentityPreviewUrl] = useState<string | null>(null);
+  const [identityBackImage, setIdentityBackImage] = useState<File | null>(null);
+  const [triedGenerate, setTriedGenerate] = useState(false);
   const [notes, setNotes] = useState('');
   const [requireIdCapture, setRequireIdCapture] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
@@ -104,14 +131,13 @@ export function DelegatePickupQrCard({ childId, nurseryId, childDisplayName }: P
   const [rotatingId, setRotatingId] = useState<string | null>(null);
   const [latestGenerated, setLatestGenerated] = useState<QrTokenPayload | null>(null);
   const [latestStatus, setLatestStatus] = useState<IssuedQrToken['status']>('active');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  // Reissuing or reactivating a QR first asks for the day it should stay valid until.
+  const [datePrompt, setDatePrompt] = useState<{ token: IssuedQrToken; action: 'regenerate' | 'activate' } | null>(null);
 
   const today = useMemo(() => getNurseryCalendarDateString(), []);
   const maxDate = useMemo(() => addCalendarDaysYmd(today, MAX_DAYS_AHEAD), [today]);
   const [date, setDate] = useState<string>(today);
-
-  useEffect(() => () => {
-    if (identityPreviewUrl) URL.revokeObjectURL(identityPreviewUrl);
-  }, [identityPreviewUrl]);
 
   const identityOptions = useMemo<FilterMenuOption<IdentityType>[]>(() => [
     { value: 'national_id', label: t('qr.custom.identityTypes.nationalId', { defaultValue: 'National ID' }), icon: 'badge' },
@@ -141,19 +167,28 @@ export function DelegatePickupQrCard({ childId, nurseryId, childDisplayName }: P
   const latestCountsAsActive = Boolean(latestGenerated && latestStatus === 'active' && !latestSavedToken);
   const activeCount = activeCustomTokens.length + (latestCountsAsActive ? 1 : 0);
   const canCreate = activeCount < MAX_ACTIVE_CUSTOM_QRS;
-  const isBusy = generate.isPending || isUploading || isRevoking || isUpdatingStatus || isRotating;
+  const isBusy = generate.isPending || isUploading || isRevoking || isUpdatingStatus || isRotating || isEditing;
   const latestIdentityLabel = latestGenerated
     ? identityOptions.find((option) => option.value === latestGenerated.pickup_identity_type)?.label ?? latestGenerated.pickup_identity_type
     : '';
   const latestRelationshipLabel = latestGenerated?.pickup_relationship || '';
 
-  const handleIdentityImage = (file: File | null) => {
-    setIdentityPreviewUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return null;
-    });
-    setIdentityImage(file);
-    if (file) setIdentityPreviewUrl(URL.createObjectURL(file));
+  const isNationalId = needsBackImage(identityType);
+  const identityNumberError = identityNumberErrorKey(identityType, identityNumber);
+  const formErrors = {
+    fullName: !fullName.trim() ? t('qr.delegate.errors.nameRequired', { defaultValue: 'Full name is required.' }) : undefined,
+    identityNumber: identityNumberError ? t(identityNumberError) : undefined,
+    identityImage: !identityImage
+      ? t(isNationalId ? 'qr.custom.errors.identityFrontImageRequired' : 'qr.custom.errors.identityImageRequired')
+      : undefined,
+    identityBackImage: isNationalId && !identityBackImage ? t('qr.custom.errors.identityBackImageRequired') : undefined,
+  };
+  // Required-field errors appear after a Generate attempt; a malformed ID number as soon as the field is left.
+  const shownErrors = {
+    fullName: triedGenerate ? formErrors.fullName : undefined,
+    identityNumber: triedGenerate || identityNumberTouched ? formErrors.identityNumber : undefined,
+    identityImage: triedGenerate ? formErrors.identityImage : undefined,
+    identityBackImage: triedGenerate ? formErrors.identityBackImage : undefined,
   };
 
   const resetForm = () => {
@@ -161,10 +196,40 @@ export function DelegatePickupQrCard({ childId, nurseryId, childDisplayName }: P
     setRelationship('driver');
     setIdentityType('national_id');
     setIdentityNumber('');
-    handleIdentityImage(null);
+    setIdentityNumberTouched(false);
+    setIdentityImage(null);
+    setIdentityBackImage(null);
+    setTriedGenerate(false);
     setNotes('');
     setRequireIdCapture(true);
     setDate(today);
+  };
+
+  /** A saved custom QR as an IssuedQrToken, for actions on the QR shown right after generating it. */
+  const latestAsIssuedToken = (): IssuedQrToken | null => {
+    if (!latestGenerated) return null;
+    if (latestSavedToken) return latestSavedToken;
+    if (!latestGenerated.id) return null;
+    return {
+      id: latestGenerated.id,
+      token: latestGenerated.token,
+      childId,
+      purpose: 'delegate',
+      delegateName: latestGenerated.delegate_name,
+      pickupPersonFullName: latestGenerated.pickup_person_full_name,
+      pickupRelationship: latestGenerated.pickup_relationship,
+      pickupIdentityType: latestGenerated.pickup_identity_type,
+      pickupIdentityNumber: latestGenerated.pickup_identity_number,
+      pickupIdentityImagePath: latestGenerated.pickup_identity_image_path,
+      pickupIdentityBackImagePath: latestGenerated.pickup_identity_back_image_path,
+      pickupNotes: latestGenerated.pickup_notes,
+      requireIdCapture: latestGenerated.require_id_capture,
+      singleUse: latestGenerated.single_use,
+      createdAt: new Date().toISOString(),
+      expiresAt: latestGenerated.expires_at,
+      consumedAt: null,
+      status: latestStatus,
+    };
   };
 
   const uploadIdentityImage = async (file: File) => {
@@ -259,8 +324,9 @@ export function DelegatePickupQrCard({ childId, nurseryId, childDisplayName }: P
     popup.document.close();
   };
 
-  const ttlForSelectedDate = () => {
-    const [y, m, d] = date.split('-').map((s) => Number(s));
+  /** Seconds from now until the end of `ymd` (local), or null for an invalid date. */
+  const ttlForDate = (ymd: string) => {
+    const [y, m, d] = ymd.split('-').map((s) => Number(s));
     if (!y || !m || !d) return null;
     const endOfDayLocal = new Date(y, m - 1, d, 23, 59, 0, 0);
     return Math.max(60, Math.floor((endOfDayLocal.getTime() - Date.now()) / 1000));
@@ -272,9 +338,11 @@ export function DelegatePickupQrCard({ childId, nurseryId, childDisplayName }: P
     identityTypeValue: IdentityType;
     identityNumberValue: string;
     identityImagePath: string;
+    identityBackImagePath: string | null;
     notesValue?: string | null;
     requireCapture: boolean;
     successName: string;
+    validUntil: string;
   }) => {
     if (!canCreate) {
       toast.error(t('qr.custom.errors.limitReached', {
@@ -283,7 +351,7 @@ export function DelegatePickupQrCard({ childId, nurseryId, childDisplayName }: P
       return;
     }
 
-    const ttl = ttlForSelectedDate();
+    const ttl = ttlForDate(args.validUntil);
     if (!ttl) {
       toast.error(t('qr.delegate.errors.dateRequired'));
       return;
@@ -299,6 +367,7 @@ export function DelegatePickupQrCard({ childId, nurseryId, childDisplayName }: P
       pickup_identity_type: args.identityTypeValue,
       pickup_identity_number: args.identityNumberValue,
       pickup_identity_image_path: args.identityImagePath,
+      pickup_identity_back_image_path: args.identityBackImagePath ?? undefined,
       pickup_notes: args.notesValue || undefined,
       require_id_capture: args.requireCapture,
       single_use: true,
@@ -310,33 +379,25 @@ export function DelegatePickupQrCard({ childId, nurseryId, childDisplayName }: P
   };
 
   const onGenerate = async () => {
+    setTriedGenerate(true);
+    if (Object.values(formErrors).some(Boolean) || !identityImage) return;
     const name = fullName.trim();
-    const trimmedIdentity = identityNumber.trim();
-    if (!name) {
-      toast.error(t('qr.delegate.errors.nameRequired', { defaultValue: 'Full name is required.' }));
-      return;
-    }
-    if (!trimmedIdentity) {
-      toast.error(t('qr.custom.errors.identityNumberRequired', { defaultValue: 'ID or passport number is required.' }));
-      return;
-    }
-    if (!identityImage) {
-      toast.error(t('qr.custom.errors.identityImageRequired', { defaultValue: 'Upload an ID or passport image.' }));
-      return;
-    }
 
     try {
       setIsUploading(true);
       const identityImagePath = await uploadIdentityImage(identityImage);
+      const identityBackImagePath = isNationalId && identityBackImage ? await uploadIdentityImage(identityBackImage) : null;
       await createCustomQr({
         name,
         relationshipText: relationshipLabel,
         identityTypeValue: identityType,
-        identityNumberValue: trimmedIdentity,
+        identityNumberValue: identityNumber.trim(),
         identityImagePath,
+        identityBackImagePath,
         notesValue: notes.trim() || null,
         requireCapture: requireIdCapture,
         successName: name,
+        validUntil: date,
       });
       resetForm();
     } catch (err) {
@@ -347,8 +408,15 @@ export function DelegatePickupQrCard({ childId, nurseryId, childDisplayName }: P
     }
   };
 
-  const onRegenerate = async (token: IssuedQrToken) => {
-    if (!token.pickupPersonFullName || !token.pickupIdentityType || !token.pickupIdentityNumber || !token.pickupIdentityImagePath) {
+  /** Issues a new QR with the same pickup person and a new expiry day. */
+  const onRegenerate = async (token: IssuedQrToken, validUntil: string) => {
+    if (
+      !canRegenerateFrom(token) ||
+      !token.pickupPersonFullName ||
+      !isIdentityType(token.pickupIdentityType) ||
+      !token.pickupIdentityNumber ||
+      !token.pickupIdentityImagePath
+    ) {
       toast.error(t('qr.custom.errors.missingSavedData', {
         defaultValue: 'This QR is missing saved identity data, so it cannot be generated again.',
       }));
@@ -360,13 +428,16 @@ export function DelegatePickupQrCard({ childId, nurseryId, childDisplayName }: P
       await createCustomQr({
         name: token.pickupPersonFullName,
         relationshipText: token.pickupRelationship ?? '',
-        identityTypeValue: token.pickupIdentityType as IdentityType,
+        identityTypeValue: token.pickupIdentityType,
         identityNumberValue: token.pickupIdentityNumber,
         identityImagePath: token.pickupIdentityImagePath,
+        identityBackImagePath: needsBackImage(token.pickupIdentityType) ? token.pickupIdentityBackImagePath : null,
         notesValue: token.pickupNotes,
         requireCapture: token.requireIdCapture,
         successName: token.pickupPersonFullName,
+        validUntil,
       });
+      setDatePrompt(null);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       toast.error(t('qr.delegate.errors.failed'), { description: msg });
@@ -388,10 +459,11 @@ export function DelegatePickupQrCard({ childId, nurseryId, childDisplayName }: P
     }
   };
 
-  const onUpdateStatus = async (token: IssuedQrToken, status: 'active' | 'inactive') => {
+  /** `validUntil` (YYYY-MM-DD) is the new last valid day when activating. */
+  const onUpdateStatus = async (token: IssuedQrToken, status: 'active' | 'inactive', validUntil?: string) => {
     try {
       setStatusUpdatingId(token.id);
-      const ttl = status === 'active' ? ttlForSelectedDate() : undefined;
+      const ttl = status === 'active' && validUntil ? ttlForDate(validUntil) : undefined;
       const result = await updateStatus({
         tokenId: token.id,
         childId: token.childId,
@@ -405,6 +477,7 @@ export function DelegatePickupQrCard({ childId, nurseryId, childDisplayName }: P
           setLatestGenerated((prev) => prev ? { ...prev, expires_at: result.expires_at ?? prev.expires_at } : prev);
         }
       }
+      setDatePrompt(null);
       toast.success(status === 'active'
         ? t('qr.custom.statusActiveSuccess', { defaultValue: 'QR status changed to active.' })
         : t('qr.custom.statusInactiveSuccess', { defaultValue: 'QR status changed to inactive.' }));
@@ -414,6 +487,71 @@ export function DelegatePickupQrCard({ childId, nurseryId, childDisplayName }: P
     } finally {
       setStatusUpdatingId(null);
     }
+  };
+
+  const onEdit = async (token: IssuedQrToken, values: CustomQrEditValues) => {
+    try {
+      const result = await editToken({
+        tokenId: token.id,
+        childId: token.childId,
+        nurseryId,
+        pickupPersonFullName: values.fullName,
+        pickupRelationship: values.relationship,
+        pickupIdentityType: values.identityType,
+        pickupIdentityNumber: values.identityNumber,
+        pickupIdentityImagePath: values.identityImagePath,
+        pickupIdentityBackImagePath: values.identityBackImagePath,
+        pickupNotes: values.notes,
+        requireIdCapture: values.requireIdCapture,
+        ttlSeconds: values.validUntil ? ttlForDate(values.validUntil) ?? undefined : undefined,
+      });
+      if (latestGenerated && (latestGenerated.id === token.id || latestGenerated.token === token.token)) {
+        setLatestGenerated((prev) => prev ? {
+          ...prev,
+          delegate_name: values.fullName,
+          pickup_person_full_name: values.fullName,
+          pickup_relationship: values.relationship,
+          pickup_identity_type: values.identityType,
+          pickup_identity_number: values.identityNumber,
+          pickup_identity_image_path: values.identityImagePath,
+          pickup_identity_back_image_path: values.identityBackImagePath,
+          pickup_notes: values.notes || null,
+          require_id_capture: values.requireIdCapture,
+          expires_at: result.expires_at ?? prev.expires_at,
+        } : prev);
+      }
+      setEditingId(null);
+      toast.success(t('qr.custom.editSuccess', { defaultValue: 'Custom QR updated.' }));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(t('qr.custom.editFailed', { defaultValue: 'Could not update QR.' }), { description: msg });
+    }
+  };
+
+  const confirmDatePrompt = (validUntil: string) => {
+    if (!datePrompt) return;
+    if (datePrompt.action === 'regenerate') void onRegenerate(datePrompt.token, validUntil);
+    else void onUpdateStatus(datePrompt.token, 'active', validUntil);
+  };
+
+  const renderDatePrompt = (tokenId: string | null | undefined) => {
+    if (!datePrompt || !tokenId || datePrompt.token.id !== tokenId) return null;
+    const regenerate = datePrompt.action === 'regenerate';
+    return (
+      <QrExpiryDatePrompt
+        title={regenerate
+          ? t('qr.custom.regenerateTitle', { defaultValue: 'New QR with the same data: choose the expiry date' })
+          : t('qr.custom.activateTitle', { defaultValue: 'Activate QR: choose the expiry date' })}
+        confirmLabel={regenerate
+          ? t('qr.custom.generateSameData', { defaultValue: 'Generate same data' })
+          : t('qr.custom.setActive', { defaultValue: 'Set active' })}
+        minDate={today}
+        maxDate={maxDate}
+        isBusy={isBusy || regeneratingId === tokenId || statusUpdatingId === tokenId}
+        onConfirm={confirmDatePrompt}
+        onCancel={() => setDatePrompt(null)}
+      />
+    );
   };
 
   const onRotate = async (token: IssuedQrToken) => {
@@ -438,27 +576,13 @@ export function DelegatePickupQrCard({ childId, nurseryId, childDisplayName }: P
 
   const onUpdateLatestStatus = async (status: 'active' | 'inactive') => {
     if (!latestGenerated) return;
-    const tokenForAction = latestSavedToken ?? (latestGenerated.id ? {
-      id: latestGenerated.id,
-      token: latestGenerated.token,
-      childId,
-      purpose: 'delegate' as const,
-      delegateName: latestGenerated.delegate_name,
-      pickupPersonFullName: latestGenerated.pickup_person_full_name,
-      pickupRelationship: latestGenerated.pickup_relationship,
-      pickupIdentityType: latestGenerated.pickup_identity_type,
-      pickupIdentityNumber: latestGenerated.pickup_identity_number,
-      pickupIdentityImagePath: latestGenerated.pickup_identity_image_path,
-      pickupNotes: latestGenerated.pickup_notes,
-      requireIdCapture: latestGenerated.require_id_capture,
-      singleUse: latestGenerated.single_use,
-      createdAt: new Date().toISOString(),
-      expiresAt: latestGenerated.expires_at,
-      consumedAt: null,
-      status: latestStatus,
-    } satisfies IssuedQrToken : null);
+    const tokenForAction = latestAsIssuedToken();
     if (!tokenForAction) {
       toast.error(t('qr.custom.errors.missingTokenId', { defaultValue: 'Refresh the page before changing this QR status.' }));
+      return;
+    }
+    if (status === 'active') {
+      setDatePrompt({ token: tokenForAction, action: 'activate' });
       return;
     }
     await onUpdateStatus(tokenForAction, status);
@@ -466,25 +590,7 @@ export function DelegatePickupQrCard({ childId, nurseryId, childDisplayName }: P
 
   const onRotateLatest = async () => {
     if (!latestGenerated) return;
-    const tokenForAction = latestSavedToken ?? (latestGenerated.id ? {
-      id: latestGenerated.id,
-      token: latestGenerated.token,
-      childId,
-      purpose: 'delegate' as const,
-      delegateName: latestGenerated.delegate_name,
-      pickupPersonFullName: latestGenerated.pickup_person_full_name,
-      pickupRelationship: latestGenerated.pickup_relationship,
-      pickupIdentityType: latestGenerated.pickup_identity_type,
-      pickupIdentityNumber: latestGenerated.pickup_identity_number,
-      pickupIdentityImagePath: latestGenerated.pickup_identity_image_path,
-      pickupNotes: latestGenerated.pickup_notes,
-      requireIdCapture: latestGenerated.require_id_capture,
-      singleUse: latestGenerated.single_use,
-      createdAt: new Date().toISOString(),
-      expiresAt: latestGenerated.expires_at,
-      consumedAt: null,
-      status: latestStatus,
-    } satisfies IssuedQrToken : null);
+    const tokenForAction = latestAsIssuedToken();
     if (!tokenForAction) {
       toast.error(t('qr.custom.errors.missingTokenId', { defaultValue: 'Refresh the page before rotating this QR.' }));
       return;
@@ -494,25 +600,7 @@ export function DelegatePickupQrCard({ childId, nurseryId, childDisplayName }: P
 
   const onDeleteLatest = async () => {
     if (!latestGenerated) return;
-    const tokenForAction = latestSavedToken ?? (latestGenerated.id ? {
-      id: latestGenerated.id,
-      token: latestGenerated.token,
-      childId,
-      purpose: 'delegate' as const,
-      delegateName: latestGenerated.delegate_name,
-      pickupPersonFullName: latestGenerated.pickup_person_full_name,
-      pickupRelationship: latestGenerated.pickup_relationship,
-      pickupIdentityType: latestGenerated.pickup_identity_type,
-      pickupIdentityNumber: latestGenerated.pickup_identity_number,
-      pickupIdentityImagePath: latestGenerated.pickup_identity_image_path,
-      pickupNotes: latestGenerated.pickup_notes,
-      requireIdCapture: latestGenerated.require_id_capture,
-      singleUse: latestGenerated.single_use,
-      createdAt: new Date().toISOString(),
-      expiresAt: latestGenerated.expires_at,
-      consumedAt: null,
-      status: latestStatus,
-    } satisfies IssuedQrToken : null);
+    const tokenForAction = latestAsIssuedToken();
     if (!tokenForAction) {
       setLatestGenerated(null);
       toast.error(t('qr.custom.errors.missingTokenId', { defaultValue: 'Refresh the page before deleting this QR.' }));
@@ -657,6 +745,7 @@ export function DelegatePickupQrCard({ childId, nurseryId, childDisplayName }: P
                 {t('common.delete')}
               </Button>
             </div>
+            {renderDatePrompt(latestSavedToken?.id ?? latestGenerated.id)}
           </div>
         </div>
       ) : null}
@@ -683,7 +772,10 @@ export function DelegatePickupQrCard({ childId, nurseryId, childDisplayName }: P
               onChange={(e) => setFullName(e.target.value)}
               maxLength={120}
               disabled={!canCreate}
+              className={cn(shownErrors.fullName && 'border-error ring-1 ring-error/30')}
+              aria-invalid={Boolean(shownErrors.fullName)}
             />
+            {shownErrors.fullName ? <p className="text-xs font-medium text-error">{shownErrors.fullName}</p> : null}
           </div>
           <FilterMenu
             value={relationship}
@@ -694,60 +786,58 @@ export function DelegatePickupQrCard({ childId, nurseryId, childDisplayName }: P
           <FilterMenu
             value={identityType}
             options={identityOptions}
-            onChange={setIdentityType}
+            onChange={(value) => {
+              setIdentityType(value);
+              setIdentityNumber((current) => normalizeIdentityNumberInput(value, current));
+            }}
             label={t('qr.custom.fields.identityType', { defaultValue: 'ID type' })}
           />
           <div className="space-y-2">
             <Label>{t('qr.custom.fields.identityNumber', { defaultValue: 'ID / passport number' })}</Label>
             <Input
+              {...identityNumberInputProps(identityType)}
               value={identityNumber}
-              onChange={(e) => setIdentityNumber(e.target.value)}
-              placeholder={t('qr.custom.fields.identityNumberPlaceholder', { defaultValue: 'National ID or passport number' })}
-              maxLength={80}
+              onChange={(e) => setIdentityNumber(normalizeIdentityNumberInput(identityType, e.target.value))}
+              onBlur={() => setIdentityNumberTouched(true)}
+              placeholder={isNationalId
+                ? t('qr.custom.fields.nationalIdPlaceholder')
+                : t('qr.custom.fields.identityNumberPlaceholder', { defaultValue: 'National ID or passport number' })}
               disabled={!canCreate}
+              className={cn(shownErrors.identityNumber && 'border-error ring-1 ring-error/30')}
+              aria-invalid={Boolean(shownErrors.identityNumber)}
             />
+            {shownErrors.identityNumber ? (
+              <p className="text-xs font-medium text-error">{shownErrors.identityNumber}</p>
+            ) : null}
           </div>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
-          <div className="space-y-2">
-            <Label>{t('qr.custom.fields.identityImage', { defaultValue: 'ID / passport image' })}</Label>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(event) => handleIdentityImage(event.target.files?.[0] ?? null)}
+        <div className="space-y-2">
+          <div className={cn('grid gap-3', isNationalId && 'md:grid-cols-2')}>
+            <IdentityImageField
+              label={isNationalId
+                ? t('qr.custom.fields.identityFront')
+                : t('qr.custom.fields.identityImage', { defaultValue: 'ID / passport image' })}
+              buttonLabel={isNationalId
+                ? t('qr.custom.fields.uploadFront')
+                : t('qr.custom.fields.uploadIdentityImage', { defaultValue: 'Upload identity image' })}
+              file={identityImage}
+              onFile={setIdentityImage}
+              error={shownErrors.identityImage}
             />
-            <Button
-              type="button"
-              variant="outline"
-              className="h-11 w-full justify-start rounded-lg"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={!canCreate}
-            >
-              <span className="material-symbols-outlined me-2 text-base" aria-hidden>upload_file</span>
-              <span className="min-w-0 truncate">
-                {identityImage
-                  ? identityImage.name
-                  : t('qr.custom.fields.uploadIdentityImage', { defaultValue: 'Upload identity image' })}
-              </span>
-            </Button>
-            <p className="text-xs text-on-surface-variant">
-              {t('qr.custom.fields.identityImageHint', { defaultValue: 'Staff can compare this with the person at pickup.' })}
-            </p>
+            {isNationalId ? (
+              <IdentityImageField
+                label={t('qr.custom.fields.identityBack')}
+                buttonLabel={t('qr.custom.fields.uploadBack')}
+                file={identityBackImage}
+                onFile={setIdentityBackImage}
+                error={shownErrors.identityBackImage}
+              />
+            ) : null}
           </div>
-          {identityPreviewUrl ? (
-            <img
-              src={identityPreviewUrl}
-              alt=""
-              className="h-32 w-full rounded-xl border border-outline-variant object-cover"
-            />
-          ) : (
-            <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-outline-variant text-xs text-on-surface-variant">
-              {t('qr.custom.fields.noImage', { defaultValue: 'No image selected' })}
-            </div>
-          )}
+          <p className="text-xs text-on-surface-variant">
+            {t('qr.custom.fields.identityImageHint', { defaultValue: 'Staff can compare this with the person at pickup.' })}
+          </p>
         </div>
 
         <div className="grid gap-3 md:grid-cols-2">
@@ -830,7 +920,7 @@ export function DelegatePickupQrCard({ childId, nurseryId, childDisplayName }: P
               const identityLabel =
                 identityOptions.find((option) => option.value === token.pickupIdentityType)?.label ?? token.pickupIdentityType;
               const name = token.pickupPersonFullName ?? token.delegateName ?? t('qr.custom.unknownPerson', { defaultValue: 'Pickup person' });
-              const canRegenerate = Boolean(token.pickupPersonFullName && token.pickupIdentityType && token.pickupIdentityNumber && token.pickupIdentityImagePath);
+              const canRegenerate = canRegenerateFrom(token);
 
               return (
                 <div key={token.id} className="grid gap-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 md:grid-cols-[156px_minmax(0,1fr)]">
@@ -893,11 +983,29 @@ export function DelegatePickupQrCard({ childId, nurseryId, childDisplayName }: P
                             : t('qr.rotate', { defaultValue: 'Rotate' })}
                         </Button>
                       ) : null}
+                      {token.status !== 'used' ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setDatePrompt(null);
+                            setEditingId(editingId === token.id ? null : token.id);
+                          }}
+                          disabled={isBusy}
+                        >
+                          <span className="material-symbols-outlined me-1 text-base" aria-hidden>edit</span>
+                          {t('common.edit')}
+                        </Button>
+                      ) : null}
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => void onRegenerate(token)}
+                        onClick={() => {
+                          setEditingId(null);
+                          setDatePrompt({ token, action: 'regenerate' });
+                        }}
                         disabled={isBusy || !canCreate || !canRegenerate || regeneratingId === token.id}
                       >
                         <span className="material-symbols-outlined me-1 text-base" aria-hidden>autorenew</span>
@@ -937,7 +1045,14 @@ export function DelegatePickupQrCard({ childId, nurseryId, childDisplayName }: P
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => void onUpdateStatus(token, isActive ? 'inactive' : 'active')}
+                          onClick={() => {
+                            if (isActive) {
+                              void onUpdateStatus(token, 'inactive');
+                              return;
+                            }
+                            setEditingId(null);
+                            setDatePrompt({ token, action: 'activate' });
+                          }}
                           disabled={isBusy || statusUpdatingId === token.id || (!isActive && !canCreate)}
                         >
                           <span className="material-symbols-outlined me-1 text-base" aria-hidden>
@@ -959,6 +1074,21 @@ export function DelegatePickupQrCard({ childId, nurseryId, childDisplayName }: P
                         {deletingId === token.id ? t('common.loading') : t('common.delete')}
                       </Button>
                     </div>
+
+                    {renderDatePrompt(token.id)}
+                    {editingId === token.id ? (
+                      <CustomQrEditForm
+                        token={token}
+                        relationshipOptions={relationshipOptions}
+                        identityOptions={identityOptions}
+                        minDate={today}
+                        maxDate={maxDate}
+                        isSaving={isEditing}
+                        uploadIdentityImage={uploadIdentityImage}
+                        onSave={(values) => onEdit(token, values)}
+                        onCancel={() => setEditingId(null)}
+                      />
+                    ) : null}
                   </div>
                 </div>
               );
