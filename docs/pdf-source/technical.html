@@ -1,0 +1,725 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>XO Platform — Technical Documentation</title>
+<link rel="stylesheet" href="theme.css" />
+<style>
+  @page {
+    size: A4;
+    margin: 18mm 16mm 18mm 16mm;
+    @bottom-left { content: "XO Platform  ·  Technical Documentation"; font-family: Inter, 'Segoe UI', sans-serif; font-size: 7.6pt; color: #8b91a3; }
+    @bottom-right { content: "Page " counter(page); font-family: Inter, 'Segoe UI', sans-serif; font-size: 7.6pt; color: #8b91a3; }
+  }
+  @page :first { margin: 0; @bottom-left { content: none; } @bottom-right { content: none; } }
+  .cover { background:
+    radial-gradient(circle at 85% 12%, rgba(20, 184, 166, 0.35), transparent 42%),
+    radial-gradient(circle at 10% 95%, rgba(91, 87, 232, 0.65), transparent 45%),
+    linear-gradient(155deg, #0f1430 0%, #1b2058 55%, #2f3aa0 100%); }
+  pre.tree {
+    font-family: 'JetBrains Mono', Consolas, monospace; font-size: 7.9pt; line-height: 1.5; color: var(--ink-2);
+    background: var(--brand-soft-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin: 6px 0 12px; break-inside: avoid; white-space: pre;
+  }
+  pre.tree .c { color: #8a90a2; }
+  table.t td code { white-space: nowrap; }
+  table.t.wrapcode td code { white-space: normal; }
+  .ref td:first-child { width: 18%; }
+</style>
+</head>
+<body>
+
+<!-- ================= COVER ================= -->
+<section class="cover">
+  <div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="dotgrid"></div>
+  <div class="brandmark"><div class="logo">XO</div>XO Platform</div>
+  <div class="kind">Technical Documentation</div>
+  <h1>XO Platform</h1>
+  <p class="subtitle">Architecture, modules, data model, roles and permissions of the nursery management platform.</p>
+  <div class="chips">
+    <span>React 19 + TypeScript</span><span>Supabase · PostgreSQL</span><span>Row-level security</span><span>Edge Functions · pg_cron</span><span>PWA · Realtime</span>
+  </div>
+  <div class="meta">
+    <div>Document<b>Technical Documentation</b></div>
+    <div>Version<b>1.0</b></div>
+    <div>Date<b>October 2026</b></div>
+    <div>Audience<b>Engineers &amp; technical partners</b></div>
+  </div>
+</section>
+
+<!-- ================= CONTENTS ================= -->
+<section class="toc">
+  <p class="eyebrow">Inside this document</p>
+  <h1>Contents</h1>
+  <p class="muted">Chapters 1–4 give the big picture. Chapters 5–8 cover the runtime. Chapters 9–11 cover modules, roles and the main flows. Chapters 12–14 cover security, operations and open items.</p>
+  <ol class="toc-list">
+    <li><div class="n">01</div><div><b>System overview</b><span>What the system is, how it is built, and the codebase in numbers.</span></div></li>
+    <li><div class="n">02</div><div><b>Architecture</b><span>Layers, services and how requests, writes and live updates travel.</span></div></li>
+    <li><div class="n">03</div><div><b>Technology stack</b><span>Frameworks, libraries and tools, with versions.</span></div></li>
+    <li><div class="n">04</div><div><b>Project structure</b><span>Folder layout and code conventions.</span></div></li>
+    <li><div class="n">05</div><div><b>Frontend architecture</b><span>Portals and routing, data layer, state, i18n, UI system and PWA.</span></div></li>
+    <li><div class="n">06</div><div><b>Backend and database</b><span>Supabase services, data domains, migrations and the server-function pattern.</span></div></li>
+    <li><div class="n">07</div><div><b>Edge functions</b><span>The 19 serverless functions and what each does.</span></div></li>
+    <li><div class="n">08</div><div><b>Scheduled jobs</b><span>The 8 pg_cron jobs that run billing, reminders and attendance.</span></div></li>
+    <li><div class="n">09</div><div><b>Module reference</b><span>For each of the 15 modules: routes, hooks, tables and server functions.</span></div></li>
+    <li><div class="n">10</div><div><b>Roles and permissions</b><span>Roles, RLS helpers, the permission engine and the RBAC data model.</span></div></li>
+    <li><div class="n">11</div><div><b>Key flows</b><span>Admissions and payment, enrollment, billing, attendance, deals.</span></div></li>
+    <li><div class="n">12</div><div><b>Security</b><span>Tenant isolation, function hardening, payments and audit.</span></div></li>
+    <li><div class="n">13</div><div><b>Development and operations</b><span>Scripts, environment variables, deployment and runbooks.</span></div></li>
+    <li><div class="n">14</div><div><b>Integration status and technical debt</b><span>Stubs, planned features and known issues.</span></div></li>
+  </ol>
+</section>
+
+<!-- ================= 01 OVERVIEW ================= -->
+<section class="chapter">
+  <div class="chapter-head"><div class="chapter-num">01</div><div><p class="eyebrow">Big picture</p><h1>System overview</h1></div></div>
+  <p class="lead">XO Platform is a multi-tenant SaaS for nurseries. A single React single-page application serves four role-specific portals. It talks directly to Supabase, where PostgreSQL holds the data, enforces tenant isolation with row-level security (RLS), and runs all money and attendance logic in server functions.</p>
+
+  <div class="grid-4" style="margin:12px 0">
+    <div class="stat"><b>147</b><span>Pages</span></div>
+    <div class="stat"><b>202</b><span>Components</span></div>
+    <div class="stat"><b>121</b><span>Data hooks</span></div>
+    <div class="stat"><b>110+</b><span>Database tables</span></div>
+    <div class="stat"><b>215</b><span>SQL migrations</span></div>
+    <div class="stat"><b>19</b><span>Edge functions</span></div>
+    <div class="stat"><b>8</b><span>Scheduled jobs</span></div>
+    <div class="stat"><b>25</b><span>Permission features</span></div>
+  </div>
+
+  <h2>Design principles</h2>
+  <div class="grid-2">
+    <div class="card"><h4>The database is the security boundary</h4><p>Every table that holds tenant data has RLS. The UI hides what a role cannot use, but correctness never depends on the UI. A direct API call with a user's token gets exactly the same answer.</p></div>
+    <div class="card"><h4>Critical logic runs on the server</h4><p>Payments, invoice generation, enrollment, attendance and billing run in <code>SECURITY DEFINER</code> PostgreSQL functions called by RPC. They are atomic, locked, idempotent and audited, never a series of client-side inserts.</p></div>
+    <div class="card"><h4>Thin client, typed data hooks</h4><p>Pages compose small TanStack Query hooks (<code>src/hooks</code>), one per data concern. Mutations write the result straight into the cache, and Realtime refreshes other screens.</p></div>
+    <div class="card"><h4>Configuration over code</h4><p>Nursery behaviour (hours, billing rules, payment methods, media privacy and more) lives in <code>nursery_settings</code>. Roles and feature grants live in database tables, so neither needs a release to change.</p></div>
+  </div>
+
+  <h2>Multi-tenancy model</h2>
+  <table class="t">
+    <thead><tr><th style="width:22%">Level</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Platform</td><td>Operated by <code>xo_super_admin</code> users, who can reach every nursery.</td></tr>
+      <tr><td class="k">Chain</td><td>A group of nurseries (<code>chains</code>). <code>chain_super_admin</code> users are scoped by <code>users.chain_id</code>.</td></tr>
+      <tr><td class="k">Nursery (tenant)</td><td>The isolation unit. Almost every table carries <code>nursery_id</code>, and RLS compares it with <code>current_user_nursery_id()</code>.</td></tr>
+      <tr><td class="k">Class</td><td>Teachers are scoped to the children of the classes they are assigned to through <code>class_staff</code>.</td></tr>
+      <tr><td class="k">Family</td><td>Parents are scoped to the children linked to them in <code>parent_children</code>.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================= 02 ARCHITECTURE ================= -->
+<section class="chapter">
+  <div class="chapter-head"><div class="chapter-num">02</div><div><p class="eyebrow">How it fits together</p><h1>Architecture</h1></div></div>
+
+  <div class="layer client">
+    <div class="label">Client · React SPA / PWA, hosted on Vercel</div>
+    <div class="boxes">
+      <div class="b"><b>Admin portal</b>/admin</div><div class="b"><b>Teacher portal</b>/teacher</div><div class="b"><b>Parent portal</b>/parent</div><div class="b"><b>XO console</b>/xo-admin</div><div class="b"><b>Public</b>/login · /signup · /public/inquiry</div>
+    </div>
+    <div class="boxes" style="margin-top:6px">
+      <div class="b">TanStack Query cache</div><div class="b">Realtime query sync</div><div class="b">i18n (ar / en, RTL)</div><div class="b">Service worker · push · offline queue</div>
+    </div>
+  </div>
+  <div class="down">▼ HTTPS · JWT (supabase-js) ▲ WebSocket (Realtime)</div>
+  <div class="layer edge">
+    <div class="label">Supabase platform services</div>
+    <div class="boxes">
+      <div class="b"><b>Auth</b>Password and magic link</div><div class="b"><b>PostgREST</b>Table API + RPC</div><div class="b"><b>Realtime</b>Change broadcast, RLS-filtered</div><div class="b"><b>Storage</b>Media, documents, IDs</div><div class="b"><b>Edge Functions</b>19 Deno functions</div>
+    </div>
+  </div>
+  <div class="down">▼</div>
+  <div class="layer data">
+    <div class="label">PostgreSQL</div>
+    <div class="boxes">
+      <div class="b"><b>110+ tables</b>Tenant data</div><div class="b"><b>RLS policies</b>On every tenant table</div><div class="b"><b>Server functions</b>SECURITY DEFINER RPCs</div><div class="b"><b>pg_cron</b>8 scheduled jobs</div><div class="b"><b>Triggers</b>Audit, sync, notifications</div>
+    </div>
+  </div>
+  <div class="down">▼</div>
+  <div class="layer ext">
+    <div class="label">External services</div>
+    <div class="boxes">
+      <div class="b"><b>Anthropic Claude</b>AI assistant, import mapper</div><div class="b"><b>Web Push</b>VAPID</div><div class="b"><b>Resend</b>Email (stub)</div><div class="b"><b>SMS Misr</b>SMS (stub)</div><div class="b"><b>360dialog</b>WhatsApp (stub)</div><div class="b"><b>Paymob</b>Online payments (planned)</div>
+    </div>
+  </div>
+
+  <h2>Three request paths</h2>
+  <div class="grid-3">
+    <div class="card"><span class="tag">Read</span><p>A hook calls <code>supabase.from(table).select()</code>. PostgREST runs the query as the user, and RLS removes every row the user may not see.</p></div>
+    <div class="card"><span class="tag">Critical write</span><p>A hook calls <code>supabase.rpc(fn)</code>. The function checks the caller's role and tenant, locks the rows it touches, validates, writes and logs in one transaction.</p></div>
+    <div class="card"><span class="tag">Live update</span><p>Postgres broadcasts the change. <code>RealtimeQuerySync</code> refreshes the matching cached queries, so other users' screens update without a reload.</p></div>
+  </div>
+</section>
+
+<!-- ================= 03 STACK ================= -->
+<section class="chapter">
+  <div class="chapter-head"><div class="chapter-num">03</div><div><p class="eyebrow">Tools</p><h1>Technology stack</h1></div></div>
+
+  <table class="t">
+    <thead><tr><th style="width:22%">Area</th><th style="width:30%">Technology</th><th>Used for</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Language</td><td>TypeScript 5.9</td><td>Whole frontend, strict mode, built with <code>tsc -b</code>.</td></tr>
+      <tr><td class="k">UI framework</td><td>React 19.2</td><td>Single-page application.</td></tr>
+      <tr><td class="k">Build tool</td><td>Vite 8 + @vitejs/plugin-react</td><td>Dev server, production bundle and code splitting.</td></tr>
+      <tr><td class="k">Routing</td><td>React Router 7</td><td>Portals, nested layouts and lazily loaded pages.</td></tr>
+      <tr><td class="k">Server state</td><td>TanStack Query 5</td><td>Fetching, caching, mutations and realtime invalidation.</td></tr>
+      <tr><td class="k">Client state</td><td>Zustand 5</td><td>Active nursery (XO console) and AI panel state.</td></tr>
+      <tr><td class="k">Forms</td><td>React Hook Form 7 + Zod 4</td><td>Wizards (enrollment, onboarding, sign-up) and validation.</td></tr>
+      <tr><td class="k">Styling</td><td>Tailwind CSS 3.4 + tailwindcss-animate</td><td>Design tokens as CSS variables, light and dark themes.</td></tr>
+      <tr><td class="k">Primitives</td><td>Radix UI (dialog, dropdown, checkbox, label, slot), CVA</td><td>Accessible dialogs, menus and component variants.</td></tr>
+      <tr><td class="k">Icons</td><td>Material Symbols, lucide-react</td><td>Iconography.</td></tr>
+      <tr><td class="k">i18n</td><td>i18next 25 + react-i18next 16</td><td>Arabic and English, RTL, language detection.</td></tr>
+      <tr><td class="k">Charts</td><td>Recharts 3</td><td>Dashboards and reports.</td></tr>
+      <tr><td class="k">Dates</td><td>date-fns 4</td><td>Formatting and date arithmetic.</td></tr>
+      <tr><td class="k">QR</td><td>html5-qrcode, qrcode.react</td><td>Scanning (camera) and generating QR codes.</td></tr>
+      <tr><td class="k">Documents</td><td>jsPDF 4 + jspdf-autotable</td><td>Invoice and receipt PDFs.</td></tr>
+      <tr><td class="k">Import / export</td><td>PapaParse, SheetJS (xlsx)</td><td>CSV and Excel import of children, exports.</td></tr>
+      <tr><td class="k">Media</td><td>browser-image-compression</td><td>Client-side photo compression before upload.</td></tr>
+      <tr><td class="k">Notifications</td><td>Sonner (toasts), Web Push</td><td>In-app feedback and push notifications.</td></tr>
+      <tr><td class="k">Backend</td><td>Supabase (supabase-js 2.100)</td><td>Auth, PostgREST, Realtime, Storage, Edge Functions.</td></tr>
+      <tr><td class="k">Database</td><td>PostgreSQL + pg_cron</td><td>Data, RLS, server functions and scheduled jobs.</td></tr>
+      <tr><td class="k">Serverless</td><td>Supabase Edge Functions (Deno)</td><td>Account provisioning, imports, AI, dispatch and export.</td></tr>
+      <tr><td class="k">AI</td><td>Anthropic Claude (Messages API)</td><td>Help assistant and AI import column mapping.</td></tr>
+      <tr><td class="k">Hosting</td><td>Vercel</td><td>Static SPA with a catch-all rewrite to <code>index.html</code>.</td></tr>
+      <tr><td class="k">Quality</td><td>ESLint 9 (typescript-eslint, react-hooks, react-refresh)</td><td>Linting. <code>npm run typecheck</code> and <code>npm run lint</code>.</td></tr>
+      <tr><td class="k">Scripts</td><td>tsx, dotenv</td><td>Seeding and ops scripts in <code>scripts/</code>.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================= 04 STRUCTURE ================= -->
+<section class="chapter">
+  <div class="chapter-head"><div class="chapter-num">04</div><div><p class="eyebrow">Codebase</p><h1>Project structure</h1></div></div>
+
+<pre class="tree">xo-platform/
+├── src/
+│   ├── App.tsx, main.tsx          <span class="c">entry point, providers and router</span>
+│   ├── router/                    <span class="c">AppRouter, ProtectedRoute, lazyPages (code splitting)</span>
+│   ├── providers/                 <span class="c">AppProviders, AuthProvider, DatabaseConnectionGate, RealtimeQuerySync</span>
+│   ├── pages/                     <span class="c">147 route screens, grouped by portal</span>
+│   │   ├── admin/   teacher/   parent/   xo-admin/   staff/   auth/   …
+│   ├── components/                <span class="c">202 components</span>
+│   │   ├── ui/                    <span class="c">design system: dialog, badge, FilterMenu, EmptyState, …</span>
+│   │   ├── layouts/               <span class="c">AdminLayout, TeacherLayout, ParentLayout, XoAdminLayout, StaffLayout</span>
+│   │   └── admin/ parent/ teacher/ financial/ qr/ chat/ help/ notifications/ …
+│   ├── features/                  <span class="c">multi-step wizards: child-enrollment, parent-signup, staff-onboarding</span>
+│   ├── hooks/                     <span class="c">121 data hooks (TanStack Query), one per data concern</span>
+│   ├── lib/                       <span class="c">domain helpers: permissions/, paymentApi, attendanceApi, ai*, i18n, …</span>
+│   ├── store/                     <span class="c">Zustand stores</span>
+│   ├── types/                     <span class="c">shared types, generated database types</span>
+│   ├── locales/                   <span class="c">en.json, ar.json</span>
+│   └── index.css                  <span class="c">design tokens (CSS variables), light and dark themes</span>
+├── supabase/
+│   ├── migrations/                <span class="c">215 timestamped SQL migrations</span>
+│   ├── functions/                 <span class="c">19 Edge Functions + _shared</span>
+│   └── config.toml
+├── public/                        <span class="c">manifest.json, sw.js (service worker), icons</span>
+├── scripts/                       <span class="c">seed and ops scripts (integrity, export, cross-tenant test)</span>
+├── docs/                          <span class="c">runbooks, RBAC design, these documents</span>
+└── vercel.json                    <span class="c">SPA rewrite</span></pre>
+
+  <h2>Conventions</h2>
+  <table class="t">
+    <thead><tr><th style="width:26%">Topic</th><th>Convention</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Pages</td><td>One file per route under the portal folder, exported as a named component and lazily imported in <code>router/lazyPages.tsx</code>.</td></tr>
+      <tr><td class="k">Data access</td><td>Components never call Supabase directly for shared data. They use a hook in <code>src/hooks</code> that owns the query key, the select, the mutations and the cache updates.</td></tr>
+      <tr><td class="k">Cache keys</td><td>Exported key factories, for example <code>adminDealsKey(nurseryId)</code>, so related hooks can invalidate each other.</td></tr>
+      <tr><td class="k">Fast refresh</td><td><code>.tsx</code> files export only components. Shared constants and helpers live in a sibling <code>.ts</code> file (ESLint <code>react-refresh/only-export-components</code>).</td></tr>
+      <tr><td class="k">Migrations</td><td><code>YYYYMMDDHHMMSS_description.sql</code>, idempotent (<code>if not exists</code>, <code>create or replace</code>), each wrapped in a transaction, never edited after being applied.</td></tr>
+      <tr><td class="k">Deletion</td><td>Records with financial or historical meaning (packages, deals) are deactivated, not deleted.</td></tr>
+      <tr><td class="k">Text</td><td>All user-facing strings go through i18n keys in <code>locales/en.json</code> and <code>locales/ar.json</code>. Server notifications store a template key and parameters, not translated text.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================= 05 FRONTEND ================= -->
+<section class="chapter">
+  <div class="chapter-head"><div class="chapter-num">05</div><div><p class="eyebrow">Client</p><h1>Frontend architecture</h1></div></div>
+
+  <h2 class="mt0">Portals and routing</h2>
+  <p>All routes sit under <code>RootLayout</code> in <code>src/router/AppRouter.tsx</code>. Each portal is a nested route tree with its own layout and a <code>ProtectedRoute</code> that checks the signed-in user's role.</p>
+  <table class="t">
+    <thead><tr><th style="width:16%">Prefix</th><th style="width:18%">Layout</th><th style="width:30%">Allowed roles</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td class="k"><code>/admin</code></td><td>AdminLayout</td><td>branch_admin, chain_super_admin, manager, xo_super_admin, teacher</td><td>About 70 routes. The sidebar is filtered by feature permissions, and RBAC settings items are XO-only.</td></tr>
+      <tr><td class="k"><code>/teacher</code></td><td>TeacherLayout</td><td>teacher</td><td>Mobile-first classroom tools, with nav items gated by feature.</td></tr>
+      <tr><td class="k"><code>/staff</code></td><td>StaffLayout</td><td>teacher</td><td>Own payslips.</td></tr>
+      <tr><td class="k"><code>/parent</code></td><td>ParentLayout</td><td>parent</td><td>Family app, about 35 routes.</td></tr>
+      <tr><td class="k"><code>/xo-admin</code></td><td>XoAdminLayout</td><td>xo_super_admin</td><td>Platform pages plus a full <code>/xo-admin/nursery/*</code> mirror of the admin portal for the active nursery.</td></tr>
+      <tr><td class="k">Public</td><td>RootLayout</td><td>anyone</td><td><code>/login</code>, <code>/signup</code>, <code>/public/inquiry/:nurseryId</code>, <code>/unauthorized</code>, <code>/error</code>.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Data layer</h2>
+  <div class="grid-2">
+    <div class="card">
+      <h4>TanStack Query</h4>
+      <ul class="dots tight">
+        <li>Global defaults: <code>staleTime</code> 5 minutes, <code>gcTime</code> 10 minutes. Volatile hooks override them.</li>
+        <li>After create, update or toggle, mutations write the returned row straight into the cache with <code>setQueryData</code>, so the UI updates instantly without waiting for a refetch.</li>
+        <li>Derived cross-entity values (for example a deal's assigned packages and children) are refreshed by invalidating the related key.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>Realtime</h4>
+      <ul class="dots tight">
+        <li><code>RealtimeQuerySync</code> subscribes to Postgres changes on the public schema. Realtime applies RLS, so users only receive rows they may read.</li>
+        <li>Bursts of changes are combined into one refresh. Queries on screen refetch immediately, and the rest are marked stale.</li>
+        <li>Application tables with RLS are in the <code>supabase_realtime</code> publication (migration <code>20261005000000</code>).</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Other client subsystems</h2>
+  <table class="t">
+    <thead><tr><th style="width:22%">Subsystem</th><th>Implementation</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Authentication</td><td>Supabase Auth with email and password, or a magic link (<code>signInWithOtp</code>). <code>AuthProvider</code> exposes the session, and <code>useUserProfile</code> loads <code>users</code> (role, nursery, department, role_id).</td></tr>
+      <tr><td class="k">Health gate</td><td><code>DatabaseConnectionGate</code> checks database reachability and routes to <code>/error</code> when the backend is unavailable.</td></tr>
+      <tr><td class="k">Client state</td><td>Zustand: <code>useActiveNurseryStore</code> (which nursery the XO console is operating) and <code>useHelpAiUiStore</code>.</td></tr>
+      <tr><td class="k">i18n</td><td>i18next with browser language detection and a per-nursery default language. Arabic switches the document to RTL, and the layout uses logical properties (start and end).</td></tr>
+      <tr><td class="k">Design system</td><td>Tailwind tokens backed by CSS variables in <code>index.css</code> (surface, outline, primary and shadow scales, plus dark theme), with shared primitives such as <code>Dialog</code>, <code>Badge</code>, <code>FilterMenu</code>, <code>FormSection</code>, <code>EmptyState</code> and <code>LoadingSkeleton</code>.</td></tr>
+      <tr><td class="k">PWA</td><td><code>manifest.json</code> (standalone, installable) and <code>sw.js</code> handling install, activate, fetch, push and notificationclick. Push subscriptions are stored in <code>user_push_subscriptions</code> using a VAPID key.</td></tr>
+      <tr><td class="k">Offline</td><td><code>lib/offlineRequestQueue.ts</code> queues failed writes and flushes them when the connection returns. <code>OfflineIndicator</code> shows pending items.</td></tr>
+      <tr><td class="k">AI assistant</td><td><code>HelpAiBundle</code> with <code>lib/aiAgent*</code>, <code>aiTools.ts</code> (12 tools such as <code>navigate_to_page</code>, <code>create_event_draft</code>, <code>mark_present</code>), <code>aiSafety</code> and <code>aiRateLimit</code>. It calls the <code>ai-assistant</code> edge function with the user's JWT.</td></tr>
+      <tr><td class="k">QR</td><td><code>html5-qrcode</code> scanner page shared by the admin and teacher portals. <code>lib/parseQrScan.ts</code> parses scans, and <code>qrcode.react</code> renders parent and pickup codes.</td></tr>
+      <tr><td class="k">Documents</td><td>jsPDF invoice and receipt generation, plus a CSV/XLSX importer with validation (<code>lib/csvParser.ts</code>, <code>lib/importValidator.ts</code>).</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================= 06 BACKEND ================= -->
+<section class="chapter">
+  <div class="chapter-head"><div class="chapter-num">06</div><div><p class="eyebrow">Server</p><h1>Backend and database</h1></div></div>
+
+  <h2 class="mt0">Data domains</h2>
+  <p>The schema has 110+ tables. They group into the following domains.</p>
+  <table class="t wrapcode">
+    <thead><tr><th style="width:20%">Domain</th><th>Main tables</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Tenancy &amp; users</td><td><code>chains</code> <code>nurseries</code> <code>nursery_settings</code> <code>users</code> <code>parent_children</code> <code>subscription_invoices</code></td></tr>
+      <tr><td class="k">Access control</td><td><code>features</code> <code>roles</code> <code>role_features</code> <code>positions</code> <code>role_assignments_log</code> <code>user_role_changes</code></td></tr>
+      <tr><td class="k">Admissions</td><td><code>inquiries</code> <code>waitlist</code> <code>applications</code> <code>application_documents</code> <code>admissions</code> <code>admission_documents</code> <code>parent_registration_templates</code> <code>import_jobs</code></td></tr>
+      <tr><td class="k">Children &amp; health</td><td><code>children</code> <code>child_allergies</code> <code>child_chronic_conditions</code> <code>child_medications</code> <code>child_vaccinations</code> <code>child_health_records</code> <code>child_health_documents</code> <code>child_health_update_requests</code> <code>child_health_alert_dismissals</code> <code>child_dietary_preferences</code> <code>child_diaper_care</code> <code>child_documents</code> <code>health_records</code> <code>health_articles</code></td></tr>
+      <tr><td class="k">Classes &amp; courses</td><td><code>classes</code> <code>class_staff</code> <code>courses</code> <code>course_enrollments</code> <code>course_invoices</code> <code>academic_calendars</code></td></tr>
+      <tr><td class="k">Attendance &amp; pickup</td><td><code>attendance_records</code> <code>attendance_events</code> <code>attendance_absence_reports</code> <code>qr_tokens</code> <code>temporary_pickup_codes</code> <code>authorized_pickups</code> <code>pickup_incidents</code> <code>staff_attendance</code></td></tr>
+      <tr><td class="k">Packages &amp; billing</td><td><code>tuition_packages</code> <code>tuition_package_billing_periods</code> <code>child_tuition_subscriptions</code> <code>packages</code> <code>child_packages</code> <code>deals</code> <code>invoices</code> <code>payments</code> <code>payment_attempts</code></td></tr>
+      <tr><td class="k">Loyalty</td><td><code>loyalty_points</code> <code>loyalty_transactions</code> <code>loyalty_rewards</code> <code>loyalty_redemptions</code></td></tr>
+      <tr><td class="k">Daily care &amp; progress</td><td><code>daily_reports</code> <code>report_reactions</code> <code>milestones</code> <code>quarterly_reports</code> <code>quarterly_report_templates</code> <code>quarterly_report_sections</code> <code>quarterly_report_items</code> <code>quarterly_report_grades</code> <code>quarterly_report_grade_levels</code> <code>meal_plans</code> <code>food_menus</code></td></tr>
+      <tr><td class="k">Events</td><td><code>events</code> <code>event_attendees</code> <code>event_attendance</code> <code>event_invoices</code> <code>permissions</code> <code>parental_consents</code></td></tr>
+      <tr><td class="k">Communication</td><td><code>chat_conversations</code> <code>chat_conversation_members</code> <code>chat_messages</code> <code>messages</code> <code>broadcast_messages</code> <code>notifications</code> <code>personal_reminders</code> <code>teacher_monthly_reminder_templates</code> <code>user_push_subscriptions</code></td></tr>
+      <tr><td class="k">Media &amp; content</td><td><code>media</code> <code>media_children</code> <code>media_visibility</code> <code>content_library</code> <code>community_posts</code> <code>community_comments</code> <code>posts</code> <code>post_comments</code> <code>surveys</code> <code>survey_responses</code> <code>nps_ratings</code></td></tr>
+      <tr><td class="k">Staff &amp; HR</td><td><code>staff</code> <code>staff_profiles</code> <code>staff_national_ids</code> <code>staff_schedules</code> <code>staff_payroll</code> <code>payroll</code> <code>compliance_docs</code></td></tr>
+      <tr><td class="k">Operations</td><td><code>inventory</code> <code>tenant_export_jobs</code> <code>tenant_export_artifacts</code></td></tr>
+      <tr><td class="k">Planned (schema only)</td><td><code>cameras</code> <code>camera_access</code> <code>bus_routes</code> <code>bus_attendance</code></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="chapter">
+  <h2 class="mt0">The server-function pattern</h2>
+  <p>Logic that moves money or changes attendance is written as a PostgreSQL function and called with <code>supabase.rpc()</code>. Each function follows the same template:</p>
+  <ol class="steps">
+    <li><b>Declared as <code>SECURITY DEFINER</code></b> with <code>set search_path = public</code> and <code>set row_security = off</code>. It runs with the owner's rights, so it must check permissions itself.</li>
+    <li><b>Authenticates the caller</b> through <code>auth.uid()</code> and reads their role, nursery and chain from <code>users</code>. It rejects callers outside the target tenant (<code>42501</code>).</li>
+    <li><b>Locks the rows it changes</b> (<code>select … for update</code>) to serialise concurrent requests such as double clicks or two devices.</li>
+    <li><b>Validates state and amounts:</b> balance checks, allowed status transitions, and payment already started.</li>
+    <li><b>Is idempotent:</b> money actions take an idempotency key, and a retry returns the first result instead of acting twice.</li>
+    <li><b>Writes and audits atomically,</b> including audit events and notifications to parents and staff, in one transaction.</li>
+    <li><b>Is granted narrowly:</b> internal helpers and cron functions have <code>EXECUTE</code> revoked from <code>anon</code> and <code>authenticated</code>, and only user-facing RPCs are granted.</li>
+  </ol>
+
+  <h2>Key RPCs</h2>
+  <table class="t">
+    <thead><tr><th style="width:38%">Function</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td class="k"><code>select_application_payment_package</code></td><td>Creates or updates the admission invoice for the chosen tuition package and period. Reads the real period price and applies an active deal, recording the discount in <code>line_items_json</code>.</td></tr>
+      <tr><td class="k"><code>select_application_extra_hours_package</code></td><td>Stores the optional extra-hours package on the application.</td></tr>
+      <tr><td class="k"><code>submit_application_for_review</code></td><td>Moves an application to review once the required documents are present.</td></tr>
+      <tr><td class="k"><code>submit_application_after_payment_attempt</code></td><td>Submits the application automatically once a payment is declared.</td></tr>
+      <tr><td class="k"><code>approve_application_enrollment</code></td><td>Approves the application, creates the child and parent link, and opens <code>child_tuition_subscriptions</code> with the price locked to the pre-discount subtotal.</td></tr>
+      <tr><td class="k"><code>admin_set_child_tuition_subscription</code></td><td>Admin change of a child's package or billing period.</td></tr>
+      <tr><td class="k"><code>submit_invoice_payment</code></td><td>Parent declares a payment (method and reference). The attempt is locked, idempotent and limited to the balance.</td></tr>
+      <tr><td class="k"><code>confirm_invoice_payment_attempt</code> / <code>reject_…</code></td><td>Finance confirms (creates the payment, awards loyalty points) or rejects an attempt with a reason.</td></tr>
+      <tr><td class="k"><code>admin_record_invoice_payment</code></td><td>Staff record a payment received at the desk.</td></tr>
+      <tr><td class="k"><code>redeem_loyalty_points</code></td><td>Applies loyalty points to an invoice.</td></tr>
+      <tr><td class="k"><code>record_attendance_check_in</code> / <code>_check_out</code></td><td>Atomic scan handling. Records the scanner, method and QR, writes an audit event, notifies parents, and on check-out runs extra-time billing.</td></tr>
+      <tr><td class="k"><code>undo_attendance_check_in</code>, <code>admin_correct_attendance</code></td><td>Corrections with an audit trail.</td></tr>
+      <tr><td class="k"><code>admin_waive_late_charge</code></td><td>Waives or reduces a late charge, releases package hours and lowers the invoice.</td></tr>
+      <tr><td class="k"><code>get_attendance_days</code>, <code>get_attendance_kpis</code></td><td>One consistent source for attendance statistics on every dashboard.</td></tr>
+      <tr><td class="k"><code>user_has_feature</code></td><td>Server-side feature check against the RBAC tables.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================= 07 EDGE FUNCTIONS ================= -->
+<section class="chapter">
+  <div class="chapter-head"><div class="chapter-num">07</div><div><p class="eyebrow">Serverless</p><h1>Edge functions</h1></div></div>
+  <p class="lead">Deno functions in <code>supabase/functions</code> handle work that needs the service-role key, third-party APIs or long-running processing. Shared helpers live in <code>_shared</code>.</p>
+
+  <table class="t">
+    <thead><tr><th style="width:30%">Function</th><th style="width:18%">Area</th><th>Responsibility</th></tr></thead>
+    <tbody>
+      <tr><td class="k"><code>xo-create-nursery</code></td><td>Platform</td><td>Creates a nursery, its settings and its first admin account.</td></tr>
+      <tr><td class="k"><code>xo-assign-nursery-admin</code></td><td>Platform</td><td>Assigns or replaces a nursery's admin.</td></tr>
+      <tr><td class="k"><code>xo-check-admin-email</code></td><td>Platform</td><td>Checks whether an admin email is available.</td></tr>
+      <tr><td class="k"><code>parent-signup-complete</code></td><td>Admissions</td><td>Finalises parent self sign-up (profile and nursery link).</td></tr>
+      <tr><td class="k"><code>child-enrollment-complete</code></td><td>Admissions</td><td>Finalises the staff enrollment wizard (child, guardians, accounts).</td></tr>
+      <tr><td class="k"><code>process-import</code></td><td>Admissions</td><td>Processes a bulk child import job.</td></tr>
+      <tr><td class="k"><code>ai-import-mapper</code></td><td>Admissions · AI</td><td>Uses Claude to map uploaded spreadsheet columns to XO fields.</td></tr>
+      <tr><td class="k"><code>staff-onboarding-complete</code></td><td>HR</td><td>Creates the staff login and profile from the onboarding wizard.</td></tr>
+      <tr><td class="k"><code>qr-token</code></td><td>Attendance</td><td>Issues parent and one-time pickup QR tokens.</td></tr>
+      <tr><td class="k"><code>qr-verify</code></td><td>Attendance</td><td>Verifies a scanned QR token.</td></tr>
+      <tr><td class="k"><code>event-qr-issue</code></td><td>Events</td><td>Issues event check-in QR codes.</td></tr>
+      <tr><td class="k"><code>permission-deadline-reminder</code></td><td>Events</td><td>Reminds parents about pending permission slips.</td></tr>
+      <tr><td class="k"><code>payment-reminders</code></td><td>Finance</td><td>Sends reminders for due and overdue invoices.</td></tr>
+      <tr><td class="k"><code>emergency-broadcast</code></td><td>Communication</td><td>Sends urgent messages to every family.</td></tr>
+      <tr><td class="k"><code>email-dispatch</code></td><td>Communication</td><td>Email through Resend (<span class="pill amber">stub</span> until credentials are set).</td></tr>
+      <tr><td class="k"><code>sms-dispatch</code></td><td>Communication</td><td>SMS through SMS Misr (<span class="pill amber">stub</span>).</td></tr>
+      <tr><td class="k"><code>whatsapp-dispatch</code></td><td>Communication</td><td>WhatsApp through 360dialog, with per-parent daily limits (<span class="pill amber">stub</span>).</td></tr>
+      <tr><td class="k"><code>ai-assistant</code></td><td>AI</td><td>Proxies the help assistant to the Claude Messages API with the user's context.</td></tr>
+      <tr><td class="k"><code>tenant-export</code></td><td>Operations</td><td>Exports one nursery's data for backup or portability.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout info"><b>Secrets</b><p>Provider keys (for example <code>ANTHROPIC_API_KEY</code>) and <code>SUPABASE_SERVICE_ROLE_KEY</code> live only in Edge Function secrets. The browser only ever holds the anon/publishable key.</p></div>
+</section>
+
+<!-- ================= 08 CRON ================= -->
+<section class="chapter">
+  <div class="chapter-head"><div class="chapter-num">08</div><div><p class="eyebrow">Automation</p><h1>Scheduled jobs</h1></div></div>
+  <p class="lead">Recurring work runs inside the database with <code>pg_cron</code>. Jobs are scheduled idempotently: each migration unschedules a job by name before scheduling it again.</p>
+
+  <table class="t">
+    <thead><tr><th style="width:32%">Job</th><th style="width:18%">Schedule</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td class="k"><code>tuition-subscription-billing-daily</code></td><td>Daily 06:00</td><td>Finds active tuition subscriptions that are due and generates their invoices (<code>run_tuition_subscription_billing</code>).</td></tr>
+      <tr><td class="k"><code>late-pickup-sweep</code></td><td>Every 15 min</td><td>Bills children still checked in after closing time, up to the configured cap (<code>run_late_pickup_sweep</code>).</td></tr>
+      <tr><td class="k"><code>attendance-pickup-reminders</code></td><td>Every 5 min</td><td>Reminds parents of children still in the building before closing (<code>run_pickup_reminders</code>).</td></tr>
+      <tr><td class="k"><code>attendance-daily-close</code></td><td>Hourly at :15</td><td>Closes each nursery's day and flags missing check-outs for review (<code>run_attendance_daily_close</code>).</td></tr>
+      <tr><td class="k"><code>payment-reminders-daily</code></td><td>Daily 09:00</td><td>Reminders for due and overdue invoices (<code>run_payment_reminders</code>).</td></tr>
+      <tr><td class="k"><code>permission-deadline-reminders-daily</code></td><td>Daily 10:00</td><td>Reminders for unanswered event permission slips.</td></tr>
+      <tr><td class="k"><code>personal-reminders-hourly</code></td><td>Hourly</td><td>Delivers users' personal reminders that are due.</td></tr>
+      <tr><td class="k"><code>teacher-monthly-reminders</code></td><td>1st of month, 08:00</td><td>Sends monthly teacher reminders from templates (<code>run_monthly_teacher_reminders</code>).</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout warn"><b>Settings-driven</b><p>The jobs read their rules from <code>nursery_settings</code>, so behaviour changes per nursery without code changes. Examples include <code>auto_late_pickup_billing_enabled</code>, <code>late_sweep_cap_hours</code>, <code>pickup_reminder_minutes_before</code>, <code>auto_payment_reminders_enabled</code> and quiet hours.</p></div>
+</section>
+
+<!-- ================= 09 MODULE REFERENCE ================= -->
+<section class="chapter">
+  <div class="chapter-head"><div class="chapter-num">09</div><div><p class="eyebrow">Where things live</p><h1>Module reference</h1></div></div>
+  <p class="lead">For each business module: its main routes, data hooks, tables and server-side pieces. Admin routes are also mirrored under <code>/xo-admin/nursery/*</code>.</p>
+
+  <table class="t ref wrapcode">
+    <thead><tr><th>Module</th><th style="width:27%">Routes</th><th style="width:28%">Hooks</th><th>Data &amp; server</th></tr></thead>
+    <tbody>
+      <tr><td class="k">1 · Admissions &amp; enrollment</td>
+        <td><code>/admin/admissions/*</code> (inquiries, waitlist, applications, import), <code>/admin/children/enroll</code>, <code>/signup</code>, <code>/public/inquiry/:id</code>, <code>/parent/applications</code></td>
+        <td>useInquiries, useWaitlist, useApplications, useApplicationDraft, useApplicationPackagePayment, useApplicationExtraHoursPackage, useBulkImport</td>
+        <td>applications, application_documents, parent_registration_templates, import_jobs · <code>select_application_payment_package</code>, <code>approve_application_enrollment</code> · edge: parent-signup-complete, child-enrollment-complete, process-import, ai-import-mapper</td></tr>
+      <tr><td class="k">2 · Child profiles &amp; health</td>
+        <td><code>/admin/children</code>, <code>/admin/children/:id</code>, <code>…/:id/health</code>, <code>/admin/health/alerts</code>, <code>/parent/children/:id/health</code></td>
+        <td>useChildHealth, useChildHealthMutations, useHealthAlerts, useParentHealthActions, useAdminChildBilling</td>
+        <td>children, parent_children, child_allergies, child_medications, child_vaccinations, child_health_* · <code>admin_set_child_tuition_subscription</code></td></tr>
+      <tr><td class="k">3 · Classes &amp; courses</td>
+        <td><code>/admin/classes</code>, <code>/admin/courses</code>, <code>/teacher/classes</code>, <code>/teacher/courses</code>, <code>/parent/courses</code></td>
+        <td>useClassStaff, useAdminCoursesList, useAdminCourseDetail, useTeacherCourses, useParentCourses</td>
+        <td>classes, class_staff, courses, course_enrollments, course_invoices</td></tr>
+      <tr><td class="k">4 · Attendance &amp; safe pickup</td>
+        <td><code>/admin/attendance</code> (+ dashboard, logs, child report), <code>/admin/scanner</code>, <code>/teacher/attendance</code>, <code>/teacher/scanner</code>, <code>/parent/qr-code</code>, <code>/parent/attendance</code></td>
+        <td>useAttendanceDays, useAttendanceKpis, useAllChildrenAttendanceSummary, useChildAttendanceHistory, useQrTokenGeneration, useParentIssuedQrTokens, useStaffAttendanceMonth</td>
+        <td>attendance_records, attendance_events, attendance_absence_reports, qr_tokens, authorized_pickups · <code>record_attendance_check_in/out</code>, <code>admin_waive_late_charge</code> · cron: late-pickup-sweep, pickup-reminders, daily-close · edge: qr-token, qr-verify</td></tr>
+      <tr><td class="k">5 · Daily care &amp; progress</td>
+        <td><code>/teacher/daily-reports</code>, <code>/teacher/milestones</code>, <code>/admin/reports</code>, <code>/parent/daily-reports</code>, <code>/parent/quarterly-reports</code>, <code>/admin/meals</code></td>
+        <td>useDailyReports, useParentReports, useMilestones, useQuarterlyReports, useMealPlans</td>
+        <td>daily_reports, report_reactions, milestones, quarterly_report_*, meal_plans, food_menus</td></tr>
+      <tr><td class="k">6 · Packages, pricing &amp; deals</td>
+        <td><code>/admin/packages</code> (Fixed and Hours tabs), <code>/admin/deals</code></td>
+        <td>useAdminTuitionPackages, useAdminTuitionBillingPeriods, useAdminPackages, useAdminDeals</td>
+        <td>tuition_packages, tuition_package_billing_periods, packages, child_packages, deals (<code>deal_id</code> on both package tables)</td></tr>
+      <tr><td class="k">7 · Billing, payments &amp; finance</td>
+        <td><code>/admin/invoices</code>, <code>/admin/financial/dashboard</code>, <code>/admin/reports/financial</code>, <code>/parent/invoices</code>, <code>/parent/invoices/:id/pay</code>, <code>/parent/payment-record</code></td>
+        <td>useAdminInvoices, useInvoiceDetails, useParentInvoices, useSubmitInvoicePayment, usePaymentAttempts, usePaymentHistory, useAdminFinancialDashboard, useFinancialReports, useParentChildBilling</td>
+        <td>invoices, payments, payment_attempts, child_tuition_subscriptions · <code>submit_invoice_payment</code>, <code>confirm/reject_invoice_payment_attempt</code>, <code>admin_record_invoice_payment</code> · cron: tuition billing, payment reminders</td></tr>
+      <tr><td class="k">8 · Staff &amp; HR</td>
+        <td><code>/admin/staff</code>, <code>/admin/staff/onboarding</code>, <code>/admin/staff/:id</code>, <code>/admin/staff/payroll</code>, <code>/staff/payslips</code></td>
+        <td>useStaff, useStaffSchedules, useStaffAttendanceMonth, usePayroll, useStaffPayrollRecords, usePositions, useStaffIdentityExists</td>
+        <td>staff_profiles, staff_national_ids, staff_schedules, staff_attendance, staff_payroll · edge: staff-onboarding-complete</td></tr>
+      <tr><td class="k">9 · Communication</td>
+        <td><code>/admin/chat</code>, <code>/admin/messages/broadcast(s)</code>, <code>/admin/inbox</code>, <code>/admin/notifications</code>, portal inbox/chat pages</td>
+        <td>useAdminChat, useConversationMessages, useChatParticipants, useUnreadMessagesCount, useNotificationsCenter, useParentInbox, usePersonalReminders, useWebPushSetup</td>
+        <td>chat_*, broadcast_messages, notifications, personal_reminders, user_push_subscriptions · edge: emergency-broadcast, email/sms/whatsapp-dispatch</td></tr>
+      <tr><td class="k">10 · Events &amp; permissions</td>
+        <td><code>/admin/events/*</code>, <code>/admin/calendar</code>, <code>/teacher/events</code>, <code>/parent/events</code>, <code>/parent/permissions</code></td>
+        <td>useAdminEventsList, useAdminEventDetails, useAdminEventPermissionStats, useEventAttendees, useEventTargets, useParentEventPermissions, useParentEventsCatalog</td>
+        <td>events, event_attendees, event_attendance, event_invoices, permissions, parental_consents · edge: event-qr-issue, permission-deadline-reminder</td></tr>
+      <tr><td class="k">11 · Media, content &amp; community</td>
+        <td><code>/admin/media</code> (+ upload, approval), <code>/teacher/media</code>, <code>/parent/media</code>, <code>/admin/library</code>, <code>/admin/community</code>, <code>/admin/surveys</code></td>
+        <td>useMediaUpload, useMediaApproval, useParentMedia, useContentLibrary, useCommunity, useSurveys</td>
+        <td>media, media_children, media_visibility, content_library, community_posts, community_comments, surveys, survey_responses, nps_ratings</td></tr>
+      <tr><td class="k">12 · Loyalty</td>
+        <td><code>/admin/loyalty</code>, <code>/parent/rewards</code></td>
+        <td>useLoyalty</td>
+        <td>loyalty_points, loyalty_transactions, loyalty_rewards, loyalty_redemptions · <code>redeem_loyalty_points</code>, <code>loyalty_award_payment_points</code></td></tr>
+      <tr><td class="k">13 · Settings &amp; operations</td>
+        <td><code>/admin/settings</code>, <code>/admin/onboarding/*</code>, <code>/admin/inventory</code>, <code>/admin/qr-codes</code></td>
+        <td>useNurserySettings, useInventory</td>
+        <td>nursery_settings (12 tabs), inventory</td></tr>
+      <tr><td class="k">14 · Platform admin</td>
+        <td><code>/xo-admin</code>, <code>/xo-admin/nurseries/*</code>, <code>/xo-admin/analytics</code>, <code>/xo-admin/payments</code></td>
+        <td>useNurseries, useNurseryDetail, useNurseriesAnalytics, usePlatformAnalytics, useXoAdminStats, useXoPaymentAttempts, useTenantExports</td>
+        <td>chains, nurseries, subscription_invoices, tenant_export_* · edge: xo-create-nursery, xo-assign-nursery-admin, tenant-export</td></tr>
+      <tr><td class="k">15 · AI assistant</td>
+        <td>Floating panel in every portal; <code>/parent/settings</code> and <code>/teacher/settings</code> for preferences</td>
+        <td>useAiAssistantController, useAiAssistantPanelPosition</td>
+        <td>edge: ai-assistant (Claude) · <code>lib/aiTools.ts</code>, <code>lib/aiSafety.ts</code></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================= 10 ROLES & PERMISSIONS ================= -->
+<section class="chapter">
+  <div class="chapter-head"><div class="chapter-num">10</div><div><p class="eyebrow">Access control</p><h1>Roles and permissions</h1></div></div>
+
+  <h2 class="mt0">Base roles</h2>
+  <p>The Postgres enum <code>public.user_role</code> (column <code>users.role</code>) decides the portal and the RLS scope.</p>
+  <table class="t">
+    <thead><tr><th style="width:22%">Role</th><th style="width:30%">RLS data scope</th><th>Sub-type and notes</th></tr></thead>
+    <tbody>
+      <tr><td class="k"><code>xo_super_admin</code></td><td>Every nursery</td><td>Bypasses every permission check. Uses <code>/xo-admin</code> and can operate any nursery.</td></tr>
+      <tr><td class="k"><code>chain_super_admin</code></td><td>Nurseries in <code>users.chain_id</code></td><td>Treated as "top management" in the permission matrix.</td></tr>
+      <tr><td class="k"><code>branch_admin</code></td><td>Own <code>nursery_id</code></td><td>Top management. Manages the nursery's custom roles and positions.</td></tr>
+      <tr><td class="k"><code>manager</code></td><td>Own <code>nursery_id</code></td><td><code>users.department</code> is one of <code>finance</code>, <code>hr</code> or <code>operations</code>, and unlocks department-gated features.</td></tr>
+      <tr><td class="k"><code>teacher</code></td><td>Children of assigned classes</td><td><code>class_staff.role</code> is <code>lead</code> or <code>assistant</code>.</td></tr>
+      <tr><td class="k"><code>parent</code></td><td>Children in <code>parent_children</code></td><td>Not part of the feature matrix. Has its own portal.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>RLS helper functions</h2>
+  <p>Policies call small <code>SECURITY DEFINER</code> helpers with <code>row_security = off</code>, which avoids recursive policy evaluation on <code>users</code>:</p>
+  <table class="t">
+    <thead><tr><th style="width:38%">Helper</th><th>Returns</th></tr></thead>
+    <tbody>
+      <tr><td class="k"><code>current_user_role()</code></td><td>The caller's <code>user_role</code>.</td></tr>
+      <tr><td class="k"><code>current_user_nursery_id()</code></td><td>The caller's nursery.</td></tr>
+      <tr><td class="k"><code>is_xo_super_admin()</code></td><td>Whether the caller is a platform admin.</td></tr>
+      <tr><td class="k"><code>rls_staff_manages_nursery(nursery_id)</code></td><td>Whether the caller is an admin of that nursery (or its chain).</td></tr>
+      <tr><td class="k"><code>rls_staff_can_access_child(child_id)</code></td><td>Whether the caller is staff allowed to see that child.</td></tr>
+      <tr><td class="k"><code>rls_authenticated_staff_sees_nursery(nursery_id)</code></td><td>Whether any staff role in the nursery may read.</td></tr>
+      <tr><td class="k"><code>user_has_feature(key)</code></td><td>Server-side feature check against <code>role_features</code>.</td></tr>
+    </tbody>
+  </table>
+  <p class="small muted">Typical policy shape: an <code>_xo_all</code> policy (<code>is_xo_super_admin()</code>), an <code>_admin_all</code> policy (admin role with matching nursery), a <code>_staff_select</code> policy, and a <code>_parent_select</code> policy limited to active rows of the parent's nursery or children.</p>
+</section>
+
+<section class="chapter">
+  <h2 class="mt0">The permission engine</h2>
+  <div class="flow">
+    <div class="node"><b>1 · XO super admin?</b>Full access, all actions</div><div class="arrow">→</div>
+    <div class="node"><b>2 · DB matrix</b><code>role_features</code> for <code>users.role_id</code></div><div class="arrow">→</div>
+    <div class="node"><b>3 · Static fallback</b><code>lib/permissions/matrix.ts</code></div>
+  </div>
+  <ul class="dots">
+    <li><code>useFeatureActions(feature)</code> in <code>hooks/usePermissions.ts</code> returns <code>{ allowed, requiresApproval, actions }</code>, where <code>actions</code> is a set of <code>view</code>, <code>create</code>, <code>update</code> and <code>delete</code>.</li>
+    <li><code>usePermissionMatrix(roleId)</code> loads <code>role_features(feature_id, actions[], requires_approval)</code> and caches it for 5 minutes.</li>
+    <li>A feature without <code>view</code> means no access. <code>requires_approval</code> corresponds to the "with approval" cells.</li>
+    <li>The static matrix maps roles to columns: <code>chain_super_admin</code> and <code>branch_admin</code> map to <em>topManagement</em>, and <code>manager</code> and <code>teacher</code> map to their own columns. A cell is <code>full</code>, <code>none</code>, <code>with_approval</code> or <code>{ requireDepartment }</code>.</li>
+    <li>Navigation items declare a <code>feature</code>, and layouts hide items the user cannot view. RBAC settings pages are marked <code>xoOnly</code>.</li>
+  </ul>
+
+  <h2>RBAC data model</h2>
+  <table class="t">
+    <thead><tr><th style="width:24%">Table</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td class="k"><code>features</code></td><td>Catalogue of feature keys (EN/AR names, category, <code>is_seed</code>). Platform-wide and editable by XO admins.</td></tr>
+      <tr><td class="k"><code>roles</code></td><td>Seed and custom roles per nursery. Each has an immutable <code>base_role</code> (and <code>base_department</code> for managers) that drives RLS.</td></tr>
+      <tr><td class="k"><code>role_features</code></td><td>Grants: <code>role_id</code>, <code>feature_id</code>, <code>actions[]</code>, <code>requires_approval</code>.</td></tr>
+      <tr><td class="k"><code>positions</code></td><td>HR positions, each linked to a role, so onboarding into a position sets access.</td></tr>
+      <tr><td class="k"><code>role_assignments_log</code></td><td>Audit of role changes (old role, new role, changed by, reason).</td></tr>
+      <tr><td class="k"><code>users.role_id</code></td><td>The user's assigned role. <code>users.role</code> stays in sync with the role's base role.</td></tr>
+    </tbody>
+  </table>
+  <div class="callout warn"><b>Invariant</b><p>A custom role can only <em>narrow</em> access. Data scope always comes from its <code>base_role</code> through RLS, so a custom role can never see more rows than its base role.</p></div>
+
+  <h3 style="break-before: page; margin-top: 0">Default feature matrix (static fallback and seed)</h3>
+  <p class="small muted">Source: <code>src/lib/permissions/matrix.ts</code>. Some admin routes (courses, packages, deals, chat, settings) declare no feature and are visible to every role allowed into <code>/admin</code>.</p>
+  <table class="t center compact">
+    <thead><tr><th style="text-align:left">Feature key</th><th>Top mgmt</th><th>Manager</th><th>Teacher</th></tr></thead>
+    <tbody>
+      <tr><td class="k"><code>dashboard_attendance</code></td><td><span class="acc full">full</span></td><td><span class="acc full">full</span></td><td><span class="acc full">full</span></td></tr>
+      <tr><td class="k"><code>dashboard_finance</code></td><td><span class="acc full">full</span></td><td><span class="acc dept">finance</span></td><td><span class="acc none">none</span></td></tr>
+      <tr><td class="k"><code>newsfeed</code></td><td><span class="acc full">full</span></td><td><span class="acc full">full</span></td><td><span class="acc full">full</span></td></tr>
+      <tr><td class="k"><code>kids_applications</code></td><td><span class="acc full">full</span></td><td><span class="acc full">full</span></td><td><span class="acc none">none</span></td></tr>
+      <tr><td class="k"><code>staff</code></td><td><span class="acc full">full</span></td><td><span class="acc dept">hr</span></td><td><span class="acc none">none</span></td></tr>
+      <tr><td class="k"><code>classes</code></td><td><span class="acc full">full</span></td><td><span class="acc full">full</span></td><td><span class="acc full">full</span></td></tr>
+      <tr><td class="k"><code>admissions</code></td><td><span class="acc full">full</span></td><td><span class="acc full">full</span></td><td><span class="acc none">none</span></td></tr>
+      <tr><td class="k"><code>permissions</code></td><td><span class="acc full">full</span></td><td><span class="acc full">full</span></td><td><span class="acc none">none</span></td></tr>
+      <tr><td class="k"><code>event_calendar</code></td><td><span class="acc full">full</span></td><td><span class="acc full">full</span></td><td><span class="acc full">full</span></td></tr>
+      <tr><td class="k"><code>financial_reports</code></td><td><span class="acc full">full</span></td><td><span class="acc dept">finance</span></td><td><span class="acc none">none</span></td></tr>
+      <tr><td class="k"><code>notifications</code></td><td><span class="acc full">full</span></td><td><span class="acc full">full</span></td><td><span class="acc full">full</span></td></tr>
+      <tr><td class="k"><code>media_library</code></td><td><span class="acc full">full</span></td><td><span class="acc full">full</span></td><td><span class="acc appr">with_approval</span></td></tr>
+      <tr><td class="k"><code>upload_media</code></td><td><span class="acc full">full</span></td><td><span class="acc full">full</span></td><td><span class="acc full">full</span></td></tr>
+      <tr><td class="k"><code>content_library</code></td><td><span class="acc full">full</span></td><td><span class="acc full">full</span></td><td><span class="acc full">full</span></td></tr>
+      <tr><td class="k"><code>surveys</code></td><td><span class="acc full">full</span></td><td><span class="acc full">full</span></td><td><span class="acc none">none</span></td></tr>
+      <tr><td class="k"><code>messages</code></td><td><span class="acc full">full</span></td><td><span class="acc full">full</span></td><td><span class="acc full">full</span></td></tr>
+      <tr><td class="k"><code>daily_reports</code></td><td><span class="acc full">full</span></td><td><span class="acc full">full</span></td><td><span class="acc appr">with_approval</span></td></tr>
+      <tr><td class="k"><code>child_enrollment</code></td><td><span class="acc full">full</span></td><td><span class="acc full">full</span></td><td><span class="acc none">none</span></td></tr>
+      <tr><td class="k"><code>staff_onboarding</code></td><td><span class="acc full">full</span></td><td><span class="acc full">full</span></td><td><span class="acc none">none</span></td></tr>
+      <tr><td class="k"><code>inventory</code></td><td><span class="acc full">full</span></td><td><span class="acc full">full</span></td><td><span class="acc none">none</span></td></tr>
+      <tr><td class="k"><code>meals</code></td><td><span class="acc full">full</span></td><td><span class="acc full">full</span></td><td><span class="acc none">none</span></td></tr>
+      <tr><td class="k"><code>qr_code</code></td><td><span class="acc full">full</span></td><td><span class="acc full">full</span></td><td><span class="acc none">none</span></td></tr>
+      <tr><td class="k"><code>health_alerts</code></td><td><span class="acc full">full</span></td><td><span class="acc full">full</span></td><td><span class="acc full">full</span></td></tr>
+      <tr><td class="k"><code>loyalty</code></td><td><span class="acc full">full</span></td><td><span class="acc dept">finance</span></td><td><span class="acc none">none</span></td></tr>
+      <tr><td class="k"><code>broadcast_messages</code></td><td><span class="acc full">full</span></td><td><span class="acc full">full</span></td><td><span class="acc none">none</span></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================= 11 KEY FLOWS ================= -->
+<section class="chapter">
+  <div class="chapter-head"><div class="chapter-num">11</div><div><p class="eyebrow">End to end</p><h1>Key flows</h1></div></div>
+
+  <div class="grid-2">
+    <div class="card">
+      <span class="tag">Flow A</span>
+      <h3>Admission, payment and enrollment</h3>
+      <ol class="steps">
+        <li>The parent signs up (<code>parent-signup-complete</code>) and fills the application from the nursery's <code>parent_registration_templates</code>.</li>
+        <li>The parent picks a package and period. <code>select_application_payment_package</code> computes the subtotal from <code>tuition_package_billing_periods</code>, applies an active deal, and upserts the admission invoice.</li>
+        <li>The parent declares a payment (<code>submit_invoice_payment</code>), which auto-submits the application for review.</li>
+        <li>Finance confirms the attempt (<code>confirm_invoice_payment_attempt</code>). The payment is recorded and loyalty points are awarded.</li>
+        <li>The admin approves (<code>approve_application_enrollment</code>). The child is created and a <code>child_tuition_subscriptions</code> row is opened with <code>locked_price</code> equal to the pre-discount subtotal.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <span class="tag">Flow B</span>
+      <h3>QR attendance and late billing</h3>
+      <ol class="steps">
+        <li>Staff scan a QR. <code>qr-verify</code> and <code>attendance_check_qr</code> validate the token, the child and the tenant.</li>
+        <li><code>record_attendance_check_in</code> writes the record, an audit event (scanner, method, QR) and a parent notification.</li>
+        <li>At pickup, <code>record_attendance_check_out</code> computes extra time from <code>nursery_settings</code> (from closing time or from check-in, rounding unit, grace).</li>
+        <li>Extra time uses up extra-hours package hours first. The remainder is added to a daily or monthly invoice as a late item.</li>
+        <li>The <code>late-pickup-sweep</code> bills children still checked in, up to the cap. <code>admin_waive_late_charge</code> reverses a charge.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-top:10px">
+    <div class="card">
+      <span class="tag">Flow C</span>
+      <h3>Recurring tuition billing</h3>
+      <ol class="steps">
+        <li>Daily at 06:00, <code>run_tuition_subscription_billing</code> selects active subscriptions whose next billing date is due.</li>
+        <li><code>_generate_tuition_invoice</code> creates the invoice at <code>locked_price</code> for the subscription's period, and advances the next date.</li>
+        <li>Parents are notified. Reminders follow through <code>payment-reminders-daily</code>.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <span class="tag">Flow D</span>
+      <h3>Deals and discounts</h3>
+      <ol class="steps">
+        <li>A deal (<code>deals</code>) has a percentage or fixed value and an optional <code>starts_at</code> and <code>ends_at</code>, and is attached through <code>deal_id</code> on a package.</li>
+        <li>Discount equals <code>round(subtotal × value / 100, 2)</code>, or the fixed value, capped at the subtotal. It is written to the invoice <code>line_items_json</code> as <code>subtotal</code>, <code>discount_amount</code> and a negative line.</li>
+        <li><strong>First invoice only:</strong> enrollment locks the subscription to the subtotal, so recurring invoices are never discounted.</li>
+        <li>The parent UI mirrors the same math (<code>computePackageBillingQuote</code>) and shows a live countdown to <code>ends_at</code>.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 12 SECURITY ================= -->
+<section class="chapter">
+  <div class="chapter-head"><div class="chapter-num">12</div><div><p class="eyebrow">Defence in depth</p><h1>Security</h1></div></div>
+
+  <table class="t">
+    <thead><tr><th style="width:26%">Concern</th><th>Control</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Tenant isolation</td><td>RLS on every tenant table, keyed on <code>nursery_id</code> and chain. <code>npm run ops:cross-tenant</code> signs in temporary test parents and checks that reads across tenants are denied.</td></tr>
+      <tr><td class="k">Route access</td><td><code>ProtectedRoute</code> per portal, with role checks and redirects to <code>/unauthorized</code>. Navigation is filtered by feature. The UI is a convenience; RLS is the guarantee.</td></tr>
+      <tr><td class="k">Privileged functions</td><td><code>SECURITY DEFINER</code> with a pinned <code>search_path</code> and explicit caller checks. <code>EXECUTE</code> is revoked from <code>anon</code> and <code>authenticated</code> on internal and cron functions.</td></tr>
+      <tr><td class="k">Payments</td><td>Single server path per action, with row locks, balance checks and idempotency keys. Parents cannot create attempts on another family's invoice or above the balance.</td></tr>
+      <tr><td class="k">Audit</td><td>Attendance events (scanner, method, QR), payment attempts with confirm or reject history, <code>role_assignments_log</code> and <code>user_role_changes</code>.</td></tr>
+      <tr><td class="k">Media and documents</td><td>Private storage buckets served through short-lived signed URLs, media approval before parents see items, per-child visibility (<code>media_children</code>, <code>media_visibility</code>).</td></tr>
+      <tr><td class="k">Secrets</td><td>Service-role and provider keys only in Edge Function secrets. The frontend only receives the anon/publishable key.</td></tr>
+      <tr><td class="k">Realtime</td><td>Only tables with RLS are published, so Realtime never streams rows a subscriber could not read.</td></tr>
+      <tr><td class="k">AI</td><td>Assistant actions are drafts that the user confirms, with safety rules (<code>aiSafety</code>), per-user rate limiting (<code>aiRateLimit</code>) and an opt-out.</td></tr>
+      <tr><td class="k">Resilience</td><td>Per-tenant export (<code>tenant-export</code>), <code>docs/backup-and-recovery.md</code>, <code>docs/incident-runbook.md</code> and <code>npm run ops:integrity</code>.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================= 13 DEV & OPS ================= -->
+<section class="chapter">
+  <div class="chapter-head"><div class="chapter-num">13</div><div><p class="eyebrow">Working on XO</p><h1>Development and operations</h1></div></div>
+
+  <h2 class="mt0">npm scripts</h2>
+  <table class="t">
+    <thead><tr><th style="width:32%">Command</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td class="k"><code>npm run dev</code></td><td>Vite dev server with hot reload.</td></tr>
+      <tr><td class="k"><code>npm run build</code> / <code>preview</code></td><td>Production bundle and local preview.</td></tr>
+      <tr><td class="k"><code>npm run typecheck</code></td><td><code>tsc -b</code> across the project.</td></tr>
+      <tr><td class="k"><code>npm run lint</code></td><td>ESLint.</td></tr>
+      <tr><td class="k"><code>npm run seed:demo</code></td><td>Seeds demo data.</td></tr>
+      <tr><td class="k"><code>ops:integrity</code>, <code>ops:cross-tenant</code></td><td>Data integrity check, and RLS cross-tenant denial test.</td></tr>
+      <tr><td class="k"><code>ops:trigger-export</code>, <code>ops:verify-export</code>, <code>ops:restore-rehearsal</code></td><td>Tenant export and restore drills.</td></tr>
+      <tr><td class="k"><code>ops:usage</code>, <code>check:ai-endpoint</code></td><td>Supabase usage watch, and an AI endpoint health check.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Environment variables</h2>
+  <table class="t">
+    <thead><tr><th style="width:36%">Variable</th><th>Where and why</th></tr></thead>
+    <tbody>
+      <tr><td class="k"><code>VITE_SUPABASE_URL</code>, <code>VITE_SUPABASE_ANON_KEY</code></td><td>Frontend connection to Supabase (public).</td></tr>
+      <tr><td class="k"><code>VITE_SUPABASE_LEGACY_ANON_KEY</code></td><td>Legacy JWT anon key for <code>functions/v1</code> calls when publishable keys are rejected.</td></tr>
+      <tr><td class="k"><code>VITE_VAPID_PUBLIC_KEY</code></td><td>Web Push subscription.</td></tr>
+      <tr><td class="k"><code>VITE_SHOW_DEMO_ACCOUNTS</code></td><td>Shows demo-account shortcuts on the login page.</td></tr>
+      <tr><td class="k"><code>SUPABASE_SERVICE_ROLE_KEY</code>, <code>SUPABASE_DB_PASSWORD</code></td><td>Server and ops only. Never shipped to the browser.</td></tr>
+      <tr><td class="k"><code>SUPABASE_ACCESS_TOKEN</code></td><td>Management API (usage script).</td></tr>
+      <tr><td class="k"><code>ANTHROPIC_API_KEY</code></td><td>Edge Function secret for the AI assistant and import mapper.</td></tr>
+      <tr><td class="k"><code>RLS_CROSS_TENANT_TEST_PASSWORD</code>, <code>TENANT_EXPORT_TEST_*</code></td><td>Credentials for the ops test scripts.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Deployment</h2>
+  <ol class="steps">
+    <li><b>Database:</b> apply migrations with <code>supabase db push</code> (or <code>--db-url</code> against the pooler). The command applies, in order, every local migration missing from <code>supabase_migrations.schema_migrations</code>.</li>
+    <li><b>Edge functions:</b> <code>supabase functions deploy &lt;name&gt;</code>, with secrets set in the dashboard.</li>
+    <li><b>Frontend:</b> Vercel builds with <code>vite build</code>. <code>vercel.json</code> rewrites every path to <code>index.html</code> for client-side routing.</li>
+    <li><b>Verify:</b> run <code>typecheck</code> and <code>lint</code>, check the PostgREST schema cache picked up new relations, and smoke-test each portal.</li>
+  </ol>
+  <div class="callout warn"><b>Ship schema and code together</b><p>The frontend assumes the matching migrations are live. Deploying UI code before <code>db push</code> causes errors such as missing tables or columns.</p></div>
+</section>
+
+<!-- ================= 14 STATUS & DEBT ================= -->
+<section class="chapter">
+  <div class="chapter-head"><div class="chapter-num">14</div><div><p class="eyebrow">Open items</p><h1>Integration status and technical debt</h1></div></div>
+
+  <h2 class="mt0">Integrations</h2>
+  <table class="t">
+    <thead><tr><th style="width:24%">Integration</th><th style="width:16%">Status</th><th>Location and next step</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Email (Resend)</td><td><span class="pill amber">Stub</span></td><td><code>functions/email-dispatch</code> logs the payload and returns <code>resend_stub</code>. Add the API key and the real call.</td></tr>
+      <tr><td class="k">SMS (SMS Misr)</td><td><span class="pill amber">Stub</span></td><td><code>functions/sms-dispatch</code>. Same as above.</td></tr>
+      <tr><td class="k">WhatsApp (360dialog)</td><td><span class="pill amber">Stub</span></td><td><code>functions/whatsapp-dispatch</code>. Credentials are needed, and the daily limit should be read from <code>max_whatsapp_per_parent_per_day</code> instead of being hard-coded.</td></tr>
+      <tr><td class="k">Paymob checkout</td><td><span class="pill blue">Not built</span></td><td><code>src/lib/paymob/initiatePayment.ts</code> returns an empty URL. Methods are typed: card, Fawry, InstaPay, Vodafone Cash, Orange Cash. Payments are manual-confirmed today.</td></tr>
+      <tr><td class="k">CCTV</td><td><span class="pill">Schema only</span></td><td><code>cameras</code>, <code>camera_access</code> and the CCTV settings tab exist, but there is no viewer UI.</td></tr>
+      <tr><td class="k">Transport</td><td><span class="pill">Schema only</span></td><td><code>bus_routes</code> and <code>bus_attendance</code> exist, with no UI.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Known technical debt</h2>
+  <div class="grid-2">
+    <div class="card"><h4>Generated database types are behind</h4><p><code>tsc -b</code> reports errors in several files (for example the course, roles, positions and features hooks) because <code>src/types/database.ts</code> predates newer tables. Regenerate the types with <code>supabase gen types</code> and remove the <code>as never</code> casts.</p></div>
+    <div class="card"><h4>Untranslated strings</h4><p>Some newer admin screens (deals, package editors, filter bars) use hard-coded English labels. Move them to <code>locales/en.json</code> and <code>ar.json</code>.</p></div>
+    <div class="card"><h4>Native selects in older dialogs</h4><p>The hours-package dialog still uses native <code>&lt;select&gt;</code> elements. Migrate them to <code>FilterMenu</code> for a consistent look.</p></div>
+    <div class="card"><h4>Design doc drift</h4><p><code>docs/rbac-roles-positions-features.md</code> is marked "not implemented", but the RBAC tables, pages and per-action grants are live, and the matrix in code differs from the doc's table. Update the doc.</p></div>
+    <div class="card"><h4>Lint baseline</h4><p>The repository has pre-existing ESLint errors (for example <code>react-refresh</code> in <code>components/ui/dialog.tsx</code> and impure <code>Date.now</code> calls during render). Fix them, then enforce lint in CI.</p></div>
+    <div class="card"><h4>Migration discipline</h4><p>Several migrations were once left unapplied on the hosted database. Add a CI or deploy check that compares <code>supabase migration list</code> local and remote before each frontend release.</p></div>
+  </div>
+</section>
+
+</body>
+</html>

@@ -54,6 +54,32 @@ type VerifyPayload = {
   check_out?: string | null;
 };
 
+// qr-verify answers refusals with an English sentence and a 4xx status; map them to the
+// attendance.errors.* codes the app already translates.
+const QR_VERIFY_REFUSALS: ReadonlyArray<[RegExp, string]> = [
+  [/expired/i, 'attendance_qr_expired'],
+  [/already been used/i, 'attendance_qr_used'],
+  [/different nursery|only nursery staff/i, 'attendance_forbidden'],
+  [/not active/i, 'attendance_child_not_active'],
+  [/child not found/i, 'attendance_child_not_found'],
+  [/invalid qr|token is required|invalid event qr/i, 'attendance_qr_invalid'],
+];
+
+/** supabase.functions.invoke only reports "non-2xx status code"; the real reason is in the body. */
+async function qrVerifyRefusal(error: unknown): Promise<string> {
+  let message = error instanceof Error ? error.message : String(error ?? '');
+  const response = (error as { context?: unknown } | null)?.context;
+  if (response instanceof Response) {
+    try {
+      const body = (await response.clone().json()) as { error?: unknown };
+      if (typeof body.error === 'string') message = body.error;
+    } catch {
+      // Non-JSON body: keep the generic message.
+    }
+  }
+  return QR_VERIFY_REFUSALS.find(([pattern]) => pattern.test(message))?.[1] ?? message;
+}
+
 type DialogState = {
   childName: string;
   pickupPersonName: string | null;
@@ -176,7 +202,7 @@ export function QRScannerPage() {
         const { data, error } = await supabase.functions.invoke('qr-verify', {
           body: { token, defer_consume: true },
         });
-        if (error) throw error;
+        if (error) throw new Error(await qrVerifyRefusal(error));
         const payload = data as VerifyPayload & { error?: string };
         if (payload?.error) {
           throw new Error(payload.error);

@@ -78,10 +78,12 @@ export function useInquiries(nurseryId?: string, filters?: InquiryFilters) {
       source: 'website' | 'referral' | 'walk_in' | 'social_media' | 'other';
       message: string;
     }) => {
+      // No .select(): visitors may INSERT an inquiry but not read it back, and reading the new
+      // row would make RLS reject the whole insert for logged-out users.
       const inquiryRes = await supabase.from('inquiries').insert({
         ...payload,
         status: 'new',
-      } as never).select('id').single();
+      } as never);
       if (inquiryRes.error) throw inquiryRes.error;
 
       const adminsRes = await supabase

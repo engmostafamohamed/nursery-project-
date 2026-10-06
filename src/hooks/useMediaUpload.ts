@@ -114,6 +114,11 @@ export function useMediaUpload(params: { userId?: string; nurseryId?: string; mo
           .insert({
             nursery_id: params.nurseryId,
             uploaded_by: params.userId,
+            // teacher_id / type / url are NOT NULL columns left over from the original media table
+            // (003_batch3); 019's redefinition was skipped because the table already existed.
+            teacher_id: params.userId,
+            type: result.kind,
+            url: upload.storagePath,
             file_url: upload.storagePath,
             thumbnail_url: result.kind === 'photo' ? upload.storagePath : null,
             file_type: result.kind,

@@ -35,6 +35,7 @@ import {
 import { applyDealToPrice, isDealCurrentlyActive, useAdminDeals } from '@/hooks/useAdminDeals';
 import { useNurserySettings } from '@/hooks/useNurserySettings';
 import { formatQueryError } from '@/lib/utils';
+import { BulkTuitionAssignDialog } from './BulkTuitionAssignDialog';
 import { FormSection } from './FormSection';
 import { PackageDealPicker } from './PackageDealPicker';
 import { TuitionPackageBillingPeriodsEditor } from './TuitionPackageBillingPeriodsEditor';
@@ -87,6 +88,7 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
   const [periodRows, setPeriodRows] = useState<Record<BillingPeriodKind, BillingPeriodRowState> | null>(null);
   const { query: periodsQuery, upsert: upsertPeriod } = useAdminTuitionBillingPeriods(editingId);
 
+  const [bulkOpen, setBulkOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [dealFilter, setDealFilter] = useState<'all' | 'with' | 'without'>('all');
@@ -257,10 +259,18 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
             these during registration.
           </p>
         </div>
-        <Button type="button" onClick={openCreate}>
-          <MaterialSymbol name="add" size="text-base" />
-          New package
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {rows.some((pkg) => pkg.active) ? (
+            <Button type="button" variant="outline" onClick={() => setBulkOpen(true)}>
+              <MaterialSymbol name="group_add" size="text-base" />
+              Assign to children
+            </Button>
+          ) : null}
+          <Button type="button" onClick={openCreate}>
+            <MaterialSymbol name="add" size="text-base" />
+            New package
+          </Button>
+        </div>
       </div>
 
       {query.isLoading ? (
@@ -407,6 +417,8 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
         )}
         </div>
       )}
+
+      <BulkTuitionAssignDialog open={bulkOpen} onOpenChange={setBulkOpen} nurseryId={nurseryId} />
 
       <Dialog open={dialogOpen} onOpenChange={(open) => !busy && setDialogOpen(open)}>
         <DialogContent className="max-w-2xl">
