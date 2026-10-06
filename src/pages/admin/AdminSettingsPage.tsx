@@ -83,6 +83,18 @@ export function AdminSettingsPage() {
         if (Number.isNaN(n) || n < 0) return 'settings.errors.nonNegative';
       }
     }
+    const rangeKeys: Array<[SettingsKey, number, number]> = [
+      ['late_sweep_cap_hours', 1, 12],
+      ['pickup_reminder_minutes_before', 0, 180],
+      ['min_minutes_between_scans', 0, 120],
+    ];
+    for (const [key, min, max] of rangeKeys) {
+      const raw = v[key];
+      if (raw != null && raw !== '') {
+        const n = Number(raw);
+        if (!Number.isInteger(n) || n < min || n > max) return 'settings.errors.outOfRange';
+      }
+    }
     if (activeTab === 'summerPause') {
       const min = Number(v.summer_pause_min_weeks ?? 0);
       const max = Number(v.summer_pause_max_weeks ?? 0);

@@ -13,6 +13,8 @@ import { useAuthSession } from '@/hooks/useAuthSession';
 import { useNurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { usePagination } from '@/hooks/usePagination';
+import { attendanceErrorKey, undoCheckIn } from '@/lib/attendanceApi';
+import { getNurseryCalendarDateString } from '@/lib/nurseryDay';
 import { supabase } from '@/lib/supabase';
 import { teacherAttendanceToggle } from '@/lib/teacherAttendanceToggle';
 
@@ -49,7 +51,7 @@ export function TeacherAttendancePage() {
     undo: () => Promise<void>;
   } | null>(null);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getNurseryCalendarDateString();
 
   const childrenQuery = useQuery({
     queryKey: ['teacher-children', profile?.nursery_id],
@@ -132,12 +134,29 @@ export function TeacherAttendancePage() {
     },
     onSuccess: async (result, child) => {
       await queryClient.invalidateQueries({ queryKey: ['teacher-attendance-today'] });
+      if (result.mode === 'rejected') {
+        toast.error(t(attendanceErrorKey(result.reason), { minutes: result.minMinutes ?? 5 }));
+        return;
+      }
+      if (result.mode === 'already_checked_in' || result.mode === 'already_checked_out') {
+        toast.info(t(result.mode === 'already_checked_in' ? 'attendance.status.inNursery' : 'attendance.status.checkedOut'));
+        return;
+      }
       if (result.mode === 'checkout') {
-        toast.success(t('teacher.attendance.checkedOut'));
+        toast.success(t('teacher.attendance.checkedOut'), {
+          description: result.extraHours > 0
+            ? t('attendance.scanner.extraHoursSummary', {
+                hours: result.extraHours,
+                covered: result.extraHoursCovered,
+                fee: result.extraFee.toFixed(2),
+                minutes: result.lateMinutes,
+              })
+            : undefined,
+        });
         return;
       }
 
-      const checkInDate = new Date(result.created.check_in as string);
+      const checkInDate = new Date(result.checkIn);
       const checkInTime = new Intl.DateTimeFormat(i18n.language === 'ar' ? 'ar-EG' : 'en-US', {
         hour: '2-digit',
         minute: '2-digit', hour12: true,
@@ -152,13 +171,10 @@ export function TeacherAttendancePage() {
       const childImage = `https://ui-avatars.com/api/?name=${encodeURIComponent(childName)}&background=d4e3ff&color=001c3a`;
 
       const undo = async () => {
-        if (result.previous) {
-          await supabase
-            .from('attendance_records')
-            .update({ check_in: result.previous.check_in, check_out: result.previous.check_out } as never)
-            .eq('id', result.created.id);
-        } else {
-          await supabase.from('attendance_records').delete().eq('id', result.created.id);
+        try {
+          await undoCheckIn(result.attendanceId);
+        } catch (error) {
+          toast.error(t(attendanceErrorKey(error)));
         }
         await queryClient.invalidateQueries({ queryKey: ['teacher-attendance-today'] });
         setConfirmCard(null);
@@ -170,8 +186,9 @@ export function TeacherAttendancePage() {
         setConfirmCard((current) => (current?.childId === child.id ? null : current));
       }, 3000);
     },
-    onError: () => {
-      toast.error(t('onboarding.errors.saveFailed'));
+    onError: (error) => {
+      const key = attendanceErrorKey(error);
+      toast.error(t(key === 'attendance.errors.generic' ? 'onboarding.errors.saveFailed' : key));
     },
   });
 

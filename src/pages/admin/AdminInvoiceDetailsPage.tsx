@@ -7,13 +7,16 @@ import { InvoiceLineItemsBuilder, type BuilderLineItem } from '@/components/admi
 import { PendingPaymentAttempts } from '@/components/admin/PendingPaymentAttempts';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/button';
+import { confirm } from '@/components/ui/confirm';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useInvoiceDetails } from '@/hooks/useInvoiceDetails';
 import { usePaymentAttempts } from '@/hooks/usePaymentAttempts';
+import { useSingleFlight } from '@/hooks/useSingleFlight';
 import { downloadInvoicePdf } from '@/lib/exports';
 import { cancelInvoice, markInvoiceAsPaid, sendInvoiceReminder } from '@/lib/invoiceActions';
+import { newIdempotencyKey, paymentError } from '@/lib/paymentApi';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 
@@ -78,6 +81,8 @@ export function AdminInvoiceDetailsPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [editingDueDate, setEditingDueDate] = useState('');
   const [editingItems, setEditingItems] = useState<BuilderLineItem[]>([]);
+  // Mark paid / cancel / remind: one at a time, a double click does nothing.
+  const actionFlight = useSingleFlight();
 
   const isUnpaid = details?.status === 'pending' || details?.status === 'overdue';
   const statusClass = statusBadgeClass(details?.status);
@@ -85,7 +90,15 @@ export function AdminInvoiceDetailsPage() {
   const openEdit = () => {
     if (!details) return;
     setEditingDueDate(details.dueDate.slice(0, 10));
-    setEditingItems(details.lineItems.map((item) => ({ description: item.description, quantity: item.quantity, unitPrice: item.unitPrice })));
+    setEditingItems(
+      details.lineItems.map((item, idx) => ({
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        raw: details.rawLineItems[idx],
+        originalDescription: item.description,
+      })),
+    );
     setEditOpen(true);
   };
 
@@ -96,12 +109,32 @@ export function AdminInvoiceDetailsPage() {
 
   const onSaveEdit = async () => {
     if (!details) return;
+    // A system line keeps its kind and names (shown in each reader's language) unless the
+    // admin rewrote its text; then it becomes a plain typed line.
+    const items = editingItems.map((item) => {
+      const rewritten = !item.raw || item.description !== item.originalDescription;
+      const base: Record<string, unknown> = { ...(item.raw ?? {}) };
+      if (rewritten) {
+        for (const key of ['kind', 'name_ar', 'name_en', 'description_ar']) delete base[key];
+      }
+      return {
+        ...base,
+        ...(rewritten ? { description: item.description } : {}),
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        unit_price: item.unitPrice,
+        total: Math.round(item.quantity * item.unitPrice * 100) / 100,
+      };
+    });
+    const stored = details.rawLineItemsJson;
+    const keep = stored && typeof stored === 'object' && !Array.isArray(stored) ? (stored as Record<string, unknown>) : {};
     const { error } = await supabase
       .from('invoices')
       .update({
         amount: editedTotal.toFixed(2),
         due_date: editingDueDate,
-        line_items_json: { items: editingItems, notes: details.notes, tax: details.tax },
+        // Other keys (application_id, child_id, billing month…) link the invoice to its source.
+        line_items_json: { ...keep, items, notes: details.rawNotes, tax: details.tax },
       } as never)
       .eq('id', details.id);
     if (error) throw error;
@@ -110,54 +143,78 @@ export function AdminInvoiceDetailsPage() {
     await detailsQuery.refetch();
   };
 
-  const handleMarkPaid = async () => {
-    if (!details) return;
-    try {
-      await markInvoiceAsPaid({
-        invoiceId: details.id,
-        nurseryId: details.nurseryId,
-        parentId: details.parentId,
-        invoiceNumber: details.invoiceNumber,
-        amount: details.amount,
-        paymentMethod: 'cash',
-        paidAt: new Date().toISOString(),
+  const handleMarkPaid = () =>
+    actionFlight.run(async () => {
+      if (!details) return;
+      const amount = details.balanceDue > 0 ? details.balanceDue : details.amount;
+      const amountText = t('invoice.egpAmount', { amount: amount.toFixed(2) });
+      const ok = await confirm({
+        title: t('invoice.markPaid.confirmTitle'),
+        description: t('invoice.markPaid.confirmDescription', {
+          amount: amountText,
+          number: details.invoiceNumber,
+          method: t('invoice.paymentMethods.cash'),
+        }),
+        confirmText: t('invoice.markPaid.confirm'),
+        icon: 'paid',
       });
-      toast.success(t('invoice.markPaid.success'));
-      await detailsQuery.refetch();
-    } catch {
-      toast.error(t('invoice.create.error'));
-    }
-  };
+      if (!ok) return;
+      try {
+        const result = await markInvoiceAsPaid({
+          invoiceId: details.id,
+          amount,
+          paymentMethod: 'cash',
+          paidAt: new Date().toISOString(),
+          idempotencyKey: newIdempotencyKey(),
+        });
+        toast.success(t(result.status === 'recorded' ? 'invoice.markPaid.success' : 'invoice.markPaid.alreadyPaid'));
+        await detailsQuery.refetch();
+      } catch (error) {
+        const { key, values } = paymentError(error);
+        toast.error(t(key, values));
+      }
+    });
 
-  const handleCancel = async () => {
-    if (!details) return;
-    try {
-      await cancelInvoice({ invoiceId: details.id });
-      toast.success(t('invoice.cancel.success'));
-      await detailsQuery.refetch();
-    } catch {
-      toast.error(t('invoice.create.error'));
-    }
-  };
-
-  const handleReminder = async () => {
-    if (!details) return;
-    try {
-      await sendInvoiceReminder({
-        nurseryId: details.nurseryId,
-        parentId: details.parentId,
-        parentEmail: details.parentEmail,
-        parentPhone: details.parentPhone,
-        parentLanguage: details.parentLanguage,
-        invoiceNumber: details.invoiceNumber,
-        amount: details.amount,
+  const handleCancel = () =>
+    actionFlight.run(async () => {
+      if (!details) return;
+      const ok = await confirm({
+        title: t('invoice.cancel.title'),
+        description: t('invoice.cancel.description'),
+        confirmText: t('invoice.cancel.confirm'),
+        cancelText: t('invoice.cancel.keep'),
+        variant: 'danger',
       });
-      toast.success(t('invoice.details.reminderSent'));
-      await detailsQuery.refetch();
-    } catch {
-      toast.error(t('invoice.create.error'));
-    }
-  };
+      if (!ok) return;
+      try {
+        await cancelInvoice({ invoiceId: details.id });
+        toast.success(t('invoice.cancel.success'));
+        await detailsQuery.refetch();
+      } catch {
+        toast.error(t('invoice.create.error'));
+      }
+    });
+
+  const handleReminder = () =>
+    actionFlight.run(async () => {
+      if (!details) return;
+      try {
+        await sendInvoiceReminder({
+          invoiceId: details.id,
+          nurseryId: details.nurseryId,
+          parentId: details.parentId,
+          parentEmail: details.parentEmail,
+          parentPhone: details.parentPhone,
+          parentLanguage: details.parentLanguage,
+          invoiceNumber: details.invoiceNumber,
+          amount: details.balanceDue > 0 ? details.balanceDue : details.amount,
+        });
+        toast.success(t('invoice.details.reminderSent'));
+        await detailsQuery.refetch();
+      } catch {
+        toast.error(t('invoice.create.error'));
+      }
+    });
 
   if (!detailsQuery.isLoading && !details) {
     return <EmptyState icon="receipt_long" title={t('invoice.details.notFound')} description={t('common.comingSoon')} />;
@@ -180,9 +237,9 @@ export function AdminInvoiceDetailsPage() {
             <span className={`inline-flex items-center rounded-md border px-3 py-2 text-xs font-semibold ${statusClass}`}>
               {t(`invoice.status.${details?.status ?? 'pending'}`)}
             </span>
-            {isUnpaid ? <Button className="gap-2 rounded-md" variant="outline" onClick={() => void handleMarkPaid()}><span className="material-symbols-outlined text-base" aria-hidden>paid</span>{t('invoice.actions.markPaid')}</Button> : null}
-            {isUnpaid ? <Button className="gap-2 rounded-md border-error/40 text-error hover:bg-error/10" variant="outline" onClick={() => void handleCancel()}><span className="material-symbols-outlined text-base" aria-hidden>cancel</span>{t('invoice.actions.cancel')}</Button> : null}
-            <Button className="gap-2 rounded-md" variant="outline" onClick={() => void handleReminder()}><span className="material-symbols-outlined text-base" aria-hidden>notifications_active</span>{t('invoice.details.sendReminder')}</Button>
+            {isUnpaid ? <Button className="gap-2 rounded-md" variant="outline" disabled={actionFlight.running} onClick={() => void handleMarkPaid()}><span className="material-symbols-outlined text-base" aria-hidden>paid</span>{t('invoice.actions.markPaid')}</Button> : null}
+            {isUnpaid ? <Button className="gap-2 rounded-md border-error/40 text-error hover:bg-error/10" variant="outline" disabled={actionFlight.running} onClick={() => void handleCancel()}><span className="material-symbols-outlined text-base" aria-hidden>cancel</span>{t('invoice.actions.cancel')}</Button> : null}
+            <Button className="gap-2 rounded-md" variant="outline" disabled={actionFlight.running} onClick={() => void handleReminder()}><span className="material-symbols-outlined text-base" aria-hidden>notifications_active</span>{t('invoice.details.sendReminder')}</Button>
             <Button
               className="gap-2 rounded-md"
               variant="outline"

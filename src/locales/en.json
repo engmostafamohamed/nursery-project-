@@ -880,6 +880,8 @@
       "loadError": "Could not load profile."
     },
     "nav": {
+      "scanner": "QR scanner",
+      "attendanceLogs": "Attendance logs",
       "sidebarLabel": "Admin navigation",
       "dashboard": "Dashboard",
       "children": "Children",
@@ -1276,6 +1278,9 @@
       "colStatus": "Status",
       "latePickup": "Late pickup",
       "status": {
+        "excused": "Excused",
+        "off": "Day off",
+        "holiday": "Holiday",
         "present": "Present",
         "partial": "Checked in only",
         "absent": "Absent"
@@ -1965,6 +1970,17 @@
     }
   },
   "invoice": {
+    "itemKinds": {
+      "late_pickup": "Late pickup extra hours · {{date}}",
+      "loyalty_discount": "Loyalty points discount ({{points}} points)",
+      "tuition": "Tuition",
+      "admission_package": "Admission package",
+      "discount": "Discount",
+      "event": "Event"
+    },
+    "notes": {
+      "applicationPackage": "Admission package selected before approval."
+    },
     "egpAmount": "EGP {{amount}}",
     "invoiceNumber": "Invoice #{{number}}",
     "dueDate": "Due date: {{date}}",
@@ -2048,6 +2064,10 @@
       "avgDaysToPayment": "Average Days to Payment"
     },
     "markPaid": {
+      "confirmTitle": "Record this payment?",
+      "confirmDescription": "Record {{amount}} received by {{method}} for invoice {{number}}? The invoice is updated and the parent is notified.",
+      "descriptionAmount": "Record a payment of up to {{amount}}. Only the unpaid balance is recorded, and only once.",
+      "alreadyPaid": "This invoice was already paid — nothing new was recorded.",
       "title": "Mark invoice as paid",
       "description": "Confirm payment details before updating this invoice.",
       "paymentMethod": "Payment Method",
@@ -2126,6 +2146,41 @@
     }
   },
   "payment": {
+    "manualMethods": {
+      "instapay": {
+        "label": "InstaPay",
+        "help": "Transfer with InstaPay to the nursery's address, then enter the transaction number."
+      },
+      "vodafone_cash": {
+        "label": "Vodafone Cash",
+        "help": "Send from your wallet to the nursery's number, then enter the transaction number."
+      },
+      "bank_transfer": {
+        "label": "Bank transfer",
+        "help": "Transfer to the nursery's bank account, then enter the transfer reference."
+      },
+      "cash": {
+        "label": "Cash at the nursery",
+        "help": "Pay at the nursery office; finance confirms when they receive it."
+      },
+      "manual": {
+        "label": "Payment for review",
+        "help": "Finance confirms your payment before the invoice is marked paid."
+      }
+    },
+    "instructionsTitle": "Where to send the money",
+    "reference": "Transaction / reference number",
+    "referencePlaceholder": "e.g. 123456789012",
+    "referenceHelp": "Finance uses it to match your transfer.",
+    "referenceRequired": "Enter the transaction number (at least 4 characters).",
+    "confirm": {
+      "title": "Confirm payment",
+      "description": "Submit {{amount}} for invoice {{number}} by {{method}}?",
+      "reference": "Reference: {{reference}}.",
+      "reviewNote": "The invoice is marked paid after the nursery's finance team verifies the payment.",
+      "submit": "Submit {{amount}}"
+    },
+    "alreadySubmitted": "This payment was already submitted — it was not sent twice.",
     "comingSoon": "Coming soon",
     "comingSoonMessage": "Paymob integration coming in Feature 4. For now, use Cash or Bank Transfer.",
     "methodsTitle": "Payment Method",
@@ -2165,6 +2220,13 @@
       "payWithMethod": "Pay {{amount}} EGP with {{method}}"
     },
     "admin": {
+      "confirmTitle": "Confirm this payment?",
+      "confirmDescription": "Confirm {{amount}} from {{parent}} by {{method}}? The payment is recorded and the parent is notified.",
+      "rejectTitle": "Reject this payment?",
+      "rejectDescription": "{{amount}} from {{parent}} will be marked as not received.",
+      "rejectReason": "Reason (sent to the parent)",
+      "rejectReasonPlaceholder": "e.g. No transfer found with this reference",
+      "rejectReasonHelp": "Optional, but it helps the parent fix the payment.",
       "pendingTitle": "Pending Payment Confirmation",
       "method": "Method",
       "amount": "Amount",
@@ -2177,6 +2239,20 @@
       "rejected": "Payment attempt rejected."
     },
     "errors": {
+      "payment_exceeds_balance": "The amount is more than the balance still due on this invoice.",
+      "payment_duplicate": "This payment was just submitted. It was not sent twice.",
+      "payment_invoice_closed": "This invoice is already paid or cancelled.",
+      "payment_invoice_not_yours": "This invoice belongs to another account.",
+      "payment_invoice_not_found": "Invoice not found.",
+      "payment_attempt_not_found": "This payment no longer exists.",
+      "payment_invalid_amount": "Enter an amount greater than zero.",
+      "payment_invalid_method": "Choose a payment method.",
+      "payment_forbidden": "You don't have permission to do this.",
+      "payment_not_authenticated": "Please sign in again.",
+      "loyalty_disabled": "Rewards are not enabled for this nursery.",
+      "loyalty_min_points": "Redeem at least 100 points.",
+      "loyalty_insufficient_points": "You don't have enough points.",
+      "loyalty_exceeds_cap": "Points can cover at most half of this invoice.",
       "actionFailed": "Could not complete this action."
     }
   },
@@ -3805,6 +3881,18 @@
     }
   },
   "loyalty": {
+    "confirmRedeem": {
+      "title": "Redeem points?",
+      "description": "Use {{points}} points for a {{amount}} discount on invoice {{number}}? This cannot be undone.",
+      "confirm": "Redeem"
+    },
+    "redemptionAlreadyApplied": "This redemption was already applied.",
+    "errors": {
+      "minPoints": "Enter at least {{count}} points.",
+      "maxPoints": "You can redeem up to {{count}} points on this invoice."
+    },
+    "pointsValue": "{{count}} pts",
+    "redeemedForDiscount": "Invoice discount",
     "adminTitle": "Loyalty Management",
     "rewardsPageTitle": "Rewards",
     "disabledTitle": "Rewards are not enabled",
@@ -4158,6 +4246,428 @@
     "goBack": "Go back",
     "goHome": "Home",
     "pushSubscriptionSave": "Could not save notification settings. Try again when you are online."
+  },
+  "attendance": {
+    "status": {
+      "present": "Present",
+      "partial": "Checked in only",
+      "absent": "Absent",
+      "excused": "Excused",
+      "off": "Day off",
+      "holiday": "Holiday",
+      "upcoming": "Upcoming",
+      "inNursery": "In the nursery",
+      "checkedOut": "Picked up"
+    },
+    "method": {
+      "qr_parent": "Parent QR",
+      "qr_custom": "Custom QR",
+      "manual": "Manual"
+    },
+    "byStaff": "by {{name}}",
+    "pickedUpBy": "Picked up by {{name}}",
+    "extraHoursShort": "Extra hours: {{hours}}",
+    "lateMinutes": "{{minutes}} min after closing",
+    "coveredByPackage": "{{hours}} from package",
+    "waived": "Waived",
+    "provisional": "Provisional",
+    "needsReview": "Needs review",
+    "offDayTitle": "Not a working day",
+    "offDayDescription": "This day is a weekend or holiday for the nursery, so no attendance is expected.",
+    "sections": {
+      "absent": "Absent",
+      "excused": "Excused absence"
+    },
+    "columns": {
+      "extraTime": "Extra time",
+      "amount": "Amount",
+      "actions": "Actions"
+    },
+    "invoiceStatus": {
+      "pending": "Unpaid",
+      "paid": "Paid",
+      "overdue": "Overdue",
+      "cancelled": "Cancelled"
+    },
+    "reviewReason": {
+      "missing_checkout": "No checkout recorded",
+      "refund_due": "Refund due",
+      "other": "Needs review"
+    },
+    "errors": {
+      "generic": "Something went wrong. Please try again.",
+      "attendance_not_authenticated": "Your session has ended. Please sign in again.",
+      "attendance_forbidden": "You can only record attendance for children in your nursery.",
+      "attendance_admin_only": "Only the nursery admin or a manager can do this.",
+      "attendance_child_not_found": "Child not found.",
+      "attendance_child_not_active": "This child is not active in the nursery.",
+      "attendance_invalid_method": "Unknown attendance method.",
+      "attendance_qr_required": "Attendance must be recorded by scanning a QR code.",
+      "attendance_custom_qr_pickup_only": "A custom QR is for pickup only. Scan the parent QR for drop-off.",
+      "attendance_qr_invalid": "This QR code is not valid.",
+      "attendance_qr_wrong_child": "This QR code belongs to another child.",
+      "attendance_qr_expired": "This QR code has expired.",
+      "attendance_qr_wrong_type": "This QR code cannot be used here.",
+      "attendance_qr_used": "This one-time QR code was already used.",
+      "attendance_already_checked_out": "The child was already picked up today.",
+      "attendance_not_checked_in": "The child has not been checked in today.",
+      "attendance_too_soon": "Checked in less than {{minutes}} minutes ago. Scan again later to check out.",
+      "attendance_not_found": "Attendance record not found.",
+      "attendance_undo_not_allowed": "This check-in can no longer be undone.",
+      "attendance_undo_window_passed": "Check-ins can only be undone within 15 minutes by the person who recorded them.",
+      "attendance_reason_required": "Please enter a reason.",
+      "attendance_invalid_times": "Check the times: they must be on that day, in the past, and pickup after drop-off.",
+      "attendance_invalid_range": "Choose a valid date range."
+    },
+    "scanner": {
+      "alreadyCheckedIn": "{{name}} is already checked in (since {{time}}).",
+      "alreadyCheckedOut": "{{name}} was already picked up today at {{time}}.",
+      "checkedInAt": "Checked in at {{time}}",
+      "extraHoursSummary": "{{minutes}} min late · extra hours: {{hours}} ({{covered}} from package) · due: {{fee}}",
+      "rejectedTag": "Rejected"
+    },
+    "parent": {
+      "extraHoursPeriod": "Extra hours (this period)",
+      "extraHoursValue": "{{hours}} h · {{fee}}",
+      "extraHoursDue": "Extra hours due ({{count}} invoices)"
+    },
+    "absence": {
+      "title": "Report an absence",
+      "subtitle": "Tell the nursery in advance; the day is then counted as an excused absence.",
+      "child": "Child",
+      "date": "Day",
+      "reason": "Reason",
+      "note": "Note (optional)",
+      "submit": "Send",
+      "reported": "Absence reported to the nursery.",
+      "cancelled": "Absence report cancelled.",
+      "failed": "Could not save. Please try again.",
+      "upcoming": "Reported absences",
+      "reasons": {
+        "sick": "Sick",
+        "travel": "Travel",
+        "family": "Family matter",
+        "other": "Other"
+      },
+      "errors": {
+        "childRequired": "Choose the child.",
+        "dateRequired": "Choose the day.",
+        "dateRange": "Choose a day from today up to {{days}} days ahead.",
+        "alreadyReported": "An absence is already reported for this child on this day.",
+        "noteTooLong": "Keep the note under 500 characters."
+      }
+    },
+    "correct": {
+      "action": "Correct",
+      "title": "Correct attendance",
+      "description": "{{name}} · {{date}}. Extra hours and the invoice are recalculated automatically.",
+      "checkIn": "Check-in time",
+      "checkOut": "Pickup time",
+      "checkOutHint": "Leave empty if the child is still in the nursery.",
+      "reason": "Reason",
+      "save": "Save correction",
+      "saved": "Attendance corrected and charges recalculated.",
+      "errors": {
+        "checkInRequired": "Enter the check-in time.",
+        "future": "The time cannot be in the future.",
+        "outBeforeIn": "Pickup must be after check-in.",
+        "reasonRequired": "Write a short reason (at least 3 characters)."
+      }
+    },
+    "waive": {
+      "action": "Waive",
+      "title": "Waive extra-hours charge",
+      "description": "{{name}} · {{date}} · {{fee}}. The unpaid invoice is reduced and package hours are returned.",
+      "confirm": "Waive charge",
+      "done": "Charge waived.",
+      "doneManualRefund": "Charge waived. The invoice was already paid, so refund the parent manually."
+    },
+    "logs": {
+      "open": "Attendance logs",
+      "title": "Attendance logs",
+      "subtitle": "Every check-in and pickup: who scanned it, how, who collected the child, and extra-hours charges.",
+      "method": "Method",
+      "lateOnly": "Late pickups only",
+      "reviewOnly": "Needs review only",
+      "includeAbsences": "Include absences",
+      "timeline": "History",
+      "resolve": "Mark reviewed",
+      "reviewResolved": "Marked as reviewed.",
+      "noEvents": "No events recorded for this day.",
+      "system": "System",
+      "emptyTitle": "No records",
+      "emptyDescription": "No attendance matches these filters.",
+      "chargeDetail": "+{{hours}} h ({{covered}} from package) · {{fee}} · {{source}}",
+      "reducedDetail": "−{{hours}} h · refund {{refund}}",
+      "source": {
+        "sweep": "automatic",
+        "checkout": "at pickup",
+        "correction": "correction"
+      },
+      "totals": {
+        "records": "Records",
+        "late": "Late pickups",
+        "hours": "Extra hours",
+        "covered": "From packages",
+        "fee": "Extra-hours charges",
+        "review": "Need review"
+      },
+      "errors": {
+        "rangeRequired": "Choose both dates.",
+        "fromAfterTo": "The start date must be before the end date.",
+        "rangeTooLong": "Choose at most {{days}} days."
+      }
+    },
+    "events": {
+      "check_in": "Checked in",
+      "check_out": "Picked up",
+      "check_in_undone": "Check-in undone",
+      "scan_rejected": "Scan rejected",
+      "late_charge": "Extra hours charged",
+      "charge_reduced": "Charge reduced",
+      "charge_waived": "Charge waived",
+      "correction": "Times corrected",
+      "review_flagged": "Flagged for review",
+      "review_resolved": "Review resolved",
+      "absence_reported": "Absence reported"
+    },
+    "kpis": {
+      "today": "Today",
+      "month": "This month ({{month}})",
+      "inNursery": "In the nursery now",
+      "ofActive": "of {{count}} active children",
+      "checkedOut": "Picked up",
+      "absent": "Absent",
+      "excused": "Excused",
+      "lateNow": "Late pickup now",
+      "extraToday": "Extra hours today",
+      "rate": "Attendance rate",
+      "childDays": "{{present}} present · {{absent}} absent days",
+      "latePickups": "Late pickups",
+      "hoursHint": "{{hours}} h ({{covered}} from packages)",
+      "billed": "Extra hours billed",
+      "billedHours": "{{hours}} billable hours",
+      "collected": "Collected",
+      "outstanding": "Outstanding",
+      "needsReview": "Need review",
+      "scans": "{{qr}} by QR · {{manual}} manual",
+      "topLate": "Most extra hours this month",
+      "topLateRow": "{{days}} days · {{hours}} h · {{fee}}"
+    }
+  },
+  "notificationTemplates": {
+    "unknown": {
+      "title": "Notification"
+    },
+    "common": {
+      "parent": "Parent"
+    },
+    "attendance_checkin": {
+      "title": "Child checked in",
+      "body": "{{child}} checked in at {{time}}",
+      "segments": {
+        "staff": " by {{staff}}"
+      }
+    },
+    "attendance_checkout": {
+      "title": "Child picked up",
+      "body": "{{child}} was picked up at {{time}}",
+      "segments": {
+        "pickup": " by {{pickup}}",
+        "staff": " · Checked out by {{staff}}",
+        "extra": " · Extra hours: {{hours}}",
+        "covered": " ({{covered}} from package)",
+        "fee": " · Amount due: {{fee}}"
+      }
+    },
+    "attendance_checkin_cancelled": {
+      "title": "Check-in cancelled",
+      "body": "The check-in for {{child}} was cancelled because it was recorded by mistake."
+    },
+    "extra_hours_accruing": {
+      "title": "Extra hours being charged",
+      "body": "{{child}} has not been picked up yet. Extra hours so far: {{hours}}",
+      "segments": {
+        "covered": " ({{covered}} from package)",
+        "fee": " · Amount: {{fee}}"
+      }
+    },
+    "late_pickup_cap_reached": {
+      "title": "Alert: child not yet picked up",
+      "body": "{{child}} has not been picked up and has reached the automatic billing cap ({{cap}} hours). Please follow up immediately."
+    },
+    "late_pickup_cap_reached_parent": {
+      "title": "Alert: your child has not been picked up",
+      "body": "{{child}} is still at the nursery, {{cap}} hours past the pickup time. Please contact the nursery now."
+    },
+    "attendance_refund_due": {
+      "title": "Extra-hours refund needed",
+      "body": "The extra-hours charge for {{child}} was reduced by {{refund}} after the invoice was paid. Please refund the parent."
+    },
+    "attendance_corrected": {
+      "title": "Attendance record updated",
+      "body": "The attendance record of {{child}} for {{date}} was updated: in {{check_in_time}}",
+      "segments": {
+        "out": " · out {{check_out_time}}",
+        "charges": " · extra hours: {{hours}} · amount: {{fee}}"
+      }
+    },
+    "extra_hours_waived": {
+      "title": "Extra-hours charge waived",
+      "body": "The extra-hours charge for {{child}} on {{date}} was waived."
+    },
+    "pickup_reminder": {
+      "title": "Pickup reminder",
+      "body": "Pickup time for {{child}} is {{end_time}}. After {{billing_time}} extra hours are charged at {{rate}} per hour."
+    },
+    "attendance_needs_review": {
+      "title": "Attendance records need review",
+      "body": "{{count}} attendance record(s) have no checkout. Please record the actual pickup time."
+    },
+    "absence_reported": {
+      "title": "Absence reported",
+      "body": "Absence reported for {{child}} on {{date}} ({{reason}})."
+    },
+    "pickup_attempt_failed": {
+      "title": "Pickup attempt blocked",
+      "body": "A pickup attempt for {{child}} at {{time}} was blocked at verification. Contact the nursery if this was unexpected."
+    },
+    "payment_attempt_created": {
+      "title": "Payment awaiting approval",
+      "body": "{{parent}} submitted {{amount}} for invoice {{invoice_number}} for review."
+    },
+    "payment_attempt_rejected": {
+      "title": "Payment not confirmed",
+      "body": "Your payment of {{amount}} for invoice {{invoice_number}} was not confirmed. Please check the details or pay again.",
+      "segments": {
+        "reason": " Reason: {{reason}}"
+      }
+    },
+    "invoice_paid": {
+      "title": "Payment confirmed",
+      "body": "Your payment of {{amount}} for invoice {{invoice_number}} was confirmed."
+    },
+    "application_payment_confirmed": {
+      "title": "Application payment confirmed",
+      "body": "A package payment was confirmed. The application is ready for approval."
+    },
+    "invoice_due_reminder": {
+      "title": "Invoice reminder",
+      "body": "Reminder: invoice {{invoice_number}} of {{amount}} is due in {{days}} day(s)."
+    },
+    "invoice_overdue_reminder": {
+      "title": "Overdue invoice",
+      "body": "Invoice {{invoice_number}} of {{amount}} is {{days}} day(s) overdue. Please pay."
+    },
+    "invoice_reminder": {
+      "title": "Invoice reminder",
+      "body": "Reminder: invoice {{invoice_number}} of {{amount}} is still due."
+    },
+    "invoice_ready": {
+      "title": "New invoice",
+      "body": "A new invoice of {{amount}} has been issued."
+    },
+    "event_invoice_generated": {
+      "title": "Event invoice issued",
+      "body": "An invoice of {{amount}} was issued for {{event}}."
+    },
+    "permission_deadline_reminder": {
+      "title": "Permission reminder",
+      "body": "Reminder: please respond to the permission request for \"{{event}}\" before the deadline."
+    },
+    "permission_reminder": {
+      "title": "Reminder: event permission",
+      "body": "Please respond to the permission request for {{event}}."
+    },
+    "teacher_monthly_reminder": {
+      "title": "Monthly reminder",
+      "body": "Start-of-month reminder."
+    },
+    "application_submitted": {
+      "title": "New application submitted",
+      "body": "New application from {{parent}}",
+      "segments": {
+        "reason": " ({{reason}})"
+      },
+      "reasons": {
+        "payment_submitted": "payment submitted"
+      }
+    },
+    "application_approved": {
+      "title": "Application approved",
+      "body": "Your child's application was approved and the child profile is now on your dashboard."
+    },
+    "application_documents_pending": {
+      "title": "Additional documents requested",
+      "body": "Please upload the additional documents requested by the nursery.",
+      "segments": {
+        "reason": " Note: {{reason}}"
+      }
+    },
+    "application_rejected": {
+      "title": "Application not accepted",
+      "body": "Sorry, the application was not accepted.",
+      "segments": {
+        "reason": " Reason: {{reason}}"
+      }
+    },
+    "daily_report_published": {
+      "title": "New daily report",
+      "body": "A new daily report has been published for your child."
+    },
+    "admission_inquiry_new": {
+      "title": "New admission inquiry",
+      "body": "New inquiry from {{parent}}."
+    },
+    "media_pending_approval": {
+      "title": "New media needs approval",
+      "body": "{{count}} new media file(s) uploaded and awaiting approval."
+    },
+    "media_approved": {
+      "title": "Media approved",
+      "body": "Your uploaded photo or video was approved."
+    },
+    "media_shared": {
+      "title": "New photo shared",
+      "body": "New photo shared: {{caption}}",
+      "classPhoto": "Class photo"
+    },
+    "media_rejected": {
+      "title": "Media rejected",
+      "body": "Your media was rejected: {{reason}}"
+    },
+    "staff_payroll_paid": {
+      "title": "Payslip paid",
+      "body": "Your {{month}} payslip has been paid: {{amount}}."
+    },
+    "event_published": {
+      "title": "New nursery event",
+      "body": "An event was published: {{event}}"
+    },
+    "child_health_update_request": {
+      "title": "Health record update requested",
+      "body": "A parent requested a review or update of a child health record."
+    },
+    "child_health_document_uploaded": {
+      "title": "New medical document uploaded",
+      "body": "A parent uploaded a new medical document."
+    },
+    "child_health_shared": {
+      "title": "Health profile shared",
+      "body": "Your nursery shared a health summary for your child. Check the app."
+    },
+    "health_alert": {
+      "title": "Health alert",
+      "body": "{{kind}} — {{detail}}"
+    },
+    "health_alert_bulk": {
+      "title": "Health alerts",
+      "body": "Please review your child's health record in the app."
+    },
+    "milestone_shared": {
+      "title": "New milestone",
+      "body": "New milestone for {{child}}: {{milestone}}"
+    }
   },
   "qr": {
     "refresh": "Refresh token",
@@ -4813,6 +5323,7 @@
       "confirm": "Reset"
     },
     "errors": {
+      "outOfRange": "A value is outside its allowed range.",
       "startBeforeEnd": "Start time must be before end time.",
       "quietHoursDifferent": "Quiet hours start must differ from end.",
       "percentRange": "Percentage values must be between 0 and 100.",
@@ -4823,6 +5334,50 @@
       "hourlyRateRequired": "Hourly rate is required for hourly pricing."
     },
     "fields": {
+      "late_billing_base": {
+        "label": "Extra hours start",
+        "helper": "At closing time, or once the child's package hours (counted from check-in) are used up."
+      },
+      "payment_instructions": {
+        "label": "Payment instructions for parents",
+        "helper": "Shown on the pay page: InstaPay address, Vodafone Cash number or bank account."
+      },
+      "auto_late_pickup_billing_enabled": {
+        "label": "Charge extra hours automatically",
+        "helper": "While a child is still here after closing, extra hours are added every 15 minutes (up to the cap) and parents are notified."
+      },
+      "late_billing_unit_minutes": {
+        "label": "Extra-hours rounding unit",
+        "helper": "Late time is rounded up to this block before billing."
+      },
+      "late_billing_from": {
+        "label": "Bill extra time from",
+        "helper": "Whether billing counts from closing time or from the end of the grace period."
+      },
+      "late_sweep_cap_hours": {
+        "label": "Automatic charge cap (hours)",
+        "helper": "The automatic charge stops here and staff are alerted; a real pickup still bills the actual time."
+      },
+      "early_arrival_billing_enabled": {
+        "label": "Bill early arrival",
+        "helper": "Also bill time before opening as extra hours."
+      },
+      "late_invoice_mode": {
+        "label": "Extra-hours invoice",
+        "helper": "One invoice per late day, or one running invoice per child per month."
+      },
+      "pickup_reminder_minutes_before": {
+        "label": "Pickup reminder (minutes before closing)",
+        "helper": "Parents of children still here get a reminder this many minutes before closing. 0 turns it off."
+      },
+      "require_qr_for_attendance": {
+        "label": "Require QR for attendance",
+        "helper": "Teachers must scan a QR to check children in and out; manual entry stays available to admins."
+      },
+      "min_minutes_between_scans": {
+        "label": "Minimum minutes between check-in and pickup",
+        "helper": "Prevents an accidental double scan from checking the child out right after drop-off."
+      },
       "standard_start_time": {
         "label": "Nursery opens at",
         "helper": "When the nursery opens. Used as the expected arrival time for attendance reports."
@@ -5033,6 +5588,23 @@
       }
     },
     "options": {
+      "late_billing_base": {
+        "closing_time": "At closing time",
+        "stay_duration": "After the package hours from check-in"
+      },
+      "late_billing_unit_minutes": {
+        "15": "15 minutes",
+        "30": "Half hour",
+        "60": "Full hour"
+      },
+      "late_billing_from": {
+        "end_time": "Closing time",
+        "grace_end": "End of grace period"
+      },
+      "late_invoice_mode": {
+        "daily": "One invoice per day",
+        "monthly": "One invoice per month"
+      },
       "paid_event_refund_policy": {
         "full": "Full",
         "partial": "Partial",
@@ -5049,6 +5621,8 @@
         "en": "English"
       },
       "payment_methods_enabled": {
+        "instapay": "InstaPay",
+        "vodafone_cash": "Vodafone Cash",
         "paymob": "Paymob",
         "cash": "Cash",
         "bank_transfer": "Bank Transfer"

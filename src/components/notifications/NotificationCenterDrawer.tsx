@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { useNotificationsCenter } from '@/hooks/useNotificationsCenter';
+import { notificationText } from '@/lib/notificationText';
 import { supabase } from '@/lib/supabase';
 
 type Role = 'admin' | 'parent' | 'teacher';
@@ -69,10 +70,11 @@ export function NotificationCenterDrawer({ open, onOpenChange, userId, role }: P
     await supabase.from('notifications').update({ read: true } as never).eq('user_id', userId).eq('read', false);
   };
 
-  const onRowClick = async (id: string, type: string) => {
+  const onRowClick = async (id: string, type: string, actionLink: string | null) => {
     await supabase.from('notifications').update({ read: true } as never).eq('id', id);
     onOpenChange(false);
-    navigate(routeForType(type, role));
+    // The server's link points at the exact record; only follow it inside this role's area.
+    navigate(actionLink?.startsWith(`/${role}/`) ? actionLink : routeForType(type, role));
   };
 
   return (
@@ -99,14 +101,13 @@ export function NotificationCenterDrawer({ open, onOpenChange, userId, role }: P
 
         <div className="space-y-2 overflow-y-auto pb-10">
           {filtered.map((item) => {
-            const title = i18n.language === 'ar' ? item.title_ar : item.title_en;
-            const body = i18n.language === 'ar' ? item.body_ar : item.body_en;
+            const { title, body } = notificationText(item, i18n.language);
             return (
               <button
                 key={item.id}
                 type="button"
                 className={`w-full rounded-xl border p-3 text-start ${item.read ? 'bg-surface-container border-outline-variant' : 'bg-surface-container-lowest border-outline-variant'}`}
-                onClick={() => void onRowClick(item.id, item.type)}
+                onClick={() => void onRowClick(item.id, item.type, item.action_link)}
               >
                 <div className="flex items-start gap-2">
                   <div className="mt-0.5 text-on-surface-variant">{iconForType(item.type)}</div>

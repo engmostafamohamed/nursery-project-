@@ -5,6 +5,7 @@ import { LoyaltyDashboard } from '@/components/parent/LoyaltyDashboard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useLoyalty } from '@/hooks/useLoyalty';
+import { formatDate } from '@/lib/datetime';
 import { useSettings } from '@/lib/useSettings';
 
 export function ParentRewardsPage() {
@@ -40,8 +41,18 @@ export function ParentRewardsPage() {
         <div className="space-y-2">
           {rows.map((tx) => (
             <article key={String(tx.id)} className="rounded-lg border border-outline-variant bg-surface text-foreground p-2 text-sm">
-              <p className="font-medium">{t(`loyalty.sources.${String(tx.source)}`)} - {Number(tx.points)} pts</p>
-              <p className="text-xs text-on-surface-variant">{String(tx.description ?? '-')}</p>
+              <p className="font-medium">
+                {tx.transaction_type === 'redeemed' ? t('loyalty.redeemedForDiscount') : t(`loyalty.sources.${String(tx.source)}`)}
+                {' · '}
+                {t('loyalty.pointsValue', { count: Number(tx.points) })}
+              </p>
+              <p className="text-xs text-on-surface-variant">
+                {/* Only an admin's bonus reason is free text; every other row is labelled by its type. */}
+                {tx.source === 'bonus' && typeof tx.description === 'string' && tx.description.trim()
+                  ? tx.description
+                  : t(`loyalty.transactionTypes.${String(tx.transaction_type)}`)}
+                {tx.created_at ? ` · ${formatDate(String(tx.created_at))}` : ''}
+              </p>
             </article>
           ))}
         </div>

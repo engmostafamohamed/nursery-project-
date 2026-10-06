@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 
 import { uploadMediaFile, validateMediaFile, MAX_FILES_PER_BATCH } from '@/lib/mediaStorage';
+import { templateNotificationRow } from '@/lib/notificationText';
 import { supabase } from '@/lib/supabase';
 
 export type TeacherUploadVisibility = 'all_class' | 'tagged_only';
@@ -149,18 +150,16 @@ export function useMediaUpload(params: { userId?: string; nurseryId?: string; mo
           .eq('nursery_id', params.nurseryId)
           .in('role', ['branch_admin', 'chain_super_admin']);
         if (!adminUsers.error) {
-          const notifications = ((adminUsers.data ?? []) as { id: string }[]).map((admin) => ({
-            nursery_id: params.nurseryId,
-            user_id: admin.id,
-            type: 'media_pending_approval',
-            title_ar: 'وسائط جديدة تحتاج موافقة',
-            title_en: 'New media uploaded - needs approval',
-            body_ar: `تم رفع ${args.files.length} ملف جديد ويحتاج مراجعة.`,
-            body_en: `${args.files.length} new media file(s) uploaded and awaiting approval.`,
-            channel: 'push',
-            read: false,
-            sent_at: new Date().toISOString(),
-          }));
+          const notifications = ((adminUsers.data ?? []) as { id: string }[]).map((admin) =>
+            templateNotificationRow({
+              nurseryId: params.nurseryId ?? null,
+              userId: admin.id,
+              type: 'media_pending_approval',
+              params: { count: args.files.length },
+              actionLink: '/admin/media/approval',
+              channel: 'push',
+            }),
+          );
           if (notifications.length) await supabase.from('notifications').insert(notifications as never);
         }
       }

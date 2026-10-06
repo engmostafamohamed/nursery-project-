@@ -15,7 +15,8 @@ interface Props {
   isSaving: boolean;
 }
 
-const PAYMENT_METHODS = ['paymob', 'cash', 'bank_transfer'];
+// instapay / vodafone_cash: parents transfer directly and finance confirms by reference number.
+const PAYMENT_METHODS = ['paymob', 'cash', 'bank_transfer', 'instapay', 'vodafone_cash'];
 const LOYALTY_TIERS = ['silver', 'gold', 'platinum'] as const;
 
 export function SettingsCategoryForm({

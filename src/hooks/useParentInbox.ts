@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 
+import { notificationText } from '@/lib/notificationText';
 import { supabase } from '@/lib/supabase';
 import { useParentInAppNotifications } from '@/hooks/useParentInAppNotifications';
 import type { SurveyType } from '@/hooks/useSurveys';
@@ -77,6 +79,8 @@ export function useParentInbox(params: {
   language: 'ar' | 'en' | 'both';
 }) {
   const { userId, nurseryId, childClassIds, language } = params;
+  const { i18n } = useTranslation();
+  const appLanguage = i18n.language;
 
   const surveysQuery = useQuery({
     queryKey: ['parent-inbox-surveys', nurseryId, userId],
@@ -250,8 +254,7 @@ export function useParentInbox(params: {
       if (t.startsWith('permission_') || t.startsWith('survey_')) continue; // surveys cover these
       if (t.startsWith('broadcast')) continue; // broadcasts cover these
       const isHigh = n.urgency === 'high';
-      const title = language === 'ar' ? n.title_ar : n.title_en;
-      const body = language === 'ar' ? n.body_ar : n.body_en;
+      const { title, body } = notificationText(n, language === 'ar' || language === 'en' ? language : appLanguage);
       out.push({
         id: `notif:${n.id}`,
         kind: 'notification',
@@ -279,6 +282,7 @@ export function useParentInbox(params: {
     notificationsQuery.data,
     userId,
     language,
+    appLanguage,
   ]);
 
   const counts = useMemo(() => {

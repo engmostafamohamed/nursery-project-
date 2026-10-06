@@ -5,6 +5,17 @@ export interface NurserySettingsRow {
   standard_end_time: string | null;
   late_pickup_grace_minutes: number | null;
   late_pickup_fee_per_hour: string | null;
+  auto_late_pickup_billing_enabled: boolean | null;
+  require_qr_for_attendance: boolean | null;
+  late_billing_unit_minutes: 15 | 30 | 60 | null;
+  late_billing_from: 'end_time' | 'grace_end' | null;
+  /** closing_time: extra hours start at closing; stay_duration: after the package's daily hours from check-in. */
+  late_billing_base: 'closing_time' | 'stay_duration' | null;
+  late_sweep_cap_hours: number | null;
+  early_arrival_billing_enabled: boolean | null;
+  late_invoice_mode: 'daily' | 'monthly' | null;
+  pickup_reminder_minutes_before: number | null;
+  min_minutes_between_scans: number | null;
   absence_alert_time: string | null;
   end_of_day_checklist_time: string | null;
   permission_deadline_default_hours: number | null;
@@ -28,6 +39,8 @@ export interface NurserySettingsRow {
   sibling_discount_2nd_child_percentage: string | null;
   sibling_discount_3rd_child_percentage: string | null;
   payment_methods_enabled: string[] | null;
+  /** Where parents send transfers (InstaPay address, wallet number, bank account), shown on the pay page. */
+  payment_instructions: string | null;
   summer_pause_enabled: boolean | null;
   summer_pause_min_weeks: number | null;
   summer_pause_max_weeks: number | null;

@@ -102,7 +102,16 @@ export async function generateEventInvoice({
   const dueDate = (configuredDueDate.getTime() < eventDueDate.getTime() ? configuredDueDate : eventDueDate)
     .toISOString()
     .slice(0, 10);
-  const lineItems = [{ description: `Event: ${event.title_en}`, amount: event.price }];
+  // The app labels the line in the reader's language from the event names.
+  const lineItems = [
+    {
+      kind: 'event',
+      name_ar: event.title_ar?.trim() || null,
+      name_en: event.title_en?.trim() || null,
+      description: event.title_en?.trim() || event.title_ar?.trim() || '',
+      amount: event.price,
+    },
+  ];
   const invoiceInsertRes = await supabase
     .from('invoices')
     .insert({

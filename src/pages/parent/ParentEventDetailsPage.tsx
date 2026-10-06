@@ -18,6 +18,7 @@ import {
 } from '@/hooks/useParentEventDetails';
 import { parentPermissionsCountsQueryKey } from '@/hooks/useParentPermissionsPage';
 import { generateEventInvoice, getInvoiceForPermission } from '@/lib/eventInvoices';
+import { localizedNames, templateNotificationRow } from '@/lib/notificationText';
 import { supabase } from '@/lib/supabase';
 import { useSettings } from '@/lib/useSettings';
 
@@ -90,15 +91,16 @@ export function ParentEventDetailsPage() {
       });
     }
     if (invoice) {
-      await supabase.from('notifications').insert({
-        user_id: parentId,
-        type: 'event_invoice_generated',
-        title_ar: 'تم إصدار فاتورة فعالية',
-        title_en: 'Event invoice generated',
-        body_ar: `تم إصدار فاتورة للفعالية ${event.title_ar}: ${invoice.amount} جنيه.`,
-        body_en: `Invoice generated for ${event.title_en}: EGP ${invoice.amount}.`,
-        channel: 'push',
-      } as never);
+      await supabase.from('notifications').insert(
+        templateNotificationRow({
+          nurseryId: null,
+          userId: parentId,
+          type: 'event_invoice_generated',
+          params: { event: localizedNames(event.title_ar, event.title_en), amount: Number(invoice.amount), currency: 'EGP' },
+          actionLink: `/parent/invoices/${invoice.id}`,
+          channel: 'push',
+        }) as never,
+      );
     }
     return invoice;
   };

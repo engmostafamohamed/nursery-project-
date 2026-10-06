@@ -1,3 +1,4 @@
+import { templateNotificationRow } from '@/lib/notificationText';
 import { supabase } from '@/lib/supabase';
 
 interface BaseActionInput {
@@ -9,23 +10,17 @@ async function notifyUser(params: {
   nurseryId: string;
   userId: string;
   type: string;
-  titleAr: string;
-  titleEn: string;
-  bodyAr: string;
-  bodyEn: string;
+  params?: Record<string, unknown>;
 }) {
-  await supabase.from('notifications').insert({
-    nursery_id: params.nurseryId,
-    user_id: params.userId,
-    type: params.type,
-    title_ar: params.titleAr,
-    title_en: params.titleEn,
-    body_ar: params.bodyAr,
-    body_en: params.bodyEn,
-    channel: 'push',
-    read: false,
-    sent_at: new Date().toISOString(),
-  } as never);
+  await supabase.from('notifications').insert(
+    templateNotificationRow({
+      nurseryId: params.nurseryId,
+      userId: params.userId,
+      type: params.type,
+      params: params.params,
+      channel: 'push',
+    }) as never,
+  );
 }
 
 async function getMediaContext(mediaId: string) {
@@ -89,24 +84,18 @@ export async function approveMedia(input: BaseActionInput) {
     nurseryId: media.nursery_id,
     userId: media.uploaded_by,
     type: 'media_approved',
-    titleAr: 'تمت الموافقة على الوسائط',
-    titleEn: 'Media approved',
-    bodyAr: '✓ تمت الموافقة على الصورة/الفيديو المرفوع.',
-    bodyEn: '✓ Your uploaded media was approved.',
   });
 
   const parentIds = await parentsForMedia(media.id, media.visibility, media.class_id);
-  const captionLabel = media.caption?.trim() || 'Class photo';
+  const caption = media.caption?.trim();
   await Promise.all(
     parentIds.map((parentId) =>
       notifyUser({
         nurseryId: media.nursery_id,
         userId: parentId,
         type: 'media_shared',
-        titleAr: 'صورة جديدة تمت مشاركتها',
-        titleEn: 'New photo shared',
-        bodyAr: `صورة جديدة: ${captionLabel}`,
-        bodyEn: `New photo shared: ${captionLabel}`,
+        // Without a caption the app words it as a class photo.
+        params: { caption: caption || { i18n: 'notificationTemplates.media_shared.classPhoto' } },
       }),
     ),
   );
@@ -128,10 +117,7 @@ export async function rejectMedia(input: BaseActionInput & { reason: string }) {
     nurseryId: media.nursery_id,
     userId: media.uploaded_by,
     type: 'media_rejected',
-    titleAr: 'تم رفض الوسائط',
-    titleEn: 'Media rejected',
-    bodyAr: `✗ تم رفض الوسائط: ${input.reason}`,
-    bodyEn: `✗ Your media was rejected: ${input.reason}`,
+    params: { reason: input.reason },
   });
 }
 

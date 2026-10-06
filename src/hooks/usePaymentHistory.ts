@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 
+import { invoiceItemDescription, invoiceRawItems } from '@/lib/invoiceItems';
 import { supabase } from '@/lib/supabase';
 
 export type PaymentHistoryInvoiceType = 'monthly' | 'event' | 'extra_hours' | 'other';
@@ -91,14 +93,9 @@ function amount(value: string | number | null | undefined): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-function firstDescription(raw: unknown): string {
-  const source = Array.isArray(raw)
-    ? raw
-    : Array.isArray((raw as { items?: unknown[] } | null)?.items)
-      ? ((raw as { items: unknown[] }).items)
-      : [];
-  const first = source[0] as { description?: unknown } | undefined;
-  return typeof first?.description === 'string' ? first.description : '';
+function firstDescription(raw: unknown, language: string): string {
+  const first = invoiceRawItems(raw)[0];
+  return first ? invoiceItemDescription(first, language) : '';
 }
 
 function gatewayFor(method: string | null | undefined): string {
@@ -140,8 +137,10 @@ function endBound(value: string): string {
 }
 
 export function usePaymentHistory({ nurseryId, parentId, applicationId, fromDate, toDate, limit = 12 }: PaymentHistoryParams) {
+  const { i18n } = useTranslation();
+  const language = i18n.language;
   const query = useQuery({
-    queryKey: ['payment-history', nurseryId, parentId, applicationId, fromDate, toDate, limit],
+    queryKey: ['payment-history', nurseryId, parentId, applicationId, fromDate, toDate, limit, language],
     queryFn: async (): Promise<PaymentHistoryRow[]> => {
       let resolvedParentId = parentId ?? null;
       let resolvedNurseryId = nurseryId ?? null;
@@ -270,7 +269,7 @@ export function usePaymentHistory({ nurseryId, parentId, applicationId, fromDate
           lastAttemptStatus: latestAttempt?.status ?? null,
           lastAttemptMethod: latestAttempt?.payment_method ?? null,
           lastAttemptAmount: latestAttempt ? amount(latestAttempt.amount) : 0,
-          description: firstDescription(invoice.line_items_json),
+          description: firstDescription(invoice.line_items_json, language),
         };
       });
     },

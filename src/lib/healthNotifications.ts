@@ -1,12 +1,11 @@
+import { templateNotificationRow } from '@/lib/notificationText';
 import { supabase } from '@/lib/supabase';
 
+/** Notifications use `type` as their template (notificationTemplates.<type>) with `params`. */
 export async function notifyNurseryAdmins(params: {
   nurseryId: string;
   type: string;
-  titleAr: string;
-  titleEn: string;
-  bodyAr: string;
-  bodyEn: string;
+  params?: Record<string, unknown>;
   actionLink?: string | null;
 }): Promise<void> {
   const adminUsers = await supabase
@@ -17,20 +16,16 @@ export async function notifyNurseryAdmins(params: {
   if (adminUsers.error) throw adminUsers.error;
   const rows = (adminUsers.data ?? []) as { id: string }[];
   if (!rows.length) return;
-  const sentAt = new Date().toISOString();
-  const payload = rows.map((admin) => ({
-    nursery_id: params.nurseryId,
-    user_id: admin.id,
-    type: params.type,
-    title_ar: params.titleAr,
-    title_en: params.titleEn,
-    body_ar: params.bodyAr,
-    body_en: params.bodyEn,
-    read: false,
-    channel: 'push' as const,
-    sent_at: sentAt,
-    action_link: params.actionLink ?? null,
-  }));
+  const payload = rows.map((admin) =>
+    templateNotificationRow({
+      nurseryId: params.nurseryId,
+      userId: admin.id,
+      type: params.type,
+      params: params.params,
+      actionLink: params.actionLink ?? null,
+      channel: 'push',
+    }),
+  );
   const { error } = await supabase.from('notifications').insert(payload as never);
   if (error) throw error;
 }
@@ -39,28 +34,21 @@ export async function notifyParentUsers(params: {
   nurseryId: string;
   parentUserIds: string[];
   type: string;
-  titleAr: string;
-  titleEn: string;
-  bodyAr: string;
-  bodyEn: string;
+  params?: Record<string, unknown>;
   actionLink?: string | null;
 }): Promise<void> {
   const unique = [...new Set(params.parentUserIds)];
   if (!unique.length) return;
-  const sentAt = new Date().toISOString();
-  const payload = unique.map((userId) => ({
-    nursery_id: params.nurseryId,
-    user_id: userId,
-    type: params.type,
-    title_ar: params.titleAr,
-    title_en: params.titleEn,
-    body_ar: params.bodyAr,
-    body_en: params.bodyEn,
-    read: false,
-    channel: 'push' as const,
-    sent_at: sentAt,
-    action_link: params.actionLink ?? null,
-  }));
+  const payload = unique.map((userId) =>
+    templateNotificationRow({
+      nurseryId: params.nurseryId,
+      userId,
+      type: params.type,
+      params: params.params,
+      actionLink: params.actionLink ?? null,
+      channel: 'push',
+    }),
+  );
   const { error } = await supabase.from('notifications').insert(payload as never);
   if (error) throw error;
 }

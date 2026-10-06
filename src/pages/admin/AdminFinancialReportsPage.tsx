@@ -69,6 +69,7 @@ export function AdminFinancialReportsPage() {
     if (!profile?.nursery_id) return;
     try {
       await sendInvoiceReminder({
+        invoiceId: row.id,
         nurseryId: profile.nursery_id,
         parentId: row.parentId,
         parentEmail: row.parentEmail,

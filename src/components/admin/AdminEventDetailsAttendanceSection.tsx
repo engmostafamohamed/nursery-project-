@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Input } from '@/components/ui/input';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
 import type { AdminEventAttendanceRow, AdminEventDetailRow } from '@/hooks/useAdminEventDetails';
+import { localizedNames, templateNotificationRow } from '@/lib/notificationText';
 import { supabase } from '@/lib/supabase';
 import { getUserInitials } from '@/lib/utils';
 
@@ -136,19 +137,15 @@ export function AdminEventDetailsAttendanceSection({
     if (!parentIds.length) return;
     setReminderBusy(true);
     try {
-      const now = new Date().toISOString();
-      const inserts = parentIds.map((user_id) => ({
-        nursery_id: event.nursery_id,
-        user_id,
-        type: 'permission_reminder',
-        title_ar: 'تذكير: موافقة فعالية',
-        title_en: 'Reminder: event permission',
-        body_ar: `يرجى الرد على طلب الموافقة للفعالية: ${event.title_ar}`,
-        body_en: `Please respond to the permission request for: ${event.title_en}`,
-        read: false,
-        channel: 'in_app' as const,
-        sent_at: now,
-      }));
+      const inserts = parentIds.map((userId) =>
+        templateNotificationRow({
+          nurseryId: event.nursery_id,
+          userId,
+          type: 'permission_reminder',
+          params: { event: localizedNames(event.title_ar, event.title_en) },
+          actionLink: `/parent/events/${event.id}`,
+        }),
+      );
       const { error } = await supabase.from('notifications').insert(inserts as never);
       if (error) throw error;
       toast.success(t('admin.events.details.reminderSuccess', { count: parentIds.length }));

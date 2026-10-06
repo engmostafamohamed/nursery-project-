@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { uploadApplicationDocument } from '@/lib/applicationDocuments';
 import { activateEnrollment } from '@/lib/enrollmentActivation';
 import { getOrCreateConversationId } from '@/lib/chat';
+import { templateNotificationRow } from '@/lib/notificationText';
 import { supabase } from '@/lib/supabase';
 
 const requiredApplicationDocs = ['birth_certificate', 'vaccination_card', 'parent_id', 'proof_of_address'] as const;
@@ -365,18 +366,16 @@ export function useApplications(params: { nurseryId?: string; applicationId?: st
       if (!adminsRes.error) {
         const adminIds = ((adminsRes.data ?? []) as Array<{ id: string }>).map((a) => a.id);
         if (adminIds.length) {
-          await supabase.from('notifications').insert(adminIds.map((id) => ({
-            nursery_id: payload.nurseryId,
-            user_id: id,
-            type: 'application_submitted',
-            title_ar: 'طلب تسجيل جديد',
-            title_en: 'New application submitted',
-            body_ar: `طلب جديد من ${payload.parentName}.`,
-            body_en: `New application from ${payload.parentName}.`,
-            channel: 'push',
-            read: false,
-            sent_at: new Date().toISOString(),
-          })) as never);
+          await supabase.from('notifications').insert(adminIds.map((id) =>
+            templateNotificationRow({
+              nurseryId: payload.nurseryId,
+              userId: id,
+              type: 'application_submitted',
+              params: { parent: payload.parentName },
+              actionLink: `/admin/admissions/applications/${payload.id}`,
+              channel: 'push',
+            }),
+          ) as never);
         }
       }
     },
@@ -493,51 +492,17 @@ export function useApplications(params: { nurseryId?: string; applicationId?: st
       }
 
       if (resolvedParentId && payload.nurseryId && payload.status !== 'under_review') {
-        const actionLink = `/parent/applications/${payload.id}`;
-        const titleByStatus = {
-          approved: {
-            ar: 'تم قبول طلب التسجيل',
-            en: 'Application approved',
-          },
-          documents_pending: {
-            ar: 'مستندات إضافية مطلوبة',
-            en: 'Additional documents requested',
-          },
-          rejected: {
-            ar: 'تم رفض طلب التسجيل',
-            en: 'Application rejected',
-          },
-        } as const;
-        const bodyByStatus = {
-          approved: {
-            ar: 'تم قبول طلب طفلك وتفعيل ملفه في لوحة ولي الأمر.',
-            en: 'Your child application was approved and the child profile is now visible on your dashboard.',
-          },
-          documents_pending: {
-            ar: payload.reason || 'يرجى رفع المستندات الإضافية المطلوبة من الحضانة.',
-            en: payload.reason || 'Please upload the additional documents requested by the nursery.',
-          },
-          rejected: {
-            ar: payload.reason || 'راجع رسالة الإدارة لمعرفة سبب الرفض.',
-            en: payload.reason || 'Check the admin message for the rejection reason.',
-          },
-        } as const;
-        const notificationCopy = titleByStatus[payload.status];
-        const notificationBody = bodyByStatus[payload.status];
-        await supabase.from('notifications').insert({
-          nursery_id: payload.nurseryId,
-          user_id: resolvedParentId,
-          type: `application_${payload.status}`,
-          title_ar: notificationCopy.ar,
-          title_en: notificationCopy.en,
-          body_ar: notificationBody.ar,
-          body_en: notificationBody.en,
-          channel: 'in_app',
-          urgency: payload.status === 'approved' ? 'normal' : 'high',
-          read: false,
-          action_link: actionLink,
-          sent_at: new Date().toISOString(),
-        } as never);
+        const reason = payload.status === 'approved' ? '' : payload.reason?.trim() ?? '';
+        await supabase.from('notifications').insert(
+          templateNotificationRow({
+            nurseryId: payload.nurseryId,
+            userId: resolvedParentId,
+            type: `application_${payload.status}`,
+            params: reason ? { reason, segments: ['reason'] } : {},
+            actionLink: `/parent/applications/${payload.id}`,
+            urgency: payload.status === 'approved' ? 'normal' : 'high',
+          }) as never,
+        );
 
         if (payload.openChat && payload.reviewedBy && payload.chatMessage?.trim()) {
           const conversationId = getOrCreateConversationId(undefined);

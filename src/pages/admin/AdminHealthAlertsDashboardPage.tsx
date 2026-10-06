@@ -69,10 +69,10 @@ export function AdminHealthAlertsDashboardPage() {
         nurseryId: profile.nursery_id,
         parentUserIds: ids,
         type: 'health_alert',
-        titleAr: 'تنبيه صحي',
-        titleEn: 'Health alert',
-        bodyAr: `${t(`health.dashboard.types.${a.type}`)} — ${a.detailAr}`,
-        bodyEn: `${t(`health.dashboard.types.${a.type}`)} — ${a.detailEn}`,
+        params: {
+          kind: { i18n: `health.dashboard.types.${a.type}` },
+          detail: { ar: a.detailAr, en: a.detailEn },
+        },
         actionLink: `/parent/children/${a.childId}/health`,
       });
       toast.success(t('health.toast.notifySent'));
@@ -103,10 +103,6 @@ export function AdminHealthAlertsDashboardPage() {
         nurseryId: profile.nursery_id,
         parentUserIds: parentIds,
         type: 'health_alert_bulk',
-        titleAr: 'تنبيهات صحية',
-        titleEn: 'Health alerts',
-        bodyAr: 'يرجى مراجعة ملف طفلك الصحي في التطبيق.',
-        bodyEn: 'Please review your child health record in the app.',
         actionLink: '/parent/profile',
       });
       toast.success(t('health.toast.bulkSent'));

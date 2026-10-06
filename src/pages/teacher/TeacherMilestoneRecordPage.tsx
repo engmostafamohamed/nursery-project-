@@ -7,6 +7,7 @@ import { MilestoneForm, type MilestoneFormValue } from '@/components/teacher/Mil
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useMilestones } from '@/hooks/useMilestones';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { localizedNames, templateNotificationRow } from '@/lib/notificationText';
 import { supabase } from '@/lib/supabase';
 
 export function TeacherMilestoneRecordPage() {
@@ -48,18 +49,19 @@ export function TeacherMilestoneRecordPage() {
       const links = await supabase.from('parent_children').select('parent_id').eq('child_id', form.childId);
       if (!links.error) {
         const childName = milestones.children.find((c) => c.id === form.childId);
-        const notifications = ((links.data ?? []) as { parent_id: string }[]).map((l) => ({
-          nursery_id: profile.nursery_id,
-          user_id: l.parent_id,
-          type: 'milestone_shared',
-          title_ar: 'إنجاز جديد',
-          title_en: 'New milestone',
-          body_ar: `🎯 ${childName?.full_name_ar ?? childName?.full_name_en ?? 'Child'}: ${form.milestoneText}`,
-          body_en: `🎯 New milestone: ${childName?.full_name_en ?? childName?.full_name_ar ?? 'Child'} - ${form.milestoneText}`,
-          channel: 'push',
-          read: false,
-          sent_at: new Date().toISOString(),
-        }));
+        const notifications = ((links.data ?? []) as { parent_id: string }[]).map((l) =>
+          templateNotificationRow({
+            nurseryId: profile.nursery_id,
+            userId: l.parent_id,
+            type: 'milestone_shared',
+            params: {
+              child: localizedNames(childName?.full_name_ar, childName?.full_name_en),
+              milestone: form.milestoneText.trim(),
+            },
+            actionLink: '/parent/milestones',
+            channel: 'push',
+          }),
+        );
         if (notifications.length) await supabase.from('notifications').insert(notifications as never);
       }
     }

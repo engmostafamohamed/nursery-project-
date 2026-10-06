@@ -6,17 +6,24 @@ import { toast } from 'sonner';
 import { PointsRedemptionWidget } from '@/components/parent/PointsRedemptionWidget';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { confirm } from '@/components/ui/confirm';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useInvoiceDetails, type InvoiceDetailsData } from '@/hooks/useInvoiceDetails';
 import { useLoyalty } from '@/hooks/useLoyalty';
+import { useSingleFlight } from '@/hooks/useSingleFlight';
 import { useSubmitInvoicePayment } from '@/hooks/useSubmitInvoicePayment';
 import { formatDate, formatDateTime } from '@/lib/datetime';
 import { downloadInvoicePdf } from '@/lib/exports';
-import { redeemLoyaltyPoints } from '@/lib/loyaltyPoints';
-import { supabase } from '@/lib/supabase';
+import {
+  enabledManualMethods,
+  methodNeedsReference,
+  newIdempotencyKey,
+  paymentError,
+  type ParentPaymentMethodCode,
+} from '@/lib/paymentApi';
 import { useSettings } from '@/lib/useSettings';
 import { cn } from '@/lib/utils';
 
@@ -91,8 +98,26 @@ export function ParentPaymentPage() {
   const invoice = invoiceQuery.data;
   const invoiceRef = useRef<HTMLElement | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const methods = useMemo(() => enabledManualMethods(settings.payment_methods_enabled), [settings.payment_methods_enabled]);
+  const [method, setMethod] = useState<ParentPaymentMethodCode>(methods[0]);
+  const [reference, setReference] = useState('');
+  const [referenceTouched, setReferenceTouched] = useState(false);
   const submitPayment = useSubmitInvoicePayment();
+  const payFlight = useSingleFlight();
+  const redeemFlight = useSingleFlight();
+  // One key per payment the parent is making: a retry of the same payment reuses it, so the
+  // server returns the first result instead of recording it again.
+  const paymentKeyRef = useRef<string | null>(null);
+  const submitting = payFlight.running;
+
+  useEffect(() => {
+    if (!methods.includes(method)) setMethod(methods[0]);
+  }, [method, methods]);
+
+  // A different amount, method or reference is a different payment: it gets its own key.
+  useEffect(() => {
+    paymentKeyRef.current = null;
+  }, [paymentAmount, method, reference]);
 
   const inReview = Boolean(invoice?.inReview);
   const balanceDue = invoice?.balanceDue ?? invoice?.amount ?? 0;
@@ -103,6 +128,8 @@ export function ParentPaymentPage() {
   );
   const validPaymentAmount =
     Number.isFinite(parsedPaymentAmount) && parsedPaymentAmount > 0 && parsedPaymentAmount <= balanceDue;
+  const needsReference = methodNeedsReference(method);
+  const referenceError = needsReference && reference.trim().length < 4 ? t('payment.referenceRequired') : null;
   const statusLabel = invoice?.inReview ? t('invoice.inReview') : t(`invoice.status.${invoice?.status ?? 'pending'}`);
   const typeLabel = invoice ? t(`invoice.types.${invoice.type}`) : '-';
   const quickAmounts = useMemo(() => {
@@ -187,24 +214,77 @@ export function ParentPaymentPage() {
     }
   };
 
-  const handlePayNow = async () => {
-    if (!invoice || !validPaymentAmount) return;
-    setSubmitting(true);
-    try {
-      await submitPayment.mutateAsync({
-        invoiceId: invoice.id,
-        amount: parsedPaymentAmount,
-        invoiceNumber: invoice.invoiceNumber,
+  const handlePayNow = () =>
+    payFlight.run(async () => {
+      if (!invoice || !validPaymentAmount) return;
+      if (referenceError) {
+        setReferenceTouched(true);
+        return;
+      }
+      const amountText = t('invoice.egpAmount', { amount: parsedPaymentAmount.toFixed(2) });
+      const ok = await confirm({
+        title: t('payment.confirm.title'),
+        description: [
+          t('payment.confirm.description', {
+            amount: amountText,
+            number: invoice.invoiceNumber,
+            method: t(`payment.manualMethods.${method}.label`),
+          }),
+          reference.trim() ? t('payment.confirm.reference', { reference: reference.trim() }) : '',
+          t('payment.confirm.reviewNote'),
+        ]
+          .filter(Boolean)
+          .join(' '),
+        confirmText: t('payment.confirm.submit', { amount: amountText }),
+        icon: 'payments',
       });
-      await invoiceQuery.refetch();
-      toast.success(t('payment.submittedForApproval'));
-      navigate(safeReturnTo ?? `/parent/invoices${qs}`);
-    } catch {
-      toast.error(t('payment.errors.actionFailed'));
-    } finally {
-      setSubmitting(false);
-    }
-  };
+      if (!ok) return;
+
+      paymentKeyRef.current ??= newIdempotencyKey();
+      try {
+        const result = await submitPayment.mutateAsync({
+          invoiceId: invoice.id,
+          amount: parsedPaymentAmount,
+          method,
+          reference: needsReference ? reference : null,
+          idempotencyKey: paymentKeyRef.current,
+        });
+        paymentKeyRef.current = null;
+        await invoiceQuery.refetch();
+        toast.success(t(result.status === 'duplicate' ? 'payment.alreadySubmitted' : 'payment.submittedForApproval'));
+        navigate(safeReturnTo ?? `/parent/invoices${qs}`);
+      } catch (error) {
+        const { key, values } = paymentError(error);
+        // A refused payment will not succeed on a retry; a new attempt gets a new key.
+        if (key !== 'payment.errors.actionFailed') paymentKeyRef.current = null;
+        toast.error(t(key, values));
+        void invoiceQuery.refetch();
+      }
+    });
+
+  const handleRedeem = (points: number, discountEgp: number) =>
+    redeemFlight.run(async () => {
+      if (!invoice) return;
+      const ok = await confirm({
+        title: t('loyalty.confirmRedeem.title'),
+        description: t('loyalty.confirmRedeem.description', {
+          points,
+          amount: t('invoice.egpAmount', { amount: discountEgp.toFixed(2) }),
+          number: invoice.invoiceNumber,
+        }),
+        confirmText: t('loyalty.confirmRedeem.confirm'),
+        icon: 'redeem',
+      });
+      if (!ok) return;
+      try {
+        const result = await loyalty.redeemPoints({ invoiceId: invoice.id, points, idempotencyKey: newIdempotencyKey() });
+        await invoiceQuery.refetch();
+        toast.success(t(result.status === 'duplicate' ? 'loyalty.redemptionAlreadyApplied' : 'loyalty.redemptionApplied'));
+      } catch (error) {
+        const { key, values } = paymentError(error);
+        toast.error(t(key, values));
+      }
+    });
 
   return (
     <div className="w-full max-w-none space-y-5 pb-28">
@@ -404,7 +484,72 @@ export function ParentPaymentPage() {
                     {t('payment.invalidPartialAmount', { defaultValue: 'Enter an amount greater than 0 and not more than the balance.' })}
                   </p>
                 ) : null}
-                <Button className="h-11 w-full rounded-md" onClick={() => void handlePayNow()} disabled={submitting || !invoice || !validPaymentAmount}>
+
+                {methods.length > 1 || methods[0] !== 'manual' ? (
+                  <fieldset className="space-y-2">
+                    <legend className="mb-1 text-sm font-medium text-on-surface">{t('payment.methodsTitle')}</legend>
+                    {methods.map((m) => (
+                      <label
+                        key={m}
+                        className={cn(
+                          'flex cursor-pointer items-start gap-2 rounded-lg border p-3 text-sm',
+                          method === m ? 'border-primary bg-primary/5' : 'border-outline-variant bg-surface-container-lowest',
+                        )}
+                      >
+                        <input
+                          type="radio"
+                          name="payment-method"
+                          className="mt-1"
+                          value={m}
+                          checked={method === m}
+                          onChange={() => setMethod(m)}
+                        />
+                        <span>
+                          <span className="block font-medium text-on-surface">{t(`payment.manualMethods.${m}.label`)}</span>
+                          <span className="block text-xs text-on-surface-variant">{t(`payment.manualMethods.${m}.help`)}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </fieldset>
+                ) : null}
+
+                {settings.payment_instructions?.trim() && method !== 'cash' ? (
+                  <div className="rounded-lg border border-outline-variant bg-surface-container-lowest p-3 text-sm">
+                    <p className="text-xs font-semibold text-on-surface-variant">{t('payment.instructionsTitle')}</p>
+                    <p className="mt-1 whitespace-pre-line break-words text-on-surface">{settings.payment_instructions}</p>
+                  </div>
+                ) : null}
+
+                {needsReference ? (
+                  <div className="space-y-1">
+                    <Label htmlFor="payment-reference">{t('payment.reference')}</Label>
+                    <Input
+                      id="payment-reference"
+                      value={reference}
+                      maxLength={80}
+                      autoComplete="off"
+                      placeholder={t('payment.referencePlaceholder')}
+                      aria-invalid={Boolean(referenceTouched && referenceError)}
+                      onChange={(e) => {
+                        setReference(e.target.value);
+                        setReferenceTouched(true);
+                      }}
+                      onBlur={() => setReferenceTouched(true)}
+                    />
+                    {referenceTouched && referenceError ? (
+                      <p className="text-xs text-error">{referenceError}</p>
+                    ) : (
+                      <p className="text-xs text-on-surface-variant">{t('payment.referenceHelp')}</p>
+                    )}
+                  </div>
+                ) : null}
+
+                <Button
+                  className="h-11 w-full rounded-md"
+                  onClick={() => void handlePayNow()}
+                  disabled={submitting || !invoice || !validPaymentAmount}
+                  aria-busy={submitting}
+                >
                   {submitting ? t('payment.submitting') : t('payment.payNowAmount', { amount: validPaymentAmount ? parsedPaymentAmount.toFixed(2) : '0.00' })}
                 </Button>
               </div>
@@ -425,28 +570,20 @@ export function ParentPaymentPage() {
           </section>
 
           <PointsRedemptionWidget
-            enabled={Boolean(settings.loyalty_enabled) && !inReview}
+            enabled={
+              Boolean(settings.loyalty_enabled) &&
+              !inReview &&
+              balanceDue > 0 &&
+              invoice?.status !== 'paid' &&
+              invoice?.status !== 'cancelled'
+            }
             balance={loyalty.summary.balance}
             invoiceAmount={invoice?.amount ?? 0}
             rate={Number(settings.points_redemption_rate ?? 0)}
             minPoints={100}
             maxDiscountPercent={0.5}
-            onRedeem={async (points, discountEgp) => {
-              if (!invoice || !nurseryId || !user?.id) return;
-              await redeemLoyaltyPoints({
-                nurseryId,
-                parentId: user.id,
-                invoiceId: invoice.id,
-                points,
-                description: `Redeemed for discount EGP ${discountEgp.toFixed(2)}`,
-              });
-              await supabase
-                .from('invoices')
-                .update({ amount: Math.max(0, invoice.amount - discountEgp).toFixed(2) } as never)
-                .eq('id', invoice.id);
-              await invoiceQuery.refetch();
-              toast.success(t('loyalty.redemptionApplied'));
-            }}
+            busy={redeemFlight.running}
+            onRedeem={(points, discountEgp) => handleRedeem(points, discountEgp).then(() => undefined)}
           />
         </aside>
       </section>

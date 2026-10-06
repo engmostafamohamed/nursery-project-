@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { useSingleFlight } from '@/hooks/useSingleFlight';
+import { newIdempotencyKey, paymentError } from '@/lib/paymentApi';
 
 type PaymentMethod =
   | 'cash'
@@ -18,8 +21,10 @@ type PaymentMethod =
 
 interface Props {
   disabled: boolean;
+  /** The amount being recorded, shown in the confirmation. */
+  amountLabel?: string;
   onView: () => void;
-  onMarkPaid: (payload: { paymentMethod: PaymentMethod; paidAt: string; notes: string }) => Promise<void>;
+  onMarkPaid: (payload: { paymentMethod: PaymentMethod; paidAt: string; notes: string; idempotencyKey: string }) => Promise<void>;
   onCancel: () => Promise<void>;
 }
 
@@ -33,35 +38,44 @@ const PAYMENT_METHODS: PaymentMethod[] = [
   'orange_cash',
 ];
 
-export function InvoiceActionsMenu({ disabled, onView, onMarkPaid, onCancel }: Props) {
+export function InvoiceActionsMenu({ disabled, amountLabel, onView, onMarkPaid, onCancel }: Props) {
   const { t } = useTranslation();
   const [markPaidOpen, setMarkPaidOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [paidAt, setPaidAt] = useState(new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState('');
+  // One key per opening of the dialog: a double click or a retry records the payment once.
+  const [paymentKey, setPaymentKey] = useState(newIdempotencyKey);
+  const flight = useSingleFlight();
+  const isSubmitting = flight.running;
 
-  const submitMarkPaid = async () => {
-    setIsSubmitting(true);
-    try {
-      await onMarkPaid({ paymentMethod, paidAt, notes });
-      setMarkPaidOpen(false);
-      setNotes('');
-    } finally {
-      setIsSubmitting(false);
-    }
+  const openMarkPaid = () => {
+    setPaymentKey(newIdempotencyKey());
+    setMarkPaidOpen(true);
   };
 
-  const submitCancel = async () => {
-    setIsSubmitting(true);
-    try {
-      await onCancel();
-      setCancelOpen(false);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  const submitMarkPaid = () =>
+    flight.run(async () => {
+      try {
+        await onMarkPaid({ paymentMethod, paidAt, notes, idempotencyKey: paymentKey });
+        setMarkPaidOpen(false);
+        setNotes('');
+      } catch (error) {
+        const { key, values } = paymentError(error);
+        toast.error(t(key, values));
+      }
+    });
+
+  const submitCancel = () =>
+    flight.run(async () => {
+      try {
+        await onCancel();
+        setCancelOpen(false);
+      } catch {
+        toast.error(t('payment.errors.actionFailed'));
+      }
+    });
 
   return (
     <>
@@ -69,7 +83,7 @@ export function InvoiceActionsMenu({ disabled, onView, onMarkPaid, onCancel }: P
         <Button variant="outline" size="sm" onClick={onView}>
           {t('invoice.actions.viewDetails')}
         </Button>
-        <Button variant="outline" size="sm" disabled={disabled} onClick={() => setMarkPaidOpen(true)}>
+        <Button variant="outline" size="sm" disabled={disabled} onClick={openMarkPaid}>
           {t('invoice.actions.markPaid')}
         </Button>
         <Button variant="outline" size="sm" disabled={disabled} onClick={() => setCancelOpen(true)}>
@@ -81,7 +95,9 @@ export function InvoiceActionsMenu({ disabled, onView, onMarkPaid, onCancel }: P
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('invoice.markPaid.title')}</DialogTitle>
-            <DialogDescription>{t('invoice.markPaid.description')}</DialogDescription>
+            <DialogDescription>
+              {amountLabel ? t('invoice.markPaid.descriptionAmount', { amount: amountLabel }) : t('invoice.markPaid.description')}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-2">
@@ -110,8 +126,8 @@ export function InvoiceActionsMenu({ disabled, onView, onMarkPaid, onCancel }: P
               <Button variant="outline" onClick={() => setMarkPaidOpen(false)}>
                 {t('common.cancel')}
               </Button>
-              <Button onClick={() => void submitMarkPaid()} disabled={isSubmitting}>
-                {t('invoice.markPaid.confirm')}
+              <Button onClick={() => void submitMarkPaid()} disabled={isSubmitting} aria-busy={isSubmitting}>
+                {isSubmitting ? t('payment.submitting') : t('invoice.markPaid.confirm')}
               </Button>
             </div>
           </div>

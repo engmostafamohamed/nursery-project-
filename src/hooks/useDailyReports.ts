@@ -1,8 +1,19 @@
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { templateNotificationRow } from '@/lib/notificationText';
 import { supabase } from '@/lib/supabase';
 import type { DailyReportFormData, DailyReportStatus } from '@/hooks/dailyReportsSchema';
+
+function dailyReportNotification(nurseryId: string | undefined, parentId: string) {
+  return templateNotificationRow({
+    nurseryId: nurseryId ?? null,
+    userId: parentId,
+    type: 'daily_report_published',
+    actionLink: '/parent/daily-reports',
+    channel: 'push',
+  });
+}
 
 export function useDailyReports(params: { userId?: string; nurseryId?: string }) {
   const qc = useQueryClient();
@@ -130,18 +141,9 @@ export function useDailyReports(params: { userId?: string; nurseryId?: string })
       if (args.status === 'published') {
         const parentsRes = await supabase.from('parent_children').select('parent_id').eq('child_id', args.form.childId);
         if (!parentsRes.error) {
-          const notifications = ((parentsRes.data ?? []) as { parent_id: string }[]).map((p) => ({
-            nursery_id: params.nurseryId,
-            user_id: p.parent_id,
-            type: 'daily_report_published',
-            title_ar: 'تقرير يومي جديد',
-            title_en: 'New daily report',
-            body_ar: 'تم نشر تقرير يومي جديد لطفلك.',
-            body_en: 'A new daily report has been published for your child.',
-            channel: 'push',
-            read: false,
-            sent_at: new Date().toISOString(),
-          }));
+          const notifications = ((parentsRes.data ?? []) as { parent_id: string }[]).map((p) =>
+            dailyReportNotification(params.nurseryId, p.parent_id),
+          );
           if (notifications.length) await supabase.from('notifications').insert(notifications as never);
         }
       }
@@ -173,18 +175,9 @@ export function useDailyReports(params: { userId?: string; nurseryId?: string })
 
       const parentsRes = await supabase.from('parent_children').select('parent_id').eq('child_id', args.childId);
       if (!parentsRes.error) {
-        const notifications = ((parentsRes.data ?? []) as { parent_id: string }[]).map((p) => ({
-          nursery_id: params.nurseryId,
-          user_id: p.parent_id,
-          type: 'daily_report_published',
-          title_ar: 'تقرير يومي جديد',
-          title_en: 'New daily report',
-          body_ar: 'تم نشر تقرير يومي جديد لطفلك.',
-          body_en: 'A new daily report has been published for your child.',
-          channel: 'push',
-          read: false,
-          sent_at: new Date().toISOString(),
-        }));
+        const notifications = ((parentsRes.data ?? []) as { parent_id: string }[]).map((p) =>
+          dailyReportNotification(params.nurseryId, p.parent_id),
+        );
         if (notifications.length) await supabase.from('notifications').insert(notifications as never);
       }
     },

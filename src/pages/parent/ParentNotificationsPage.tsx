@@ -24,6 +24,7 @@ import {
   type ParentInAppNotificationRow,
 } from '@/hooks/useParentInAppNotifications';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { notificationText } from '@/lib/notificationText';
 import {
   formatNotificationRelativeTime,
   resolveParentNotificationPath,
@@ -116,9 +117,8 @@ export function ParentNotificationsPage() {
     invalidate();
   };
 
-  const isAr = i18n.language === 'ar';
-  const titleFor = (item: ParentInAppNotificationRow) => (isAr ? item.title_ar : item.title_en);
-  const bodyFor = (item: ParentInAppNotificationRow) => (isAr ? item.body_ar : item.body_en);
+  const titleFor = (item: ParentInAppNotificationRow) => notificationText(item, i18n.language).title;
+  const bodyFor = (item: ParentInAppNotificationRow) => notificationText(item, i18n.language).body;
 
   return (
     <div className="space-y-4">

@@ -1,12 +1,16 @@
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
-import { useAuthSession } from '@/hooks/useAuthSession';
+import { confirm } from '@/components/ui/confirm';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import type { PaymentAttemptItem } from '@/hooks/usePaymentAttempts';
-import { confirmPaymentAttempt } from '@/lib/invoiceActions';
-import { supabase } from '@/lib/supabase';
+import { useSingleFlight } from '@/hooks/useSingleFlight';
+import { confirmPaymentAttempt, MANUAL_PAYMENT_METHODS, paymentError, rejectPaymentAttempt } from '@/lib/paymentApi';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -14,16 +18,29 @@ interface Props {
   onUpdated: () => Promise<void>;
 }
 
+/**
+ * Parent payments waiting for finance. Confirming records the payment (once — a repeated
+ * confirm does nothing), updates the invoice and notifies the parent; rejecting tells the
+ * parent why. Both run on the server and only one action runs at a time.
+ */
 export function PendingPaymentAttempts({ attempts, onUpdated }: Props) {
   const { t } = useTranslation();
-  const { user } = useAuthSession();
   const queryClient = useQueryClient();
+  const flight = useSingleFlight();
+  const [rejecting, setRejecting] = useState<PaymentAttemptItem | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
   const pending = attempts.filter((a) => a.status === 'pending_confirmation');
   if (!pending.length) return null;
+
+  const methodLabel = (method: string) =>
+    (MANUAL_PAYMENT_METHODS as readonly string[]).includes(method) || method === 'manual'
+      ? t(`payment.manualMethods.${method}.label`)
+      : t(`payment.methods.${method}`, { defaultValue: method });
 
   const invalidatePaymentViews = () => {
     void queryClient.invalidateQueries({ queryKey: ['payment-history'] });
     void queryClient.invalidateQueries({ queryKey: ['parent-invoices'] });
+    void queryClient.invalidateQueries({ queryKey: ['invoice-details'] });
     void queryClient.invalidateQueries({ queryKey: ['financial-reports'] });
     void queryClient.invalidateQueries({ queryKey: ['admin-financial-dashboard'] });
     void queryClient.invalidateQueries({ queryKey: ['application-package-invoice'] });
@@ -35,42 +52,50 @@ export function PendingPaymentAttempts({ attempts, onUpdated }: Props) {
     void queryClient.invalidateQueries({ queryKey: ['admin-children-list'] });
   };
 
-  const confirmAttempt = async (attempt: PaymentAttemptItem) => {
-    try {
-      await confirmPaymentAttempt(attempt.id);
-      toast.success(t('payment.admin.confirmed'));
-      invalidatePaymentViews();
-      await onUpdated();
-    } catch {
-      toast.error(t('payment.errors.actionFailed'));
-    }
-  };
+  const confirmAttempt = (attempt: PaymentAttemptItem) =>
+    flight.run(async () => {
+      const ok = await confirm({
+        title: t('payment.admin.confirmTitle'),
+        description: [
+          t('payment.admin.confirmDescription', {
+            amount: t('invoice.egpAmount', { amount: attempt.amount.toFixed(2) }),
+            parent: attempt.parentName,
+            method: methodLabel(attempt.method),
+          }),
+          attempt.reference ? t('payment.confirm.reference', { reference: attempt.reference }) : '',
+        ]
+          .filter(Boolean)
+          .join(' '),
+        confirmText: t('payment.admin.confirm'),
+        icon: 'price_check',
+      });
+      if (!ok) return;
+      try {
+        await confirmPaymentAttempt(attempt.id);
+        toast.success(t('payment.admin.confirmed'));
+        invalidatePaymentViews();
+        await onUpdated();
+      } catch (error) {
+        const { key, values } = paymentError(error);
+        toast.error(t(key, values));
+      }
+    });
 
-  const rejectAttempt = async (attempt: PaymentAttemptItem) => {
-    try {
-      await supabase
-        .from('payment_attempts')
-        .update({ status: 'cancelled', confirmed_at: new Date().toISOString(), confirmed_by: user?.id ?? null } as never)
-        .eq('id', attempt.id);
-      await supabase.from('notifications').insert({
-        nursery_id: attempt.nurseryId,
-        user_id: attempt.parentId,
-        type: 'payment_attempt_rejected',
-        title_ar: 'تم رفض محاولة الدفع',
-        title_en: 'Payment attempt rejected',
-        body_ar: 'يرجى المحاولة مرة أخرى أو اختيار طريقة دفع أخرى.',
-        body_en: 'Please try again or use another payment method.',
-        channel: 'push',
-        read: false,
-        sent_at: new Date().toISOString(),
-      } as never);
-      toast.success(t('payment.admin.rejected'));
-      invalidatePaymentViews();
-      await onUpdated();
-    } catch {
-      toast.error(t('payment.errors.actionFailed'));
-    }
-  };
+  const submitReject = () =>
+    flight.run(async () => {
+      if (!rejecting) return;
+      try {
+        await rejectPaymentAttempt(rejecting.id, rejectReason);
+        toast.success(t('payment.admin.rejected'));
+        setRejecting(null);
+        setRejectReason('');
+        invalidatePaymentViews();
+        await onUpdated();
+      } catch (error) {
+        const { key, values } = paymentError(error);
+        toast.error(t(key, values));
+      }
+    });
 
   return (
     <section className="rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
@@ -92,7 +117,7 @@ export function PendingPaymentAttempts({ attempts, onUpdated }: Props) {
                 <p className="mt-1 break-words text-xs text-on-surface-variant">{attempt.parentName}</p>
               </div>
               <span className="shrink-0 rounded-md border border-warning/30 bg-warning/10 px-2 py-1 text-xs font-semibold text-warning">
-                {t(`payment.methods.${attempt.method}`)}
+                {methodLabel(attempt.method)}
               </span>
             </div>
             <dl className="grid gap-2 text-xs">
@@ -102,8 +127,14 @@ export function PendingPaymentAttempts({ attempts, onUpdated }: Props) {
               </div>
               <div className="flex justify-between gap-3">
                 <dt className="text-on-surface-variant">{t('payment.admin.method')}</dt>
-                <dd className="text-end font-medium text-on-surface">{t(`payment.methods.${attempt.method}`)}</dd>
+                <dd className="text-end font-medium text-on-surface">{methodLabel(attempt.method)}</dd>
               </div>
+              {attempt.reference ? (
+                <div className="flex justify-between gap-3">
+                  <dt className="text-on-surface-variant">{t('payment.reference')}</dt>
+                  <dd className="break-all text-end font-mono font-medium text-on-surface">{attempt.reference}</dd>
+                </div>
+              ) : null}
             </dl>
             {attempt.proofUrl ? (
               <a className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary underline" href={attempt.proofUrl} target="_blank" rel="noreferrer">
@@ -112,7 +143,12 @@ export function PendingPaymentAttempts({ attempts, onUpdated }: Props) {
               </a>
             ) : null}
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <Button className="h-9 rounded-md gap-1" size="sm" onClick={() => void confirmAttempt(attempt)}>
+              <Button
+                className="h-9 rounded-md gap-1"
+                size="sm"
+                disabled={flight.running}
+                onClick={() => void confirmAttempt(attempt)}
+              >
                 <span className="material-symbols-outlined text-base" aria-hidden>check</span>
                 {t('payment.admin.confirm')}
               </Button>
@@ -120,7 +156,11 @@ export function PendingPaymentAttempts({ attempts, onUpdated }: Props) {
                 className={cn('h-9 rounded-md gap-1 border-error/40 text-error hover:bg-error/10')}
                 size="sm"
                 variant="outline"
-                onClick={() => void rejectAttempt(attempt)}
+                disabled={flight.running}
+                onClick={() => {
+                  setRejectReason('');
+                  setRejecting(attempt);
+                }}
               >
                 <span className="material-symbols-outlined text-base" aria-hidden>close</span>
                 {t('payment.admin.reject')}
@@ -129,6 +169,41 @@ export function PendingPaymentAttempts({ attempts, onUpdated }: Props) {
           </div>
         ))}
       </div>
+
+      <Dialog open={Boolean(rejecting)} onOpenChange={(open) => (!open && !flight.running ? setRejecting(null) : undefined)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('payment.admin.rejectTitle')}</DialogTitle>
+            <DialogDescription>
+              {rejecting
+                ? t('payment.admin.rejectDescription', {
+                    amount: t('invoice.egpAmount', { amount: rejecting.amount.toFixed(2) }),
+                    parent: rejecting.parentName,
+                  })
+                : null}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="reject-reason">{t('payment.admin.rejectReason')}</Label>
+            <Textarea
+              id="reject-reason"
+              value={rejectReason}
+              maxLength={300}
+              placeholder={t('payment.admin.rejectReasonPlaceholder')}
+              onChange={(e) => setRejectReason(e.target.value)}
+            />
+            <p className="text-xs text-on-surface-variant">{t('payment.admin.rejectReasonHelp')}</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" disabled={flight.running} onClick={() => setRejecting(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button variant="destructive" disabled={flight.running} aria-busy={flight.running} onClick={() => void submitReject()}>
+              {flight.running ? t('payment.submitting') : t('payment.admin.reject')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

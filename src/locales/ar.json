@@ -892,6 +892,8 @@
       "loadError": "تعذر تحميل الملف الشخصي."
     },
     "nav": {
+      "scanner": "ماسح QR",
+      "attendanceLogs": "سجلات الحضور",
       "sidebarLabel": "تنقل الإدارة",
       "dashboard": "لوحة التحكم",
       "children": "الأطفال",
@@ -1287,6 +1289,9 @@
       "colStatus": "الحالة",
       "latePickup": "استلام متأخر",
       "status": {
+        "excused": "غياب بعذر",
+        "off": "عطلة",
+        "holiday": "إجازة رسمية",
         "present": "حاضر",
         "partial": "دخول فقط",
         "absent": "غائب"
@@ -1976,6 +1981,17 @@
     }
   },
   "invoice": {
+    "itemKinds": {
+      "late_pickup": "ساعات إضافية لتأخر الاستلام · {{date}}",
+      "loyalty_discount": "خصم نقاط الولاء ({{points}} نقطة)",
+      "tuition": "رسوم دراسية",
+      "admission_package": "باقة التسجيل",
+      "discount": "خصم",
+      "event": "فعالية"
+    },
+    "notes": {
+      "applicationPackage": "تم اختيار باقة التسجيل قبل اعتماد الطلب."
+    },
     "egpAmount": "{{amount}} جنيه",
     "invoiceNumber": "فاتورة رقم {{number}}",
     "dueDate": "تاريخ الاستحقاق: {{date}}",
@@ -2059,6 +2075,10 @@
       "avgDaysToPayment": "متوسط أيام السداد"
     },
     "markPaid": {
+      "confirmTitle": "تسجيل هذا الدفع؟",
+      "confirmDescription": "تسجيل استلام {{amount}} ({{method}}) للفاتورة {{number}}؟ سيتم تحديث الفاتورة وإشعار ولي الأمر.",
+      "descriptionAmount": "تسجيل دفعة حتى {{amount}}. يُسجَّل الرصيد غير المدفوع فقط، ومرة واحدة.",
+      "alreadyPaid": "هذه الفاتورة مدفوعة بالفعل — لم يُسجَّل شيء جديد.",
       "title": "تحديد الفاتورة كمدفوعة",
       "description": "أكد تفاصيل السداد قبل تحديث هذه الفاتورة.",
       "paymentMethod": "طريقة الدفع",
@@ -2137,6 +2157,41 @@
     }
   },
   "payment": {
+    "manualMethods": {
+      "instapay": {
+        "label": "إنستاباي",
+        "help": "حوّل عبر إنستاباي إلى عنوان الحضانة ثم اكتب رقم العملية."
+      },
+      "vodafone_cash": {
+        "label": "فودافون كاش",
+        "help": "حوّل من محفظتك إلى رقم الحضانة ثم اكتب رقم العملية."
+      },
+      "bank_transfer": {
+        "label": "تحويل بنكي",
+        "help": "حوّل إلى حساب الحضانة البنكي ثم اكتب رقم مرجع التحويل."
+      },
+      "cash": {
+        "label": "نقدًا في الحضانة",
+        "help": "ادفع في مكتب الحضانة؛ يؤكد قسم الحسابات عند الاستلام."
+      },
+      "manual": {
+        "label": "دفعة للمراجعة",
+        "help": "يؤكد قسم الحسابات دفعتك قبل اعتماد الفاتورة كمدفوعة."
+      }
+    },
+    "instructionsTitle": "بيانات التحويل",
+    "reference": "رقم العملية / المرجع",
+    "referencePlaceholder": "مثال: 123456789012",
+    "referenceHelp": "يستخدمه قسم الحسابات لمطابقة التحويل.",
+    "referenceRequired": "أدخل رقم العملية (4 أحرف على الأقل).",
+    "confirm": {
+      "title": "تأكيد الدفع",
+      "description": "إرسال {{amount}} للفاتورة {{number}} عبر {{method}}؟",
+      "reference": "رقم العملية: {{reference}}.",
+      "reviewNote": "تُعتمد الفاتورة كمدفوعة بعد تحقق قسم الحسابات بالحضانة من الدفعة.",
+      "submit": "إرسال {{amount}}"
+    },
+    "alreadySubmitted": "تم إرسال هذه الدفعة من قبل — لم تُرسل مرتين.",
     "comingSoon": "قريباً",
     "comingSoonMessage": "تكامل Paymob سيكون في الميزة 4. حالياً استخدم الدفع النقدي أو التحويل البنكي.",
     "methodsTitle": "طريقة الدفع",
@@ -2176,6 +2231,13 @@
       "payWithMethod": "ادفع {{amount}} جنيه عبر {{method}}"
     },
     "admin": {
+      "confirmTitle": "تأكيد هذه الدفعة؟",
+      "confirmDescription": "تأكيد استلام {{amount}} من {{parent}} عبر {{method}}؟ سيتم تسجيل الدفعة وإشعار ولي الأمر.",
+      "rejectTitle": "رفض هذه الدفعة؟",
+      "rejectDescription": "سيتم اعتبار {{amount}} من {{parent}} غير مستلمة.",
+      "rejectReason": "السبب (يُرسل لولي الأمر)",
+      "rejectReasonPlaceholder": "مثال: لم يتم العثور على تحويل بهذا الرقم",
+      "rejectReasonHelp": "اختياري، لكنه يساعد ولي الأمر على تصحيح الدفع.",
       "pendingTitle": "طلبات تأكيد دفع معلقة",
       "method": "الطريقة",
       "amount": "المبلغ",
@@ -2188,6 +2250,20 @@
       "rejected": "تم رفض محاولة الدفع."
     },
     "errors": {
+      "payment_exceeds_balance": "المبلغ أكبر من الرصيد المتبقي على هذه الفاتورة.",
+      "payment_duplicate": "تم إرسال هذه الدفعة للتو، ولم تُرسل مرتين.",
+      "payment_invoice_closed": "هذه الفاتورة مدفوعة أو ملغاة بالفعل.",
+      "payment_invoice_not_yours": "هذه الفاتورة تخص حسابًا آخر.",
+      "payment_invoice_not_found": "الفاتورة غير موجودة.",
+      "payment_attempt_not_found": "هذه الدفعة لم تعد موجودة.",
+      "payment_invalid_amount": "أدخل مبلغًا أكبر من صفر.",
+      "payment_invalid_method": "اختر طريقة الدفع.",
+      "payment_forbidden": "ليست لديك صلاحية لهذا الإجراء.",
+      "payment_not_authenticated": "يرجى تسجيل الدخول مرة أخرى.",
+      "loyalty_disabled": "برنامج النقاط غير مفعّل لهذه الحضانة.",
+      "loyalty_min_points": "استبدل 100 نقطة على الأقل.",
+      "loyalty_insufficient_points": "رصيد نقاطك غير كافٍ.",
+      "loyalty_exceeds_cap": "يمكن أن تغطي النقاط نصف قيمة الفاتورة كحد أقصى.",
       "actionFailed": "تعذر إتمام هذا الإجراء."
     }
   },
@@ -3817,6 +3893,18 @@
     }
   },
   "loyalty": {
+    "confirmRedeem": {
+      "title": "استبدال النقاط؟",
+      "description": "استخدام {{points}} نقطة لخصم {{amount}} من الفاتورة {{number}}؟ لا يمكن التراجع عن ذلك.",
+      "confirm": "استبدال"
+    },
+    "redemptionAlreadyApplied": "تم تطبيق هذا الاستبدال من قبل.",
+    "errors": {
+      "minPoints": "أدخل {{count}} نقطة على الأقل.",
+      "maxPoints": "يمكنك استبدال {{count}} نقطة كحد أقصى على هذه الفاتورة."
+    },
+    "pointsValue": "{{count}} نقطة",
+    "redeemedForDiscount": "خصم على فاتورة",
     "adminTitle": "إدارة برنامج الولاء",
     "rewardsPageTitle": "المكافآت",
     "disabledTitle": "المكافآت غير مفعلة",
@@ -4170,6 +4258,428 @@
     "goBack": "رجوع",
     "goHome": "الرئيسية",
     "pushSubscriptionSave": "تعذّر حفظ إعدادات الإشعارات. أعد المحاولة عند الاتصال بالإنترنت."
+  },
+  "attendance": {
+    "status": {
+      "present": "حاضر",
+      "partial": "حضر فقط",
+      "absent": "غائب",
+      "excused": "غياب بعذر",
+      "off": "عطلة",
+      "holiday": "إجازة رسمية",
+      "upcoming": "قادم",
+      "inNursery": "في الحضانة",
+      "checkedOut": "تم الاستلام"
+    },
+    "method": {
+      "qr_parent": "QR ولي الأمر",
+      "qr_custom": "QR مخصص",
+      "manual": "يدوي"
+    },
+    "byStaff": "بواسطة {{name}}",
+    "pickedUpBy": "استلمه {{name}}",
+    "extraHoursShort": "ساعات إضافية: {{hours}}",
+    "lateMinutes": "{{minutes}} دقيقة بعد نهاية الدوام",
+    "coveredByPackage": "{{hours}} من الباقة",
+    "waived": "معفى",
+    "provisional": "مبدئي",
+    "needsReview": "يحتاج مراجعة",
+    "offDayTitle": "ليس يوم عمل",
+    "offDayDescription": "هذا اليوم عطلة للحضانة، لذلك لا يُتوقع حضور.",
+    "sections": {
+      "absent": "غائب",
+      "excused": "غياب بعذر"
+    },
+    "columns": {
+      "extraTime": "الوقت الإضافي",
+      "amount": "المبلغ",
+      "actions": "إجراءات"
+    },
+    "invoiceStatus": {
+      "pending": "غير مدفوعة",
+      "paid": "مدفوعة",
+      "overdue": "متأخرة",
+      "cancelled": "ملغاة"
+    },
+    "reviewReason": {
+      "missing_checkout": "لم يُسجَّل الانصراف",
+      "refund_due": "مطلوب استرداد",
+      "other": "يحتاج مراجعة"
+    },
+    "errors": {
+      "generic": "حدث خطأ. حاول مرة أخرى.",
+      "attendance_not_authenticated": "انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.",
+      "attendance_forbidden": "يمكنك تسجيل حضور أطفال حضانتك فقط.",
+      "attendance_admin_only": "هذا الإجراء متاح لمدير الحضانة أو المدير فقط.",
+      "attendance_child_not_found": "الطفل غير موجود.",
+      "attendance_child_not_active": "هذا الطفل غير نشط في الحضانة.",
+      "attendance_invalid_method": "طريقة تسجيل غير معروفة.",
+      "attendance_qr_required": "يجب تسجيل الحضور بمسح رمز QR.",
+      "attendance_custom_qr_pickup_only": "رمز QR المخصص للاستلام فقط. امسح رمز ولي الأمر عند الحضور.",
+      "attendance_qr_invalid": "رمز QR غير صالح.",
+      "attendance_qr_wrong_child": "رمز QR هذا لطفل آخر.",
+      "attendance_qr_expired": "انتهت صلاحية رمز QR.",
+      "attendance_qr_wrong_type": "لا يمكن استخدام رمز QR هذا هنا.",
+      "attendance_qr_used": "تم استخدام رمز QR هذا من قبل (يُستخدم مرة واحدة).",
+      "attendance_already_checked_out": "تم استلام الطفل بالفعل اليوم.",
+      "attendance_not_checked_in": "لم يتم تسجيل حضور الطفل اليوم.",
+      "attendance_too_soon": "تم تسجيل الحضور منذ أقل من {{minutes}} دقائق. امسح مرة أخرى لاحقًا لتسجيل الانصراف.",
+      "attendance_not_found": "سجل الحضور غير موجود.",
+      "attendance_undo_not_allowed": "لم يعد ممكنًا التراجع عن تسجيل الحضور هذا.",
+      "attendance_undo_window_passed": "يمكن التراجع عن تسجيل الحضور خلال 15 دقيقة فقط ومن نفس الشخص الذي سجّله.",
+      "attendance_reason_required": "يرجى كتابة السبب.",
+      "attendance_invalid_times": "راجع الأوقات: يجب أن تكون في نفس اليوم وفي الماضي، والانصراف بعد الحضور.",
+      "attendance_invalid_range": "اختر فترة تاريخ صحيحة."
+    },
+    "scanner": {
+      "alreadyCheckedIn": "تم تسجيل حضور {{name}} بالفعل (منذ {{time}}).",
+      "alreadyCheckedOut": "تم استلام {{name}} اليوم بالفعل الساعة {{time}}.",
+      "checkedInAt": "سُجّل الحضور الساعة {{time}}",
+      "extraHoursSummary": "تأخير {{minutes}} دقيقة · ساعات إضافية: {{hours}} ({{covered}} من الباقة) · المستحق: {{fee}}",
+      "rejectedTag": "مرفوض"
+    },
+    "parent": {
+      "extraHoursPeriod": "الساعات الإضافية (هذه الفترة)",
+      "extraHoursValue": "{{hours}} ساعة · {{fee}}",
+      "extraHoursDue": "مستحق الساعات الإضافية ({{count}} فواتير)"
+    },
+    "absence": {
+      "title": "الإبلاغ عن غياب",
+      "subtitle": "أبلغ الحضانة مسبقًا، وسيُحتسب اليوم غيابًا بعذر.",
+      "child": "الطفل",
+      "date": "اليوم",
+      "reason": "السبب",
+      "note": "ملاحظة (اختياري)",
+      "submit": "إرسال",
+      "reported": "تم إبلاغ الحضانة بالغياب.",
+      "cancelled": "تم إلغاء الإبلاغ عن الغياب.",
+      "failed": "تعذر الحفظ. حاول مرة أخرى.",
+      "upcoming": "الغيابات المبلغ عنها",
+      "reasons": {
+        "sick": "مرض",
+        "travel": "سفر",
+        "family": "ظرف عائلي",
+        "other": "أخرى"
+      },
+      "errors": {
+        "childRequired": "اختر الطفل.",
+        "dateRequired": "اختر اليوم.",
+        "dateRange": "اختر يومًا من اليوم وحتى {{days}} يومًا قادمًا.",
+        "alreadyReported": "تم الإبلاغ عن غياب هذا الطفل في هذا اليوم من قبل.",
+        "noteTooLong": "اجعل الملاحظة أقل من 500 حرف."
+      }
+    },
+    "correct": {
+      "action": "تصحيح",
+      "title": "تصحيح الحضور",
+      "description": "{{name}} · {{date}}. تُعاد حساب الساعات الإضافية والفاتورة تلقائيًا.",
+      "checkIn": "وقت الحضور",
+      "checkOut": "وقت الاستلام",
+      "checkOutHint": "اتركه فارغًا إذا كان الطفل ما زال في الحضانة.",
+      "reason": "السبب",
+      "save": "حفظ التصحيح",
+      "saved": "تم تصحيح الحضور وإعادة حساب الرسوم.",
+      "errors": {
+        "checkInRequired": "أدخل وقت الحضور.",
+        "future": "لا يمكن أن يكون الوقت في المستقبل.",
+        "outBeforeIn": "يجب أن يكون الاستلام بعد الحضور.",
+        "reasonRequired": "اكتب سببًا مختصرًا (3 أحرف على الأقل)."
+      }
+    },
+    "waive": {
+      "action": "إعفاء",
+      "title": "الإعفاء من رسوم الساعات الإضافية",
+      "description": "{{name}} · {{date}} · {{fee}}. تُخفض الفاتورة غير المدفوعة وتُعاد ساعات الباقة.",
+      "confirm": "إعفاء من الرسوم",
+      "done": "تم الإعفاء من الرسوم.",
+      "doneManualRefund": "تم الإعفاء من الرسوم. الفاتورة كانت مدفوعة، لذا يرجى رد المبلغ لولي الأمر يدويًا."
+    },
+    "logs": {
+      "open": "سجلات الحضور",
+      "title": "سجلات الحضور",
+      "subtitle": "كل حضور واستلام: من قام بالمسح، وبأي طريقة، ومن استلم الطفل، ورسوم الساعات الإضافية.",
+      "method": "الطريقة",
+      "lateOnly": "المتأخرون في الاستلام فقط",
+      "reviewOnly": "ما يحتاج مراجعة فقط",
+      "includeAbsences": "إظهار الغياب",
+      "timeline": "السجل",
+      "resolve": "تمت المراجعة",
+      "reviewResolved": "تم تعليمه كمُراجَع.",
+      "noEvents": "لا توجد أحداث مسجلة لهذا اليوم.",
+      "system": "النظام",
+      "emptyTitle": "لا توجد سجلات",
+      "emptyDescription": "لا يوجد حضور يطابق هذه الفلاتر.",
+      "chargeDetail": "+{{hours}} ساعة ({{covered}} من الباقة) · {{fee}} · {{source}}",
+      "reducedDetail": "−{{hours}} ساعة · استرداد {{refund}}",
+      "source": {
+        "sweep": "تلقائي",
+        "checkout": "عند الاستلام",
+        "correction": "تصحيح"
+      },
+      "totals": {
+        "records": "السجلات",
+        "late": "تأخير الاستلام",
+        "hours": "الساعات الإضافية",
+        "covered": "من الباقات",
+        "fee": "رسوم الساعات الإضافية",
+        "review": "تحتاج مراجعة"
+      },
+      "errors": {
+        "rangeRequired": "اختر التاريخين.",
+        "fromAfterTo": "يجب أن يكون تاريخ البداية قبل تاريخ النهاية.",
+        "rangeTooLong": "اختر {{days}} يومًا كحد أقصى."
+      }
+    },
+    "events": {
+      "check_in": "تسجيل حضور",
+      "check_out": "تسجيل استلام",
+      "check_in_undone": "إلغاء تسجيل الحضور",
+      "scan_rejected": "مسح مرفوض",
+      "late_charge": "احتساب ساعات إضافية",
+      "charge_reduced": "تخفيض الرسوم",
+      "charge_waived": "إعفاء من الرسوم",
+      "correction": "تصحيح الأوقات",
+      "review_flagged": "تعليم للمراجعة",
+      "review_resolved": "انتهاء المراجعة",
+      "absence_reported": "إبلاغ بغياب"
+    },
+    "kpis": {
+      "today": "اليوم",
+      "month": "هذا الشهر ({{month}})",
+      "inNursery": "في الحضانة الآن",
+      "ofActive": "من {{count}} طفل نشط",
+      "checkedOut": "تم استلامهم",
+      "absent": "غائب",
+      "excused": "بعذر",
+      "lateNow": "متأخر الاستلام الآن",
+      "extraToday": "ساعات إضافية اليوم",
+      "rate": "نسبة الحضور",
+      "childDays": "{{present}} يوم حضور · {{absent}} يوم غياب",
+      "latePickups": "مرات تأخر الاستلام",
+      "hoursHint": "{{hours}} ساعة ({{covered}} من الباقات)",
+      "billed": "رسوم الساعات الإضافية",
+      "billedHours": "{{hours}} ساعة مدفوعة",
+      "collected": "المحصّل",
+      "outstanding": "المتبقي",
+      "needsReview": "تحتاج مراجعة",
+      "scans": "{{qr}} بالـ QR · {{manual}} يدوي",
+      "topLate": "الأكثر في الساعات الإضافية هذا الشهر",
+      "topLateRow": "{{days}} أيام · {{hours}} ساعة · {{fee}}"
+    }
+  },
+  "notificationTemplates": {
+    "unknown": {
+      "title": "إشعار"
+    },
+    "common": {
+      "parent": "ولي الأمر"
+    },
+    "attendance_checkin": {
+      "title": "تم تسجيل حضور الطفل",
+      "body": "تم تسجيل حضور {{child}} الساعة {{time}}",
+      "segments": {
+        "staff": " بواسطة {{staff}}"
+      }
+    },
+    "attendance_checkout": {
+      "title": "تم استلام الطفل",
+      "body": "تم استلام {{child}} الساعة {{time}}",
+      "segments": {
+        "pickup": " بواسطة {{pickup}}",
+        "staff": " · سجّل الانصراف: {{staff}}",
+        "extra": " · الساعات الإضافية: {{hours}}",
+        "covered": " (منها {{covered}} من الباقة)",
+        "fee": " · المبلغ المستحق: {{fee}}"
+      }
+    },
+    "attendance_checkin_cancelled": {
+      "title": "تم إلغاء تسجيل الحضور",
+      "body": "تم إلغاء تسجيل حضور {{child}} لأنه سُجّل بالخطأ."
+    },
+    "extra_hours_accruing": {
+      "title": "بدأ احتساب ساعات إضافية",
+      "body": "لم يتم استلام {{child}} بعد. الساعات الإضافية حتى الآن: {{hours}}",
+      "segments": {
+        "covered": " (منها {{covered}} من الباقة)",
+        "fee": " · المبلغ: {{fee}}"
+      }
+    },
+    "late_pickup_cap_reached": {
+      "title": "تنبيه: تأخر استلام الطفل",
+      "body": "{{child}} لم يتم استلامه بعد ووصل إلى الحد الأقصى للاحتساب التلقائي ({{cap}} ساعات). يرجى المتابعة فورًا."
+    },
+    "late_pickup_cap_reached_parent": {
+      "title": "تنبيه: لم يتم استلام طفلك",
+      "body": "{{child}} ما زال في الحضانة بعد موعد الاستلام بـ {{cap}} ساعات. يرجى التواصل مع الحضانة فورًا."
+    },
+    "attendance_refund_due": {
+      "title": "استرداد مطلوب لرسوم ساعات إضافية",
+      "body": "تم تخفيض رسوم الساعات الإضافية لـ {{child}} بقيمة {{refund}} بعد سداد الفاتورة. يرجى رد المبلغ لولي الأمر."
+    },
+    "attendance_corrected": {
+      "title": "تم تعديل سجل الحضور",
+      "body": "تم تعديل سجل حضور {{child}} ليوم {{date}}: الحضور {{check_in_time}}",
+      "segments": {
+        "out": " · الانصراف {{check_out_time}}",
+        "charges": " · الساعات الإضافية: {{hours}} · المبلغ: {{fee}}"
+      }
+    },
+    "extra_hours_waived": {
+      "title": "إعفاء من رسوم الساعات الإضافية",
+      "body": "تم إعفاء {{child}} من رسوم الساعات الإضافية ليوم {{date}}."
+    },
+    "pickup_reminder": {
+      "title": "تذكير بموعد الاستلام",
+      "body": "موعد استلام {{child}} الساعة {{end_time}}. بعد {{billing_time}} تُحتسب ساعات إضافية بسعر {{rate}} للساعة."
+    },
+    "attendance_needs_review": {
+      "title": "سجلات حضور تحتاج مراجعة",
+      "body": "يوجد {{count}} سجل حضور بدون تسجيل انصراف. يرجى تسجيل وقت الاستلام الفعلي."
+    },
+    "absence_reported": {
+      "title": "إبلاغ بغياب",
+      "body": "تم الإبلاغ عن غياب {{child}} يوم {{date}} ({{reason}})."
+    },
+    "pickup_attempt_failed": {
+      "title": "محاولة استلام لم تكتمل",
+      "body": "تم رفض محاولة استلام {{child}} الساعة {{time}} عند التحقق. تواصل مع الحضانة إذا لم تكن متوقعة."
+    },
+    "payment_attempt_created": {
+      "title": "دفعة بانتظار الموافقة",
+      "body": "أرسل {{parent}} دفعة بقيمة {{amount}} للفاتورة {{invoice_number}} للمراجعة."
+    },
+    "payment_attempt_rejected": {
+      "title": "لم يتم تأكيد الدفعة",
+      "body": "لم يتم تأكيد دفعتك بقيمة {{amount}} للفاتورة {{invoice_number}}. يرجى مراجعة البيانات أو الدفع مرة أخرى.",
+      "segments": {
+        "reason": " السبب: {{reason}}"
+      }
+    },
+    "invoice_paid": {
+      "title": "تم تأكيد السداد",
+      "body": "تم تأكيد سداد {{amount}} للفاتورة {{invoice_number}}."
+    },
+    "application_payment_confirmed": {
+      "title": "تم تأكيد دفع طلب التسجيل",
+      "body": "تم تأكيد دفع الباقة. الطلب جاهز للاعتماد."
+    },
+    "invoice_due_reminder": {
+      "title": "تذكير فاتورة",
+      "body": "تذكير: الفاتورة {{invoice_number}} بقيمة {{amount}} تستحق خلال {{days}} يوم."
+    },
+    "invoice_overdue_reminder": {
+      "title": "فاتورة متأخرة",
+      "body": "الفاتورة {{invoice_number}} بقيمة {{amount}} متأخرة {{days}} يوم. يرجى السداد."
+    },
+    "invoice_reminder": {
+      "title": "تذكير بفاتورة مستحقة",
+      "body": "تذكير: الفاتورة {{invoice_number}} بقيمة {{amount}} ما زالت مستحقة."
+    },
+    "invoice_ready": {
+      "title": "فاتورة جديدة",
+      "body": "تم إصدار فاتورة جديدة بقيمة {{amount}}."
+    },
+    "event_invoice_generated": {
+      "title": "تم إصدار فاتورة فعالية",
+      "body": "تم إصدار فاتورة بقيمة {{amount}} للفعالية {{event}}."
+    },
+    "permission_deadline_reminder": {
+      "title": "تذكير موافقة",
+      "body": "تذكير: مطلوب الرد على موافقة فعالية \"{{event}}\" قبل انتهاء الموعد."
+    },
+    "permission_reminder": {
+      "title": "تذكير: موافقة فعالية",
+      "body": "يرجى الرد على طلب الموافقة للفعالية: {{event}}"
+    },
+    "teacher_monthly_reminder": {
+      "title": "تذكير شهري",
+      "body": "تذكير بداية الشهر."
+    },
+    "application_submitted": {
+      "title": "طلب تسجيل جديد",
+      "body": "طلب جديد من {{parent}}",
+      "segments": {
+        "reason": " ({{reason}})"
+      },
+      "reasons": {
+        "payment_submitted": "تم إرسال الدفع"
+      }
+    },
+    "application_approved": {
+      "title": "تم قبول طلب التسجيل",
+      "body": "تم قبول طلب طفلك وتفعيل ملفه في لوحة ولي الأمر."
+    },
+    "application_documents_pending": {
+      "title": "مستندات إضافية مطلوبة",
+      "body": "يرجى رفع المستندات الإضافية المطلوبة من الحضانة.",
+      "segments": {
+        "reason": " ملاحظة: {{reason}}"
+      }
+    },
+    "application_rejected": {
+      "title": "لم يتم قبول طلب التسجيل",
+      "body": "نعتذر، لم يتم قبول طلب التسجيل.",
+      "segments": {
+        "reason": " السبب: {{reason}}"
+      }
+    },
+    "daily_report_published": {
+      "title": "تقرير يومي جديد",
+      "body": "تم نشر تقرير يومي جديد لطفلك."
+    },
+    "admission_inquiry_new": {
+      "title": "استفسار قبول جديد",
+      "body": "استفسار جديد من {{parent}}."
+    },
+    "media_pending_approval": {
+      "title": "وسائط جديدة تحتاج موافقة",
+      "body": "تم رفع {{count}} ملف جديد ويحتاج مراجعة."
+    },
+    "media_approved": {
+      "title": "تمت الموافقة على الوسائط",
+      "body": "تمت الموافقة على الصورة/الفيديو المرفوع."
+    },
+    "media_shared": {
+      "title": "صورة جديدة تمت مشاركتها",
+      "body": "صورة جديدة: {{caption}}",
+      "classPhoto": "صورة الفصل"
+    },
+    "media_rejected": {
+      "title": "تم رفض الوسائط",
+      "body": "تم رفض الوسائط: {{reason}}"
+    },
+    "staff_payroll_paid": {
+      "title": "تم صرف الراتب",
+      "body": "تم صرف راتب {{month}} بقيمة {{amount}}."
+    },
+    "event_published": {
+      "title": "فعالية جديدة",
+      "body": "تم نشر فعالية: {{event}}"
+    },
+    "child_health_update_request": {
+      "title": "طلب تحديث السجل الصحي",
+      "body": "طلب ولي أمر مراجعة أو تحديث المعلومات الصحية لطفل."
+    },
+    "child_health_document_uploaded": {
+      "title": "مستند طبي جديد",
+      "body": "رفع ولي أمر مستندًا طبيًا جديدًا."
+    },
+    "child_health_shared": {
+      "title": "تمت مشاركة الملف الصحي",
+      "body": "شاركت الحضانة ملخصًا صحيًا لطفلك. راجع التطبيق."
+    },
+    "health_alert": {
+      "title": "تنبيه صحي",
+      "body": "{{kind}} — {{detail}}"
+    },
+    "health_alert_bulk": {
+      "title": "تنبيهات صحية",
+      "body": "يرجى مراجعة ملف طفلك الصحي في التطبيق."
+    },
+    "milestone_shared": {
+      "title": "إنجاز جديد",
+      "body": "إنجاز جديد لـ {{child}}: {{milestone}}"
+    }
   },
   "qr": {
     "refresh": "تحديث الرمز",
@@ -4825,6 +5335,7 @@
       "confirm": "إعادة ضبط"
     },
     "errors": {
+      "outOfRange": "إحدى القيم خارج النطاق المسموح.",
       "startBeforeEnd": "يجب أن يكون وقت البداية قبل وقت النهاية.",
       "quietHoursDifferent": "يجب أن يختلف وقت بداية ساعات الهدوء عن نهايتها.",
       "percentRange": "قيم النسبة يجب أن تكون بين 0 و100.",
@@ -4835,6 +5346,50 @@
       "hourlyRateRequired": "الرسوم بالساعة مطلوبة مع نموذج التسعير بالساعة."
     },
     "fields": {
+      "late_billing_base": {
+        "label": "بداية احتساب الساعات الإضافية",
+        "helper": "من موعد الإغلاق، أو بعد انتهاء ساعات باقة الطفل محسوبة من وقت الحضور."
+      },
+      "payment_instructions": {
+        "label": "تعليمات الدفع لأولياء الأمور",
+        "helper": "تظهر في صفحة الدفع: عنوان إنستاباي أو رقم فودافون كاش أو الحساب البنكي."
+      },
+      "auto_late_pickup_billing_enabled": {
+        "label": "احتساب الساعات الإضافية تلقائيًا",
+        "helper": "إذا بقي الطفل بعد نهاية الدوام تُضاف الساعات كل 15 دقيقة (حتى الحد الأقصى) ويُبلَّغ ولي الأمر."
+      },
+      "late_billing_unit_minutes": {
+        "label": "وحدة تقريب الساعات الإضافية",
+        "helper": "يُقرَّب وقت التأخير لأعلى إلى هذه المدة قبل الحساب."
+      },
+      "late_billing_from": {
+        "label": "بداية احتساب الوقت الإضافي",
+        "helper": "هل يبدأ الحساب من نهاية الدوام أم من نهاية فترة السماح."
+      },
+      "late_sweep_cap_hours": {
+        "label": "الحد الأقصى للاحتساب التلقائي (ساعات)",
+        "helper": "يتوقف الاحتساب التلقائي عند هذا الحد ويُنبَّه الموظفون؛ وعند الاستلام الفعلي يُحتسب الوقت الحقيقي."
+      },
+      "early_arrival_billing_enabled": {
+        "label": "احتساب الحضور المبكر",
+        "helper": "احتساب الوقت قبل بداية الدوام كساعات إضافية أيضًا."
+      },
+      "late_invoice_mode": {
+        "label": "فاتورة الساعات الإضافية",
+        "helper": "فاتورة لكل يوم تأخير، أو فاتورة واحدة متراكمة لكل طفل شهريًا."
+      },
+      "pickup_reminder_minutes_before": {
+        "label": "تذكير الاستلام (دقائق قبل نهاية الدوام)",
+        "helper": "يصل تذكير لأولياء أمور الأطفال الموجودين قبل نهاية الدوام بهذه المدة. 0 لإيقافه."
+      },
+      "require_qr_for_attendance": {
+        "label": "إلزام تسجيل الحضور بالـ QR",
+        "helper": "يجب على المعلمين مسح QR للحضور والانصراف؛ ويبقى التسجيل اليدوي متاحًا للإدارة."
+      },
+      "min_minutes_between_scans": {
+        "label": "أقل مدة بين الحضور والاستلام (دقائق)",
+        "helper": "يمنع المسح المزدوج بالخطأ من تسجيل الانصراف مباشرة بعد الحضور."
+      },
       "standard_start_time": {
         "label": "موعد فتح الحضانة",
         "helper": "وقت فتح الحضانة. يُستخدم كوقت الوصول المتوقع في تقارير الحضور."
@@ -5045,6 +5600,23 @@
       }
     },
     "options": {
+      "late_billing_base": {
+        "closing_time": "من موعد الإغلاق",
+        "stay_duration": "بعد ساعات الباقة من وقت الحضور"
+      },
+      "late_billing_unit_minutes": {
+        "15": "15 دقيقة",
+        "30": "نصف ساعة",
+        "60": "ساعة كاملة"
+      },
+      "late_billing_from": {
+        "end_time": "نهاية الدوام",
+        "grace_end": "نهاية فترة السماح"
+      },
+      "late_invoice_mode": {
+        "daily": "فاتورة لكل يوم",
+        "monthly": "فاتورة شهرية"
+      },
       "paid_event_refund_policy": {
         "full": "كامل",
         "partial": "جزئي",
@@ -5061,6 +5633,8 @@
         "en": "الإنجليزية"
       },
       "payment_methods_enabled": {
+        "instapay": "إنستاباي",
+        "vodafone_cash": "فودافون كاش",
         "paymob": "Paymob",
         "cash": "نقدًا",
         "bank_transfer": "تحويل بنكي"

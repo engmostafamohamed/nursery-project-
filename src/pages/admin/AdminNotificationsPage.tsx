@@ -28,6 +28,7 @@ import {
   formatNotificationRelativeTime,
   resolveAdminNotificationPath,
 } from '@/lib/adminNotificationUtils';
+import { notificationText } from '@/lib/notificationText';
 import { supabase } from '@/lib/supabase';
 
 type Tab = 'all' | 'unread';
@@ -116,9 +117,8 @@ export function AdminNotificationsPage() {
     invalidate();
   };
 
-  const isAr = i18n.language === 'ar';
-  const titleFor = (item: AdminInAppNotificationRow) => (isAr ? item.title_ar : item.title_en);
-  const bodyFor = (item: AdminInAppNotificationRow) => (isAr ? item.body_ar : item.body_en);
+  const titleFor = (item: AdminInAppNotificationRow) => notificationText(item, i18n.language).title;
+  const bodyFor = (item: AdminInAppNotificationRow) => notificationText(item, i18n.language).body;
 
   return (
     <div className="space-y-4">

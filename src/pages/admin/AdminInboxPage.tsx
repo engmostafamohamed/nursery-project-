@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useNurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { NOTIFICATION_TEXT_COLUMNS, notificationText, type NotificationTextRow } from '@/lib/notificationText';
 import { supabase } from '@/lib/supabase';
 
 type InboxKind =
@@ -165,36 +166,36 @@ export function AdminInboxPage() {
 
   // System notifications addressed to this admin (e.g., "5 media awaiting approval").
   const notifQuery = useQuery({
-    queryKey: ['admin-inbox-notif', user?.id, languagePref],
+    queryKey: ['admin-inbox-notif', user?.id, languagePref, i18n.language],
     queryFn: async () => {
       if (!user?.id) return [] as InboxItem[];
       const res = await supabase
         .from('notifications')
-        .select('id, type, title_ar, title_en, body_ar, body_en, read, sent_at, urgency, action_link')
+        .select(`id, type, read, sent_at, urgency, action_link, ${NOTIFICATION_TEXT_COLUMNS}`)
         .eq('user_id', user.id)
         .order('sent_at', { ascending: false })
         .limit(20);
       if (res.error) throw res.error;
-      return ((res.data ?? []) as Array<{
+      const lang = languagePref === 'ar' || languagePref === 'en' ? languagePref : i18n.language;
+      return ((res.data ?? []) as Array<NotificationTextRow & {
         id: string;
         type: string;
-        title_ar: string;
-        title_en: string;
-        body_ar: string;
-        body_en: string;
         read: boolean;
         sent_at: string;
         urgency: 'low' | 'normal' | 'high' | null;
         action_link: string | null;
-      }>).map<InboxItem>((n) => ({
-        id: `notif:${n.id}`,
-        kind: 'notification',
-        title: languagePref === 'ar' ? n.title_ar : n.title_en,
-        preview: languagePref === 'ar' ? n.body_ar : n.body_en,
-        sentAt: n.sent_at,
-        unread: !n.read,
-        actionLink: n.action_link?.startsWith('/admin') ? n.action_link : '/admin/notifications',
-      }));
+      }>).map<InboxItem>((n) => {
+        const text = notificationText(n, lang);
+        return {
+          id: `notif:${n.id}`,
+          kind: 'notification',
+          title: text.title,
+          preview: text.body,
+          sentAt: n.sent_at,
+          unread: !n.read,
+          actionLink: n.action_link?.startsWith('/admin') ? n.action_link : '/admin/notifications',
+        };
+      });
     },
     enabled: Boolean(user?.id),
   });

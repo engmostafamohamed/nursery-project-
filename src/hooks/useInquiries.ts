@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { templateNotificationRow } from '@/lib/notificationText';
 import { supabase } from '@/lib/supabase';
 
 export type InquiryFilters = {
@@ -92,18 +93,16 @@ export function useInquiries(nurseryId?: string, filters?: InquiryFilters) {
         const adminIds = ((adminsRes.data ?? []) as Array<{ id: string }>).map((a) => a.id);
         if (adminIds.length) {
           await supabase.from('notifications').insert(
-            adminIds.map((id) => ({
-              nursery_id: payload.nursery_id,
-              user_id: id,
-              type: 'admission_inquiry_new',
-              title_ar: 'استفسار قبول جديد',
-              title_en: 'New admission inquiry',
-              body_ar: `استفسار جديد من ${payload.parent_name}.`,
-              body_en: `New inquiry from ${payload.parent_name}.`,
-              channel: 'push',
-              read: false,
-              sent_at: new Date().toISOString(),
-            })) as never,
+            adminIds.map((id) =>
+              templateNotificationRow({
+                nurseryId: payload.nursery_id,
+                userId: id,
+                type: 'admission_inquiry_new',
+                params: { parent: payload.parent_name },
+                actionLink: '/admin/admissions/inquiries',
+                channel: 'push',
+              }),
+            ) as never,
           );
         }
       }

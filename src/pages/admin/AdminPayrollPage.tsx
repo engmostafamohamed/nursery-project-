@@ -26,11 +26,6 @@ export function AdminPayrollPage() {
   const [search, setSearch] = useState('');
   const payroll = usePayroll(profile?.nursery_id ?? undefined, undefined, { month, department, status, search });
 
-  const monthLabel = useMemo(
-    () => new Date(`${month}-01T00:00:00`).toLocaleDateString(i18n.language?.startsWith('ar') ? 'ar-EG' : 'en-GB', { month: 'long', year: 'numeric' }),
-    [month, i18n.language],
-  );
-
   const nf = useMemo(
     () =>
       new Intl.NumberFormat(i18n.language?.startsWith('ar') ? 'ar-EG' : 'en-GB', {
@@ -255,7 +250,7 @@ export function AdminPayrollPage() {
                                 staffUserId: String(profileRow.user_id),
                                 nurseryId: profile?.nursery_id ?? undefined,
                                 amount,
-                                monthText: monthLabel,
+                                month,
                               })
                             }
                           >

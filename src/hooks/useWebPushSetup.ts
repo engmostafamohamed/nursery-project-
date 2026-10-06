@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
+import { notificationText, type NotificationTextRow } from '@/lib/notificationText';
 import { upsertPushSubscription } from '@/lib/pushSubscription';
 import { supabase } from '@/lib/supabase';
 
@@ -51,16 +52,9 @@ export function useWebPushSetup(userId: string | undefined) {
         { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
         async (payload) => {
           if (Notification.permission !== 'granted' || isEgyptQuietHours()) return;
-          const row = payload.new as {
-            type: string;
-            body_en: string;
-            body_ar: string;
-            title_en: string;
-            title_ar: string;
-          };
+          const row = payload.new as NotificationTextRow & { type: string };
           const lang = document.documentElement.lang === 'ar' ? 'ar' : 'en';
-          const title = lang === 'ar' ? row.title_ar : row.title_en;
-          const body = lang === 'ar' ? row.body_ar : row.body_en;
+          const { title, body } = notificationText(row, lang);
 
           const registration = await navigator.serviceWorker.getRegistration();
           if (!registration) return;

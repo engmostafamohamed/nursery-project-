@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { templateNotificationRow } from '@/lib/notificationText';
 import { supabase } from '@/lib/supabase';
 
 export type PayrollFilters = {
@@ -119,7 +120,7 @@ export function usePayroll(nurseryId?: string, userId?: string, filters?: Payrol
   });
 
   const markPaid = useMutation({
-    mutationFn: async (args: { id: string; paidBy?: string; paymentDate?: string; staffUserId?: string; nurseryId?: string; amount?: number; monthText?: string }) => {
+    mutationFn: async (args: { id: string; paidBy?: string; paymentDate?: string; staffUserId?: string; nurseryId?: string; amount?: number; month?: string }) => {
       const payDate = args.paymentDate ?? new Date().toISOString().slice(0, 10);
       const res = await supabase.from('staff_payroll').update({
         payment_status: 'paid',
@@ -128,18 +129,16 @@ export function usePayroll(nurseryId?: string, userId?: string, filters?: Payrol
       } as never).eq('id', args.id);
       if (res.error) throw res.error;
       if (args.staffUserId && args.nurseryId) {
-        await supabase.from('notifications').insert({
-          nursery_id: args.nurseryId,
-          user_id: args.staffUserId,
-          type: 'staff_payroll_paid',
-          title_ar: 'تم صرف الراتب',
-          title_en: 'Payslip Paid',
-          body_ar: `تم صرف راتب ${args.monthText ?? ''} بقيمة ${args.amount ?? 0} جنيه.`,
-          body_en: `Your ${args.monthText ?? ''} payslip has been paid - ${args.amount ?? 0} EGP.`,
-          read: false,
-          channel: 'push',
-          sent_at: new Date().toISOString(),
-        } as never);
+        await supabase.from('notifications').insert(
+          templateNotificationRow({
+            nurseryId: args.nurseryId,
+            userId: args.staffUserId,
+            type: 'staff_payroll_paid',
+            params: { month: args.month ?? '', amount: Number(args.amount ?? 0), currency: 'EGP' },
+            actionLink: '/staff/payslips',
+            channel: 'push',
+          }) as never,
+        );
       }
     },
     onSuccess: () => {

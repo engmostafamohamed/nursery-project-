@@ -20,6 +20,7 @@ import { useNurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
 import { useAllowedFeatures } from '@/hooks/usePermissions';
 import { useWebPushSetup } from '@/hooks/useWebPushSetup';
 import { useNotificationsCenter } from '@/hooks/useNotificationsCenter';
+import { useUnreadMessagesCount } from '@/hooks/useUnreadMessagesCount';
 import { isHelpPanelEnabled } from '@/lib/helpAiPreferences';
 import { cn } from '@/lib/utils';
 import type { FeatureKey } from '@/lib/permissions/types';
@@ -67,6 +68,12 @@ export function TeacherLayout() {
   const navigate = useNavigate();
   const setHelpOpen = useHelpAiUiStore((s) => s.setHelpOpen);
   const { user } = useAuthSession();
+  const { data: profile } = useUserProfile(user?.id);
+  const { data: languagePref = 'both' } = useNurseryLanguagePref(profile?.nursery_id);
+  const teacherDisplayName =
+    (i18n.language === 'ar'
+      ? profile?.name_ar?.trim() || profile?.name_en?.trim()
+      : profile?.name_en?.trim() || profile?.name_ar?.trim()) || t('teacher.nav.profile');
   const { data: unreadCount = 0 } = useUnreadMessagesCount(user?.id);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { data: notifications = [] } = useNotificationsCenter(user?.id);

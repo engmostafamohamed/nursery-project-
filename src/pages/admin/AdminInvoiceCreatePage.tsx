@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuthSession } from '@/hooks/useAuthSession';
+import { templateNotificationRow } from '@/lib/notificationText';
 import { isValidIsoDate } from '@/lib/onboardingDateBounds';
 import { useSettings } from '@/lib/useSettings';
 import { supabase } from '@/lib/supabase';
@@ -110,18 +111,16 @@ export function AdminInvoiceCreatePage() {
       if (createdRes.error) throw createdRes.error;
       const invoiceId = (createdRes.data as { id: string }).id;
 
-      await supabase.from('notifications').insert({
-        nursery_id: nurseryId,
-        user_id: parentId,
-        type: 'invoice_ready',
-        title_ar: 'تم إنشاء فاتورة جديدة',
-        title_en: 'New invoice generated',
-        body_ar: `تم إنشاء فاتورة بقيمة ${total.toFixed(2)} جنيه.`,
-        body_en: `A new invoice of EGP ${total.toFixed(2)} has been created.`,
-        channel: 'push',
-        read: false,
-        sent_at: new Date().toISOString(),
-      } as never);
+      await supabase.from('notifications').insert(
+        templateNotificationRow({
+          nurseryId,
+          userId: parentId,
+          type: 'invoice_ready',
+          params: { amount: Number(total.toFixed(2)), currency: 'EGP' },
+          actionLink: `/parent/invoices/${invoiceId}`,
+          channel: 'push',
+        }) as never,
+      );
 
       if (parent?.email) {
         await supabase.functions.invoke('email-dispatch', {

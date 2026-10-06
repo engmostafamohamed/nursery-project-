@@ -1,17 +1,15 @@
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { NOTIFICATION_TEXT_COLUMNS, type NotificationTextRow } from '@/lib/notificationText';
 import { supabase } from '@/lib/supabase';
 
-export type NotificationItem = {
+export type NotificationItem = NotificationTextRow & {
   id: string;
   type: string;
-  title_ar: string;
-  title_en: string;
-  body_ar: string;
-  body_en: string;
   read: boolean;
   sent_at: string;
+  action_link: string | null;
 };
 
 export function useNotificationsCenter(userId: string | undefined) {
@@ -24,7 +22,7 @@ export function useNotificationsCenter(userId: string | undefined) {
       if (!userId) return [];
       const { data, error } = await supabase
         .from('notifications')
-        .select('id, type, title_ar, title_en, body_ar, body_en, read, sent_at')
+        .select(`id, type, read, sent_at, action_link, ${NOTIFICATION_TEXT_COLUMNS}`)
         .eq('user_id', userId)
         .order('sent_at', { ascending: false });
       if (error) throw error;

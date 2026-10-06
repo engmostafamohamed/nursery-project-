@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   Bar,
   BarChart,
@@ -15,6 +16,7 @@ import {
 } from 'recharts';
 
 import { ChildSelector, useParentChildren } from '@/components/parent/ChildSelector';
+import { ReportAbsencePanel } from '@/components/parent/ReportAbsencePanel';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FilterMenu, type FilterMenuOption } from '@/components/ui/FilterMenu';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
@@ -25,10 +27,12 @@ import { useAuthSession } from '@/hooks/useAuthSession';
 import { useChildAttendanceHistory, type DayAttendanceRow } from '@/hooks/useChildAttendanceHistory';
 import { usePagination } from '@/hooks/usePagination';
 import { averageMinutesToTimeLabel, minutesFromMidnight } from '@/lib/attendanceAnalytics';
+import { staffName } from '@/lib/attendanceApi';
+import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { useUserProfile } from '@/hooks/useUserProfile';
 
-type StatusFilter = 'all' | 'present' | 'partial' | 'absent' | 'late';
+type StatusFilter = 'all' | 'present' | 'partial' | 'absent' | 'excused' | 'late';
 type RangeFilter = '7' | '14' | '30';
 type AttendanceTableRow = DayAttendanceRow & { childId?: string };
 
@@ -105,6 +109,14 @@ function StatusBadge({ row }: { row: DayAttendanceRow }) {
       </span>
     );
   }
+  if (row.status === 'excused' || row.status === 'off' || row.status === 'holiday') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full border border-outline-variant bg-surface-container-low px-2.5 py-1 text-xs font-semibold text-on-surface-variant">
+        <MaterialSymbol name={row.status === 'excused' ? 'sick' : row.status === 'holiday' ? 'celebration' : 'weekend'} size="text-sm" />
+        {t(`attendance.status.${row.status}`)}
+      </span>
+    );
+  }
   return (
     <span className="inline-flex items-center gap-1 rounded-full border border-error/30 bg-error/10 px-2.5 py-1 text-xs font-semibold text-error">
       <MaterialSymbol name="event_busy" size="text-sm" />
@@ -150,6 +162,7 @@ export function ParentAttendanceHistoryPage() {
     { value: 'present', label: t('parent.dashboard.analytics.present', { defaultValue: 'Present' }), icon: 'event_available' },
     { value: 'partial', label: t('parent.attendanceHistory.partial', { defaultValue: 'Partial' }), icon: 'pending' },
     { value: 'absent', label: t('parent.dashboard.analytics.absent', { defaultValue: 'Absent' }), icon: 'event_busy' },
+    { value: 'excused', label: t('attendance.status.excused'), icon: 'sick' },
     { value: 'late', label: t('parent.attendanceHistory.lateBadge'), icon: 'schedule' },
   ], [t]);
 
@@ -204,27 +217,47 @@ export function ParentAttendanceHistoryPage() {
   }, [rangeTableRows, statusFilter]);
 
   const metrics = useMemo(() => {
-    const schoolRows = rangeTableRows.filter((row) => {
-      const w = new Date(`${row.date}T12:00:00`).getDay();
-      return w !== 0 && w !== 6;
-    });
-    const presentRows = schoolRows.filter((row) => row.checkIn);
-    const absentRows = schoolRows.filter((row) => row.status === 'absent');
-    const partialRows = schoolRows.filter((row) => row.status === 'partial');
+    // The server marks each day (working day, holiday, excused); only expected days count.
+    const presentRows = rangeTableRows.filter((row) => row.checkIn);
+    const absentRows = rangeTableRows.filter((row) => row.status === 'absent');
+    const partialRows = rangeTableRows.filter((row) => row.status === 'partial');
+    const excusedRows = rangeTableRows.filter((row) => row.status === 'excused');
     const lateRows = rangeTableRows.filter((row) => row.latePickup);
-    const mins = rangeTableRows.filter((row) => row.checkIn).map((row) => minutesFromMidnight(row.checkIn!));
+    const mins = presentRows.map((row) => minutesFromMidnight(row.checkIn!));
     const avgMin = mins.length ? mins.reduce((a, b) => a + b, 0) / mins.length : null;
-    const rate = schoolRows.length > 0 ? Math.min(100, Math.round((presentRows.length / schoolRows.length) * 1000) / 10) : 0;
+    const expected = presentRows.length + absentRows.length;
+    const rate = expected > 0 ? Math.min(100, Math.round((presentRows.length / expected) * 1000) / 10) : 0;
     return {
       rate,
       present: presentRows.length,
       absent: absentRows.length,
       partial: partialRows.length,
+      excused: excusedRows.length,
       late: lateRows.length,
       avgIn: averageMinutesToTimeLabel(avgMin, i18n.language),
-      totalSchoolDays: schoolRows.length,
+      totalSchoolDays: expected + excusedRows.length,
+      extraHours: rangeTableRows.reduce((sum, row) => sum + (row.detail?.extraHours ?? 0), 0),
+      extraHoursCovered: rangeTableRows.reduce((sum, row) => sum + (row.detail?.extraHoursCovered ?? 0), 0),
+      extraFee: rangeTableRows.reduce((sum, row) => sum + (row.detail?.extraFee ?? 0), 0),
     };
   }, [i18n.language, rangeTableRows]);
+
+  // Unpaid extra-hours invoices (RLS limits them to this parent's).
+  const extraHoursDueQuery = useQuery({
+    queryKey: ['parent-extra-hours-due', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('id, amount, status')
+        .eq('invoice_type', 'extra_hours')
+        .in('status', ['pending', 'overdue']);
+      if (error) throw error;
+      const rows = (data ?? []) as Array<{ id: string; amount: number | string }>;
+      return { count: rows.length, total: rows.reduce((sum, row) => sum + Number(row.amount || 0), 0) };
+    },
+    enabled: Boolean(user?.id),
+  });
+  const extraHoursDue = extraHoursDueQuery.data ?? { count: 0, total: 0 };
 
   const chartRows = useMemo(
     () =>
@@ -248,8 +281,9 @@ export function ParentAttendanceHistoryPage() {
         { name: t('parent.dashboard.analytics.present', { defaultValue: 'Present' }), value: metrics.present, color: 'rgb(var(--success))' },
         { name: t('parent.attendanceHistory.partial', { defaultValue: 'Partial' }), value: metrics.partial, color: 'rgb(var(--primary))' },
         { name: t('parent.dashboard.analytics.absent', { defaultValue: 'Absent' }), value: metrics.absent, color: 'rgb(var(--error))' },
+        { name: t('attendance.status.excused'), value: metrics.excused, color: 'rgb(var(--warning))' },
       ].filter((row) => row.value > 0),
-    [metrics.absent, metrics.partial, metrics.present, t],
+    [metrics.absent, metrics.excused, metrics.partial, metrics.present, t],
   );
 
   const pager = usePagination(
@@ -335,7 +369,7 @@ export function ParentAttendanceHistoryPage() {
             <Skeleton className="h-24 rounded-xl" />
           </div>
         ) : (
-          <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-5 sm:p-5">
+          <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7 sm:p-5">
             <AttendanceStatCard
               icon="monitoring"
               label={t('parent.attendanceHistory.attendanceRate', { defaultValue: 'Attendance rate' })}
@@ -366,9 +400,33 @@ export function ParentAttendanceHistoryPage() {
               value={metrics.late}
               tone={metrics.late > 0 ? 'warning' : 'success'}
             />
+            <AttendanceStatCard
+              icon="more_time"
+              label={t('attendance.parent.extraHoursPeriod')}
+              value={metrics.extraHours > 0
+                ? t('attendance.parent.extraHoursValue', {
+                    hours: metrics.extraHours,
+                    covered: metrics.extraHoursCovered,
+                    fee: metrics.extraFee.toFixed(2),
+                  })
+                : '0'}
+              tone={metrics.extraHours > 0 ? 'warning' : 'success'}
+            />
+            <Link to="/parent/invoices" className="block">
+              <AttendanceStatCard
+                icon="receipt_long"
+                label={t('attendance.parent.extraHoursDue', { count: extraHoursDue.count })}
+                value={extraHoursDue.total.toFixed(2)}
+                tone={extraHoursDue.total > 0 ? 'error' : 'success'}
+              />
+            </Link>
           </div>
         )}
       </section>
+
+      {children.length ? (
+        <ReportAbsencePanel children={children} defaultChildId={selectedChildId || undefined} />
+      ) : null}
 
       {loading ? (
         <Skeleton className="h-96 w-full rounded-xl" />
@@ -478,7 +536,7 @@ export function ParentAttendanceHistoryPage() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px] text-sm">
+              <table className="w-full min-w-[1040px] text-sm">
                 <thead className="bg-surface-container-lowest text-xs uppercase text-on-surface-variant">
                   <tr>
                     {isAllMode ? (
@@ -490,11 +548,11 @@ export function ParentAttendanceHistoryPage() {
                     <th className="px-4 py-3 text-start font-semibold">{t('common.status', { defaultValue: 'Status' })}</th>
                     <th className="px-4 py-3 text-start font-semibold">{t('parent.attendanceHistory.colCheckIn')}</th>
                     <th className="px-4 py-3 text-start font-semibold">{t('parent.attendanceHistory.colCheckOut')}</th>
-                    {!isAllMode ? (
-                      <th className="px-4 py-3 text-start font-semibold">
-                        {t('parent.attendanceHistory.colPickup')}
-                      </th>
-                    ) : null}
+                    <th className="px-4 py-3 text-start font-semibold">{t('attendance.columns.extraTime')}</th>
+                    <th className="px-4 py-3 text-start font-semibold">{t('attendance.columns.amount')}</th>
+                    <th className="px-4 py-3 text-start font-semibold">
+                      {t('parent.attendanceHistory.colPickup')}
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-outline-variant">
@@ -506,10 +564,65 @@ export function ParentAttendanceHistoryPage() {
                         </td>
                       ) : null}
                       <td className="px-4 py-3 align-top font-medium text-on-surface">{formatDate(row.date, locale)}</td>
-                      <td className="px-4 py-3 align-top"><StatusBadge row={row} /></td>
-                      <td className="px-4 py-3 align-top text-on-surface-variant">{formatTime(row.checkIn)}</td>
-                      <td className="px-4 py-3 align-top text-on-surface-variant">{formatTime(row.checkOut)}</td>
-                      {!isAllMode ? (
+                      <td className="px-4 py-3 align-top">
+                        <StatusBadge row={row} />
+                        {row.status === 'excused' && row.detail?.absenceReason ? (
+                          <p className="mt-1 text-xs text-on-surface-variant">
+                            {t(`attendance.absence.reasons.${row.detail.absenceReason}`)}
+                          </p>
+                        ) : null}
+                      </td>
+                      <td className="px-4 py-3 align-top text-on-surface-variant">
+                        {formatTime(row.checkIn)}
+                        {row.detail?.checkIn ? (
+                          <p className="text-xs">
+                            {t('attendance.byStaff', { name: staffName(row.detail.checkedInBy, i18n.language) ?? '—' })}
+                            {row.detail.checkInMethod ? ` · ${t(`attendance.method.${row.detail.checkInMethod}`)}` : ''}
+                          </p>
+                        ) : null}
+                      </td>
+                      <td className="px-4 py-3 align-top text-on-surface-variant">
+                        {formatTime(row.checkOut)}
+                        {row.detail?.checkOut ? (
+                          <p className="text-xs">
+                            {t('attendance.byStaff', { name: staffName(row.detail.checkedOutBy, i18n.language) ?? '—' })}
+                            {row.detail.checkOutMethod ? ` · ${t(`attendance.method.${row.detail.checkOutMethod}`)}` : ''}
+                          </p>
+                        ) : null}
+                      </td>
+                      <td className="px-4 py-3 align-top">
+                        {row.detail?.extraHours ? (
+                          <div className="text-xs">
+                            <p className="font-semibold text-warning">
+                              {t('attendance.extraHoursShort', { hours: row.detail.extraHours })}
+                            </p>
+                            <p className="text-on-surface-variant">
+                              {t('attendance.lateMinutes', { minutes: row.detail.lateMinutes })}
+                              {row.detail.extraHoursCovered > 0
+                                ? ` · ${t('attendance.coveredByPackage', { hours: row.detail.extraHoursCovered })}`
+                                : ''}
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-on-surface-variant">-</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 align-top">
+                        {row.detail?.lateChargeWaived ? (
+                          <span className="text-xs font-semibold text-success">{t('attendance.waived')}</span>
+                        ) : row.detail && row.detail.extraFee > 0 ? (
+                          <div className="text-xs">
+                            <p className="font-semibold text-on-surface">{row.detail.extraFee.toFixed(2)}</p>
+                            {row.detail.invoiceStatus ? (
+                              <Link to="/parent/invoices" className="text-primary underline-offset-2 hover:underline">
+                                {t(`attendance.invoiceStatus.${row.detail.invoiceStatus}`, { defaultValue: row.detail.invoiceStatus })}
+                              </Link>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <span className="text-on-surface-variant">-</span>
+                        )}
+                      </td>
                         <td className="px-4 py-3 align-top">
                           {row.pickup?.personName || row.pickup?.photoUrl ? (
                             <div className="flex items-center gap-2">
@@ -537,12 +650,11 @@ export function ParentAttendanceHistoryPage() {
                             <span className="text-on-surface-variant">-</span>
                           )}
                         </td>
-                      ) : null}
                     </tr>
                   ))}
                   {pager.pageItems.length === 0 ? (
                     <tr>
-                      <td className="px-4 py-10 text-center text-sm text-on-surface-variant" colSpan={isAllMode ? 5 : 5}>
+                      <td className="px-4 py-10 text-center text-sm text-on-surface-variant" colSpan={isAllMode ? 8 : 7}>
                         {t('parent.attendanceHistory.noFilteredRecords', { defaultValue: 'No attendance records match these filters.' })}
                       </td>
                     </tr>

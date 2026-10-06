@@ -1,15 +1,12 @@
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { NOTIFICATION_TEXT_COLUMNS, type NotificationTextRow } from '@/lib/notificationText';
 import { supabase } from '@/lib/supabase';
 
-export type ParentInAppNotificationRow = {
+export type ParentInAppNotificationRow = NotificationTextRow & {
   id: string;
   type: string;
-  title_ar: string;
-  title_en: string;
-  body_ar: string;
-  body_en: string;
   read: boolean;
   sent_at: string;
   action_link: string | null;
@@ -17,8 +14,7 @@ export type ParentInAppNotificationRow = {
   image_url: string | null;
 };
 
-const selectColumns =
-  'id, type, title_ar, title_en, body_ar, body_en, read, sent_at, action_link, urgency, image_url';
+const selectColumns = `id, type, read, sent_at, action_link, urgency, image_url, ${NOTIFICATION_TEXT_COLUMNS}`;
 
 export function parentInAppNotificationsQueryKey(userId: string | undefined) {
   return ['parent-in-app-notifications', userId] as const;

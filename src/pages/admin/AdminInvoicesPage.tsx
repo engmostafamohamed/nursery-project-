@@ -111,22 +111,18 @@ export function AdminInvoicesPage() {
 
   const onMarkPaid = async (
     invoiceId: string,
-    payload: { paymentMethod: string; paidAt: string; notes: string },
-    parentId: string,
-    invoiceNumber: string,
+    payload: { paymentMethod: string; paidAt: string; notes: string; idempotencyKey: string },
     amount: number,
   ) => {
-    if (!profile?.nursery_id) return;
-    await markInvoiceAsPaid({
+    // The server records at most the unpaid balance and nothing for an invoice already paid.
+    const result = await markInvoiceAsPaid({
       invoiceId,
-      nurseryId: profile.nursery_id,
-      parentId,
-      invoiceNumber,
       amount,
       paymentMethod: payload.paymentMethod,
       paidAt: payload.paidAt,
+      idempotencyKey: payload.idempotencyKey,
     });
-    toast.success(t('invoice.markPaid.success'));
+    toast.success(t(result.status === 'recorded' ? 'invoice.markPaid.success' : 'invoice.markPaid.alreadyPaid'));
     await invoicesQuery.refetch();
   };
 
@@ -140,7 +136,8 @@ export function AdminInvoicesPage() {
     <InvoiceActionsMenu
       disabled={row.status === 'paid' || row.status === 'cancelled'}
       onView={() => navigate(`/admin/invoices/${row.id}${qs}`)}
-      onMarkPaid={(payload) => onMarkPaid(row.id, payload, row.parentId, row.invoiceNumber, row.amount)}
+      amountLabel={t('invoice.egpAmount', { amount: row.amount.toFixed(2) })}
+      onMarkPaid={(payload) => onMarkPaid(row.id, payload, row.amount)}
       onCancel={() => onCancel(row.id)}
     />
   );

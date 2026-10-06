@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { toast } from 'sonner';
 
 import { ChildSelector, useParentChildren } from '@/components/parent/ChildSelector';
 import { InvoiceCard } from '@/components/parent/InvoiceCard';
@@ -11,7 +10,6 @@ import {
   type ParentInvoiceSort,
   type ParentInvoiceStatusFilter,
 } from '@/hooks/useParentInvoices';
-import { useSubmitInvoicePayment } from '@/hooks/useSubmitInvoicePayment';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { formatDate } from '@/lib/datetime';
 
@@ -40,22 +38,10 @@ export function ParentInvoicesPage() {
   });
   const invoices = invoicesQuery.data;
 
-  const submitPayment = useSubmitInvoicePayment();
-  const [submittingId, setSubmittingId] = useState<string | null>(null);
-  const handlePayNow = async (invoice: { id: string; amount: number; invoiceNumber: string }) => {
-    setSubmittingId(invoice.id);
-    try {
-      await submitPayment.mutateAsync({
-        invoiceId: invoice.id,
-        amount: invoice.amount,
-        invoiceNumber: invoice.invoiceNumber,
-      });
-      toast.success(t('payment.submittedForApproval'));
-    } catch {
-      toast.error(t('payment.errors.actionFailed'));
-    } finally {
-      setSubmittingId(null);
-    }
+  // Paying always goes through the pay page: amount, method and reference, then a confirmation.
+  const handlePayNow = (invoiceId: string) => {
+    const returnTo = encodeURIComponent('/parent/invoices');
+    navigate(`/parent/invoices/${invoiceId}/pay?returnTo=${returnTo}${isPreview ? '&preview=true' : ''}`);
   };
 
   useEffect(() => {
@@ -128,14 +114,7 @@ export function ParentInvoicesPage() {
               key={invoice.id}
               invoice={invoice}
               highlighted={Boolean(highlightId && invoice.id === highlightId)}
-              submitting={submittingId === invoice.id}
-              onPayNow={() =>
-                void handlePayNow({
-                  id: invoice.id,
-                  amount: invoice.amount,
-                  invoiceNumber: invoice.invoiceNumber,
-                })
-              }
+              onPayNow={() => handlePayNow(invoice.id)}
               onView={() => navigate(`/parent/invoices/${invoice.id}${qs}`)}
             />
           ))}

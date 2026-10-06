@@ -9,6 +9,10 @@ export type BuilderLineItem = {
   description: string;
   quantity: number;
   unitPrice: number;
+  /** The stored line this row edits (kept so system lines keep their kind and names). */
+  raw?: Record<string, unknown>;
+  /** The text shown when editing began; a change means the admin rewrote the line. */
+  originalDescription?: string;
 };
 
 interface Props {

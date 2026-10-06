@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
@@ -12,7 +12,9 @@ import {
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useNurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
+import { useNurserySettings } from '@/hooks/useNurserySettings';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { attendanceErrorKey } from '@/lib/attendanceApi';
 import { parseQrTokenFromText } from '@/lib/parseQrScan';
 import { supabase } from '@/lib/supabase';
 import {
@@ -44,14 +46,12 @@ type VerifyPayload = {
   event_title_ar?: string | null;
   event_title_en?: string | null;
   already_checked_in?: boolean;
-};
-
-type AttendanceRow = {
-  id: string;
-  child_id: string;
-  attendance_date: string;
-  check_in: string | null;
-  check_out: string | null;
+  // Today's attendance (nursery timezone), resolved server-side.
+  attendance_date?: string;
+  attendance_state?: 'none' | 'checked_in' | 'checked_out';
+  attendance_id?: string | null;
+  check_in?: string | null;
+  check_out?: string | null;
 };
 
 type DialogState = {
@@ -73,36 +73,26 @@ function randomSuffix(): string {
 }
 
 export function QRScannerPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const { user } = useAuthSession();
   const { data: profile } = useUserProfile(user?.id);
   const { data: languagePref = 'both' } = useNurseryLanguagePref(profile?.nursery_id);
+  const { settings } = useNurserySettings(profile?.nursery_id);
+  const minScanGapMinutes = settings?.min_minutes_between_scans ?? 5;
   const [lastScanned, setLastScanned] = useState<string | null>(null);
+
+  const formatScanTime = useCallback(
+    (iso: string | null) =>
+      iso
+        ? new Date(iso).toLocaleTimeString(i18n.language === 'ar' ? 'ar-EG' : 'en-GB', { hour: '2-digit', minute: '2-digit', hour12: true })
+        : '—',
+    [i18n.language],
+  );
 
   const [dialogState, setDialogState] = useState<DialogState | null>(null);
   const [dialogBusy, setDialogBusy] = useState(false);
   const decisionResolverRef = useRef<((d: PickupConfirmDecision | null) => void) | null>(null);
-
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
-
-  const attendanceQuery = useQuery({
-    queryKey: ['teacher-attendance-today', profile?.nursery_id, today],
-    queryFn: async (): Promise<Record<string, AttendanceRow>> => {
-      if (!profile?.nursery_id) return {};
-      const { data, error } = await supabase
-        .from('attendance_records')
-        .select('id, child_id, attendance_date, check_in, check_out')
-        .eq('attendance_date', today);
-      if (error) throw error;
-      const rows = (data ?? []) as AttendanceRow[];
-      return rows.reduce<Record<string, AttendanceRow>>((acc, row) => {
-        acc[row.child_id] = row;
-        return acc;
-      }, {});
-    },
-    enabled: Boolean(profile?.nursery_id),
-  });
 
   const childDisplayName = useCallback(
     (payload: VerifyPayload) => {
@@ -167,34 +157,8 @@ export function QRScannerPage() {
         reason,
         note: note || null,
       } as never);
+      // The server logs the attempt and notifies the child's parents (pickup_incidents trigger).
       if (insertErr) throw insertErr;
-
-      // Notify the child's parents that a pickup attempt failed verification.
-      const { data: parentRows } = await supabase
-        .from('parent_children')
-        .select('parent_id')
-        .eq('child_id', payload.child_id);
-      const parentIds = ((parentRows ?? []) as { parent_id: string }[]).map((r) => r.parent_id);
-      if (parentIds.length) {
-        const childNameAr = payload.full_name_ar || payload.full_name_en;
-        const childNameEn = payload.full_name_en || payload.full_name_ar;
-        const when = new Date();
-        const timeAr = when.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: true });
-        const timeEn = when.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true });
-        await supabase.from('notifications').insert(
-          parentIds.map((parentId) => ({
-            nursery_id: profile.nursery_id,
-            user_id: parentId,
-            type: 'pickup_attempt_failed',
-            title_ar: 'محاولة استلام لم تكتمل',
-            title_en: 'Pickup attempt blocked',
-            body_ar: `تم رفض محاولة استلام ${childNameAr} في ${timeAr}. تواصل مع الحضانة إذا لم تكن متوقعة.`,
-            body_en: `A pickup attempt for ${childNameEn} at ${timeEn} was blocked at verification. Contact the nursery if unexpected.`,
-            channel: 'in_app' as const,
-            read: false,
-          })) as never,
-        );
-      }
     },
     [profile?.nursery_id, user?.id],
   );
@@ -208,8 +172,9 @@ export function QRScannerPage() {
       }
 
       try {
+        // defer_consume: a one-time QR is spent only when the pickup is confirmed below.
         const { data, error } = await supabase.functions.invoke('qr-verify', {
-          body: { token },
+          body: { token, defer_consume: true },
         });
         if (error) throw error;
         const payload = data as VerifyPayload & { error?: string };
@@ -244,8 +209,38 @@ export function QRScannerPage() {
           full_name_en: payload.full_name_en,
         };
 
-        const existing = attendanceQuery.data?.[child.id] ?? null;
-        const isCheckout = Boolean(existing?.check_in && !existing?.check_out);
+        const name = childDisplayName(payload);
+        if (payload.attendance_state === 'checked_out') {
+          toast.info(t('attendance.scanner.alreadyCheckedOut', {
+            name,
+            time: formatScanTime(payload.check_out ?? null),
+          }));
+          setLastScanned(`${name} · ${t('attendance.status.checkedOut')}`);
+          return false;
+        }
+
+        const existing = payload.attendance_state === 'checked_in' && payload.attendance_id
+          ? {
+              id: payload.attendance_id,
+              child_id: child.id,
+              attendance_date: payload.attendance_date ?? '',
+              check_in: payload.check_in ?? null,
+              check_out: null,
+            }
+          : null;
+        const isCheckout = Boolean(existing);
+        const method = payload.purpose === 'delegate' ? 'qr_custom' as const : 'qr_parent' as const;
+
+        // A custom QR is a pickup pass only; the server rejects (and logs) it at drop-off.
+        if (!isCheckout && method === 'qr_custom') {
+          const rejected = await teacherAttendanceToggle(child, null, payload.attendance_date ?? '', {}, {
+            method,
+            qrTokenId: payload.qr_token_id ?? null,
+          });
+          toast.error(t(rejected.mode === 'rejected' ? attendanceErrorKey(rejected.reason) : 'attendance.errors.attendance_custom_qr_pickup_only'));
+          setLastScanned(`${name} · ${t('attendance.scanner.rejectedTag')}`);
+          return false;
+        }
 
         const pickupCtx = {
           purpose: payload.purpose,
@@ -261,7 +256,19 @@ export function QRScannerPage() {
           requireIdCapture: payload.require_id_capture ?? true,
         };
 
-        const name = childDisplayName(payload);
+        // A second scan right after drop-off is an accidental double scan: say so before
+        // opening the identity check (the server enforces the same gap).
+        if (existing?.check_in) {
+          const minutesSinceCheckIn = (Date.now() - new Date(existing.check_in).getTime()) / 60000;
+          if (minutesSinceCheckIn < minScanGapMinutes) {
+            toast.info(t('attendance.errors.attendance_too_soon', { minutes: minScanGapMinutes }), {
+              description: t('attendance.scanner.checkedInAt', { time: formatScanTime(existing.check_in) }),
+            });
+            setLastScanned(`${name} · ${t('attendance.status.inNursery')}`);
+            return false;
+          }
+        }
+
         const delegate = payload.purpose === 'delegate'
           ? (payload.pickup_person_full_name ?? payload.delegate_name)?.trim()
           : null;
@@ -320,29 +327,47 @@ export function QRScannerPage() {
           settleDecision(decision);
         }
 
-        const result = await teacherAttendanceToggle(child, existing, today, {
-          ...pickupCtx,
-          preResolved: resolved ?? undefined,
-          idPhotoPath,
-          verifiedBy: isCheckout ? user?.id ?? null : null,
-        });
+        const result = await teacherAttendanceToggle(
+          child,
+          existing,
+          payload.attendance_date ?? '',
+          {
+            ...pickupCtx,
+            preResolved: resolved ?? undefined,
+            idPhotoPath,
+            identityConfirmed: isCheckout,
+          },
+          { method, qrTokenId: payload.qr_token_id ?? null },
+        );
         await queryClient.invalidateQueries({ queryKey: ['teacher-attendance-today'] });
+
+        if (result.mode === 'rejected') {
+          toast.error(t(attendanceErrorKey(result.reason), { minutes: result.minMinutes ?? minScanGapMinutes }));
+          setLastScanned(`${name} · ${t('attendance.scanner.rejectedTag')}`);
+          return false;
+        }
+        if (result.mode === 'already_checked_in') {
+          toast.info(t('attendance.scanner.alreadyCheckedIn', { name, time: formatScanTime(result.checkIn) }));
+          setLastScanned(`${name} · ${t('attendance.status.inNursery')}`);
+          return false;
+        }
+        if (result.mode === 'already_checked_out') {
+          toast.info(t('attendance.scanner.alreadyCheckedOut', { name, time: formatScanTime(result.checkOut) }));
+          setLastScanned(`${name} · ${t('attendance.status.checkedOut')}`);
+          return false;
+        }
 
         setLastScanned(delegate ? `${name} · ${delegate}` : name);
 
         if (result.mode === 'checkout') {
-          if (result.latePickup && result.extraHours > 0) {
+          if (result.extraHours > 0) {
             toast.success(t('teacher.scanner.successCheckoutLate', { name }), {
-              description: delegate
-                ? t('teacher.scanner.delegatePickupDesc', {
-                    delegate,
-                    hours: result.extraHours,
-                    fee: result.extraFee,
-                  })
-                : t('teacher.scanner.successCheckoutLateDesc', {
-                    hours: result.extraHours,
-                    fee: result.extraFee,
-                  }),
+              description: t('attendance.scanner.extraHoursSummary', {
+                hours: result.extraHours,
+                covered: result.extraHoursCovered,
+                fee: result.extraFee.toFixed(2),
+                minutes: result.lateMinutes,
+              }) + (delegate ? ` · ${t('teacher.scanner.delegatePickupShort', { delegate })}` : ''),
             });
           } else {
             toast.success(t('teacher.scanner.successCheckout', { name }), {
@@ -352,38 +377,36 @@ export function QRScannerPage() {
             });
           }
         } else {
-          toast.success(t('teacher.scanner.successCheckin', { name }), {
-            description: delegate
-              ? t('teacher.scanner.delegatePickupShort', { delegate })
-              : undefined,
-          });
+          toast.success(t('teacher.scanner.successCheckin', { name }));
         }
         return true;
       } catch (e) {
         // Clear any stuck dialog state if we threw partway through.
         if (decisionResolverRef.current) settleDecision(null);
-        const msg = e instanceof Error ? e.message : t('teacher.scanner.errors.generic');
+        const key = attendanceErrorKey(e);
+        const msg = key === 'attendance.errors.generic'
+          ? (e instanceof Error ? e.message : t('teacher.scanner.errors.generic'))
+          : t(key);
         toast.error(`${t('teacher.scanner.errors.prefix')}\n${msg}`);
         return false;
       }
     },
     [
-      attendanceQuery.data,
       awaitDecision,
       childDisplayName,
+      formatScanTime,
       languagePref,
       logIncident,
+      minScanGapMinutes,
       queryClient,
       settleDecision,
       t,
-      today,
       uploadIdPhoto,
       createSignedStorageUrl,
-      user?.id,
     ],
   );
 
-  const scannerDisabled = !profile?.nursery_id || attendanceQuery.isPending;
+  const scannerDisabled = !profile?.nursery_id;
 
   return (
     <div className="relative min-h-[calc(100vh-10rem)] overflow-hidden rounded-3xl bg-primary p-4 text-white">

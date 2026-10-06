@@ -1,5 +1,10 @@
 import { supabase } from '@/lib/supabase';
 
+/**
+ * Points for payments and redemptions are written by the server (loyalty_award_payment_points,
+ * redeem_loyalty_points). `description` holds only text a person typed (an admin's bonus
+ * reason); the app labels every other row from its transaction type and source.
+ */
 export async function addLoyaltyTransaction(params: {
   nurseryId: string;
   parentId: string;
@@ -21,27 +26,6 @@ export async function addLoyaltyTransaction(params: {
   if (res.error) throw res.error;
 }
 
-export async function awardPaymentPoints(params: {
-  nurseryId: string;
-  parentId: string;
-  invoiceId: string;
-  amount: number;
-  pointsPerEgp: number;
-  multiplier?: number;
-}) {
-  const points = Math.floor(params.amount * Math.max(0, params.pointsPerEgp) * (params.multiplier ?? 1));
-  if (points <= 0) return;
-  await addLoyaltyTransaction({
-    nurseryId: params.nurseryId,
-    parentId: params.parentId,
-    transactionType: 'earned',
-    points,
-    source: 'payment',
-    referenceId: params.invoiceId,
-    description: `Points earned from invoice payment (${params.amount.toFixed(2)} EGP)`,
-  });
-}
-
 export async function awardReviewPoints(params: {
   nurseryId: string;
   parentId: string;
@@ -58,25 +42,6 @@ export async function awardReviewPoints(params: {
     points,
     source: 'review',
     referenceId: params.referenceId,
-    description: 'Points earned from parent review/reaction',
-  });
-}
-
-export async function redeemLoyaltyPoints(params: {
-  nurseryId: string;
-  parentId: string;
-  invoiceId: string;
-  points: number;
-  description?: string;
-}) {
-  await addLoyaltyTransaction({
-    nurseryId: params.nurseryId,
-    parentId: params.parentId,
-    transactionType: 'redeemed',
-    points: -Math.abs(params.points),
-    source: 'manual',
-    referenceId: params.invoiceId,
-    description: params.description ?? 'Points redeemed on invoice payment',
   });
 }
 
@@ -93,7 +58,6 @@ export async function awardReferralPoints(params: {
     points: 50,
     source: 'referral',
     referenceId: params.referenceId,
-    description: 'Referral accepted bonus',
   });
   await addLoyaltyTransaction({
     nurseryId: params.nurseryId,
@@ -102,7 +66,6 @@ export async function awardReferralPoints(params: {
     points: 25,
     source: 'referral',
     referenceId: params.referenceId,
-    description: 'Welcome referral bonus',
   });
 }
 

@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { addLoyaltyTransaction, redeemLoyaltyPoints } from '@/lib/loyaltyPoints';
+import { addLoyaltyTransaction } from '@/lib/loyaltyPoints';
+import { redeemLoyaltyPoints } from '@/lib/paymentApi';
 import { supabase } from '@/lib/supabase';
 
 export function useLoyalty(params: { parentId?: string; nurseryId?: string; enabled?: boolean }) {
@@ -78,7 +79,8 @@ export function useLoyalty(params: { parentId?: string; nurseryId?: string; enab
         transactionType: 'bonus',
         points: Math.max(1, Math.floor(payload.points)),
         source: 'bonus',
-        description: payload.reason || 'Manual bonus',
+        // The admin's reason is shown as written; without one the app labels it by type.
+        description: payload.reason.trim() || undefined,
       });
     },
     onSuccess: () => {
@@ -87,11 +89,16 @@ export function useLoyalty(params: { parentId?: string; nurseryId?: string; enab
     },
   });
 
+  // The server checks the balance, the per-invoice cap and the open amount, then records the
+  // points and the discount line together; the same idempotency key never redeems twice.
   const redeemMutation = useMutation({
-    mutationFn: async (payload: { nurseryId: string; parentId: string; invoiceId: string; points: number }) => {
-      await redeemLoyaltyPoints(payload);
+    mutationFn: (payload: { invoiceId: string; points: number; idempotencyKey: string }) => redeemLoyaltyPoints(payload),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['loyalty-transactions'] });
+      void qc.invalidateQueries({ queryKey: ['invoice-details'] });
+      void qc.invalidateQueries({ queryKey: ['parent-invoices'] });
+      void qc.invalidateQueries({ queryKey: ['payment-history'] });
     },
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ['loyalty-transactions'] }),
   });
 
   const summary = useMemo(() => {

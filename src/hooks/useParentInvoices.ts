@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 
+import { invoiceItemDescription, invoiceRawItems } from '@/lib/invoiceItems';
 import { supabase } from '@/lib/supabase';
 
 export type ParentInvoiceStatusFilter = 'all' | 'pending' | 'paid';
@@ -28,12 +30,6 @@ interface UseParentInvoicesParams {
   sort: ParentInvoiceSort;
 }
 
-function readLineItems(raw: unknown): Array<{ description?: string }> {
-  if (Array.isArray(raw)) return raw as Array<{ description?: string }>;
-  const items = (raw as { items?: unknown } | null)?.items;
-  return Array.isArray(items) ? (items as Array<{ description?: string }>) : [];
-}
-
 function invoiceApplicationId(raw: unknown): string {
   const obj = raw as { application_id?: unknown; applicationId?: unknown } | null;
   if (typeof obj?.application_id === 'string') return obj.application_id;
@@ -49,8 +45,10 @@ function invoiceChildIds(raw: unknown): string[] {
 }
 
 export function useParentInvoices({ parentId, childId, status, sort }: UseParentInvoicesParams) {
+  const { i18n } = useTranslation();
+  const language = i18n.language;
   const query = useQuery({
-    queryKey: ['parent-invoices', parentId],
+    queryKey: ['parent-invoices', parentId, language],
     queryFn: async () => {
       if (!parentId) return [] as ParentInvoiceItem[];
       const { data, error } = await supabase
@@ -120,8 +118,8 @@ export function useParentInvoices({ parentId, childId, status, sort }: UseParent
         const now = new Date();
         const overdue = row.status === 'pending' && due.getTime() < now.getTime();
         const overdueDays = overdue ? Math.ceil((now.getTime() - due.getTime()) / 86400000) : 0;
-        const items = readLineItems(row.line_items_json);
-        const firstItem = (items[0] as { description?: string } | undefined)?.description;
+        const firstRawItem = invoiceRawItems(row.line_items_json)[0];
+        const firstItem = firstRawItem ? invoiceItemDescription(firstRawItem, language) : '';
         const lineItemChildIds = invoiceChildIds(row.line_items_json);
         const applicationId = invoiceApplicationId(row.line_items_json);
         const applicationChildId = applicationId ? applicationChildMap.get(applicationId) : undefined;

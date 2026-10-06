@@ -7,6 +7,7 @@ import { AdminDashboardActivityFeed } from '@/components/admin/AdminDashboardAct
 import { DashboardAlertsBar } from '@/components/admin/DashboardAlertsBar';
 import { DashboardMiniCharts } from '@/components/admin/DashboardMiniCharts';
 import { DashboardQuickActions } from '@/components/admin/DashboardQuickActions';
+import { AttendanceKpiPanel } from '@/components/admin/attendance/AttendanceKpiPanel';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatsCard } from '@/components/ui/StatsCard';
 import { Button } from '@/components/ui/button';
@@ -158,6 +159,12 @@ export function AdminDashboardPage() {
           </>
         )}
       </section>
+
+      {nurseryId ? (
+        <section className="rounded-md border border-outline-variant bg-surface-container-lowest p-5 shadow-sm">
+          <AttendanceKpiPanel nurseryId={nurseryId} />
+        </section>
+      ) : null}
 
       <section className="rounded-md border border-outline-variant bg-surface-container-lowest p-5 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">

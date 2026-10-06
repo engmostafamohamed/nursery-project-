@@ -73,6 +73,7 @@ const ADMIN_ROOTS = [
   '/admin/admissions/import',
   '/admin/attendance',
   '/admin/attendance/dashboard',
+  '/admin/scanner',
   '/admin/events',
   '/admin/courses',
   '/admin/packages',

@@ -66,10 +66,6 @@ export function AdminChildHealthProfilePage() {
         nurseryId: q.data.child.nursery_id,
         parentUserIds: ids,
         type: 'child_health_shared',
-        titleAr: 'تمت مشاركة الملف الصحي',
-        titleEn: 'Health profile shared',
-        bodyAr: 'شاركت الحضانة ملخصًا صحيًا لطفلك. راجع التطبيق.',
-        bodyEn: 'Your nursery shared a health summary for your child. Check the app.',
         actionLink: `/parent/children/${childId}/health`,
       });
       toast.success(t('health.toast.shareSent'));

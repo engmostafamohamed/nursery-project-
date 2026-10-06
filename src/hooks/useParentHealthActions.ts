@@ -55,10 +55,6 @@ export function useRequestHealthUpdate() {
       await notifyNurseryAdmins({
         nurseryId: args.nurseryId,
         type: 'child_health_update_request',
-        titleAr: 'طلب تحديث السجل الصحي',
-        titleEn: 'Health record update requested',
-        bodyAr: 'طلب ولي أمر مراجعة أو تحديث المعلومات الصحية لطفل.',
-        bodyEn: 'A parent requested a review or update of a child health record.',
         actionLink: `/admin/children/${args.childId}/health`,
       });
     },
@@ -102,10 +98,6 @@ export function useUploadChildHealthDocument() {
       await notifyNurseryAdmins({
         nurseryId: args.nurseryId,
         type: 'child_health_document_uploaded',
-        titleAr: 'مستند طبي جديد',
-        titleEn: 'New medical document uploaded',
-        bodyAr: 'رفع ولي أمر مستندًا طبيًا جديدًا.',
-        bodyEn: 'A parent uploaded a new medical document.',
         actionLink: `/admin/children/${args.childId}/health`,
       });
 

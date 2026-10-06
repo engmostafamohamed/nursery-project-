@@ -13,6 +13,7 @@ import type { ParentInAppNotificationRow } from '@/hooks/useParentInAppNotificat
 import type { SurveyType } from '@/hooks/useSurveys';
 import { useSurveys } from '@/hooks/useSurveys';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { notificationText } from '@/lib/notificationText';
 import {
   formatNotificationRelativeTime,
   parentNotificationMaterialIcon,
@@ -44,8 +45,7 @@ type GroupedNotification = {
 };
 
 function notificationGroupKey(item: ParentInAppNotificationRow, lang: string): string {
-  const title = lang === 'ar' ? item.title_ar : item.title_en;
-  const body = lang === 'ar' ? item.body_ar : item.body_en;
+  const { title, body } = notificationText(item, lang);
   return [item.type, item.action_link ?? '', title, body].join('|');
 }
 
@@ -134,8 +134,7 @@ export function ParentAdminInboxSection() {
 
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pe-1">
         {urgentNotifications.map(({ item: n, count }) => {
-          const title = i18n.language === 'ar' ? n.title_ar : n.title_en;
-          const body = i18n.language === 'ar' ? n.body_ar : n.body_en;
+          const { title, body } = notificationText(n, i18n.language);
           return (
             <Link
               key={n.id}

@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'Unauthorized' }, 401);
     }
 
-    const body = (await req.json()) as { token?: string };
+    const body = (await req.json()) as { token?: string; defer_consume?: boolean };
     const rawToken = typeof body.token === 'string' ? body.token.trim() : '';
     if (!rawToken) {
       return jsonResponse({ error: 'token is required' }, 400);
@@ -45,8 +45,9 @@ Deno.serve(async (req) => {
       .eq('id', authData.user.id)
       .maybeSingle();
 
-    if (profileErr || !profile || profile.role !== 'teacher' || !profile.nursery_id) {
-      return jsonResponse({ error: 'Only nursery teachers can verify QR tokens' }, 403);
+    // Any staff member at the gate may scan: teachers, the branch admin and managers.
+    if (profileErr || !profile || !['teacher', 'branch_admin', 'manager'].includes(String(profile.role)) || !profile.nursery_id) {
+      return jsonResponse({ error: 'Only nursery staff can verify QR tokens' }, 403);
     }
 
     const teacherNurseryId = profile.nursery_id as string;
@@ -187,13 +188,33 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (row.single_use) {
-      // Stamp consumed_at so a second scan of the same QR is rejected above.
+    // Current scanners send defer_consume: the one-time QR is then spent by
+    // record_attendance_check_out once staff confirm the person, so a rejected or cancelled
+    // pickup leaves it usable. Older clients still get it stamped here on scan.
+    if (row.single_use && !body.defer_consume) {
       await admin
         .from('qr_tokens')
         .update({ consumed_at: new Date().toISOString() } as never)
         .eq('id', row.id);
     }
+
+    // Today's attendance (in the nursery's timezone) tells the scanner whether this is a
+    // drop-off or a pickup without relying on its own, possibly stale, list.
+    const { data: settingsRow } = await admin
+      .from('nursery_settings')
+      .select('timezone')
+      .eq('nursery_id', child.nursery_id)
+      .maybeSingle();
+    const timeZone = (settingsRow as { timezone?: string | null } | null)?.timezone || 'Africa/Cairo';
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const { data: attRow } = await admin
+      .from('attendance_records')
+      .select('id, check_in, check_out')
+      .eq('child_id', child.id)
+      .eq('attendance_date', today)
+      .maybeSingle();
+    const att = attRow as { id: string; check_in: string | null; check_out: string | null } | null;
+    const attendanceState = !att?.check_in ? 'none' : att.check_out ? 'checked_out' : 'checked_in';
 
     return jsonResponse({
       qr_token_id: row.id,
@@ -213,6 +234,11 @@ Deno.serve(async (req) => {
       require_id_capture: row.require_id_capture,
       single_use: Boolean(row.single_use),
       issued_by: row.issued_by,
+      attendance_date: today,
+      attendance_state: attendanceState,
+      attendance_id: att?.id ?? null,
+      check_in: att?.check_in ?? null,
+      check_out: att?.check_out ?? null,
     });
   } catch (e) {
     return jsonResponse({ error: String(e) }, 500);

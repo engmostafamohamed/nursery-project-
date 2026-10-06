@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
+import { AttendanceKpiPanel } from '@/components/admin/attendance/AttendanceKpiPanel';
 import { AttendanceClassBars } from '@/components/admin/AttendanceClassBars';
 import { AttendanceDailyBars } from '@/components/admin/AttendanceDailyBars';
 import { Button } from '@/components/ui/button';
@@ -86,6 +87,8 @@ export function AdminAttendanceDashboardPage() {
           {t('admin.attendanceAnalytics.exportCsv')}
         </Button>
       </div>
+
+      <AttendanceKpiPanel nurseryId={profile?.nursery_id} />
 
       <div className="flex flex-wrap gap-2">
         {(['week', 'month', 'custom'] as const).map((p) => (

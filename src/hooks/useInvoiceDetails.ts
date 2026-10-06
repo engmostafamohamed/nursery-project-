@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 
+import { invoiceItemDescription, invoiceNotes, invoiceRawItems } from '@/lib/invoiceItems';
 import { supabase } from '@/lib/supabase';
 
 export type InvoiceLineItem = {
@@ -41,6 +43,11 @@ export type InvoiceDetailsData = {
   paymentMethod: string | null;
   notes: string;
   lineItems: InvoiceLineItem[];
+  /** Stored line items (same order as lineItems) and the stored line_items_json, for editing. */
+  rawLineItems: Record<string, unknown>[];
+  rawLineItemsJson: unknown;
+  /** The note as stored (lineItems/notes above are resolved for display). */
+  rawNotes: string;
   subtotal: number;
   tax: number;
   total: number;
@@ -49,15 +56,14 @@ export type InvoiceDetailsData = {
   activity: InvoiceActivityItem[];
 };
 
-function parseLineItems(raw: unknown): { items: InvoiceLineItem[]; notes: string; tax: number } {
+function parseLineItems(raw: unknown, language: string): { items: InvoiceLineItem[]; notes: string; tax: number } {
   if (Array.isArray(raw)) {
-    const items = raw
-      .map((row) => row as { description?: string; amount?: number | string; quantity?: number; unit_price?: number })
+    const items = invoiceRawItems(raw)
       .map((row) => {
         const quantity = Number(row.quantity ?? 1);
         const unitPrice = Number(row.unit_price ?? row.amount ?? 0);
         return {
-          description: String(row.description ?? ''),
+          description: invoiceItemDescription(row, language),
           quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
           unitPrice: Number.isFinite(unitPrice) ? unitPrice : 0,
           total: (Number.isFinite(quantity) && quantity > 0 ? quantity : 1) * (Number.isFinite(unitPrice) ? unitPrice : 0),
@@ -66,16 +72,14 @@ function parseLineItems(raw: unknown): { items: InvoiceLineItem[]; notes: string
     return { items, notes: '', tax: 0 };
   }
 
-  const obj = (raw ?? {}) as { items?: unknown; notes?: string; tax?: number | string };
-  const sourceItems = Array.isArray(obj.items) ? obj.items : [];
-  const items = sourceItems
-    .map((row) => row as { description?: string; quantity?: number; unitPrice?: number; unit_price?: number; total?: number })
+  const obj = (raw ?? {}) as { tax?: number | string };
+  const items = invoiceRawItems(raw)
     .map((row) => {
       const quantity = Number(row.quantity ?? 1);
       const unitPrice = Number(row.unitPrice ?? row.unit_price ?? 0);
       const total = Number(row.total ?? quantity * unitPrice);
       return {
-        description: String(row.description ?? ''),
+        description: invoiceItemDescription(row, language),
         quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
         unitPrice: Number.isFinite(unitPrice) ? unitPrice : 0,
         total: Number.isFinite(total) ? total : 0,
@@ -83,14 +87,17 @@ function parseLineItems(raw: unknown): { items: InvoiceLineItem[]; notes: string
     });
   return {
     items,
-    notes: String(obj.notes ?? ''),
+    notes: invoiceNotes(raw, language),
     tax: Number(obj.tax ?? 0) || 0,
   };
 }
 
 export function useInvoiceDetails(invoiceId: string | undefined) {
+  const { i18n } = useTranslation();
+  const language = i18n.language;
   return useQuery({
-    queryKey: ['invoice-details', invoiceId],
+    // Line descriptions are resolved in the reader's language.
+    queryKey: ['invoice-details', invoiceId, language],
     queryFn: async (): Promise<InvoiceDetailsData | null> => {
       if (!invoiceId) return null;
       const invoiceRes = await supabase
@@ -170,6 +177,7 @@ export function useInvoiceDetails(invoiceId: string | undefined) {
         .select('id, type, sent_at')
         .eq('user_id', invoice.parent_id)
         .in('type', ['invoice_paid', 'invoice_reminder'])
+        .eq('action_link', `/parent/invoices/${invoice.id}`)
         .order('sent_at', { ascending: true });
       if (notificationRes.error) throw notificationRes.error;
       const notificationRows = (notificationRes.data ?? []) as { id: string; type: string; sent_at: string }[];
@@ -196,7 +204,7 @@ export function useInvoiceDetails(invoiceId: string | undefined) {
       const inReview =
         (attemptRes.data ?? []).length > 0 && invoice.status !== 'paid' && invoice.status !== 'cancelled';
 
-      const { items, notes, tax } = parseLineItems(invoice.line_items_json);
+      const { items, notes, tax } = parseLineItems(invoice.line_items_json, language);
       const subtotal = items.reduce((sum, row) => sum + row.total, 0);
       const total = Number(invoice.amount || 0);
       const balanceDue = Math.max(0, total - paidAmount);
@@ -245,6 +253,12 @@ export function useInvoiceDetails(invoiceId: string | undefined) {
         paymentMethod: invoice.payment_method,
         notes,
         lineItems: items,
+        rawLineItems: invoiceRawItems(invoice.line_items_json),
+        rawLineItemsJson: invoice.line_items_json,
+        rawNotes:
+          invoice.line_items_json && typeof invoice.line_items_json === 'object' && !Array.isArray(invoice.line_items_json)
+            ? String((invoice.line_items_json as { notes?: unknown }).notes ?? '')
+            : '',
         subtotal,
         tax,
         total,
