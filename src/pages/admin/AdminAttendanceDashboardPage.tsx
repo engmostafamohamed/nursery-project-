@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
+  MAX_ANALYTICS_RANGE_DAYS,
   useAdminAttendanceAnalytics,
   type AttendanceDatePreset,
 } from '@/hooks/useAdminAttendanceAnalytics';
@@ -24,7 +25,7 @@ export function AdminAttendanceDashboardPage() {
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
 
-  const customReady = preset !== 'custom' || (Boolean(customFrom) && Boolean(customTo));
+  const datesChosen = preset !== 'custom' || (Boolean(customFrom) && Boolean(customTo));
 
   const analytics = useAdminAttendanceAnalytics({
     nurseryId: profile?.nursery_id ?? undefined,
@@ -34,6 +35,8 @@ export function AdminAttendanceDashboardPage() {
   });
 
   const { stats, range } = analytics;
+  // Dates chosen and valid: only then are the numbers shown.
+  const customReady = datesChosen && !analytics.rangeError;
 
   const classRows = useMemo(
     () =>
@@ -47,12 +50,10 @@ export function AdminAttendanceDashboardPage() {
   const exportCsv = () => {
     try {
       const header = ['date', 'present_count', 'absent_weekday', 'late_pickups'].join(',');
-      const lines = stats.dailyPresent.map((d) => {
-        const w = new Date(d.date + 'T12:00:00').getDay();
-        const isWd = w !== 0 && w !== 6;
-        const absent = isWd && stats.activeCount > 0 ? Math.max(0, stats.activeCount - d.count) : '';
-        return [d.date, String(d.count), absent === '' ? '' : String(absent), String(d.late)].join(',');
-      });
+      // Absences only on the nursery's own school days (blank when it was closed).
+      const lines = stats.dailyPresent.map((d) =>
+        [d.date, String(d.count), d.expected > 0 ? String(d.absent) : '', String(d.late)].join(','),
+      );
       const bom = '\uFEFF';
       const blob = new Blob([bom + [header, ...lines].join('\n')], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
@@ -108,11 +109,24 @@ export function AdminAttendanceDashboardPage() {
             <label className="text-xs text-on-surface-variant">{t('admin.attendanceAnalytics.to')}</label>
             <Input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} />
           </div>
+          {datesChosen && analytics.rangeError ? (
+            <p className="basis-full text-xs font-medium text-error" role="alert">
+              {t(`attendance.logs.errors.${analytics.rangeError}`, { days: MAX_ANALYTICS_RANGE_DAYS })}
+            </p>
+          ) : null}
         </div>
       ) : null}
 
-      {!customReady ? (
+      {!datesChosen ? (
         <p className="text-sm text-on-surface-variant">{t('admin.attendanceAnalytics.customHint')}</p>
+      ) : analytics.rangeError ? null : analytics.isError ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-error/30 bg-error/5 p-3 text-sm text-error" role="alert">
+          <MaterialSymbol name="error" size="text-xl" />
+          <span className="flex-1">{t('attendance.loadErrorTitle')}</span>
+          <Button type="button" size="sm" variant="outline" onClick={() => void analytics.refetch()}>
+            {t('common.retry')}
+          </Button>
+        </div>
       ) : (
         <p className="text-sm text-on-surface-variant">
           {t('admin.attendanceAnalytics.rangeLabel', { from: range.from, to: range.to })}
@@ -126,7 +140,7 @@ export function AdminAttendanceDashboardPage() {
           ))}
         </div>
       ) : null}
-      {customReady && !loading ? (
+      {customReady && !loading && !analytics.isError ? (
         <div className="grid gap-3 md:grid-cols-3">
           <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
             <div className="flex items-center gap-2 text-on-surface-variant">
@@ -155,7 +169,7 @@ export function AdminAttendanceDashboardPage() {
         </div>
       ) : null}
 
-      {customReady && !loading ? (
+      {customReady && !loading && !analytics.isError ? (
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
             <AttendanceDailyBars days={stats.dailyPresent} maxCount={stats.maxDaily} activeChildren={stats.activeCount} />

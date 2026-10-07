@@ -1,26 +1,25 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import {
-  calendarMonthRangeToToday,
-  countWeekdays,
-  eachDateInRange,
-  isLatePickupLog,
-  rollingWeekRangeToToday,
-} from '@/lib/attendanceAnalytics';
+import { fetchAttendanceDays, type AttendanceDay } from '@/lib/attendanceApi';
+import { calendarMonthRangeToToday, eachDateInRange, rollingWeekRangeToToday } from '@/lib/attendanceAnalytics';
 import { supabase } from '@/lib/supabase';
 
 export type AttendanceDatePreset = 'week' | 'month' | 'custom';
 
-export type AttendanceRecordRow = {
-  id: string;
-  child_id: string;
-  attendance_date: string;
-  check_in: string | null;
-  check_out: string | null;
-  qr_scan_log: unknown;
-};
+/** The server reads at most 400 days at a time; a year is plenty for a report. */
+export const MAX_ANALYTICS_RANGE_DAYS = 366;
 
+const isPresent = (day: AttendanceDay) => day.status === 'present' || day.status === 'partial';
+/** A school day the child was enrolled for: present, absent, or absent with a reason from the parent. */
+const isExpected = (day: AttendanceDay) => isPresent(day) || day.status === 'absent' || day.status === 'excused';
+const rate = (present: number, expected: number) => (expected > 0 ? Math.min(100, Math.round((present / expected) * 1000) / 10) : 0);
+
+/**
+ * Attendance for a date range, counted from get_attendance_days: the server decides which days are
+ * school days (the nursery's own working days and holidays) and when each child was enrolled, so
+ * these numbers match the attendance panel and the logs.
+ */
 export function useAdminAttendanceAnalytics(params: {
   nurseryId?: string;
   preset: AttendanceDatePreset;
@@ -36,17 +35,18 @@ export function useAdminAttendanceAnalytics(params: {
   }, [params.preset, params.customFrom, params.customTo]);
 
   const customReady = params.preset !== 'custom' || (Boolean(params.customFrom) && Boolean(params.customTo));
+  const rangeError: 'fromAfterTo' | 'rangeTooLong' | null =
+    from > to
+      ? 'fromAfterTo'
+      : Date.parse(to) - Date.parse(from) > MAX_ANALYTICS_RANGE_DAYS * 86_400_000
+        ? 'rangeTooLong'
+        : null;
 
   const query = useQuery({
     queryKey: ['admin-attendance-analytics', params.nurseryId, from, to],
     queryFn: async () => {
       if (!params.nurseryId) {
-        return {
-          records: [] as AttendanceRecordRow[],
-          activeChildIds: [] as string[],
-          childClassMap: new Map<string, string | null>(),
-          classNames: new Map<string, string>(),
-        };
+        return { days: [] as AttendanceDay[], activeChildIds: [] as string[], childClassMap: new Map<string, string | null>(), classNames: new Map<string, string>() };
       }
 
       const { data: children, error: cErr } = await supabase
@@ -73,83 +73,63 @@ export function useAdminAttendanceAnalytics(params: {
         });
       }
 
-      if (!activeChildIds.length) {
-        return { records: [] as AttendanceRecordRow[], activeChildIds, childClassMap, classNames };
-      }
-
-      const { data: att, error: aErr } = await supabase
-        .from('attendance_records')
-        .select('id, child_id, attendance_date, check_in, check_out, qr_scan_log')
-        .gte('attendance_date', from)
-        .lte('attendance_date', to)
-        .in('child_id', activeChildIds);
-      if (aErr) throw aErr;
-      const records = (att ?? []) as AttendanceRecordRow[];
-
-      return { records, activeChildIds, childClassMap, classNames };
+      const days = await fetchAttendanceDays(activeChildIds, from, to);
+      return { days, activeChildIds, childClassMap, classNames };
     },
-    enabled: Boolean(params.nurseryId && customReady),
+    enabled: Boolean(params.nurseryId && customReady && !rangeError),
   });
 
   const stats = useMemo(() => {
-    const activeCount = query.data?.activeChildIds.length ?? 0;
-    const records = query.data?.records ?? [];
+    const days = query.data?.days ?? [];
+    const activeChildIds = query.data?.activeChildIds ?? [];
     const childClassMap = query.data?.childClassMap ?? new Map<string, string | null>();
     const classNames = query.data?.classNames ?? new Map<string, string>();
-    const weekdays = Math.max(0, countWeekdays(from, to));
-    const possibleChildDays = activeCount * weekdays;
 
-    const presentRows = records.filter((r) => r.check_in);
-    const totalPresent = presentRows.length;
-    const avgRatePct = possibleChildDays > 0 ? Math.min(100, Math.round((totalPresent / possibleChildDays) * 1000) / 10) : 0;
-    const totalAbsences = Math.max(0, possibleChildDays - totalPresent);
-    const latePickups = records.filter((r) => isLatePickupLog(r.qr_scan_log)).length;
+    const expectedDays = days.filter(isExpected);
+    const presentDays = expectedDays.filter(isPresent);
+    const lateDays = days.filter((d) => d.extraHours > 0);
 
-    const dates = eachDateInRange(from, to);
-    const dailyPresent: { date: string; count: number; late: number }[] = dates.map((date) => {
-      const dayRec = records.filter((r) => r.attendance_date === date);
+    const dailyPresent = eachDateInRange(from, to).map((date) => {
+      const ofDay = days.filter((d) => d.date === date);
+      const expected = ofDay.filter(isExpected).length;
       return {
         date,
-        count: dayRec.filter((r) => r.check_in).length,
-        late: dayRec.filter((r) => isLatePickupLog(r.qr_scan_log)).length,
+        count: ofDay.filter(isPresent).length,
+        late: ofDay.filter((d) => d.extraHours > 0).length,
+        /** Children expected that day; 0 when the nursery was closed. */
+        expected,
+        absent: ofDay.filter((d) => d.status === 'absent').length,
       };
     });
 
-    const maxDaily = Math.max(1, ...dailyPresent.map((d) => d.count));
-
-    const activeChildIds = query.data?.activeChildIds ?? [];
-    const byClass = new Map<string, string[]>();
-    for (const cid of activeChildIds) {
-      const raw = childClassMap.get(cid);
-      const key = raw ?? '__unassigned__';
-      const list = byClass.get(key) ?? [];
-      list.push(cid);
-      byClass.set(key, list);
+    const byClass = new Map<string, Set<string>>();
+    for (const childId of activeChildIds) {
+      const key = childClassMap.get(childId) ?? '__unassigned__';
+      byClass.set(key, (byClass.get(key) ?? new Set<string>()).add(childId));
     }
-
     const classStats = [...byClass.entries()].map(([classId, ids]) => {
-      const size = ids.length;
-      const presentInClass = records.filter((r) => r.check_in && ids.includes(r.child_id)).length;
-      const possible = size * weekdays;
-      const rate = possible > 0 ? Math.min(100, Math.round((presentInClass / possible) * 1000) / 10) : 0;
+      const ofClass = expectedDays.filter((d) => ids.has(d.childId));
+      const present = ofClass.filter(isPresent).length;
       return {
         classId,
         name: classId === '__unassigned__' ? '__unassigned__' : classNames.get(classId) ?? classId,
-        present: presentInClass,
-        rate,
-        size,
+        present,
+        rate: rate(present, ofClass.length),
+        size: ids.size,
       };
     });
 
     return {
-      avgRatePct,
-      totalAbsences,
-      latePickups,
+      avgRatePct: rate(presentDays.length, expectedDays.length),
+      // Unexcused only, as in the attendance panel; absences the parent reported are not counted.
+      totalAbsences: expectedDays.filter((d) => d.status === 'absent').length,
+      latePickups: lateDays.length,
       dailyPresent,
-      maxDaily,
+      maxDaily: Math.max(1, ...dailyPresent.map((d) => d.count)),
       classStats,
-      activeCount,
-      weekdays,
+      activeCount: activeChildIds.length,
+      /** School days in the range (days the nursery was open for at least one child). */
+      weekdays: dailyPresent.filter((d) => d.expected > 0).length,
       from,
       to,
     };
@@ -158,6 +138,7 @@ export function useAdminAttendanceAnalytics(params: {
   return {
     ...query,
     range: { from, to },
+    rangeError,
     stats,
   };
 }

@@ -3,6 +3,7 @@ import { QRCodeCanvas, QRCodeSVG } from 'qrcode.react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
+import { CopyQrLinkButton } from '@/components/qr/CopyQrLinkButton';
 import { Button } from '@/components/ui/button';
 import { useQrTokenGeneration } from '@/hooks/useQrTokenGeneration';
 
@@ -110,8 +111,9 @@ export function ChildQrCodeCard({
           </span>
           {t('qr.download')}
         </Button>
+        <CopyQrLinkButton url={printableValue} className={showPrint ? undefined : 'col-span-2'} />
         {showPrint ? (
-          <Button type="button" variant="outline" className="col-span-2" onClick={() => window.print()}>
+          <Button type="button" variant="outline" onClick={() => window.print()}>
             <span className="material-symbols-outlined me-1 text-base" aria-hidden>
               print
             </span>

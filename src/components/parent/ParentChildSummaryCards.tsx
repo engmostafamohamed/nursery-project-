@@ -150,6 +150,10 @@ export function ParentChildSummaryCards({
             attendanceText = t('parent.dashboard.child.attendanceIn', { time: formatClock(child.checkIn, locale) });
             attendanceIcon = 'login';
             attendanceTone = 'border-success/30 bg-success/10 text-success';
+          } else if (child.attendanceLabel === 'off') {
+            attendanceText = t('attendance.offDayTitle');
+            attendanceIcon = 'weekend';
+            attendanceTone = 'border-outline-variant bg-surface-container text-on-surface-variant';
           } else if (child.attendanceLabel === 'checked_out') {
             attendanceText = t('parent.dashboard.child.attendanceOut', {
               in: formatClock(child.checkIn, locale),

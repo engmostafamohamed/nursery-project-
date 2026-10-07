@@ -21,15 +21,15 @@ export function FinancialSummaryCard() {
   const qs = isPreview ? '?preview=true' : '';
   const invoices = useParentInvoices({ parentId: user?.id, status: 'all', sort: 'due_soon' });
   const childrenQuery = useParentChildren();
-  const children = childrenQuery.data ?? [];
+  const children = useMemo(() => childrenQuery.data ?? [], [childrenQuery.data]);
 
   const getName = (c: ChildOption) =>
     i18n.language === 'ar' ? (c.nameAr || c.nameEn) : (c.nameEn || c.nameAr);
 
   const summary = useMemo(() => {
     const rows = invoices.allData ?? [];
-    const dueRows = rows.filter((r) => r.status === 'pending' || r.status === 'overdue');
-    const totalOutstanding = dueRows.reduce((s, r) => s + r.amount, 0);
+    const dueRows = rows.filter((r) => (r.status === 'pending' || r.status === 'overdue') && r.balance > 0);
+    const totalOutstanding = dueRows.reduce((s, r) => s + r.balance, 0);
     const nextDue = [...dueRows].sort((a, b) => +new Date(a.dueDate) - +new Date(b.dueDate))[0];
     const hasOverdue = dueRows.some((r) => r.status === 'overdue');
 
@@ -39,14 +39,14 @@ export function FinancialSummaryCard() {
       for (const child of children) {
         const childDue = dueRows
           .filter((r) => r.childIds.includes(child.id))
-          .reduce((s, r) => s + r.amount / Math.max(r.childIds.length, 1), 0);
+          .reduce((s, r) => s + r.balance / Math.max(r.childIds.length, 1), 0);
         if (childDue > 0) {
           perChild.push({ child, outstanding: childDue });
         }
       }
       generalDue = dueRows
         .filter((r) => r.childIds.length === 0)
-        .reduce((s, r) => s + r.amount, 0);
+        .reduce((s, r) => s + r.balance, 0);
     }
 
     return { totalOutstanding, nextDue, hasOverdue, perChild, generalDue };

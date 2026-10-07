@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
+import { fetchAllRows } from '@/lib/fetchAllRows';
 import { supabase } from '@/lib/supabase';
 
 export type RangePreset = 'this_month' | 'last_month' | 'this_quarter' | 'last_quarter' | 'this_year' | 'custom';
@@ -63,15 +64,17 @@ export function useFinancialReports(nurseryId: string | undefined, preset: Range
     queryKey: ['financial-reports', nurseryId, preset, customFrom, customTo],
     queryFn: async () => {
       if (!nurseryId) return { invoices: [] as Invoice[], parents: new Map<string, ParentInfo>(), reportNowMs: Date.now() };
-      let q = supabase
-        .from('invoices')
-        .select('id, parent_id, amount, status, due_date, created_at, paid_at, payment_method, invoice_type, payments(amount, method, paid_at, status)')
-        .eq('nursery_id', nurseryId);
-      if (range.from) q = q.gte('created_at', range.from);
-      if (range.to) q = q.lte('created_at', range.to);
-      const res = await q;
-      if (res.error) throw res.error;
-      const invoices = ((res.data ?? []) as Array<{
+      // Page through: a long range (e.g. a year) has more invoices than one response returns.
+      const rows = await fetchAllRows<unknown>((start, end) => {
+        let q = supabase
+          .from('invoices')
+          .select('id, parent_id, amount, status, due_date, created_at, paid_at, payment_method, invoice_type, payments(amount, method, paid_at, status)')
+          .eq('nursery_id', nurseryId);
+        if (range.from) q = q.gte('created_at', range.from);
+        if (range.to) q = q.lte('created_at', range.to);
+        return q.order('created_at').order('id').range(start, end).returns<unknown[]>();
+      });
+      const invoices = (rows as Array<{
         id: string;
         parent_id: string;
         amount: string;

@@ -112,15 +112,19 @@ export function XoAdminNurseryDashboardPage() {
                   to={nurseryPath('/attendance')}
                   icon={<span className="material-symbols-outlined">percent</span>}
                   value={
-                    nurseryStats?.totalChildren
+                    nurseryStats?.attendanceRatePercent != null
                       ? `${formatInt(Math.round(nurseryStats.attendanceRatePercent), locale)}%`
                       : '-'
                   }
                   label={t('admin.dashboard.statAttendanceToday')}
-                  hint={t('admin.dashboard.statAttendanceHint', {
-                    present: formatInt(nurseryStats?.presentToday ?? 0, locale),
-                    total: formatInt(nurseryStats?.totalChildren ?? 0, locale),
-                  })}
+                  hint={
+                    nurseryStats?.closedToday
+                      ? t('attendance.offDayTitle')
+                      : t('admin.dashboard.statAttendanceHint', {
+                          present: formatInt(nurseryStats?.presentToday ?? 0, locale),
+                          total: formatInt(nurseryStats?.expectedToday ?? 0, locale),
+                        })
+                  }
                 />
                 <StatsCard
                   to={nurseryPath('/media/approval')}

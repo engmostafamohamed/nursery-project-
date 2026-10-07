@@ -4,6 +4,7 @@ import { QRCodeCanvas, QRCodeSVG } from 'qrcode.react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
+import { CopyQrLinkButton } from '@/components/qr/CopyQrLinkButton';
 import { CustomQrEditForm, type CustomQrEditValues } from '@/components/qr/CustomQrEditForm';
 import { IdentityImageField } from '@/components/qr/IdentityImageField';
 import {
@@ -702,6 +703,9 @@ export function DelegatePickupQrCard({ childId, nurseryId, childDisplayName }: P
                   ? t('qr.custom.setInactive', { defaultValue: 'Set inactive' })
                   : t('qr.custom.setActive', { defaultValue: 'Set active' })}
               </Button>
+              {latestStatus === 'active' ? (
+                <CopyQrLinkButton size="sm" url={printableQrValue(latestGenerated.token)} />
+              ) : null}
               <Button
                 type="button"
                 variant="outline"
@@ -1013,6 +1017,7 @@ export function DelegatePickupQrCard({ childId, nurseryId, childDisplayName }: P
                           ? t('common.loading')
                           : t('qr.custom.generateSameData', { defaultValue: 'Generate same data' })}
                       </Button>
+                      {isActive ? <CopyQrLinkButton size="sm" url={printableQrValue(token.token)} /> : null}
                       <Button
                         type="button"
                         variant="outline"

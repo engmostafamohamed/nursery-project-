@@ -45,6 +45,11 @@ export function AppRouter() {
           <Route path="/setup/database" element={<Navigate to="/error" replace />} />
           <Route path="/unauthorized" element={<P.UnauthorizedPage />} />
 
+          {/* The link inside every attendance QR code; opening it is the same as scanning it. */}
+          <Route element={<ProtectedRoute allowedRoles={['branch_admin', 'chain_super_admin', 'manager', 'xo_super_admin', 'teacher', 'parent']} />}>
+            <Route path="/qr/verify" element={<P.QrVerifyLinkPage />} />
+          </Route>
+
           <Route element={<ProtectedRoute allowedRoles={['branch_admin', 'chain_super_admin', 'manager', 'xo_super_admin', 'teacher']} />}>
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<P.Dashboard />} />

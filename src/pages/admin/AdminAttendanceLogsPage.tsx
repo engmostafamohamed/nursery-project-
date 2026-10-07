@@ -34,7 +34,7 @@ import {
 } from '@/lib/attendanceApi';
 import { addCalendarDaysYmd, getNurseryCalendarDateString } from '@/lib/nurseryDay';
 import { supabase } from '@/lib/supabase';
-import { cn } from '@/lib/utils';
+import { cn, formatQueryError } from '@/lib/utils';
 
 type ChildRow = { id: string; full_name_ar: string; full_name_en: string; class_id: string | null };
 type LogRow = AttendanceDay & { child: ChildRow };
@@ -260,6 +260,17 @@ export function AdminAttendanceLogsPage() {
 
       {query.isPending && !rangeError ? (
         <Skeleton className="h-80 w-full rounded-xl" />
+      ) : query.isError ? (
+        <EmptyState
+          icon="error"
+          title={t('attendance.loadErrorTitle')}
+          description={formatQueryError(query.error)}
+          action={
+            <Button type="button" variant="outline" onClick={() => void query.refetch()}>
+              {t('common.retry')}
+            </Button>
+          }
+        />
       ) : !rows.length ? (
         <EmptyState icon="receipt_long" title={t('attendance.logs.emptyTitle')} description={t('attendance.logs.emptyDescription')} />
       ) : (

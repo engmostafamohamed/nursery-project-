@@ -129,15 +129,19 @@ export function AdminDashboardPage() {
               to={adminPath('/attendance')}
               icon={<span className="material-symbols-outlined">percent</span>}
               value={
-                stats?.totalChildren
+                stats?.attendanceRatePercent != null
                   ? `${formatInt(Math.round(stats.attendanceRatePercent), locale)}%`
                   : '—'
               }
               label={t('admin.dashboard.statAttendanceToday')}
-              hint={t('admin.dashboard.statAttendanceHint', {
-                present: formatInt(stats?.presentToday ?? 0, locale),
-                total: formatInt(stats?.totalChildren ?? 0, locale),
-              })}
+              hint={
+                stats?.closedToday
+                  ? t('attendance.offDayTitle')
+                  : t('admin.dashboard.statAttendanceHint', {
+                      present: formatInt(stats?.presentToday ?? 0, locale),
+                      total: formatInt(stats?.expectedToday ?? 0, locale),
+                    })
+              }
             />
             <StatsCard
               to={adminPath(pendingApprovalsPath)}

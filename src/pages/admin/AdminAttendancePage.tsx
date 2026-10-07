@@ -20,7 +20,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { fetchAttendanceDays, staffName, type AttendanceDay } from '@/lib/attendanceApi';
 import { addCalendarDaysYmd, getNurseryCalendarDateString } from '@/lib/nurseryDay';
 import { supabase } from '@/lib/supabase';
-import { getUserInitials } from '@/lib/utils';
+import { formatQueryError, getUserInitials } from '@/lib/utils';
 
 type ChildRow = {
   id: string;
@@ -118,7 +118,7 @@ export function AdminAttendancePage() {
     };
   }, [groups.late, groups.stillIn]);
 
-  const showSkeleton = profilePending || listQuery.isPending;
+  const showSkeleton = profilePending || (Boolean(nurseryId) && listQuery.isPending);
   const isOffDay = !showSkeleton && (listQuery.data ?? []).length > 0
     && (listQuery.data ?? []).every((row) => row.status === 'off' || row.status === 'holiday' || row.status === 'not_enrolled');
 
@@ -325,6 +325,17 @@ export function AdminAttendancePage() {
         </div>
       ) : !nurseryId ? (
         <p className="text-sm text-on-surface-variant">{t('admin.children.missingNursery')}</p>
+      ) : listQuery.isError ? (
+        <EmptyState
+          icon="error"
+          title={t('attendance.loadErrorTitle')}
+          description={formatQueryError(listQuery.error)}
+          action={
+            <Button type="button" variant="outline" onClick={() => void listQuery.refetch()}>
+              {t('common.retry')}
+            </Button>
+          }
+        />
       ) : isOffDay ? (
         <EmptyState icon="weekend" title={t('attendance.offDayTitle')} description={t('attendance.offDayDescription')} />
       ) : totalCount === 0 && search.trim() ? (

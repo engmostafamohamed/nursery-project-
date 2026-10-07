@@ -3,6 +3,7 @@ import { QRCodeCanvas, QRCodeSVG } from 'qrcode.react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
+import { CopyQrLinkButton } from '@/components/qr/CopyQrLinkButton';
 import { Button } from '@/components/ui/button';
 import { useQrTokenGeneration } from '@/hooks/useQrTokenGeneration';
 import { Badge } from '@/components/ui/badge';
@@ -111,6 +112,7 @@ export function AdminQrChildRow({ child, displayName, latest, nurseryId, nowMs, 
             </span>
             {t('qr.download')}
           </Button>
+          {isActive ? <CopyQrLinkButton size="sm" url={printableValue} /> : null}
         </div>
       </div>
       <div className="pointer-events-none fixed -left-[9999px] top-0 opacity-0" aria-hidden>

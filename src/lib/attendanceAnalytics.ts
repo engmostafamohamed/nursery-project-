@@ -35,13 +35,6 @@ export function eachDateInRange(from: string, to: string): string[] {
   return out;
 }
 
-export function countWeekdays(from: string, to: string): number {
-  return eachDateInRange(from, to).filter((dateStr) => {
-    const w = new Date(dateStr + 'T12:00:00').getDay();
-    return w !== 0 && w !== 6;
-  }).length;
-}
-
 import { extractPickupSnapshot } from '@/lib/pickupSnapshot';
 
 export function isLatePickupLog(log: unknown): boolean {

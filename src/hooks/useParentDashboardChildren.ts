@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
+import { fetchAttendanceDays } from '@/lib/attendanceApi';
 import { formatMealsSummary, formatMoodSummary } from '@/lib/parentDashboardFormat';
 import { getNurseryCalendarDateString } from '@/lib/nurseryDay';
 import { supabase } from '@/lib/supabase';
@@ -11,7 +12,8 @@ export type ParentDashboardChildCard = {
   avatarUrl: string | null;
   checkIn: string | null;
   checkOut: string | null;
-  attendanceLabel: 'absent' | 'checked_in' | 'checked_out';
+  /** off: the nursery is closed today (weekend or holiday), so the child is not absent. */
+  attendanceLabel: 'absent' | 'checked_in' | 'checked_out' | 'off';
   lastReportMood: string;
   lastReportMeals: string;
   lastReportDate: string | null;
@@ -55,18 +57,8 @@ export function useParentDashboardChildren(parentId: string | undefined, nursery
 
       const today = getNurseryCalendarDateString();
 
-      const attRes = await supabase
-        .from('attendance_records')
-        .select('child_id, check_in, check_out')
-        .eq('attendance_date', today)
-        .in('child_id', childIds);
-      if (attRes.error) throw attRes.error;
-      const attByChild = new Map(
-        (attRes.data ?? []).map((r: { child_id: string; check_in: string | null; check_out: string | null }) => [
-          r.child_id,
-          r,
-        ]),
-      );
+      // Today's status from the server, which knows the nursery's working days and holidays.
+      const attByChild = new Map((await fetchAttendanceDays(childIds, today, today)).map((day) => [day.childId, day]));
 
       const reportRes = await supabase
         .from('daily_reports')
@@ -99,10 +91,11 @@ export function useParentDashboardChildren(parentId: string | undefined, nursery
 
       return children.map((c) => {
         const att = attByChild.get(c.id);
-        const checkIn = att?.check_in ?? null;
-        const checkOut = att?.check_out ?? null;
+        const checkIn = att?.checkIn ?? null;
+        const checkOut = att?.checkOut ?? null;
         let attendanceLabel: ParentDashboardChildCard['attendanceLabel'] = 'absent';
         if (checkIn) attendanceLabel = checkOut ? 'checked_out' : 'checked_in';
+        else if (att?.status === 'off' || att?.status === 'holiday') attendanceLabel = 'off';
 
         const lr = lastReportByChild.get(c.id);
         return {

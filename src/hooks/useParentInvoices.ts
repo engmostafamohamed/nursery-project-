@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 
 import { invoiceItemDescription, invoiceRawItems } from '@/lib/invoiceItems';
+import { getNurseryCalendarDateString } from '@/lib/nurseryDay';
 import { supabase } from '@/lib/supabase';
 
 export type ParentInvoiceStatusFilter = 'all' | 'pending' | 'paid';
@@ -12,6 +13,10 @@ export type ParentInvoiceItem = {
   id: string;
   invoiceNumber: string;
   amount: number;
+  /** Completed payments on this invoice. */
+  paidAmount: number;
+  /** Still owed: amount less completed payments (0 once paid or cancelled). */
+  balance: number;
   type: 'monthly' | 'event' | 'extra_hours' | 'other';
   status: 'pending' | 'paid' | 'overdue' | 'cancelled';
   /** True when the parent has submitted a payment that finance has not yet confirmed. */
@@ -53,7 +58,7 @@ export function useParentInvoices({ parentId, childId, status, sort }: UseParent
       if (!parentId) return [] as ParentInvoiceItem[];
       const { data, error } = await supabase
         .from('invoices')
-        .select('id, generated_invoice_number, amount, invoice_type, status, due_date, created_at, line_items_json')
+        .select('id, generated_invoice_number, amount, invoice_type, status, due_date, created_at, line_items_json, payments ( amount, status )')
         .eq('parent_id', parentId);
       if (error) throw error;
 
@@ -109,15 +114,24 @@ export function useParentInvoices({ parentId, childId, status, sort }: UseParent
         generated_invoice_number: string | null;
         amount: string;
         invoice_type: 'monthly' | 'event' | 'extra_hours' | 'other';
-        status: 'pending' | 'paid' | 'cancelled';
+        status: 'pending' | 'paid' | 'overdue' | 'cancelled';
         due_date: string;
         created_at: string;
         line_items_json: unknown;
+        payments: Array<{ amount: string | number; status: string }> | null;
       }>).map((row) => {
-        const due = new Date(row.due_date);
-        const now = new Date();
-        const overdue = row.status === 'pending' && due.getTime() < now.getTime();
-        const overdueDays = overdue ? Math.ceil((now.getTime() - due.getTime()) / 86400000) : 0;
+        // Overdue once the due date has passed in the nursery's calendar (not at UTC midnight of it).
+        const today = getNurseryCalendarDateString();
+        const dueDay = row.due_date.slice(0, 10);
+        const overdue = (row.status === 'pending' || row.status === 'overdue') && dueDay < today;
+        const overdueDays = overdue
+          ? Math.round((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${dueDay}T00:00:00Z`)) / 86400000)
+          : 0;
+        const amount = Number(row.amount ?? 0);
+        const paidAmount = (row.payments ?? [])
+          .filter((payment) => payment.status === 'completed')
+          .reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0);
+        const open = row.status !== 'paid' && row.status !== 'cancelled';
         const firstRawItem = invoiceRawItems(row.line_items_json)[0];
         const firstItem = firstRawItem ? invoiceItemDescription(firstRawItem, language) : '';
         const lineItemChildIds = invoiceChildIds(row.line_items_json);
@@ -126,7 +140,9 @@ export function useParentInvoices({ parentId, childId, status, sort }: UseParent
         return {
           id: row.id,
           invoiceNumber: row.generated_invoice_number ?? row.id.slice(0, 8),
-          amount: Number(row.amount ?? 0),
+          amount,
+          paidAmount,
+          balance: open ? Math.max(0, amount - paidAmount) : 0,
           type: row.invoice_type,
           status: overdue ? 'overdue' : row.status,
           inReview: inReviewSet.has(row.id) && row.status !== 'paid' && row.status !== 'cancelled',

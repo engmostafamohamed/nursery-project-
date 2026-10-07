@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
+import { fetchAttendanceDays } from '@/lib/attendanceApi';
 import { getNurseryCalendarDateString } from '@/lib/nurseryDay';
 import { supabase } from '@/lib/supabase';
 
@@ -14,7 +15,8 @@ export type ParentChildOverview = {
   relationship: string;
   dob: string | null;
   enrollmentDate: string | null;
-  todayAttendance: 'present' | 'absent' | 'checked_out';
+  /** off: the nursery is closed today (weekend or holiday), so the child is not absent. */
+  todayAttendance: 'present' | 'absent' | 'checked_out' | 'off';
   checkIn: string | null;
   checkOut: string | null;
   applicationId: string | null;
@@ -87,29 +89,20 @@ export function useParentChildrenOverview(parentId: string | undefined, nurseryI
       const childIds = [...new Set([...linkedChildIds, ...approvedApplicationChildIds])];
       if (!childIds.length) return [];
 
-      const [childrenRes, attendanceRes] = await Promise.all([
+      const [childrenRes, todayDays] = await Promise.all([
         supabase
           .from('children')
           .select('id, nursery_id, full_name_ar, full_name_en, avatar_url, status, dob, enrollment_date')
           .eq('nursery_id', nurseryId)
           .in('id', childIds),
-        supabase
-          .from('attendance_records')
-          .select('child_id, check_in, check_out')
-          .eq('attendance_date', today)
-          .in('child_id', childIds),
+        // Today's status from the server, which knows the nursery's working days and holidays.
+        fetchAttendanceDays(childIds, today, today),
       ]);
 
       if (childrenRes.error) throw childrenRes.error;
-      if (attendanceRes.error) throw attendanceRes.error;
 
       const relationshipByChild = new Map(links.map((row) => [row.child_id, row.relationship ?? '']));
-      const attendanceByChild = new Map(
-        ((attendanceRes.data ?? []) as Array<{ child_id: string; check_in: string | null; check_out: string | null }>).map((row) => [
-          row.child_id,
-          row,
-        ]),
-      );
+      const attendanceByChild = new Map(todayDays.map((day) => [day.childId, day]));
       const applicationByChild = new Map<string, ApplicationRow>();
       for (const application of applicationRows) {
         if (application.child_id && !applicationByChild.has(application.child_id)) {
@@ -120,7 +113,8 @@ export function useParentChildrenOverview(parentId: string | undefined, nurseryI
       return ((childrenRes.data ?? []) as ChildRow[]).map((child) => {
         const attendance = attendanceByChild.get(child.id);
         let todayAttendance: ParentChildOverview['todayAttendance'] = 'absent';
-        if (attendance?.check_in) todayAttendance = attendance.check_out ? 'checked_out' : 'present';
+        if (attendance?.checkIn) todayAttendance = attendance.checkOut ? 'checked_out' : 'present';
+        else if (attendance?.status === 'off' || attendance?.status === 'holiday') todayAttendance = 'off';
 
         const childNameKey = (child.full_name_en || child.full_name_ar).trim().toLowerCase();
         const application =
@@ -139,8 +133,8 @@ export function useParentChildrenOverview(parentId: string | undefined, nurseryI
           dob: child.dob,
           enrollmentDate: child.enrollment_date,
           todayAttendance,
-          checkIn: attendance?.check_in ?? null,
-          checkOut: attendance?.check_out ?? null,
+          checkIn: attendance?.checkIn ?? null,
+          checkOut: attendance?.checkOut ?? null,
           applicationId: application?.id ?? null,
           applicationStatus: application?.status ?? 'none',
           applicationCreatedAt: application?.created_at ?? null,

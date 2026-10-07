@@ -12,6 +12,8 @@ import {
   type FinancialDashboardPreset,
   type IsoRange,
 } from '@/lib/financialDashboardHelpers';
+import { fetchAllRows } from '@/lib/fetchAllRows';
+import { getNurseryCalendarDateString } from '@/lib/nurseryDay';
 import { supabase } from '@/lib/supabase';
 
 export type PaymentStatusFilter = 'all' | 'pending' | 'completed' | 'failed' | 'refunded';
@@ -75,35 +77,38 @@ export function useAdminFinancialDashboard(
         };
       }
 
-      const invRes = await supabase
-        .from('invoices')
-        .select(
-          `
-          id,
-          parent_id,
-          amount,
-          status,
-          due_date,
-          created_at,
-          paid_at,
-          generated_invoice_number,
-          payments (
+      // Every invoice of the nursery, page by page: a year of monthly billing is past one response.
+      const invoices = await fetchAllRows<InvoiceRow>((start, end) =>
+        supabase
+          .from('invoices')
+          .select(
+            `
             id,
+            parent_id,
             amount,
-            method,
             status,
-            paid_at
+            due_date,
+            created_at,
+            paid_at,
+            generated_invoice_number,
+            payments (
+              id,
+              amount,
+              method,
+              status,
+              paid_at
+            )
+          `,
           )
-        `,
-        )
-        .eq('nursery_id', nurseryId);
-
-      if (invRes.error) throw invRes.error;
-
-      const invoices = (invRes.data ?? []) as InvoiceRow[];
+          .eq('nursery_id', nurseryId)
+          .order('created_at')
+          .order('id')
+          .range(start, end)
+          .returns<InvoiceRow[]>(),
+      );
       const parentIds = [...new Set(invoices.map((i) => i.parent_id))];
 
-      const BATCH_SIZE = 10;
+      const BATCH_SIZE = 100;
       const allUsers: UserRow[] = [];
       for (let i = 0; i < parentIds.length; i += BATCH_SIZE) {
         const batch = parentIds.slice(i, i + BATCH_SIZE);
@@ -139,22 +144,30 @@ export function useAdminFinancialDashboard(
       })),
     );
 
-    const outstandingRows = invoices.filter((i) => i.status === 'pending' || i.status === 'overdue');
-    const outstandingBalance = outstandingRows.reduce((s, i) => s + num(i.amount), 0);
+    // What is still owed on an open invoice: its amount less the payments already completed.
+    const remaining = (i: InvoiceRow) =>
+      Math.max(
+        0,
+        num(i.amount) - (i.payments ?? []).filter((p) => p.status === 'completed').reduce((s, p) => s + num(p.amount), 0),
+      );
+    const outstandingRows = invoices.filter((i) => (i.status === 'pending' || i.status === 'overdue') && remaining(i) > 0);
+    const outstandingBalance = outstandingRows.reduce((s, i) => s + remaining(i), 0);
 
-    const nonCancelled = invoices.filter((i) => i.status !== 'cancelled');
-    const paidOnTimeCount = nonCancelled.filter(
+    // On-time share among invoices that are settled or already past due: one not yet due can still be paid on time.
+    const today = getNurseryCalendarDateString();
+    const decided = invoices.filter((i) => i.status !== 'cancelled' && (i.status === 'paid' || i.due_date.slice(0, 10) < today));
+    const paidOnTimeCount = decided.filter(
       (i) => i.status === 'paid' && paidOnOrBeforeDueDate(i.due_date, i.paid_at),
     ).length;
-    const collectionRate =
-      nonCancelled.length > 0 ? (paidOnTimeCount / nonCancelled.length) * 100 : 100;
+    const collectionRate = decided.length > 0 ? (paidOnTimeCount / decided.length) * 100 : 100;
 
     const statusBuckets = (['pending', 'overdue', 'paid', 'cancelled'] as const).map((status) => {
       const rows = invoices.filter((i) => i.status === status);
       return {
         status,
         count: rows.length,
-        amount: rows.reduce((s, i) => s + num(i.amount), 0),
+        // Open invoices count what is still owed, so partly paid ones match the outstanding total.
+        amount: rows.reduce((s, i) => s + (status === 'pending' || status === 'overdue' ? remaining(i) : num(i.amount)), 0),
       };
     });
 

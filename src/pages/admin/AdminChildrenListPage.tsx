@@ -1,20 +1,27 @@
 import { useQuery } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge, type BadgeProps } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Input } from '@/components/ui/input';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
+import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Pagination } from '@/components/ui/Pagination';
+import { useAttendanceDays } from '@/hooks/useAttendanceDays';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useNurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
 import { usePagination } from '@/hooks/usePagination';
+import { useCan } from '@/hooks/usePermissions';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { getNurseryCalendarDateString } from '@/lib/nurseryDay';
+import { fetchAttendanceDays, type AttendanceDay } from '@/lib/attendanceApi';
+import { fetchAllRows } from '@/lib/fetchAllRows';
+import { getNurseryCalendarDateString, NURSERY_CALENDAR_TIMEZONE } from '@/lib/nurseryDay';
 import { supabase } from '@/lib/supabase';
 import { cn, formatQueryError } from '@/lib/utils';
 
@@ -37,6 +44,10 @@ type ChildItem = {
 type FilterKey = 'all' | 'new' | 'absence_risk' | 'unpaid';
 type PaymentFilter = 'all' | 'paid' | 'unpaid';
 type AbsenceStatusFilter = 'all' | 'none' | 'some' | 'three_plus';
+type TodayFilter = 'all' | 'present' | 'absent';
+type SortKey = 'newest' | 'name' | 'absent' | 'balance';
+/** in: checked in, still here · left: checked in and picked up · excused: absence reported by a parent. */
+type TodayState = 'in' | 'left' | 'absent' | 'excused' | 'closed';
 type FilterSelectOption = {
   value: string;
   label: string;
@@ -44,28 +55,60 @@ type FilterSelectOption = {
   helper?: string;
 };
 
-const CHILD_STATUS_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: 'active', label: 'Active' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'inactive', label: 'Inactive' },
-  { value: 'graduated', label: 'Graduated' },
-  { value: 'withdrawn', label: 'Withdrawn' },
-  { value: 'suspended', label: 'Suspended' },
-  { value: 'archived', label: 'Archived' },
-];
+/** Translation keys for this page live under admin.children.list. */
+const LIST = 'admin.children.list';
 
-const PAYMENT_FILTER_OPTIONS: FilterSelectOption[] = [
-  { value: 'all', label: 'All payments', icon: 'payments', helper: 'Paid and unpaid children' },
-  { value: 'paid', label: 'Paid', icon: 'check_circle', helper: 'No previous balance' },
-  { value: 'unpaid', label: 'Unpaid', icon: 'error', helper: 'Has previous balance' },
-];
+/** get_attendance_days accepts at most a 400-day range. */
+const MAX_ABSENCE_RANGE_DAYS = 366;
 
-const ABSENCE_FILTER_OPTIONS: FilterSelectOption[] = [
-  { value: 'all', label: 'All absence', icon: 'event_available', helper: 'Any absence count' },
-  { value: 'none', label: '0 days', icon: 'check_circle', helper: 'No absent days' },
-  { value: 'some', label: '1-2 days', icon: 'event_note', helper: 'Low absence count' },
-  { value: 'three_plus', label: '3+ days', icon: 'warning', helper: 'Needs attention' },
-];
+const CHILD_STATUSES = ['active', 'pending', 'inactive', 'graduated', 'withdrawn', 'suspended', 'archived'];
+
+const STATUS_BADGE: Record<string, BadgeProps['variant']> = {
+  active: 'success',
+  pending: 'warning',
+  suspended: 'error',
+  graduated: 'default',
+  inactive: 'secondary',
+  withdrawn: 'secondary',
+  archived: 'secondary',
+};
+
+const STATUS_ICON: Record<string, string> = {
+  active: 'verified',
+  pending: 'hourglass_top',
+  inactive: 'pause_circle',
+  graduated: 'school',
+  withdrawn: 'logout',
+  suspended: 'block',
+  archived: 'inventory_2',
+};
+
+const TODAY_STATE_STYLE: Record<TodayState, { labelKey: string; icon: string; badge: string }> = {
+  in: { labelKey: 'present', icon: 'how_to_reg', badge: 'bg-success/10 text-success' },
+  left: { labelKey: 'present', icon: 'check_circle', badge: 'bg-success/10 text-success' },
+  absent: { labelKey: 'absent', icon: 'person_off', badge: 'bg-error/10 text-error' },
+  excused: { labelKey: 'absent', icon: 'event_busy', badge: 'bg-warning/10 text-warning' },
+  closed: { labelKey: 'closed', icon: 'event_busy', badge: 'bg-surface-container text-on-surface-variant' },
+};
+
+/** The server's day status (get_attendance_days) as the page shows it; null when the child is not expected today. */
+function todayState(day: AttendanceDay | undefined): TodayState | null {
+  switch (day?.status) {
+    case 'partial':
+      return 'in';
+    case 'present':
+      return 'left';
+    case 'absent':
+      return 'absent';
+    case 'excused':
+      return 'excused';
+    case 'off':
+    case 'holiday':
+      return 'closed';
+    default:
+      return null;
+  }
+}
 
 function escapeIlike(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
@@ -73,29 +116,6 @@ function escapeIlike(value: string): string {
 
 function startOfMonth(date: string): string {
   return `${date.slice(0, 8)}01`;
-}
-
-function daysBetweenInclusive(from: string, to: string): string[] {
-  const days: string[] = [];
-  const [fy, fm, fd] = from.split('-').map(Number);
-  const [ty, tm, td] = to.split('-').map(Number);
-  if (!fy || !fm || !fd || !ty || !tm || !td) return days;
-
-  let cursor = Date.UTC(fy, fm - 1, fd);
-  const end = Date.UTC(ty, tm - 1, td);
-  while (cursor <= end) {
-    const day = new Date(cursor);
-    const dayOfWeek = day.getUTCDay();
-    if (dayOfWeek !== 5 && dayOfWeek !== 6) {
-      days.push(day.toISOString().slice(0, 10));
-    }
-    cursor += 86400000;
-  }
-  return days;
-}
-
-function money(value: number): string {
-  return `EGP ${value.toFixed(2)}`;
 }
 
 function firstAndFatherName(fullName: string): string {
@@ -110,27 +130,17 @@ function firstAndLastName(fullName: string): string {
   return `${parts[0]} ${parts[parts.length - 1]}`;
 }
 
-function childStatusLabel(status: string): string {
-  const known = CHILD_STATUS_OPTIONS.find((option) => option.value === status);
-  if (known) return known.label;
-  return status
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase());
+function initials(name: string): string {
+  const letters = name
+    .split(/\s+/)
+    .filter((part) => part && part !== '/')
+    .slice(0, 2)
+    .map((part) => part[0]);
+  return letters.join('').toUpperCase() || '?';
 }
 
-function selectOptionLabel(options: FilterSelectOption[], value: string): string {
-  return options.find((option) => option.value === value)?.label ?? value;
-}
-
-function childStatusIcon(status: string): string {
-  if (status === 'active') return 'verified';
-  if (status === 'pending') return 'hourglass_top';
-  if (status === 'inactive') return 'pause_circle';
-  if (status === 'graduated') return 'school';
-  if (status === 'withdrawn') return 'logout';
-  if (status === 'suspended') return 'block';
-  if (status === 'archived') return 'inventory_2';
-  return 'label';
+function humanize(value: string): string {
+  return value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function ModernFilterSelect({
@@ -154,12 +164,12 @@ function ModernFilterSelect({
         <button
           type="button"
           className={cn(
-            'group flex h-12 min-w-[180px] items-center gap-3 rounded-2xl border border-outline-variant bg-surface px-3 text-start text-sm font-semibold text-on-surface shadow-sm transition hover:border-primary/50 hover:bg-surface-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25',
+            'group flex h-11 min-w-0 items-center gap-2 rounded-xl border border-outline-variant bg-surface px-2.5 text-start text-sm font-semibold text-on-surface transition hover:border-primary/50 hover:bg-surface-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25',
             className,
           )}
           aria-label={label}
         >
-          <span className="material-symbols-outlined flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-base text-primary">
+          <span className="material-symbols-outlined flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-base text-primary">
             {selected?.icon ?? 'tune'}
           </span>
           <span className="min-w-0 flex-1 truncate">{selected?.label ?? label}</span>
@@ -173,9 +183,7 @@ function ModernFilterSelect({
         sideOffset={8}
         className="max-h-80 w-[var(--radix-dropdown-menu-trigger-width)] min-w-[14rem] overflow-y-auto rounded-2xl border-outline-variant bg-surface-container-lowest p-2 shadow-xl"
       >
-        <div className="px-3 pb-2 pt-1 text-[0.7rem] font-bold uppercase text-on-surface-variant">
-          {label}
-        </div>
+        <div className="px-3 pb-2 pt-1 text-[0.7rem] font-bold uppercase text-on-surface-variant">{label}</div>
         {options.map((option) => {
           const selectedOption = option.value === value;
           return (
@@ -187,12 +195,7 @@ function ModernFilterSelect({
                 selectedOption && 'bg-primary/10 text-primary focus:bg-primary/10',
               )}
             >
-              <span
-                className={cn(
-                  'material-symbols-outlined text-lg',
-                  selectedOption ? 'text-primary' : 'text-on-surface-variant',
-                )}
-              >
+              <span className={cn('material-symbols-outlined text-lg', selectedOption ? 'text-primary' : 'text-on-surface-variant')}>
                 {selectedOption ? 'check_circle' : option.icon ?? 'radio_button_unchecked'}
               </span>
               <span className="min-w-0 flex-1">
@@ -209,8 +212,99 @@ function ModernFilterSelect({
   );
 }
 
-export function AdminChildrenListPage() {
+function DateRangeField({
+  label,
+  icon,
+  from,
+  to,
+  onFrom,
+  onTo,
+}: {
+  label: string;
+  icon: string;
+  from: string;
+  to: string;
+  onFrom: (value: string) => void;
+  onTo: (value: string) => void;
+}) {
   const { t } = useTranslation();
+  return (
+    <fieldset className="min-w-0">
+      <legend className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant">
+        <MaterialSymbol name={icon} size="text-base" />
+        {label}
+      </legend>
+      <div className="grid grid-cols-2 gap-2">
+        <Input
+          type="date"
+          value={from}
+          max={to || undefined}
+          onChange={(event) => onFrom(event.target.value)}
+          className="h-11 rounded-xl bg-surface"
+          aria-label={`${label} · ${t(`${LIST}.filters.from`)}`}
+        />
+        <Input
+          type="date"
+          value={to}
+          min={from || undefined}
+          onChange={(event) => onTo(event.target.value)}
+          className="h-11 rounded-xl bg-surface"
+          aria-label={`${label} · ${t(`${LIST}.filters.to`)}`}
+        />
+      </div>
+    </fieldset>
+  );
+}
+
+function ChildAvatar({ name, url, className }: { name: string; url: string | null; className?: string }) {
+  // Initials are drawn locally: no child names leave the app to build a placeholder image.
+  return (
+    <Avatar className={cn('h-11 w-11', className)}>
+      {url ? <AvatarImage src={url} alt="" /> : <AvatarFallback className="bg-primary/10 text-primary">{initials(name)}</AvatarFallback>}
+    </Avatar>
+  );
+}
+
+function TodayStatusCell({ day, loading, locale }: { day: AttendanceDay | undefined; loading: boolean; locale: string }) {
+  const { t } = useTranslation();
+  if (loading) return <span className="text-xs text-on-surface-variant">{t(`${LIST}.today.loading`)}</span>;
+  const state = todayState(day);
+  if (!state || !day) return <span className="text-on-surface-variant">-</span>;
+
+  const time = (iso: string | null) =>
+    iso
+      ? new Date(iso).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: NURSERY_CALENDAR_TIMEZONE })
+      : '-';
+  const style = TODAY_STATE_STYLE[state];
+  const reason = day.absenceReason
+    ? t(`attendance.absence.reasons.${day.absenceReason}`, { defaultValue: humanize(day.absenceReason) })
+    : null;
+  const detail = {
+    in: t(`${LIST}.today.hereSince`, { time: time(day.checkIn) }),
+    left: t(`${LIST}.today.pickedUp`, { from: time(day.checkIn), to: time(day.checkOut) }),
+    absent: t(`${LIST}.today.noCheckIn`),
+    excused: reason ? t(`${LIST}.today.reportedReason`, { reason }) : t(`${LIST}.today.reported`),
+    closed: t(`${LIST}.today.closedDetail`),
+  }[state];
+
+  return (
+    <div className="min-w-0">
+      <span className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold', style.badge)}>
+        <span className="material-symbols-outlined text-sm" aria-hidden>
+          {style.icon}
+        </span>
+        {t(`${LIST}.today.${style.labelKey}`)}
+      </span>
+      <p className="mt-1 truncate text-xs text-on-surface-variant">{detail}</p>
+    </div>
+  );
+}
+
+export function AdminChildrenListPage() {
+  const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
+  const locale = i18n.language === 'ar' ? 'ar-EG' : 'en-US';
+  const listSeparator = i18n.language === 'ar' ? '، ' : ', ';
   const { user, loading: authLoading } = useAuthSession();
   const {
     data: profile,
@@ -219,6 +313,7 @@ export function AdminChildrenListPage() {
     error: profileQueryError,
   } = useUserProfile(user?.id);
   const nurseryId = profile?.nursery_id;
+  const canEnroll = useCan('child_enrollment');
   const { data: languagePref = 'both' } = useNurseryLanguagePref(nurseryId);
   const today = getNurseryCalendarDateString();
   const monthStart = startOfMonth(today);
@@ -228,6 +323,9 @@ export function AdminChildrenListPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('all');
   const [absenceStatusFilter, setAbsenceStatusFilter] = useState<AbsenceStatusFilter>('all');
+  const [todayFilter, setTodayFilter] = useState<TodayFilter>('all');
+  const [sort, setSort] = useState<SortKey>('newest');
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
   const [enrolledFrom, setEnrolledFrom] = useState('');
   const [enrolledTo, setEnrolledTo] = useState('');
   const [absentFromDate, setAbsentFromDate] = useState(monthStart);
@@ -238,8 +336,8 @@ export function AdminChildrenListPage() {
 
   const childrenQuery = useQuery({
     queryKey: ['admin-children-list', nurseryId, debouncedSearch, absenceStart, absenceEnd, languagePref],
-    queryFn: async (): Promise<ChildItem[]> => {
-      if (!nurseryId) return [];
+    queryFn: async (): Promise<{ rows: ChildItem[]; unpaidTotal: number }> => {
+      if (!nurseryId) return { rows: [], unpaidTotal: 0 };
 
       let q = supabase
         .from('children')
@@ -264,26 +362,24 @@ export function AdminChildrenListPage() {
         enrollment_date: string | null;
         created_at: string;
       }>;
-      if (!childRows.length) return [];
+      if (!childRows.length) return { rows: [], unpaidTotal: 0 };
 
       const childIds = childRows.map((child) => child.id);
       const classIds = [...new Set(childRows.map((child) => child.class_id).filter(Boolean) as string[])];
 
-      const [classesRes, linksRes, attendanceRes] = await Promise.all([
+      const [classesRes, linksRes, absenceDays] = await Promise.all([
         classIds.length
           ? supabase.from('classes').select('id, name_ar, name_en').in('id', classIds)
           : Promise.resolve({ data: [], error: null }),
         supabase.from('parent_children').select('child_id, parent_id').in('child_id', childIds),
-        supabase
-          .from('attendance_records')
-          .select('child_id, attendance_date, check_in')
-          .in('child_id', childIds)
-          .gte('attendance_date', absenceStart)
-          .lte('attendance_date', absenceEnd),
+        // Day statuses from the server, which knows the nursery's working days, holidays and each
+        // child's enrollment date. A range the server rejects (reversed, or over a year) counts nothing.
+        absenceStart <= absenceEnd && Date.parse(absenceEnd) - Date.parse(absenceStart) <= MAX_ABSENCE_RANGE_DAYS * 86_400_000
+          ? fetchAttendanceDays(childIds, absenceStart, absenceEnd)
+          : Promise.resolve([] as AttendanceDay[]),
       ]);
       if (classesRes.error) throw classesRes.error;
       if (linksRes.error) throw linksRes.error;
-      if (attendanceRes.error) throw attendanceRes.error;
 
       const classMap = new Map(
         ((classesRes.data ?? []) as Array<{ id: string; name_ar: string | null; name_en: string | null }>).map((row) => [
@@ -292,35 +388,38 @@ export function AdminChildrenListPage() {
         ]),
       );
 
+      type InvoiceRow = {
+        id: string;
+        generated_invoice_number: string | null;
+        parent_id: string;
+        amount: string | number;
+        status: string;
+        created_at: string;
+        payments: Array<{ amount: string | number; status: string }> | null;
+      };
       const links = (linksRes.data ?? []) as Array<{ child_id: string; parent_id: string }>;
       const parentIds = [...new Set(links.map((link) => link.parent_id))];
-      const [parentsRes, invoicesRes] = await Promise.all([
+      const [parentsRes, invoiceRows] = await Promise.all([
         parentIds.length
           ? supabase.from('users').select('id, name_ar, name_en').in('id', parentIds)
           : Promise.resolve({ data: [], error: null }),
+        // Only open invoices of this nursery matter for balances; page through in case there are many.
         parentIds.length
-          ? supabase
-              .from('invoices')
-              .select(
-                `
-                id,
-                generated_invoice_number,
-                parent_id,
-                amount,
-                status,
-                created_at,
-                payments (
-                  amount,
-                  status
-                )
-              `,
-              )
-              .in('parent_id', parentIds)
-              .neq('status', 'cancelled')
-          : Promise.resolve({ data: [], error: null }),
+          ? fetchAllRows<InvoiceRow>((start, end) =>
+              supabase
+                .from('invoices')
+                .select('id, generated_invoice_number, parent_id, amount, status, created_at, payments ( amount, status )')
+                .eq('nursery_id', nurseryId)
+                .in('parent_id', parentIds)
+                .not('status', 'in', '(paid,cancelled)')
+                .order('created_at')
+                .order('id')
+                .range(start, end)
+                .returns<InvoiceRow[]>(),
+            )
+          : Promise.resolve([] as InvoiceRow[]),
       ]);
       if (parentsRes.error) throw parentsRes.error;
-      if (invoicesRes.error) throw invoicesRes.error;
 
       const parentMap = new Map(
         ((parentsRes.data ?? []) as Array<{ id: string; name_ar: string | null; name_en: string | null }>).map((row) => [
@@ -333,25 +432,16 @@ export function AdminChildrenListPage() {
         return acc;
       }, {});
 
-      const presentDatesByChild = new Map<string, Set<string>>();
-      for (const row of (attendanceRes.data ?? []) as Array<{ child_id: string; attendance_date: string; check_in: string | null }>) {
-        if (!row.check_in) continue;
-        const dates = presentDatesByChild.get(row.child_id) ?? new Set<string>();
-        dates.add(row.attendance_date);
-        presentDatesByChild.set(row.child_id, dates);
+      // School days missed, with or without a reason from the parent.
+      const absentDaysByChild = new Map<string, number>();
+      for (const day of absenceDays) {
+        if (day.status === 'absent' || day.status === 'excused') {
+          absentDaysByChild.set(day.childId, (absentDaysByChild.get(day.childId) ?? 0) + 1);
+        }
       }
 
-      type InvoiceRow = {
-        id: string;
-        generated_invoice_number: string | null;
-        parent_id: string;
-        amount: string | number;
-        status: string;
-        created_at: string;
-        payments: Array<{ amount: string | number; status: string }> | null;
-      };
       const invoiceSummaryByParent = new Map<string, { balance: number; invoiceNumber: string | null; invoiceDate: string }>();
-      for (const invoice of (invoicesRes.data ?? []) as InvoiceRow[]) {
+      for (const invoice of invoiceRows) {
         const invoiceAmount = Number(invoice.amount ?? 0);
         const rawPaid = (invoice.payments ?? [])
           .filter((payment) => payment.status === 'completed')
@@ -367,11 +457,7 @@ export function AdminChildrenListPage() {
         });
       }
 
-      return childRows.map((child) => {
-        const startDate =
-          [absenceStart, child.enrollment_date, child.created_at?.slice(0, 10)].filter(Boolean).sort().at(-1) ?? absenceStart;
-        const schoolDays = daysBetweenInclusive(startDate, absenceEnd);
-        const presentDates = presentDatesByChild.get(child.id) ?? new Set<string>();
+      const rows = childRows.map((child) => {
         const linkedParentIds = parentIdsByChild[child.id] ?? [];
         const parentNames = linkedParentIds.map((id) => parentMap.get(id)).filter(Boolean) as string[];
         let unpaidBalance = 0;
@@ -392,11 +478,14 @@ export function AdminChildrenListPage() {
           ...child,
           className: child.class_id ? classMap.get(child.class_id) ?? '-' : '-',
           parentNames,
-          absentMonthCount: schoolDays.filter((date) => !presentDates.has(date)).length,
+          absentMonthCount: absentDaysByChild.get(child.id) ?? 0,
           unpaidBalance,
           latestUnpaidInvoice,
         };
       });
+      // A family's balance is shown on each of its children, so the total adds each family once.
+      const unpaidTotal = [...invoiceSummaryByParent.values()].reduce((sum, summary) => sum + summary.balance, 0);
+      return { rows, unpaidTotal };
     },
     enabled: Boolean(nurseryId),
   });
@@ -418,7 +507,64 @@ export function AdminChildrenListPage() {
     return (child: ChildItem) => firstAndFatherName(displayName(child));
   }, [displayName]);
 
-  const children = childrenQuery.data ?? [];
+  const money = useMemo(() => {
+    const format = new Intl.NumberFormat(locale, { style: 'currency', currency: 'EGP', maximumFractionDigits: 2 });
+    return (value: number) => format.format(value);
+  }, [locale]);
+  const formatDate = (iso: string) => new Date(iso).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
+  const statusLabel = (status: string) => t(`${LIST}.status.${status}`, { defaultValue: humanize(status) });
+
+  const children = useMemo(() => childrenQuery.data?.rows ?? [], [childrenQuery.data]);
+
+  // Today's status of every active child, from the same server function as the attendance pages
+  // (it knows working days, holidays and absences reported by parents). Polls while the page is open.
+  const activeChildIds = useMemo(() => children.filter((child) => child.status === 'active').map((child) => child.id), [children]);
+  const todayQuery = useAttendanceDays({ childIds: activeChildIds, from: today, to: today, refetchInterval: 60_000 });
+  const todayDays = useMemo(() => new Map((todayQuery.data ?? []).map((day) => [day.childId, day])), [todayQuery.data]);
+  const todayLoading = todayQuery.isLoading;
+  const todayStats = useMemo(() => {
+    const count = { in: 0, left: 0, absent: 0, excused: 0, closed: 0 };
+    for (const day of todayDays.values()) {
+      const state = todayState(day);
+      if (state) count[state] += 1;
+    }
+    const present = count.in + count.left;
+    const absent = count.absent + count.excused;
+    return { present, here: count.in, absent, reported: count.excused, closed: count.closed > 0 && present + absent === 0 };
+  }, [todayDays]);
+  const todayValue = (count: number) => (todayLoading ? '…' : todayQuery.isError ? '-' : count);
+  const todayNote = (text: string) =>
+    todayLoading
+      ? undefined
+      : todayQuery.isError
+        ? t(`${LIST}.cards.loadFailed`)
+        : todayStats.closed
+          ? t(`${LIST}.cards.closedToday`)
+          : text;
+
+  const todayOptions: FilterSelectOption[] = [
+    { value: 'all', label: t(`${LIST}.filters.allToday`), icon: 'today', helper: t(`${LIST}.filters.allTodayHelp`) },
+    { value: 'present', label: t(`${LIST}.filters.presentToday`), icon: 'how_to_reg', helper: t(`${LIST}.filters.presentTodayHelp`) },
+    { value: 'absent', label: t(`${LIST}.filters.absentToday`), icon: 'person_off', helper: t(`${LIST}.filters.absentTodayHelp`) },
+  ];
+  const paymentOptions: FilterSelectOption[] = [
+    { value: 'all', label: t(`${LIST}.filters.allPayments`), icon: 'payments' },
+    { value: 'paid', label: t(`${LIST}.filters.paid`), icon: 'check_circle', helper: t(`${LIST}.filters.paidHelp`) },
+    { value: 'unpaid', label: t(`${LIST}.filters.unpaid`), icon: 'error', helper: t(`${LIST}.filters.unpaidHelp`) },
+  ];
+  const absenceOptions: FilterSelectOption[] = [
+    { value: 'all', label: t(`${LIST}.filters.anyAbsence`), icon: 'event_available' },
+    { value: 'none', label: t(`${LIST}.filters.absenceNone`), icon: 'check_circle' },
+    { value: 'some', label: t(`${LIST}.filters.absenceSome`), icon: 'event_note' },
+    { value: 'three_plus', label: t(`${LIST}.filters.absenceMany`), icon: 'warning', helper: t(`${LIST}.filters.absenceManyHelp`) },
+  ];
+  const sortOptions: FilterSelectOption[] = [
+    { value: 'newest', label: t(`${LIST}.sort.newest`), icon: 'schedule' },
+    { value: 'name', label: t(`${LIST}.sort.name`), icon: 'sort_by_alpha' },
+    { value: 'absent', label: t(`${LIST}.sort.absent`), icon: 'event_busy' },
+    { value: 'balance', label: t(`${LIST}.sort.balance`), icon: 'receipt_long' },
+  ];
+
   const classOptions = useMemo(() => {
     const seen = new Map<string, string>();
     for (const child of children) {
@@ -426,32 +572,19 @@ export function AdminChildrenListPage() {
     }
     return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1]));
   }, [children]);
-  const classSelectOptions = useMemo<FilterSelectOption[]>(() => {
-    return [
-      { value: 'all', label: 'All classes', icon: 'school' },
-      ...classOptions.map(([id, name]) => ({ value: id, label: name, icon: 'groups' })),
-    ];
-  }, [classOptions]);
-  const statusOptions = useMemo(() => {
-    const knownValues = new Set(CHILD_STATUS_OPTIONS.map((option) => option.value));
-    const customStatuses = [...new Set(children.map((child) => child.status).filter((status) => status && !knownValues.has(status)))].sort();
-    return [
-      ...CHILD_STATUS_OPTIONS,
-      ...customStatuses.map((status) => ({
-        value: status,
-        label: childStatusLabel(status),
-      })),
-    ];
+  const classSelectOptions: FilterSelectOption[] = [
+    { value: 'all', label: t(`${LIST}.filters.allClasses`), icon: 'school' },
+    ...classOptions.map(([id, name]) => ({ value: id, label: name, icon: 'groups' })),
+  ];
+  const statusValues = useMemo(() => {
+    const custom = [...new Set(children.map((child) => child.status).filter((status) => status && !CHILD_STATUSES.includes(status)))].sort();
+    return [...CHILD_STATUSES, ...custom];
   }, [children]);
-  const statusSelectOptions = useMemo<FilterSelectOption[]>(() => {
-    return [
-      { value: 'all', label: 'All statuses', icon: 'tune' },
-      ...statusOptions.map((status) => ({
-        ...status,
-        icon: childStatusIcon(status.value),
-      })),
-    ];
-  }, [statusOptions]);
+  const statusSelectOptions: FilterSelectOption[] = [
+    { value: 'all', label: t(`${LIST}.filters.allStatuses`), icon: 'tune' },
+    ...statusValues.map((status) => ({ value: status, label: statusLabel(status), icon: STATUS_ICON[status] ?? 'label' })),
+  ];
+
   const filteredChildren = useMemo(() => {
     return children.filter((child) => {
       if (filter === 'new' && child.created_at.slice(0, 7) !== today.slice(0, 7)) return false;
@@ -464,17 +597,33 @@ export function AdminChildrenListPage() {
       if (absenceStatusFilter === 'none' && child.absentMonthCount !== 0) return false;
       if (absenceStatusFilter === 'some' && (child.absentMonthCount < 1 || child.absentMonthCount > 2)) return false;
       if (absenceStatusFilter === 'three_plus' && child.absentMonthCount < 3) return false;
+      if (todayFilter !== 'all') {
+        const state = todayState(todayDays.get(child.id));
+        if (todayFilter === 'present' && state !== 'in' && state !== 'left') return false;
+        if (todayFilter === 'absent' && state !== 'absent' && state !== 'excused') return false;
+      }
 
       const enrolledOn = child.enrollment_date ?? child.created_at.slice(0, 10);
       if (enrolledFrom && enrolledOn < enrolledFrom) return false;
       if (enrolledTo && enrolledOn > enrolledTo) return false;
       return true;
     });
-  }, [absenceStatusFilter, children, classFilter, enrolledFrom, enrolledTo, filter, paymentFilter, statusFilter, today]);
+  }, [absenceStatusFilter, children, classFilter, enrolledFrom, enrolledTo, filter, paymentFilter, statusFilter, today, todayDays, todayFilter]);
+
+  // 'newest' keeps the server order (created_at, newest first).
+  const sortedChildren = useMemo(() => {
+    if (sort === 'newest') return filteredChildren;
+    const list = [...filteredChildren];
+    if (sort === 'name') list.sort((a, b) => displayName(a).localeCompare(displayName(b), locale));
+    if (sort === 'absent') list.sort((a, b) => b.absentMonthCount - a.absentMonthCount);
+    if (sort === 'balance') list.sort((a, b) => b.unpaidBalance - a.unpaidBalance);
+    return list;
+  }, [displayName, filteredChildren, locale, sort]);
+
   const pager = usePagination(
-    filteredChildren,
+    sortedChildren,
     15,
-    `${filter}|${debouncedSearch}|${classFilter}|${statusFilter}|${paymentFilter}|${absenceStatusFilter}|${enrolledFrom}|${enrolledTo}|${absenceStart}|${absenceEnd}`,
+    `${filter}|${debouncedSearch}|${classFilter}|${statusFilter}|${paymentFilter}|${absenceStatusFilter}|${todayFilter}|${sort}|${enrolledFrom}|${enrolledTo}|${absenceStart}|${absenceEnd}`,
   );
 
   const stats = useMemo(() => {
@@ -482,44 +631,62 @@ export function AdminChildrenListPage() {
     const newThisMonth = children.filter((child) => child.created_at.slice(0, 7) === today.slice(0, 7)).length;
     const absenceRisk = children.filter((child) => child.absentMonthCount >= 3).length;
     const withUnpaid = children.filter((child) => child.unpaidBalance > 0).length;
-    const unpaidTotal = children.reduce((sum, child) => sum + child.unpaidBalance, 0);
+    const unpaidTotal = childrenQuery.data?.unpaidTotal ?? 0;
     return { total, newThisMonth, absenceRisk, withUnpaid, unpaidTotal };
-  }, [children, today]);
+  }, [children, childrenQuery.data, today]);
 
   const resetFilters = () => {
+    setSearch('');
     setFilter('all');
     setClassFilter('all');
     setStatusFilter('all');
     setPaymentFilter('all');
     setAbsenceStatusFilter('all');
+    setTodayFilter('all');
     setEnrolledFrom('');
     setEnrolledTo('');
     setAbsentFromDate(monthStart);
     setAbsentToDate(today);
   };
 
-  const selectedClassName = classOptions.find(([id]) => id === classFilter)?.[1] ?? '';
+  const optionLabel = (options: FilterSelectOption[], value: string) => options.find((option) => option.value === value)?.label ?? value;
+  const chip = (labelKey: string, value: string, onClear: () => void) => ({
+    label: t(`${LIST}.filters.chip`, { label: t(`${LIST}.filters.${labelKey}`), value }),
+    onClear,
+  });
+  const cardFilterLabel = filter === 'new' ? t(`${LIST}.cards.newThisMonth`) : filter === 'unpaid' ? t(`${LIST}.cards.unpaid`) : null;
   const activeFilters = [
-    search.trim() ? { label: `Search: ${search.trim()}`, onClear: () => setSearch('') } : null,
-    classFilter !== 'all' ? { label: `Class: ${selectedClassName}`, onClear: () => setClassFilter('all') } : null,
-    statusFilter !== 'all' ? { label: `Status: ${childStatusLabel(statusFilter)}`, onClear: () => setStatusFilter('all') } : null,
-    paymentFilter !== 'all'
-      ? { label: `Payment: ${selectOptionLabel(PAYMENT_FILTER_OPTIONS, paymentFilter)}`, onClear: () => setPaymentFilter('all') }
-      : null,
+    cardFilterLabel ? { label: cardFilterLabel, onClear: () => setFilter('all') } : null,
+    todayFilter !== 'all' ? chip('today', optionLabel(todayOptions, todayFilter), () => setTodayFilter('all')) : null,
+    classFilter !== 'all' ? chip('class', optionLabel(classSelectOptions, classFilter), () => setClassFilter('all')) : null,
+    statusFilter !== 'all' ? chip('status', statusLabel(statusFilter), () => setStatusFilter('all')) : null,
+    paymentFilter !== 'all' ? chip('payment', optionLabel(paymentOptions, paymentFilter), () => setPaymentFilter('all')) : null,
     absenceStatusFilter !== 'all'
-      ? {
-          label: `Absent: ${selectOptionLabel(ABSENCE_FILTER_OPTIONS, absenceStatusFilter)}`,
-          onClear: () => {
-            setAbsenceStatusFilter('all');
-            if (filter === 'absence_risk') setFilter('all');
-          },
-        }
+      ? chip('absence', optionLabel(absenceOptions, absenceStatusFilter), () => {
+          setAbsenceStatusFilter('all');
+          if (filter === 'absence_risk') setFilter('all');
+        })
       : null,
-    enrolledFrom ? { label: `Enrolled from: ${enrolledFrom}`, onClear: () => setEnrolledFrom('') } : null,
-    enrolledTo ? { label: `Enrolled to: ${enrolledTo}`, onClear: () => setEnrolledTo('') } : null,
-    absentFromDate !== monthStart ? { label: `Absent from: ${absentFromDate}`, onClear: () => setAbsentFromDate(monthStart) } : null,
-    absentToDate !== today ? { label: `Absent to: ${absentToDate}`, onClear: () => setAbsentToDate(today) } : null,
+    enrolledFrom ? chip('enrolledFrom', enrolledFrom, () => setEnrolledFrom('')) : null,
+    enrolledTo ? chip('enrolledTo', enrolledTo, () => setEnrolledTo('')) : null,
+    absentFromDate !== monthStart ? chip('absentFrom', absentFromDate, () => setAbsentFromDate(monthStart)) : null,
+    absentToDate !== today ? chip('absentTo', absentToDate, () => setAbsentToDate(today)) : null,
   ].filter(Boolean) as Array<{ label: string; onClear: () => void }>;
+  const moreFiltersCount = [
+    paymentFilter !== 'all',
+    absenceStatusFilter !== 'all',
+    Boolean(enrolledFrom),
+    Boolean(enrolledTo),
+    absentFromDate !== monthStart,
+    absentToDate !== today,
+  ].filter(Boolean).length;
+  const anyFilterActive = activeFilters.length > 0 || search.trim().length > 0;
+
+  // The whole row opens the record; links and buttons inside it keep their own behaviour.
+  const openFromRow = (event: MouseEvent<HTMLTableRowElement>, childId: string) => {
+    if ((event.target as HTMLElement).closest('a, button')) return;
+    navigate(childId);
+  };
 
   if (waitingForAuthOrProfile || (Boolean(nurseryId) && childrenQuery.isPending)) {
     return <LoadingSkeleton />;
@@ -549,253 +716,453 @@ export function AdminChildrenListPage() {
     );
   }
 
+  const enrollButton = canEnroll ? (
+    <Button asChild className="h-11 gap-1.5 rounded-xl px-4">
+      <Link to="enroll">
+        <MaterialSymbol name="person_add" size="text-lg" />
+        {t(`${LIST}.enroll`)}
+      </Link>
+    </Button>
+  ) : null;
+
   if (!children.length && !debouncedSearch) {
     return (
       <EmptyState
         icon="groups"
         title={t('admin.children.emptyTitle')}
-        description={t('admin.children.emptyDescription')}
+        description={t(`${LIST}.emptyDescription`)}
+        action={enrollButton}
       />
     );
   }
 
+  const cards = [
+    {
+      key: 'all',
+      label: t(`${LIST}.cards.all`),
+      value: stats.total,
+      icon: 'groups',
+      tone: 'text-primary bg-primary/10',
+      selected: filter === 'all' && todayFilter === 'all',
+      onSelect: () => {
+        setFilter('all');
+        setAbsenceStatusFilter('all');
+        setTodayFilter('all');
+      },
+    },
+    {
+      key: 'present_today',
+      label: t(`${LIST}.cards.presentToday`),
+      value: todayValue(todayStats.present),
+      icon: 'how_to_reg',
+      tone: 'text-success bg-success/10',
+      note: todayNote(t(`${LIST}.cards.hereNow`, { count: todayStats.here })),
+      noteTone: 'text-success',
+      selected: todayFilter === 'present',
+      onSelect: () => setTodayFilter(todayFilter === 'present' ? 'all' : 'present'),
+    },
+    {
+      key: 'absent_today',
+      label: t(`${LIST}.cards.absentToday`),
+      value: todayValue(todayStats.absent),
+      icon: 'person_off',
+      tone: 'text-error bg-error/10',
+      note: todayNote(t(`${LIST}.cards.reportedByParents`, { count: todayStats.reported })),
+      noteTone: 'text-on-surface-variant',
+      selected: todayFilter === 'absent',
+      onSelect: () => setTodayFilter(todayFilter === 'absent' ? 'all' : 'absent'),
+    },
+    {
+      key: 'new',
+      label: t(`${LIST}.cards.newThisMonth`),
+      value: stats.newThisMonth,
+      icon: 'person_add',
+      tone: 'text-primary bg-primary/10',
+      selected: filter === 'new',
+      onSelect: () => setFilter(filter === 'new' ? 'all' : 'new'),
+    },
+    {
+      key: 'absence_risk',
+      label: t(`${LIST}.cards.absenceRisk`),
+      value: stats.absenceRisk,
+      icon: 'event_busy',
+      tone: 'text-warning bg-warning/10',
+      selected: filter === 'absence_risk',
+      onSelect: () => {
+        const next = filter === 'absence_risk' ? 'all' : 'absence_risk';
+        setFilter(next);
+        setAbsenceStatusFilter(next === 'all' ? 'all' : 'three_plus');
+      },
+    },
+    {
+      key: 'unpaid',
+      label: t(`${LIST}.cards.unpaid`),
+      value: stats.withUnpaid,
+      icon: 'receipt_long',
+      tone: 'text-error bg-error/10',
+      note: money(stats.unpaidTotal),
+      noteTone: 'text-error',
+      selected: filter === 'unpaid',
+      onSelect: () => setFilter(filter === 'unpaid' ? 'all' : 'unpaid'),
+    },
+  ];
+
   return (
     <div className="w-full space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-2xl font-semibold text-on-surface">{t('admin.children.title')}</h1>
-          <p className="text-sm text-on-surface-variant">
-            {stats.total} children | {stats.newThisMonth} new this month | {money(stats.unpaidTotal)} unpaid
-          </p>
+          <p className="mt-1 text-sm text-on-surface-variant">{t(`${LIST}.subtitle`)}</p>
         </div>
-      </div>
+        {enrollButton}
+      </header>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {[
-          { key: 'all' as const, label: 'All children', value: stats.total, icon: 'groups', tone: 'text-primary bg-primary/10' },
-          { key: 'new' as const, label: 'New this month', value: stats.newThisMonth, icon: 'person_add', tone: 'text-success bg-success/10' },
-          { key: 'absence_risk' as const, label: 'Absent 3+ days', value: stats.absenceRisk, icon: 'event_busy', tone: 'text-warning bg-warning/10' },
-          { key: 'unpaid' as const, label: 'Unpaid balance', value: stats.withUnpaid, icon: 'receipt_long', tone: 'text-error bg-error/10' },
-        ].map((item) => (
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 2xl:grid-cols-6">
+        {cards.map((card) => (
           <button
-            key={item.key}
+            key={card.key}
             type="button"
-            onClick={() => {
-              setFilter(item.key);
-              if (item.key === 'all') setAbsenceStatusFilter('all');
-              if (item.key === 'absence_risk') setAbsenceStatusFilter('three_plus');
-            }}
-            className={`flex min-h-28 items-center gap-4 rounded-2xl border p-4 text-start shadow-sm transition ${
-              filter === item.key
-                ? 'border-primary bg-primary/10'
-                : 'border-outline-variant bg-surface-container-lowest hover:bg-surface-container'
-            }`}
+            onClick={card.onSelect}
+            aria-pressed={card.selected}
+            className={cn(
+              'flex min-w-0 items-center gap-3 rounded-2xl border p-3.5 text-start shadow-sm transition sm:p-4',
+              card.selected
+                ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                : 'border-outline-variant bg-surface-container-lowest hover:border-primary/40 hover:bg-surface-container',
+            )}
           >
-            <span className={`material-symbols-outlined flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-xl ${item.tone}`}>
-              {item.icon}
+            <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl', card.tone)}>
+              <MaterialSymbol name={card.icon} size="text-xl" />
             </span>
-            <span>
-              <span className="block text-sm font-semibold text-on-surface-variant">{item.label}</span>
-              <span className="mt-1 block text-3xl font-bold text-on-surface">{item.value}</span>
-              {item.key === 'unpaid' ? (
-                <span className="mt-1 block text-xs font-semibold text-error">{money(stats.unpaidTotal)}</span>
-              ) : null}
+            <span className="min-w-0">
+              <span className="block truncate text-xs font-semibold text-on-surface-variant">{card.label}</span>
+              <span className="block text-2xl font-bold leading-tight tabular-nums text-on-surface">{card.value}</span>
+              {card.note ? <span className={cn('line-clamp-2 block text-xs font-medium', card.noteTone)}>{card.note}</span> : null}
             </span>
           </button>
         ))}
       </div>
 
-      <div className="rounded-3xl border border-outline-variant bg-surface-container-lowest p-3 shadow-sm">
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="relative min-w-[260px] flex-1">
-            <span className="material-symbols-outlined pointer-events-none absolute start-4 top-1/2 -translate-y-1/2 text-xl text-on-surface-variant">
-              search
-            </span>
+      <section className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-3 shadow-sm sm:p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="relative min-w-0 flex-[2_1_16rem]">
+            <MaterialSymbol
+              name="search"
+              size="text-xl"
+              className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-on-surface-variant"
+            />
             <Input
-              placeholder="Search child name"
+              placeholder={t('admin.children.searchPlaceholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-12 rounded-2xl border-outline-variant bg-surface ps-12 text-base"
+              className="h-11 rounded-xl bg-surface pe-10 ps-10"
               aria-label={t('admin.children.searchPlaceholder')}
             />
+            {search ? (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                aria-label={t(`${LIST}.clearSearch`)}
+                className="absolute end-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container"
+              >
+                <MaterialSymbol name="close" size="text-lg" />
+              </button>
+            ) : null}
           </label>
-
           <ModernFilterSelect
-            label="Class"
+            label={t(`${LIST}.filters.today`)}
+            value={todayFilter}
+            options={todayOptions}
+            onChange={(value) => setTodayFilter(value as TodayFilter)}
+            className="flex-[1_1_10rem]"
+          />
+          <ModernFilterSelect
+            label={t(`${LIST}.filters.class`)}
             value={classFilter}
             options={classSelectOptions}
             onChange={setClassFilter}
-            className="min-w-[180px]"
+            className="flex-[1_1_10rem]"
           />
-
           <ModernFilterSelect
-            label="Status"
+            label={t(`${LIST}.filters.status`)}
             value={statusFilter}
             options={statusSelectOptions}
             onChange={setStatusFilter}
-            className="min-w-[170px]"
+            className="flex-[1_1_10rem]"
           />
-
-          <span className="ms-auto rounded-full bg-surface-container px-4 py-2 text-sm font-semibold text-on-surface">
-            {filteredChildren.length} shown
-          </span>
-
-          <Button type="button" variant="outline" className="h-12 rounded-2xl px-5" onClick={resetFilters}>
-            Reset
+          <ModernFilterSelect
+            label={t(`${LIST}.filters.sort`)}
+            value={sort}
+            options={sortOptions}
+            onChange={(value) => setSort(value as SortKey)}
+            className="flex-[1_1_10rem]"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            className={cn('h-11 gap-1.5 rounded-xl px-3', showMoreFilters && 'border-primary text-primary')}
+            onClick={() => setShowMoreFilters((open) => !open)}
+            aria-expanded={showMoreFilters}
+          >
+            <MaterialSymbol name="tune" size="text-lg" />
+            {t(showMoreFilters ? `${LIST}.filters.less` : `${LIST}.filters.more`)}
+            {moreFiltersCount ? (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[0.7rem] font-bold text-white">
+                {moreFiltersCount}
+              </span>
+            ) : null}
           </Button>
         </div>
 
-        <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <ModernFilterSelect
-            label="Payment"
-            value={paymentFilter}
-            options={PAYMENT_FILTER_OPTIONS}
-            onChange={(value) => setPaymentFilter(value as PaymentFilter)}
-            className="w-full min-w-0"
-          />
-
-          <ModernFilterSelect
-            label="Absence"
-            value={absenceStatusFilter}
-            options={ABSENCE_FILTER_OPTIONS}
-            onChange={(value) => {
-              const next = value as AbsenceStatusFilter;
-              setAbsenceStatusFilter(next);
-              if (next === 'three_plus') setFilter('absence_risk');
-              if (next !== 'three_plus' && filter === 'absence_risk') setFilter('all');
-            }}
-            className="w-full min-w-0"
-          />
-        </div>
-
-        <div className="mt-3 grid gap-3 xl:grid-cols-2">
-          <div className="rounded-2xl bg-surface/70 p-3">
-            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-on-surface">
-              <span className="material-symbols-outlined text-lg text-on-surface-variant">how_to_reg</span>
-              Enrollment date
+        {showMoreFilters ? (
+          <div className="mt-3 grid gap-3 border-t border-outline-variant pt-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="min-w-0">
+              <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant">
+                <MaterialSymbol name="payments" size="text-base" />
+                {t(`${LIST}.filters.payment`)}
+              </p>
+              <ModernFilterSelect
+                label={t(`${LIST}.filters.payment`)}
+                value={paymentFilter}
+                options={paymentOptions}
+                onChange={(value) => setPaymentFilter(value as PaymentFilter)}
+                className="w-full"
+              />
             </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <Input type="date" value={enrolledFrom} onChange={(event) => setEnrolledFrom(event.target.value)} className="h-11 rounded-xl bg-surface" />
-              <Input type="date" value={enrolledTo} onChange={(event) => setEnrolledTo(event.target.value)} className="h-11 rounded-xl bg-surface" />
+            <div className="min-w-0">
+              <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant">
+                <MaterialSymbol name="event_note" size="text-base" />
+                {t(`${LIST}.filters.absence`)}
+              </p>
+              <ModernFilterSelect
+                label={t(`${LIST}.filters.absence`)}
+                value={absenceStatusFilter}
+                options={absenceOptions}
+                onChange={(value) => {
+                  const next = value as AbsenceStatusFilter;
+                  setAbsenceStatusFilter(next);
+                  if (next === 'three_plus') setFilter('absence_risk');
+                  if (next !== 'three_plus' && filter === 'absence_risk') setFilter('all');
+                }}
+                className="w-full"
+              />
             </div>
-          </div>
-
-          <div className="rounded-2xl bg-surface/70 p-3">
-            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-on-surface">
-              <span className="material-symbols-outlined text-lg text-on-surface-variant">event_busy</span>
-              Absence date range
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <Input type="date" value={absentFromDate} onChange={(event) => setAbsentFromDate(event.target.value)} className="h-11 rounded-xl bg-surface" />
-              <Input type="date" value={absentToDate} onChange={(event) => setAbsentToDate(event.target.value)} className="h-11 rounded-xl bg-surface" />
-            </div>
-          </div>
-        </div>
-
-        {activeFilters.length ? (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {activeFilters.map((item) => (
-              <button
-                key={item.label}
-                type="button"
-                onClick={item.onClear}
-                className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary"
-              >
-                {item.label}
-                <span className="material-symbols-outlined text-sm">close</span>
-              </button>
-            ))}
+            <DateRangeField
+              label={t(`${LIST}.filters.enrolledRange`)}
+              icon="how_to_reg"
+              from={enrolledFrom}
+              to={enrolledTo}
+              onFrom={setEnrolledFrom}
+              onTo={setEnrolledTo}
+            />
+            <DateRangeField
+              label={t(`${LIST}.filters.absenceRange`)}
+              icon="event_busy"
+              from={absentFromDate}
+              to={absentToDate}
+              onFrom={setAbsentFromDate}
+              onTo={setAbsentToDate}
+            />
           </div>
         ) : null}
-      </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="text-sm font-semibold text-on-surface">
+            {t(`${LIST}.filters.shown`, { count: filteredChildren.length, total: children.length })}
+          </span>
+          {activeFilters.map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              onClick={item.onClear}
+              className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary transition hover:bg-primary/15"
+            >
+              {item.label}
+              <MaterialSymbol name="close" size="text-sm" />
+            </button>
+          ))}
+          {anyFilterActive ? (
+            <button type="button" onClick={resetFilters} className="text-xs font-semibold text-on-surface-variant underline-offset-2 hover:text-primary hover:underline">
+              {t(`${LIST}.filters.clearAll`)}
+            </button>
+          ) : null}
+        </div>
+      </section>
 
       {!filteredChildren.length ? (
-        <EmptyState icon="search_off" title={t('admin.children.searchEmptyTitle')} description={t('admin.children.searchEmptyDescription')} />
+        <EmptyState
+          icon="search_off"
+          title={t('admin.children.searchEmptyTitle')}
+          description={t(`${LIST}.emptyFiltered`)}
+          action={
+            anyFilterActive ? (
+              <Button type="button" variant="outline" onClick={resetFilters}>
+                {t(`${LIST}.filters.clearAll`)}
+              </Button>
+            ) : null
+          }
+        />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1280px] text-[0.95rem]">
-              <thead className="bg-surface-container text-sm text-on-surface-variant">
-                <tr>
-                  <th className="px-4 py-3 text-start font-semibold">Child</th>
-                  <th className="px-4 py-3 text-start font-semibold">Class</th>
-                  <th className="px-4 py-3 text-start font-semibold">Parent</th>
-                  <th className="px-4 py-3 text-start font-semibold">Status</th>
-                  <th className="px-4 py-3 text-start font-semibold">Absent</th>
-                  <th className="px-4 py-3 text-start font-semibold">Previous payment</th>
-                  <th className="px-4 py-3 text-start font-semibold">Enrolled</th>
-                  <th className="px-4 py-3 text-start font-semibold">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pager.pageItems.map((child) => {
-                  const fullName = displayName(child);
-                  const name = displayShortName(child);
-                  const thumb =
-                    child.avatar_url ??
-                    `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=eceef0&color=191c1e`;
-                  const hasUnpaid = child.unpaidBalance > 0;
-                  const parentNames = child.parentNames.map(firstAndLastName);
-                  return (
-                    <tr key={child.id} className={`border-t border-outline-variant ${hasUnpaid ? 'bg-error/5' : 'bg-surface-low/35'}`}>
-                      <td className={`px-4 py-3 ${hasUnpaid ? 'border-s-4 border-error' : 'border-s-4 border-transparent'}`}>
-                        <div className="flex items-center gap-3">
-                          <img src={thumb} alt="" className="h-11 w-11 shrink-0 rounded-full object-cover" loading="lazy" decoding="async" />
-                          <div className="min-w-0">
-                            <p className="truncate font-semibold text-on-surface" title={fullName}>{name}</p>
-                            <p className="text-xs text-on-surface-variant">{child.id.slice(0, 8)}</p>
-                          </div>
+        <>
+          {/* Phones: one card per child. */}
+          <ul className="space-y-3 md:hidden">
+            {pager.pageItems.map((child) => {
+              const name = displayShortName(child);
+              const hasUnpaid = child.unpaidBalance > 0;
+              return (
+                <li key={child.id}>
+                  <Link
+                    to={child.id}
+                    className={cn(
+                      'block rounded-2xl border bg-surface-container-lowest p-4 shadow-sm transition hover:border-primary/40',
+                      hasUnpaid ? 'border-error/40' : 'border-outline-variant',
+                    )}
+                  >
+                    <div className="flex items-start gap-3">
+                      <ChildAvatar name={name} url={child.avatar_url} className="h-12 w-12" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="truncate font-semibold text-on-surface">{name}</p>
+                          <Badge variant={STATUS_BADGE[child.status] ?? 'secondary'} className="shrink-0">
+                            {statusLabel(child.status)}
+                          </Badge>
                         </div>
-                      </td>
-                      <td className="px-4 py-3 text-on-surface">{child.className}</td>
-                      <td className="px-4 py-3 text-on-surface" title={child.parentNames.join(', ')}>
-                        {parentNames.length ? (
-                          <div className="space-y-1">
-                            {parentNames.map((parentName, index) => (
-                              <p key={`${parentName}-${index}`} className="truncate font-medium">
-                                {parentName}
+                        <p className="truncate text-xs text-on-surface-variant">
+                          {child.class_id ? child.className : t(`${LIST}.noClass`)}
+                          {child.parentNames.length ? ` · ${child.parentNames.map(firstAndLastName).join(listSeparator)}` : ''}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-end justify-between gap-3 border-t border-outline-variant pt-3">
+                      <TodayStatusCell day={todayDays.get(child.id)} loading={todayLoading && child.status === 'active'} locale={locale} />
+                      <div className="shrink-0 text-end text-xs">
+                        <p className={cn(child.absentMonthCount >= 3 ? 'font-semibold text-error' : 'text-on-surface-variant')}>
+                          {t(`${LIST}.absentDays`, { count: child.absentMonthCount })}
+                        </p>
+                        {hasUnpaid ? <p className="font-semibold text-error">{money(child.unpaidBalance)}</p> : null}
+                      </div>
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+
+          {/* Tablets and up: the project's standard table. */}
+          <section className="hidden overflow-hidden rounded-2xl border border-outline-variant bg-surface shadow-sm md:block">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[1080px] text-sm">
+                <thead className="bg-surface-container-lowest text-xs uppercase text-on-surface-variant">
+                  <tr>
+                    <th className="px-4 py-3 text-start font-semibold">{t(`${LIST}.columns.child`)}</th>
+                    <th className="px-4 py-3 text-start font-semibold">{t(`${LIST}.columns.parent`)}</th>
+                    <th className="px-4 py-3 text-start font-semibold">{t(`${LIST}.columns.status`)}</th>
+                    <th className="px-4 py-3 text-start font-semibold">{t(`${LIST}.columns.today`)}</th>
+                    <th
+                      className="px-4 py-3 text-start font-semibold"
+                      title={t(`${LIST}.columns.absentDaysHint`, { from: absenceStart, to: absenceEnd })}
+                    >
+                      {t(`${LIST}.columns.absentDays`)}
+                    </th>
+                    <th className="px-4 py-3 text-start font-semibold">{t(`${LIST}.columns.balance`)}</th>
+                    <th className="px-4 py-3 text-start font-semibold">{t(`${LIST}.columns.enrolled`)}</th>
+                    <th className="px-4 py-3">
+                      <span className="sr-only">{t(`${LIST}.columns.open`)}</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-outline-variant">
+                  {pager.pageItems.map((child) => {
+                    const fullName = displayName(child);
+                    const name = displayShortName(child);
+                    const hasUnpaid = child.unpaidBalance > 0;
+                    return (
+                      <tr
+                        key={child.id}
+                        onClick={(event) => openFromRow(event, child.id)}
+                        className="group cursor-pointer bg-surface transition hover:bg-surface-container-lowest"
+                      >
+                        <td className={cn('border-s-4 px-4 py-3', hasUnpaid ? 'border-s-error' : 'border-s-transparent')}>
+                          <div className="flex items-center gap-3">
+                            <ChildAvatar name={name} url={child.avatar_url} />
+                            <div className="min-w-0">
+                              <Link to={child.id} title={fullName} className="block max-w-[15rem] truncate font-semibold text-on-surface hover:text-primary">
+                                {name}
+                              </Link>
+                              <p className="truncate text-xs text-on-surface-variant">
+                                {child.class_id ? child.className : t(`${LIST}.noClass`)}
                               </p>
-                            ))}
+                            </div>
                           </div>
-                        ) : (
-                          '-'
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="rounded-full bg-success/10 px-3 py-1 text-xs font-semibold text-success">
-                          {childStatusLabel(child.status)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={child.absentMonthCount > 0 ? 'font-semibold text-warning' : 'text-on-surface'}>
-                          {child.absentMonthCount}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        {hasUnpaid ? (
-                          <div className="font-semibold text-error">
-                            {money(child.unpaidBalance)}
-                            <p className="text-xs font-medium text-error/80">{child.latestUnpaidInvoice ?? 'Unpaid invoice'}</p>
-                          </div>
-                        ) : (
-                          <span className="font-medium text-success">Paid</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-on-surface">
-                        {child.enrollment_date ? new Date(child.enrollment_date).toLocaleDateString() : new Date(child.created_at).toLocaleDateString()}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Button asChild size="sm" variant="outline">
-                          <Link to={`/admin/children/${child.id}`}>View</Link>
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                        </td>
+                        <td className="px-4 py-3 text-on-surface" title={child.parentNames.join(', ')}>
+                          {child.parentNames.length ? (
+                            <div className="max-w-[12rem] space-y-0.5">
+                              {child.parentNames.map((parentName, index) => (
+                                <p key={`${parentName}-${index}`} className="truncate">
+                                  {firstAndLastName(parentName)}
+                                </p>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-on-surface-variant">{t(`${LIST}.noParent`)}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge variant={STATUS_BADGE[child.status] ?? 'secondary'}>{statusLabel(child.status)}</Badge>
+                        </td>
+                        <td className="max-w-[13rem] px-4 py-3">
+                          <TodayStatusCell day={todayDays.get(child.id)} loading={todayLoading && child.status === 'active'} locale={locale} />
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={cn(
+                              'inline-flex min-w-8 justify-center rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums',
+                              child.absentMonthCount >= 3
+                                ? 'bg-error/10 text-error'
+                                : child.absentMonthCount > 0
+                                  ? 'bg-warning/10 text-warning'
+                                  : 'bg-surface-container text-on-surface-variant',
+                            )}
+                          >
+                            {child.absentMonthCount}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {hasUnpaid ? (
+                            <div>
+                              <p className="font-semibold tabular-nums text-error">{money(child.unpaidBalance)}</p>
+                              <p className="text-xs text-error/80">
+                                {child.latestUnpaidInvoice
+                                  ? t(`${LIST}.unpaidInvoice`, { number: child.latestUnpaidInvoice })
+                                  : t(`${LIST}.unpaid`)}
+                              </p>
+                            </div>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-success">
+                              <MaterialSymbol name="check_circle" size="text-sm" />
+                              {t(`${LIST}.paid`)}
+                            </span>
+                          )}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-on-surface-variant">
+                          {formatDate(child.enrollment_date ?? child.created_at)}
+                        </td>
+                        <td className="px-4 py-3 text-end">
+                          <MaterialSymbol
+                            name="chevron_right"
+                            size="text-xl"
+                            className="text-on-surface-variant transition group-hover:text-primary rtl:rotate-180"
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </>
       )}
 
       <Pagination

@@ -411,3 +411,6 @@ export const HelpAiPreferencesPage = lazy(() =>
 export const RemindersPage = lazy(() =>
   import('@/pages/shared/RemindersPage').then((m) => ({ default: m.RemindersPage })),
 );
+export const QrVerifyLinkPage = lazy(() =>
+  import('@/pages/shared/QrVerifyLinkPage').then((m) => ({ default: m.QrVerifyLinkPage })),
+);

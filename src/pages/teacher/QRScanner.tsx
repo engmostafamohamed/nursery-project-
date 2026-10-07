@@ -1,7 +1,7 @@
-import { useCallback, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import {
@@ -148,16 +148,18 @@ export function QRScannerPage() {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuthSession();
   const { data: profile, isPending: profilePending } = useUserProfile(user?.id);
   const { data: languagePref = 'both' } = useNurseryLanguagePref(profile?.nursery_id);
-  const { settings } = useNurserySettings(profile?.nursery_id);
+  const { settings, isLoading: settingsLoading } = useNurserySettings(profile?.nursery_id);
   const minScanGapMinutes = settings?.min_minutes_between_scans ?? 5;
   const [history, setHistory] = useState<ScanEntry[]>([]);
   const [processing, setProcessing] = useState(false);
   const processingRef = useRef(false);
   const entryIdRef = useRef(0);
   const manualInputRef = useRef<HTMLInputElement | null>(null);
+  const linkTokenHandledRef = useRef(false);
   const elementId = `qr-camera-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
 
   const record = useCallback((entry: Omit<ScanEntry, 'id' | 'at'>) => {
@@ -512,6 +514,23 @@ export function QRScannerPage() {
 
   const blocked: 'loading' | 'no_nursery' | null = profilePending ? 'loading' : profile?.nursery_id ? null : 'no_nursery';
   const camera = useQrCamera({ elementId, enabled: !blocked, onScan: runScan });
+
+  // Opened from a QR link (/qr/verify?token=…): check that code as if it had just been scanned.
+  // Waits for the nursery settings, so the scan-gap check uses the nursery's own value.
+  const linkToken = searchParams.get('token');
+  useEffect(() => {
+    if (!linkToken || blocked || settingsLoading || linkTokenHandledRef.current) return;
+    linkTokenHandledRef.current = true;
+    // Take the token out of the address first, so a refresh or Back does not check it again.
+    setSearchParams(
+      (params) => {
+        params.delete('token');
+        return params;
+      },
+      { replace: true },
+    );
+    void runScan(linkToken);
+  }, [linkToken, blocked, settingsLoading, runScan, setSearchParams]);
   const attendanceLink = location.pathname.startsWith('/admin') ? '/admin/attendance' : '/teacher/attendance';
   const focusManual = () => {
     manualInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });

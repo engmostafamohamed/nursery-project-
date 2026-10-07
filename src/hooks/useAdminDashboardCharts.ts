@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { addCalendarDaysYmd, getNurseryCalendarDateString } from '@/lib/nurseryDay';
+import { fetchAttendanceDays } from '@/lib/attendanceApi';
+import { fetchAllRows } from '@/lib/fetchAllRows';
+import { addCalendarDaysYmd, getNurseryCalendarDateString, nurseryDayStartIso } from '@/lib/nurseryDay';
 import { supabase } from '@/lib/supabase';
 
 export type AttendanceDayPoint = { date: string; ratePercent: number; present: number; total: number };
@@ -29,62 +31,49 @@ export function useAdminDashboardCharts(nurseryId: string | undefined) {
         dayLabels.push(addCalendarDaysYmd(today, -i));
       }
 
-      const childIdsRes = await supabase.from('children').select('id').eq('nursery_id', nurseryId);
-      if (childIdsRes.error) throw childIdsRes.error;
-      const childIds = (childIdsRes.data ?? []).map((r: { id: string }) => r.id);
-      const total = childIds.length;
-
-      let attendance7: AttendanceDayPoint[] = dayLabels.map((date) => ({
-        date,
-        ratePercent: 0,
-        present: 0,
-        total,
-      }));
-
-      if (childIds.length > 0) {
-        const attRes = await supabase
-          .from('attendance_records')
-          .select('attendance_date')
-          .in('child_id', childIds)
-          .in('attendance_date', dayLabels)
-          .not('check_in', 'is', null);
-        if (attRes.error) throw attRes.error;
-        const counts = new Map<string, number>();
-        for (const row of attRes.data ?? []) {
-          const d = (row as { attendance_date: string }).attendance_date;
-          counts.set(d, (counts.get(d) ?? 0) + 1);
-        }
-        attendance7 = dayLabels.map((date) => {
-          const present = counts.get(date) ?? 0;
-          const ratePercent = total > 0 ? Math.round((present / total) * 1000) / 10 : 0;
-          return { date, ratePercent, present, total };
-        });
+      // Per-day status from the server (active children, working days, holidays and enrollment
+      // dates handled there): the rate is present out of the children expected that day.
+      const activeRes = await supabase.from('children').select('id').eq('nursery_id', nurseryId).eq('status', 'active');
+      if (activeRes.error) throw activeRes.error;
+      const activeIds = (activeRes.data ?? []).map((r: { id: string }) => r.id);
+      const days = await fetchAttendanceDays(activeIds, dayLabels[0], today);
+      const perDay = new Map<string, { present: number; total: number }>();
+      for (const day of days) {
+        const expected = day.status === 'present' || day.status === 'partial' || day.status === 'absent' || day.status === 'excused';
+        if (!expected) continue;
+        const cur = perDay.get(day.date) ?? { present: 0, total: 0 };
+        cur.total += 1;
+        if (day.status === 'present' || day.status === 'partial') cur.present += 1;
+        perDay.set(day.date, cur);
       }
+      const attendance7: AttendanceDayPoint[] = dayLabels.map((date) => {
+        const { present, total } = perDay.get(date) ?? { present: 0, total: 0 };
+        return { date, present, total, ratePercent: total > 0 ? Math.round((present / total) * 1000) / 10 : 0 };
+      });
 
       const thirtyAgo = addCalendarDaysYmd(today, -29);
-      const invRes = await supabase.from('invoices').select('id').eq('nursery_id', nurseryId);
-      if (invRes.error) throw invRes.error;
-      const invoiceIds = (invRes.data ?? []).map((r: { id: string }) => r.id);
-
       const revenueByDay = new Map<string, number>();
       for (let i = 0; i < 30; i += 1) {
         revenueByDay.set(addCalendarDaysYmd(thirtyAgo, i), 0);
       }
 
-      if (invoiceIds.length > 0) {
-        const payRes = await supabase
+      // Completed payments on this nursery's invoices (filtered through the invoice join), bucketed
+      // by the nursery's calendar day.
+      const payments = await fetchAllRows<{ amount: string | number; paid_at: string }>((start, end) =>
+        supabase
           .from('payments')
-          .select('amount, paid_at')
+          .select('id, amount, paid_at, invoices!inner(nursery_id)')
+          .eq('invoices.nursery_id', nurseryId)
           .eq('status', 'completed')
-          .gte('paid_at', `${thirtyAgo}T00:00:00`)
-          .in('invoice_id', invoiceIds);
-        if (payRes.error) throw payRes.error;
-        for (const row of payRes.data ?? []) {
-          const p = row as { amount: string | number; paid_at: string };
-          const day = p.paid_at.slice(0, 10);
-          if (!revenueByDay.has(day)) continue;
-          revenueByDay.set(day, (revenueByDay.get(day) ?? 0) + Number(p.amount));
-        }
+          .gte('paid_at', nurseryDayStartIso(thirtyAgo))
+          .order('id')
+          .range(start, end)
+          .returns<Array<{ amount: string | number; paid_at: string }>>(),
+      );
+      for (const p of payments) {
+        const day = getNurseryCalendarDateString(new Date(p.paid_at));
+        if (!revenueByDay.has(day)) continue;
+        revenueByDay.set(day, (revenueByDay.get(day) ?? 0) + Number(p.amount));
       }
 
       const revenue30: RevenueDayPoint[] = [...revenueByDay.entries()]

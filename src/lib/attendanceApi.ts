@@ -1,3 +1,4 @@
+import { API_MAX_ROWS } from '@/lib/fetchAllRows';
 import { supabase } from '@/lib/supabase';
 
 /**
@@ -88,16 +89,43 @@ const num = (value: number | string | null | undefined) => {
   return Number.isFinite(n) ? Number(n) : 0;
 };
 
+const PARALLEL_DAY_REQUESTS = 4;
+
+function daysInclusive(from: string, to: string): number {
+  const ms = Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`);
+  return Number.isFinite(ms) ? Math.floor(ms / 86_400_000) + 1 : 1;
+}
+
 /** One row per child per day (newest first) from get_attendance_days. */
 export async function fetchAttendanceDays(childIds: string[], from: string, to: string): Promise<AttendanceDay[]> {
   if (!childIds.length) return [];
-  const { data, error } = await supabase.rpc('get_attendance_days' as never, {
-    p_child_ids: childIds,
-    p_from: from,
-    p_to: to,
-  } as never);
-  if (error) throw error;
-  return ((data ?? []) as AttendanceDayRow[]).map((row) => ({
+  // The function returns one row per child per day and the API cuts a response off at
+  // API_MAX_ROWS, so ask for a few children at a time (e.g. 10 children for a 92-day range).
+  const perRequest = Math.max(1, Math.floor(API_MAX_ROWS / Math.max(1, daysInclusive(from, to))));
+  const chunks: string[][] = [];
+  for (let i = 0; i < childIds.length; i += perRequest) chunks.push(childIds.slice(i, i + perRequest));
+
+  const rows: AttendanceDayRow[] = [];
+  for (let i = 0; i < chunks.length; i += PARALLEL_DAY_REQUESTS) {
+    const parts = await Promise.all(
+      chunks.slice(i, i + PARALLEL_DAY_REQUESTS).map(async (ids) => {
+        const { data, error } = await supabase.rpc('get_attendance_days' as never, {
+          p_child_ids: ids,
+          p_from: from,
+          p_to: to,
+        } as never);
+        if (error) throw error;
+        return (data ?? []) as AttendanceDayRow[];
+      }),
+    );
+    for (const part of parts) rows.push(...part);
+  }
+  // Same order as a single call: newest day first, then child.
+  if (chunks.length > 1) {
+    rows.sort((a, b) => (a.day === b.day ? (a.child_id < b.child_id ? -1 : a.child_id > b.child_id ? 1 : 0) : a.day < b.day ? 1 : -1));
+  }
+
+  return rows.map((row) => ({
     childId: row.child_id,
     date: row.day,
     status: row.day_status,

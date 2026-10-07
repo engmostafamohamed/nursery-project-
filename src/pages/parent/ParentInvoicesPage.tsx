@@ -51,8 +51,8 @@ export function ParentInvoicesPage() {
   }, [highlightId, invoicesQuery.isLoading, invoices.length]);
 
   const summary = useMemo(() => {
-    const dueRows = invoices.filter((row) => row.status === 'pending' || row.status === 'overdue');
-    const totalDue = dueRows.reduce((sum, row) => sum + row.amount, 0);
+    const dueRows = invoices.filter((row) => (row.status === 'pending' || row.status === 'overdue') && row.balance > 0);
+    const totalDue = dueRows.reduce((sum, row) => sum + row.balance, 0);
     const nextDue = [...dueRows].sort((a, b) => +new Date(a.dueDate) - +new Date(b.dueDate))[0];
     return { totalDue, nextDue };
   }, [invoices]);

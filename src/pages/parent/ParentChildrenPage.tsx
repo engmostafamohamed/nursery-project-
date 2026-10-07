@@ -160,7 +160,8 @@ export function ParentChildrenPage() {
       const invoices = (invoicesQuery.allData ?? []).filter((invoice) => invoice.childIds.includes(child.id));
       const due = invoices.filter((invoice) => invoice.status === 'pending' || invoice.status === 'overdue');
       acc[child.id] = {
-        outstanding: due.reduce((sum, invoice) => sum + invoice.amount, 0),
+        // An invoice shared by siblings is split between them, as on the dashboard card.
+        outstanding: due.reduce((sum, invoice) => sum + invoice.balance / Math.max(invoice.childIds.length, 1), 0),
         invoices: invoices.length,
         latestInvoiceId: invoices[0]?.id,
       };
@@ -181,7 +182,7 @@ export function ParentChildrenPage() {
         if (statusFilter !== 'inactive' && child.status !== statusFilter) return false;
       }
       if (attendanceFilter === 'present' && !isPresent) return false;
-      if (attendanceFilter === 'absent' && isPresent) return false;
+      if (attendanceFilter === 'absent' && (isPresent || child.todayAttendance === 'off')) return false;
       if (applicationFilter !== 'all' && child.applicationStatus !== applicationFilter) return false;
       if (paymentFilter === 'due' && financial.outstanding <= 0) return false;
       if (paymentFilter === 'clear' && financial.outstanding > 0) return false;
@@ -193,9 +194,13 @@ export function ParentChildrenPage() {
     const active = children.filter((child) => child.status === 'active').length;
     const inactive = children.filter((child) => child.status !== 'active').length;
     const presentToday = children.filter((child) => child.todayAttendance === 'present' || child.todayAttendance === 'checked_out').length;
-    const due = Object.values(childFinancials).reduce((sum, row) => sum + row.outstanding, 0);
-    return { active, inactive, presentToday, absentToday: Math.max(0, children.length - presentToday), due };
-  }, [childFinancials, children]);
+    const due = (invoicesQuery.allData ?? [])
+      .filter((invoice) => invoice.status === 'pending' || invoice.status === 'overdue')
+      .reduce((sum, invoice) => sum + invoice.balance, 0);
+    // Absent means an active child expected today who did not come (not pending, withdrawn or a day off).
+    const absentToday = children.filter((child) => child.status === 'active' && child.todayAttendance === 'absent').length;
+    return { active, inactive, presentToday, absentToday, due };
+  }, [children, invoicesQuery.allData]);
 
   const addChild = async () => {
     if (!user?.id || !nurseryId) {
@@ -336,10 +341,17 @@ export function ParentChildrenPage() {
                       </span>
                     </td>
                     <td className="px-4 py-4">
-                      <span className={cn('inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold', statusTone(isPresent ? 'active' : 'absent'))}>
+                      <span
+                        className={cn(
+                          'inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold',
+                          statusTone(isPresent ? 'active' : child.todayAttendance === 'off' ? 'off' : 'absent'),
+                        )}
+                      >
                         {isPresent
                           ? t('parent.dashboard.analytics.present', { defaultValue: 'Present' })
-                          : t('parent.dashboard.analytics.absent', { defaultValue: 'Absent' })}
+                          : child.todayAttendance === 'off'
+                            ? t('attendance.offDayTitle')
+                            : t('parent.dashboard.analytics.absent', { defaultValue: 'Absent' })}
                       </span>
                       <p className="mt-2 text-xs text-on-surface-variant">
                         {formatClock(child.checkIn, i18n.language)} / {formatClock(child.checkOut, i18n.language)}
