@@ -3195,6 +3195,91 @@
       "dayOff": "Day off"
     },
     "scanner": {
+      "subtitle": "Scan the parent's QR at drop-off and again at pickup. At pickup you confirm the person's identity before the child leaves.",
+      "manualCheck": "Check code",
+      "manualInvalidLink": "This link isn't a QR link. Paste the link from the QR or the code itself.",
+      "status": {
+        "starting": "Starting camera…",
+        "scanning": "Camera on",
+        "processing": "Checking…",
+        "error": "Camera off",
+        "unavailable": "Not available"
+      },
+      "camera": {
+        "starting": "Starting the camera…",
+        "hint": "Hold the QR code inside the frame",
+        "processing": "Checking the code…",
+        "useManual": "Enter the code instead",
+        "technical": "Technical details",
+        "torchOn": "Turn on flashlight",
+        "torchOff": "Turn off flashlight",
+        "noNursery": {
+          "title": "Scanning isn't available",
+          "body": "Your account isn't linked to a nursery yet. Ask the nursery admin to add you."
+        },
+        "errors": {
+          "not_found": {
+            "title": "No camera found",
+            "body": "This device has no camera the browser can use. Scan from a phone or tablet, or enter the code next to the camera."
+          },
+          "denied": {
+            "title": "Camera access is blocked",
+            "body": "Allow camera access for this site from the lock icon in the address bar, then try again."
+          },
+          "in_use": {
+            "title": "The camera is busy",
+            "body": "Another app or browser tab is using the camera. Close it, then try again."
+          },
+          "unsupported": {
+            "title": "The camera needs a secure connection",
+            "body": "Browsers only open the camera on HTTPS (or localhost on this computer). Open the app over HTTPS, or enter the code instead."
+          },
+          "unknown": {
+            "title": "Couldn't start the camera",
+            "body": "Try again, or enter the code instead."
+          }
+        }
+      },
+      "result": {
+        "title": "Last scan",
+        "empty": "Scan a QR code — the result shows here.",
+        "checkin": "Checked in",
+        "checkout": "Picked up",
+        "event": "Event check-in",
+        "already": "No change",
+        "rejected": "Not accepted",
+        "blocked": "Pickup blocked",
+        "alreadyIn": "Already checked in at {{time}}",
+        "alreadyOut": "Already picked up at {{time}}",
+        "unknownCode": "Unrecognised code"
+      },
+      "history": {
+        "title": "Scanned on this screen",
+        "empty": "Nothing scanned yet.",
+        "counts": "{{checkedIn}} in · {{pickedUp}} out"
+      },
+      "today": {
+        "title": "Today",
+        "open": "Today's attendance",
+        "inNursery": "In the nursery",
+        "pickedUp": "Picked up",
+        "lateNow": "Late pickup now"
+      },
+      "steps": {
+        "title": "How it works",
+        "dropoff": {
+          "title": "Drop-off:",
+          "body": "scan the parent's QR and the child is checked in."
+        },
+        "pickup": {
+          "title": "Pickup:",
+          "body": "scan the parent's QR or a one-time pickup QR, then confirm the person's ID."
+        },
+        "manual": {
+          "title": "No camera?",
+          "body": "paste the QR link or code in \"Enter code manually\"."
+        }
+      },
       "title": "QR Scanner",
       "ready": "Scanner ready",
       "sheetTitle": "Scan attendance",

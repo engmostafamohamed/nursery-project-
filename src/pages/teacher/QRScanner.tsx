@@ -1,22 +1,27 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useId, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 
-import { QRScanner } from '@/components/teacher/QRScanner';
 import {
   PickupIdentityConfirmDialog,
   type MismatchReason,
   type PickupConfirmDecision,
 } from '@/components/teacher/PickupIdentityConfirmDialog';
-import { BottomSheet } from '@/components/ui/BottomSheet';
+import { ManualCodeEntry } from '@/components/teacher/scanner/ManualCodeEntry';
+import { QrCameraView } from '@/components/teacher/scanner/QrCameraView';
+import { LastScanCard, SessionHistory, type ScanEntry } from '@/components/teacher/scanner/ScanResults';
+import { HowItWorksCard, TodayAtGateCard } from '@/components/teacher/scanner/ScannerSideCards';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useNurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
 import { useNurserySettings } from '@/hooks/useNurserySettings';
+import { useQrCamera, type QrCamera } from '@/hooks/useQrCamera';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { attendanceErrorKey } from '@/lib/attendanceApi';
 import { parseQrTokenFromText } from '@/lib/parseQrScan';
 import { supabase } from '@/lib/supabase';
+import { cn } from '@/lib/utils';
 import {
   resolvePickupIdentity,
   teacherAttendanceToggle,
@@ -98,15 +103,69 @@ function randomSuffix(): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
+/** Recent scans kept on screen (the full record is in the attendance logs). */
+const HISTORY_LIMIT = 20;
+
+type ChipState = 'starting' | 'scanning' | 'processing' | 'error' | 'unavailable';
+
+const CHIP_STYLE: Record<ChipState, { chip: string; dot: string }> = {
+  starting: { chip: 'bg-warning/10 text-warning', dot: 'bg-warning animate-pulse' },
+  scanning: { chip: 'bg-success/10 text-success', dot: 'bg-success animate-pulse' },
+  processing: { chip: 'bg-primary/10 text-primary', dot: 'bg-primary animate-pulse' },
+  error: { chip: 'bg-error/10 text-error', dot: 'bg-error' },
+  unavailable: { chip: 'bg-surface-container text-on-surface-variant', dot: 'bg-on-surface-variant' },
+};
+
+function CameraStatusChip({ state }: { state: ChipState }) {
+  const { t } = useTranslation();
+  const style = CHIP_STYLE[state];
+  return (
+    <span className={cn('inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold', style.chip)}>
+      <span className={cn('h-2 w-2 rounded-full', style.dot)} aria-hidden />
+      {t(`teacher.scanner.status.${state}`)}
+    </span>
+  );
+}
+
+function chipState(camera: QrCamera, blocked: 'loading' | 'no_nursery' | null, processing: boolean): ChipState {
+  if (blocked === 'no_nursery') return 'unavailable';
+  if (blocked === 'loading') return 'starting';
+  if (camera.status === 'error') return 'error';
+  if (camera.status === 'starting') return 'starting';
+  return processing ? 'processing' : 'scanning';
+}
+
+/** A short buzz for a recorded scan, a double one for a refused scan (phones that support it). */
+function vibrate(ok: boolean) {
+  try {
+    navigator.vibrate?.(ok ? 60 : [80, 60, 80]);
+  } catch {
+    // Not available on this device.
+  }
+}
+
 export function QRScannerPage() {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
+  const location = useLocation();
   const { user } = useAuthSession();
-  const { data: profile } = useUserProfile(user?.id);
+  const { data: profile, isPending: profilePending } = useUserProfile(user?.id);
   const { data: languagePref = 'both' } = useNurseryLanguagePref(profile?.nursery_id);
   const { settings } = useNurserySettings(profile?.nursery_id);
   const minScanGapMinutes = settings?.min_minutes_between_scans ?? 5;
-  const [lastScanned, setLastScanned] = useState<string | null>(null);
+  const [history, setHistory] = useState<ScanEntry[]>([]);
+  const [processing, setProcessing] = useState(false);
+  const processingRef = useRef(false);
+  const entryIdRef = useRef(0);
+  const manualInputRef = useRef<HTMLInputElement | null>(null);
+  const elementId = `qr-camera-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
+
+  const record = useCallback((entry: Omit<ScanEntry, 'id' | 'at'>) => {
+    entryIdRef.current += 1;
+    const next: ScanEntry = { ...entry, id: entryIdRef.current, at: Date.now() };
+    setHistory((list) => [next, ...list].slice(0, HISTORY_LIMIT));
+    vibrate(entry.outcome === 'checkin' || entry.outcome === 'checkout' || entry.outcome === 'event');
+  }, []);
 
   const formatScanTime = useCallback(
     (iso: string | null) =>
@@ -224,7 +283,7 @@ export function QRScannerPage() {
           } else {
             toast.success(t('teacher.scanner.event.checkedIn', { name: childName, event: eventName }));
           }
-          setLastScanned(`${childName} · ${eventName}`);
+          record({ name: childName, outcome: payload.already_checked_in ? 'already' : 'event', detail: eventName || null });
           return true;
         }
 
@@ -241,7 +300,7 @@ export function QRScannerPage() {
             name,
             time: formatScanTime(payload.check_out ?? null),
           }));
-          setLastScanned(`${name} · ${t('attendance.status.checkedOut')}`);
+          record({ name, outcome: 'already', detail: t('teacher.scanner.result.alreadyOut', { time: formatScanTime(payload.check_out ?? null) }) });
           return false;
         }
 
@@ -263,8 +322,9 @@ export function QRScannerPage() {
             method,
             qrTokenId: payload.qr_token_id ?? null,
           });
-          toast.error(t(rejected.mode === 'rejected' ? attendanceErrorKey(rejected.reason) : 'attendance.errors.attendance_custom_qr_pickup_only'));
-          setLastScanned(`${name} · ${t('attendance.scanner.rejectedTag')}`);
+          const message = t(rejected.mode === 'rejected' ? attendanceErrorKey(rejected.reason) : 'attendance.errors.attendance_custom_qr_pickup_only');
+          toast.error(message);
+          record({ name, outcome: 'rejected', detail: message });
           return false;
         }
 
@@ -290,7 +350,7 @@ export function QRScannerPage() {
             toast.info(t('attendance.errors.attendance_too_soon', { minutes: minScanGapMinutes }), {
               description: t('attendance.scanner.checkedInAt', { time: formatScanTime(existing.check_in) }),
             });
-            setLastScanned(`${name} · ${t('attendance.status.inNursery')}`);
+            record({ name, outcome: 'already', detail: t('teacher.scanner.result.alreadyIn', { time: formatScanTime(existing.check_in) }) });
             return false;
           }
         }
@@ -336,7 +396,7 @@ export function QRScannerPage() {
             } finally {
               settleDecision(null);
             }
-            setLastScanned(`${name} · ${t('teacher.pickupVerify.blockedTag')}`);
+            record({ name, outcome: 'blocked', detail: resolved.pickupPersonName ?? null });
             return false;
           }
 
@@ -366,44 +426,43 @@ export function QRScannerPage() {
           { method, qrTokenId: payload.qr_token_id ?? null },
         );
         await queryClient.invalidateQueries({ queryKey: ['teacher-attendance-today'] });
+        void queryClient.invalidateQueries({ queryKey: ['attendance-kpis'] });
 
         if (result.mode === 'rejected') {
-          toast.error(t(attendanceErrorKey(result.reason), { minutes: result.minMinutes ?? minScanGapMinutes }));
-          setLastScanned(`${name} · ${t('attendance.scanner.rejectedTag')}`);
+          const message = t(attendanceErrorKey(result.reason), { minutes: result.minMinutes ?? minScanGapMinutes });
+          toast.error(message);
+          record({ name, outcome: 'rejected', detail: message });
           return false;
         }
         if (result.mode === 'already_checked_in') {
           toast.info(t('attendance.scanner.alreadyCheckedIn', { name, time: formatScanTime(result.checkIn) }));
-          setLastScanned(`${name} · ${t('attendance.status.inNursery')}`);
+          record({ name, outcome: 'already', detail: t('teacher.scanner.result.alreadyIn', { time: formatScanTime(result.checkIn) }) });
           return false;
         }
         if (result.mode === 'already_checked_out') {
           toast.info(t('attendance.scanner.alreadyCheckedOut', { name, time: formatScanTime(result.checkOut) }));
-          setLastScanned(`${name} · ${t('attendance.status.checkedOut')}`);
+          record({ name, outcome: 'already', detail: t('teacher.scanner.result.alreadyOut', { time: formatScanTime(result.checkOut) }) });
           return false;
         }
 
-        setLastScanned(delegate ? `${name} · ${delegate}` : name);
-
+        const delegateText = delegate ? t('teacher.scanner.delegatePickupShort', { delegate }) : null;
         if (result.mode === 'checkout') {
-          if (result.extraHours > 0) {
-            toast.success(t('teacher.scanner.successCheckoutLate', { name }), {
-              description: t('attendance.scanner.extraHoursSummary', {
+          const extraText = result.extraHours > 0
+            ? t('attendance.scanner.extraHoursSummary', {
                 hours: result.extraHours,
                 covered: result.extraHoursCovered,
                 fee: result.extraFee.toFixed(2),
                 minutes: result.lateMinutes,
-              }) + (delegate ? ` · ${t('teacher.scanner.delegatePickupShort', { delegate })}` : ''),
-            });
-          } else {
-            toast.success(t('teacher.scanner.successCheckout', { name }), {
-              description: delegate
-                ? t('teacher.scanner.delegatePickupShort', { delegate })
-                : undefined,
-            });
-          }
+              })
+            : null;
+          const detail = [extraText, delegateText].filter(Boolean).join(' · ') || null;
+          toast.success(t(extraText ? 'teacher.scanner.successCheckoutLate' : 'teacher.scanner.successCheckout', { name }), {
+            description: detail ?? undefined,
+          });
+          record({ name, outcome: 'checkout', detail });
         } else {
           toast.success(t('teacher.scanner.successCheckin', { name }));
+          record({ name, outcome: 'checkin', detail: null });
         }
         return true;
       } catch (e) {
@@ -414,6 +473,7 @@ export function QRScannerPage() {
           ? (e instanceof Error ? e.message : t('teacher.scanner.errors.generic'))
           : t(key);
         toast.error(`${t('teacher.scanner.errors.prefix')}\n${msg}`);
+        record({ name: t('teacher.scanner.result.unknownCode'), outcome: 'rejected', detail: msg });
         return false;
       }
     },
@@ -425,6 +485,7 @@ export function QRScannerPage() {
       logIncident,
       minScanGapMinutes,
       queryClient,
+      record,
       settleDecision,
       t,
       uploadIdPhoto,
@@ -432,32 +493,59 @@ export function QRScannerPage() {
     ],
   );
 
-  const scannerDisabled = !profile?.nursery_id;
+  // Camera and manual entry share one queue: while a code is being checked (identity dialog
+  // included) nothing else is started.
+  const runScan = useCallback(
+    async (text: string): Promise<boolean> => {
+      if (processingRef.current) return false;
+      processingRef.current = true;
+      setProcessing(true);
+      try {
+        return await handleScanResult(text);
+      } finally {
+        processingRef.current = false;
+        setProcessing(false);
+      }
+    },
+    [handleScanResult],
+  );
+
+  const blocked: 'loading' | 'no_nursery' | null = profilePending ? 'loading' : profile?.nursery_id ? null : 'no_nursery';
+  const camera = useQrCamera({ elementId, enabled: !blocked, onScan: runScan });
+  const attendanceLink = location.pathname.startsWith('/admin') ? '/admin/attendance' : '/teacher/attendance';
+  const focusManual = () => {
+    manualInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    manualInputRef.current?.focus({ preventScroll: true });
+  };
 
   return (
-    <div className="relative min-h-[calc(100vh-10rem)] overflow-hidden rounded-3xl bg-primary p-4 text-white">
-      <header className="mb-4 flex items-center justify-between">
-        <h1 className="text-lg font-semibold">{t('teacher.scanner.title')}</h1>
-        <span className="rounded-full bg-secondary px-3 py-1 text-xs font-medium text-white">
-          {scannerDisabled ? t('common.loading') : t('teacher.scanner.ready')}
-        </span>
+    <div className="mx-auto w-full max-w-6xl space-y-5">
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold text-on-surface">{t('teacher.scanner.title')}</h1>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-on-surface-variant">{t('teacher.scanner.subtitle')}</p>
+        </div>
+        <CameraStatusChip state={chipState(camera, blocked, processing)} />
       </header>
 
-      <div className="relative mx-auto mt-2 max-w-md rounded-3xl border border-white/20 bg-black/20 p-3">
-        <QRScanner onScanResult={handleScanResult} disabled={scannerDisabled} />
-      </div>
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="lg:sticky lg:top-6">
+          <QrCameraView
+            elementId={elementId}
+            camera={camera}
+            blocked={blocked}
+            processing={processing}
+            onUseManual={focusManual}
+          />
+        </div>
 
-      <div className="absolute bottom-0 left-0 right-0">
-        <BottomSheet>
-          <h2 className="text-lg font-semibold text-on-surface">{t('teacher.scanner.sheetTitle')}</h2>
-          <p className="mt-2 text-xs text-on-surface-variant">{t('teacher.scanner.sheetBody')}</p>
-          <div className="mt-4 rounded-2xl bg-surface-container-low p-3 text-on-surface">
-            <p className="text-xs text-on-surface-variant">{t('teacher.scanner.lastScanned')}</p>
-            <p className="text-sm font-semibold">
-              {lastScanned ?? t('teacher.scanner.lastScannedEmpty')}
-            </p>
-          </div>
-        </BottomSheet>
+        <div className="space-y-4">
+          <LastScanCard entry={history[0] ?? null} />
+          <ManualCodeEntry inputRef={manualInputRef} busy={processing} onSubmit={runScan} />
+          <TodayAtGateCard nurseryId={profile?.nursery_id} attendanceLink={attendanceLink} />
+          <SessionHistory entries={history} />
+          <HowItWorksCard />
+        </div>
       </div>
 
       {dialogState ? (
