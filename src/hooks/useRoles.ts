@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
+import type { Action } from '@/lib/permissions/types';
 
 export interface RoleRow {
   id: string;
@@ -27,19 +28,31 @@ export interface RoleRow {
    */
   managed_position_keys: string[] | null;
   is_seed: boolean;
+  /** The nursery's copy of a platform role (Operations / HR / Finance manager, Teacher). */
+  is_system: boolean;
   created_at: string;
   updated_at: string;
 }
 
-export function useRoles() {
+/** Staff roles are the ones a nursery manages; admin and parent roles are fixed. */
+export type StaffBaseRole = 'manager' | 'teacher';
+export type RoleDepartment = NonNullable<RoleRow['base_department']>;
+
+/**
+ * Roles of one scope: a nursery's own roles (`nurseryId`), or the platform templates new
+ * nurseries copy (`nurseryId: null`, XO only).
+ */
+export function useRoles(scope: { nurseryId: string | null } = { nurseryId: null }) {
+  const { nurseryId } = scope;
   return useQuery<RoleRow[]>({
-    queryKey: ['rbac', 'roles'],
+    queryKey: ['rbac', 'roles', nurseryId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('roles')
-        .select('*')
+      let query = supabase.from('roles').select('*');
+      query = nurseryId ? query.eq('nursery_id', nurseryId) : query.is('nursery_id', null);
+      const { data, error } = await query
+        .order('is_system', { ascending: false })
         .order('is_seed', { ascending: false })
-        .order('name_en', { ascending: true });
+        .order('created_at', { ascending: true });
       if (error) throw error;
       return (data ?? []) as RoleRow[];
     },
@@ -47,82 +60,13 @@ export function useRoles() {
   });
 }
 
-export interface CreateRoleInput {
-  key: string;
-  name_en: string;
-  name_ar: string;
-  base_role: RoleRow['base_role'];
-  base_department: RoleRow['base_department'];
-  nursery_id: string | null;
-  /** null = manage all; [] = none; [...] = specific keys */
-  managed_position_keys?: string[] | null;
-}
-
-export function useCreateRole() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (input: CreateRoleInput) => {
-      const { data, error } = await supabase
-        .from('roles')
-        .insert({ ...input, is_seed: false })
-        .select()
-        .single();
-      if (error) throw error;
-      return data as RoleRow;
-    },
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['rbac', 'roles'] });
-    },
-  });
-}
-
-export interface UpdateRoleInput {
-  id: string;
-  /** Pass undefined to leave the field unchanged. null clears it. */
-  managed_position_keys?: string[] | null;
-  name_en?: string;
-  name_ar?: string;
-}
-
-export function useUpdateRole() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (input: UpdateRoleInput) => {
-      const { id, ...patch } = input;
-      const { error } = await supabase.from('roles').update(patch).eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['rbac', 'roles'] });
-      // The viewer's profile-derived managed_position_keys is read via useStaff,
-      // so invalidating staff queries refreshes the directory immediately.
-      void qc.invalidateQueries({ queryKey: ['staff-profiles'] });
-    },
-  });
-}
-
-export function useDeleteRole() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (roleId: string) => {
-      const { error } = await supabase.from('roles').delete().eq('id', roleId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['rbac', 'roles'] });
-    },
-  });
-}
-
 // -----------------------------------------------------------------------------
-// role_features — fetch and update which features (and which actions) a role grants
+// role_features — which modules (and which actions in each) a role grants
 // -----------------------------------------------------------------------------
-export type RoleFeatureAction = 'view' | 'create' | 'update' | 'delete';
-
 export interface RoleFeatureRow {
   role_id: string;
   feature_id: string;
-  actions: RoleFeatureAction[];
+  actions: Action[];
   requires_approval: boolean;
 }
 
@@ -142,45 +86,136 @@ export function useRoleFeatures(roleId: string | null | undefined) {
   });
 }
 
-export interface RoleFeatureGrant {
-  feature_id: string;
-  actions: RoleFeatureAction[];
+export interface RoleGrant {
+  feature: string;
+  actions: Action[];
   requires_approval: boolean;
 }
 
+export interface SaveRoleInput {
+  /** null creates a new role. */
+  roleId: string | null;
+  /** The nursery a new role belongs to; null = platform template (XO only). */
+  nurseryId: string | null;
+  nameAr: string;
+  nameEn: string;
+  baseRole: StaffBaseRole;
+  department: RoleDepartment | null;
+  grants: RoleGrant[];
+}
+
+function invalidateRbac(qc: ReturnType<typeof useQueryClient>) {
+  void qc.invalidateQueries({ queryKey: ['rbac'] });
+  void qc.invalidateQueries({ queryKey: ['permission-matrix'] });
+  void qc.invalidateQueries({ queryKey: ['staff-profiles'] });
+}
+
 /**
- * Replaces all role_features rows for a given role with the supplied grants.
- * Each grant must include 'view' in actions; rows whose actions array is empty
- * are dropped entirely (= no access).
+ * Creates or updates a role and replaces its permissions in one server call
+ * (public.rbac_save_role). The server keeps only the actions each module supports and
+ * adds "view" when any other action is granted.
  */
-export function useSetRoleFeatures() {
+export function useSaveRole() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { roleId: string; grants: RoleFeatureGrant[] }) => {
-      const { error: delErr } = await supabase
-        .from('role_features')
-        .delete()
-        .eq('role_id', input.roleId);
-      if (delErr) throw delErr;
+    mutationFn: async (input: SaveRoleInput) => {
+      const { data, error } = await supabase.rpc('rbac_save_role' as never, {
+        p_role_id: input.roleId,
+        p_nursery_id: input.nurseryId,
+        p_name_ar: input.nameAr,
+        p_name_en: input.nameEn,
+        p_base_role: input.baseRole,
+        p_base_department: input.baseRole === 'manager' ? input.department : null,
+        p_grants: input.grants,
+      } as never);
+      if (error) throw error;
+      return data as string;
+    },
+    onSuccess: () => invalidateRbac(qc),
+  });
+}
 
-      const rows = input.grants
-        .filter((g) => g.actions.includes('view'))
-        .map((g) => ({
-          role_id: input.roleId,
-          feature_id: g.feature_id,
-          actions: g.actions,
-          requires_approval: g.requires_approval,
-          // Keep legacy `access` in sync so any code still reading it stays correct.
-          access: g.requires_approval ? 'with_approval' : 'full',
-        }));
+/** Deletes a custom role; the server refuses while anyone still has it. */
+export function useDeleteRole() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (roleId: string) => {
+      const { error } = await supabase.rpc('rbac_delete_role' as never, { p_role_id: roleId } as never);
+      if (error) throw error;
+    },
+    onSuccess: () => invalidateRbac(qc),
+  });
+}
 
-      if (rows.length === 0) return;
-      const { error: insErr } = await supabase.from('role_features').insert(rows);
-      if (insErr) throw insErr;
+// -----------------------------------------------------------------------------
+// Who has which role
+// -----------------------------------------------------------------------------
+export interface StaffRoleRow {
+  id: string;
+  name_ar: string | null;
+  name_en: string | null;
+  email: string | null;
+  role: StaffBaseRole;
+  role_id: string | null;
+  status: string | null;
+}
+
+/** The nursery's managers and teachers with the role each one has. */
+export function useNurseryStaffRoles(nurseryId: string | null) {
+  return useQuery<StaffRoleRow[]>({
+    queryKey: ['rbac', 'staff_roles', nurseryId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, name_ar, name_en, email, role, role_id, status')
+        .eq('nursery_id', nurseryId as string)
+        .in('role', ['manager', 'teacher'])
+        .order('name_en', { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as StaffRoleRow[];
+    },
+    enabled: Boolean(nurseryId),
+    staleTime: 1000 * 60,
+  });
+}
+
+/** Gives a staff member one of their nursery's roles (public.rbac_assign_user_role). */
+export function useAssignUserRole() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { userId: string; roleId: string }) => {
+      const { error } = await supabase.rpc('rbac_assign_user_role' as never, {
+        p_user_id: input.userId,
+        p_role_id: input.roleId,
+      } as never);
+      if (error) throw error;
     },
     onSuccess: (_data, vars) => {
-      void qc.invalidateQueries({ queryKey: ['rbac', 'role_features', vars.roleId] });
-      void qc.invalidateQueries({ queryKey: ['permission-matrix'] });
+      invalidateRbac(qc);
+      void qc.invalidateQueries({ queryKey: ['user-profile', vars.userId] });
     },
   });
+}
+
+const RBAC_ERROR_CODES = [
+  'rbac_role_not_found',
+  'rbac_forbidden',
+  'rbac_name_required',
+  'rbac_invalid_base_role',
+  'rbac_invalid_grants',
+  'rbac_system_role_type_locked',
+  'rbac_system_role_locked',
+  'rbac_unknown_feature',
+  'rbac_role_in_use',
+  'rbac_cannot_change_own_role',
+  'rbac_user_not_staff',
+  'rbac_role_wrong_nursery',
+  'rbac_user_not_found',
+] as const;
+
+/** Translation key for an error from the role functions. */
+export function rbacErrorKey(error: unknown): string {
+  const raw = error && typeof error === 'object' && 'message' in error ? String((error as { message: unknown }).message) : '';
+  const code = RBAC_ERROR_CODES.find((known) => raw.includes(known));
+  return code ? `rbac.errors.${code}` : 'rbac.errors.generic';
 }

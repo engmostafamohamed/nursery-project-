@@ -17,7 +17,7 @@ import { useFeatures, useCreateFeature, useDeleteFeature } from '@/hooks/useFeat
 const CATEGORY_OPTIONS = ['operations', 'finance', 'hr', 'comms', 'admissions', 'media', 'admin'];
 
 export function AdminFeaturesPage() {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const lang = i18n.language === 'ar' ? 'ar' : 'en';
   const { user } = useAuthSession();
   const { data: profile } = useUserProfile(user?.id);
@@ -138,7 +138,7 @@ export function AdminFeaturesPage() {
               <tbody>
                 {(features.data ?? []).map((f) => (
                   <tr key={f.id} className="border-t border-outline-variant">
-                    <td className="px-3 py-2 font-medium">{lang === 'ar' ? f.name_ar : f.name_en}</td>
+                    <td className="px-3 py-2 font-medium">{t(`rbac.features.${f.id}`, { defaultValue: (lang === 'ar' ? f.name_ar : f.name_en) ?? f.id })}</td>
                     <td className="px-3 py-2 font-mono text-xs text-on-surface-variant">{f.id}</td>
                     <td className="px-3 py-2">{f.category ?? '—'}</td>
                     <td className="px-3 py-2">

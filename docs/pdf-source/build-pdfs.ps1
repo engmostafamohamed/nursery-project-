@@ -9,7 +9,7 @@ $docs = Split-Path -Parent $here
 $profileDir = Join-Path $env:TEMP 'xo-pdf-chrome-profile'
 
 $targets = @(
-  @{ Key = 'business';  Src = 'business.html';  Out = 'XO-Platform-Business-Overview.pdf' },
+  @{ Key = 'business';  Src = 'business.html';  Out = 'XO-Platform-Business-and-Delivery-Blueprint.pdf' },
   @{ Key = 'technical'; Src = 'technical.html'; Out = 'XO-Platform-Technical-Documentation.pdf' }
 )
 

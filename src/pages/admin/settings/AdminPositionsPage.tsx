@@ -23,7 +23,9 @@ export function AdminPositionsPage() {
   const nurseryId = profile?.nursery_id ?? null;
 
   const positions = usePositions();
-  const roles = useRoles();
+  // Positions are platform-wide, so they point at the platform role templates; each nursery's
+  // staff get that nursery's copy of the role.
+  const roles = useRoles({ nurseryId: null });
   const createPos = useCreatePosition();
   const deletePos = useDeletePosition();
 

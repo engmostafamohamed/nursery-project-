@@ -36,9 +36,23 @@ export interface FeatureAccess {
   teacher: Access;
 }
 
-/** Every feature/row from the spreadsheet. Add new rows here. */
+/**
+ * Every permission in the catalogue (`public.features`). Add new keys here and in the
+ * `features` table (with the actions the module supports) and its label in rbac.features.*.
+ */
 export type FeatureKey =
   | 'dashboard_attendance'
+  | 'qr_scanner'
+  | 'invoices'
+  | 'payments'
+  | 'payroll'
+  | 'packages'
+  | 'deals'
+  | 'courses'
+  | 'chat'
+  | 'community'
+  | 'settings'
+  | 'roles_permissions'
   | 'dashboard_finance'
   | 'newsfeed'
   | 'kids_applications'
@@ -73,19 +87,22 @@ export interface AccessDecision {
 }
 
 /**
- * CRUD action a user can perform on a feature.
+ * Action a user can perform on a feature. Each feature supports a subset (features.actions).
  *
- * - `view`   — see the page and read items
- * - `create` — see Create buttons / submit New forms
- * - `update` — see Edit buttons / submit edits
- * - `delete` — see Delete buttons / submit deletions
+ * - `view`    — see the page and read items
+ * - `create`  — see Create buttons / submit New forms
+ * - `update`  — see Edit buttons / submit edits
+ * - `delete`  — see Delete buttons / submit deletions
+ * - `approve` — confirm or sign off (payments, payroll, corrections, waivers, approvals)
+ * - `export`  — download / export data
  *
  * 'view' is the gatekeeper: a role_features row always grants at least view.
- * Absence of the row = no access at all.
+ * Absence of the row = no access at all. The server checks the same grants with
+ * public.user_can(feature, action).
  */
-export type Action = 'view' | 'create' | 'update' | 'delete';
+export type Action = 'view' | 'create' | 'update' | 'delete' | 'approve' | 'export';
 
-export const ALL_ACTIONS: readonly Action[] = ['view', 'create', 'update', 'delete'] as const;
+export const ALL_ACTIONS: readonly Action[] = ['view', 'create', 'update', 'delete', 'approve', 'export'] as const;
 
 /** Full per-feature decision including which actions are unlocked. */
 export interface FeatureActionDecision {

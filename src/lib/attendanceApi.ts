@@ -283,6 +283,7 @@ export async function resolveAttendanceReview(attendanceId: string, note?: strin
 const KNOWN_CODES = new Set([
   'attendance_not_authenticated',
   'attendance_forbidden',
+  'attendance_no_permission',
   'attendance_admin_only',
   'attendance_child_not_found',
   'attendance_child_not_active',

@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>XO Platform — Business Overview</title>
+<title>XO Platform — Business &amp; Delivery Blueprint</title>
 <link rel="stylesheet" href="theme.css" />
 <style>
   @page {
     size: A4;
     margin: 18mm 16mm 18mm 16mm;
-    @bottom-left { content: "XO Platform  ·  Business Overview"; font-family: Inter, 'Segoe UI', sans-serif; font-size: 7.6pt; color: #8b91a3; }
+    @bottom-left { content: "XO Platform  ·  Business & Delivery Blueprint"; font-family: Inter, 'Segoe UI', sans-serif; font-size: 7.6pt; color: #8b91a3; }
     @bottom-right { content: "Page " counter(page); font-family: Inter, 'Segoe UI', sans-serif; font-size: 7.6pt; color: #8b91a3; }
   }
   @page :first { margin: 0; @bottom-left { content: none; } @bottom-right { content: none; } }
@@ -20,17 +20,17 @@
 <section class="cover">
   <div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="dotgrid"></div>
   <div class="brandmark"><div class="logo">XO</div>XO Platform</div>
-  <div class="kind">Business Overview</div>
+  <div class="kind">Business &amp; Delivery Blueprint</div>
   <h1>XO Platform</h1>
-  <p class="subtitle">The all-in-one operating system for modern nurseries: admissions, daily care, safe pickup, billing, staff and parent communication in one place.</p>
+  <p class="subtitle">A business and solution blueprint for the nursery operating platform: product vision, roles, permissions, feature catalogue, operating journeys, rollout timeline and acceptance deliverables.</p>
   <div class="chips">
-    <span>15 business modules</span><span>6 user roles</span><span>4 dedicated portals</span><span>Arabic &amp; English</span><span>Installable mobile app</span>
+    <span>15 business modules</span><span>6 base roles</span><span>25 feature grants</span><span>Arabic &amp; English</span><span>Delivery-ready roadmap</span>
   </div>
   <div class="meta">
-    <div>Document<b>Business Overview</b></div>
-    <div>Version<b>1.0</b></div>
+    <div>Document<b>Business &amp; Delivery Blueprint</b></div>
+    <div>Version<b>1.1</b></div>
     <div>Date<b>October 2026</b></div>
-    <div>Audience<b>Owners, directors &amp; partners</b></div>
+    <div>Audience<b>Owners, delivery teams &amp; partners</b></div>
   </div>
 </section>
 
@@ -48,8 +48,10 @@
     <li><div class="n">06</div><div><b>Permissions</b><span>How access is controlled feature by feature, including custom roles and positions.</span></div></li>
     <li><div class="n">07</div><div><b>Key journeys</b><span>From first inquiry to enrolled child, a day at the nursery, and the monthly billing cycle.</span></div></li>
     <li><div class="n">08</div><div><b>Security, privacy and trust</b><span>How children's and families' data is protected.</span></div></li>
-    <li><div class="n">09</div><div><b>Integration status and roadmap</b><span>What is live today, what is ready to switch on, and what comes next.</span></div></li>
-    <li><div class="n">10</div><div><b>Why XO</b><span>The business case in one page.</span></div></li>
+    <li><div class="n">09</div><div><b>Integration status and roadmap</b><span>Implemented workflows, provider stubs, planned capabilities and validation priorities.</span></div></li>
+    <li><div class="n">10</div><div><b>Why XO</b><span>The business case and suggested demonstration flow.</span></div></li>
+    <li><div class="n">11</div><div><b>Business operating timeline</b><span>How a family moves through the nursery lifecycle, the school day and the monthly finance cycle.</span></div></li>
+    <li><div class="n">12</div><div><b>Indicative delivery plan and deliverables</b><span>A phased rollout baseline, decision gates, acceptance evidence and handover outputs.</span></div></li>
   </ol>
 </section>
 
@@ -736,25 +738,25 @@
 <!-- ================= 09 ROADMAP ================= -->
 <section class="chapter">
   <div class="chapter-head"><div class="chapter-num">09</div><div><p class="eyebrow">Transparency</p><h1>Integration status and roadmap</h1></div></div>
-  <p class="lead">Everything described in chapter 4 is live, with the exceptions below. They are listed separately so that expectations stay accurate.</p>
+  <p class="lead">The feature catalogue describes product capabilities. A capability in the codebase does not necessarily mean its external provider is connected or that it is enabled in every deployment; the distinctions below are based on the repository documentation and implementation.</p>
 
   <table class="t">
     <thead><tr><th style="width:30%">Capability</th><th style="width:20%">Status</th><th>Details</th></tr></thead>
     <tbody>
-      <tr><td class="k">Email notifications</td><td><span class="pill amber">Ready to connect</span></td><td>Built in and wired to Resend; needs the nursery's API credentials.</td></tr>
-      <tr><td class="k">SMS notifications</td><td><span class="pill amber">Ready to connect</span></td><td>Built in and wired to SMS Misr; needs credentials.</td></tr>
-      <tr><td class="k">WhatsApp notifications</td><td><span class="pill amber">Ready to connect</span></td><td>Built in and wired to 360dialog with daily per-parent limits; needs credentials.</td></tr>
-      <tr><td class="k">Online card and wallet payments</td><td><span class="pill blue">In progress</span></td><td>Paymob checkout (card, Fawry, InstaPay, Vodafone and Orange Cash) is planned. Today, parents declare InstaPay, wallet, transfer or cash payments and finance confirms them.</td></tr>
-      <tr><td class="k">CCTV live view for parents</td><td><span class="pill">Planned</span></td><td>Settings (stream token duration, viewer limits, retention) and data model are in place; the viewing experience is not built yet.</td></tr>
-      <tr><td class="k">School bus and transport</td><td><span class="pill">Planned</span></td><td>The data model for routes and bus attendance exists; screens are not built yet.</td></tr>
+      <tr><td class="k">Email notifications</td><td><span class="pill amber">Provider stub</span></td><td>The Edge Function builds and logs email payloads; its source labels the Resend delivery call as stubbed. Do not treat email delivery as active until provider integration and a delivery test are complete.</td></tr>
+      <tr><td class="k">SMS notifications</td><td><span class="pill amber">Provider stub</span></td><td>The SMS Misr call is stubbed; OTP and fallback templates exist. Activate only after credentials, provider wiring and end-to-end testing.</td></tr>
+      <tr><td class="k">WhatsApp notifications</td><td><span class="pill amber">Provider stub</span></td><td>The 360dialog call is stubbed. A daily limit is enforced in code but is documented as hard-coded; verify configured limits before launch.</td></tr>
+      <tr><td class="k">Online card and wallet payments</td><td><span class="pill blue">Not integrated</span></td><td>The Paymob client currently returns an empty checkout URL. Parents can declare supported local/manual payment methods and finance confirms attempts; hosted checkout requires implementation, credentials and reconciliation tests.</td></tr>
+      <tr><td class="k">CCTV live view for parents</td><td><span class="pill">Planned</span></td><td>Settings and data structures are documented, but the camera viewing experience is not built. Requires privacy, consent, retention and access-control design before release.</td></tr>
+      <tr><td class="k">School bus and transport</td><td><span class="pill">Schema only</span></td><td>Route and bus-attendance data structures exist; operational screens and tracking workflows are not built.</td></tr>
     </tbody>
   </table>
 
   <h2>Suggested next steps</h2>
   <div class="grid-3">
-    <div class="card"><span class="tag">Quick win</span><p>Connect email, SMS and WhatsApp providers so reminders reach parents outside the app.</p></div>
-    <div class="card"><span class="tag">Revenue</span><p>Finish Paymob checkout so parents can pay by card and wallet instantly, without manual confirmation.</p></div>
-    <div class="card"><span class="tag">Differentiator</span><p>Launch CCTV live view and transport tracking as premium-plan features.</p></div>
+    <div class="card"><span class="tag">Operational readiness</span><p>Connect and verify messaging providers, secrets, delivery callbacks, failure handling and opt-out rules.</p></div>
+    <div class="card"><span class="tag">Revenue</span><p>Complete hosted checkout only after payment-provider callbacks, duplicate protection, refunds and reconciliation are tested.</p></div>
+    <div class="card"><span class="tag">Future scope</span><p>Define privacy, consent and operational requirements before estimating CCTV or transport user experiences.</p></div>
   </div>
 </section>
 
@@ -783,6 +785,126 @@
     <li><b>Parent experience.</b> Show the home feed, daily report, gallery, invoice payment and permission slip.</li>
     <li><b>Control.</b> Finish with roles and permissions: a teacher cannot see finance, and a finance manager can.</li>
   </ol>
+</section>
+
+<!-- ================= 11 BUSINESS TIMELINE ================= -->
+<section class="chapter">
+  <div class="chapter-head"><div class="chapter-num">11</div><div><p class="eyebrow">Operating model</p><h1>Business operating timeline</h1></div></div>
+  <p class="lead">XO connects the family lifecycle to the nursery's recurring operating rhythm. The timeline below is a business-process view, not a claim that every step is automatically enabled for every nursery.</p>
+
+  <h2 class="mt0">Family lifecycle</h2>
+  <div class="flow">
+    <div class="node"><b>Discover</b>Inquiry, nursery information and follow-up</div><div class="arrow">→</div>
+    <div class="node"><b>Apply</b>Account, registration form and documents</div><div class="arrow">→</div>
+    <div class="node"><b>Decide</b>Review, package, price and admission payment</div><div class="arrow">→</div>
+    <div class="node"><b>Enroll</b>Approval, child profile, class and subscription</div><div class="arrow">→</div>
+    <div class="node"><b>Engage</b>Daily care, reports, events and communication</div><div class="arrow">→</div>
+    <div class="node"><b>Retain</b>Renewal, loyalty, family feedback and re-enrollment</div>
+  </div>
+  <div class="callout info">
+    <b>Business outcome</b>
+    <p>A single record follows the family from first inquiry through enrollment and ongoing care, reducing repeated data entry while preserving approvals and payment history.</p>
+  </div>
+
+  <h2>Nursery operating rhythm</h2>
+  <table class="t">
+    <thead><tr><th style="width:17%">Cadence</th><th style="width:34%">Team activity</th><th style="width:31%">XO workflow</th><th>Business evidence</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Opening / arrival</td><td>Confirm children arriving and safely identify the collecting adult.</td><td>QR/manual attendance, authorised pickup validation, attendance dashboard and parent notification.</td><td>Timestamped attendance and pickup audit trail.</td></tr>
+      <tr><td class="k">During the day</td><td>Care for children, record meals and rest, share learning moments and raise health concerns.</td><td>Daily reports, health alerts, milestones, approved media and class communication.</td><td>Child-level care record visible to authorised families.</td></tr>
+      <tr><td class="k">Closing / pickup</td><td>Check children out and follow up on late or missing check-outs.</td><td>Pickup QR, closing reminders, exception review and late-charge calculation where configured.</td><td>Reconciled attendance and explainable exceptions.</td></tr>
+      <tr><td class="k">Weekly</td><td>Plan meals, activities and upcoming events; monitor inquiries and staffing.</td><td>Meal plans, calendar, event permissions, waitlist and staff schedules.</td><td>Published plans, event responses and operational coverage.</td></tr>
+      <tr><td class="k">Monthly</td><td>Review tuition, payment collection, overdue balances, payroll and occupancy.</td><td>Recurring invoice cycle, payment review, reminders, financial dashboard and payroll records.</td><td>Invoice, payment, payroll and collection reports.</td></tr>
+      <tr><td class="k">Term / annual</td><td>Review progress and family feedback; renew packages and plan capacity.</td><td>Quarterly reports, milestones, surveys, loyalty, packages and analytics.</td><td>Progress evidence, feedback trends and renewal pipeline.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Monthly finance timeline</h2>
+  <div class="flow">
+    <div class="node"><b>1 · Due date</b>Scheduled subscriptions and approved charges are evaluated</div><div class="arrow">→</div>
+    <div class="node"><b>2 · Invoice</b>Invoice is issued with line items and balance</div><div class="arrow">→</div>
+    <div class="node"><b>3 · Notify</b>Parent sees the invoice and receives configured reminders</div><div class="arrow">→</div>
+    <div class="node"><b>4 · Payment attempt</b>Parent submits a method and reference or pays through an available channel</div><div class="arrow">→</div>
+    <div class="node"><b>5 · Reconcile</b>Finance confirms or rejects; receipt and balance are updated</div>
+  </div>
+  <p class="small muted">Online checkout depends on provider integration. Manual payment submission and finance review are the documented current workflow; verify the deployed configuration before promising automated payment capture.</p>
+</section>
+
+<!-- ================= 12 DELIVERY TIMELINE & DELIVERABLES ================= -->
+<section class="chapter">
+  <div class="chapter-head"><div class="chapter-num">12</div><div><p class="eyebrow">Delivery plan</p><h1>Indicative timeline and deliverables</h1></div></div>
+  <p class="lead">This is an indicative, module-led rollout plan based on the 15 business modules already represented in the XO repository. It plans configuration, integration completion, data preparation, validation, pilot and handover—not a ground-up rebuild of all 15 modules. A module appearing in the codebase is not, by itself, proof that it is production-ready or enabled for a tenant; each wave has an explicit acceptance gate.</p>
+
+  <div class="grid-4" style="margin:12px 0">
+    <div class="stat"><b>12 weeks</b><span>Indicative baseline</span></div>
+    <div class="stat"><b>15 modules</b><span>5 module waves + foundation</span></div>
+    <div class="stat"><b>1 pilot</b><span>Representative nursery</span></div>
+    <div class="stat"><b>Evidence-led</b><span>Acceptance before each wave</span></div>
+  </div>
+
+  <h2 class="mt0">Module rollout timeline</h2>
+  <table class="t">
+    <thead><tr><th style="width:11%">When</th><th style="width:19%">Wave</th><th style="width:34%">Existing XO modules in scope</th><th style="width:23%">Wave deliverables</th><th>Exit gate</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Weeks 1–2</td><td><b>0 · Foundation &amp; readiness</b></td><td>Platform and tenant setup; role-based access; nursery settings and onboarding (Modules 13–14 foundation).</td><td>Tenant/configuration register; role and permission review; environment and migration inventory; data-import plan; baseline defects and integration register.</td><td>Named pilot nursery and owners; role/data boundaries approved; migration and backup state checked; launch scope and exclusions signed off.</td></tr>
+      <tr><td class="k">Weeks 3–4</td><td><b>1 · Enrolment &amp; child record</b></td><td>Admissions and enrolment (1); child profiles and health (2); packages, pricing and deals (6).</td><td>Registration templates and statuses configured; sample inquiry-to-application journey; package/deal catalogue; child/guardian/health data mapping; reconciled trial import.</td><td>Representative parent application can be reviewed and approved; resulting child and package links reconcile; sensitive health and document access is checked.</td></tr>
+      <tr><td class="k">Weeks 5–6</td><td><b>2 · Classroom &amp; daily operations</b></td><td>Classes and courses (3); attendance and safe pickup (4); daily care and learning progress (5).</td><td>Class/teacher assignments; QR and authorised-pickup setup; attendance exception procedures; daily-report, milestone, meal and parent-view scenarios; staff training pack.</td><td>Admin/teacher/parent scenarios pass for arrival, care and pickup; attendance audit events and permission boundaries are verified.</td></tr>
+      <tr><td class="k">Weeks 7–8</td><td><b>3 · People &amp; finance</b></td><td>Staff and HR (8); billing, payments and finance (7); pricing/deals hand-off from Module 6.</td><td>Staff positions, schedules and payroll setup; invoice and subscription rules; payment-method configuration; finance review/reconciliation procedure; opening-balance and sample-invoice checks.</td><td>Invoice totals and balances reconcile; payment submission and finance confirmation/rejection are tested; staff see only their permitted HR/payroll records. Hosted Paymob checkout is excluded unless separately integrated and accepted.</td></tr>
+      <tr><td class="k">Weeks 9–10</td><td><b>4 · Family engagement &amp; retention</b></td><td>Communication and notifications (9); events and permissions (10); media/content/community (11); loyalty and rewards (12).</td><td>Chat/inbox and broadcast rules; event and consent calendar; media privacy and approval settings; survey/community settings; loyalty earning/redemption checks; provider readiness decision.</td><td>Parent-facing communication, consent and media visibility pass with test accounts. Email, SMS and WhatsApp remain marked stubbed until actual provider delivery is proven.</td></tr>
+      <tr><td class="k">Weeks 11–12</td><td><b>5 · Platform, UAT &amp; launch</b></td><td>AI help assistant (15); chain/platform administration, analytics and tenant export (14); end-to-end regression across Modules 1–13.</td><td>AI scope/safety check; tenant/chain access and export rehearsal; UAT evidence; defect closure; go/no-go pack; production runbook, training and hypercare ownership.</td><td>Critical journeys pass in the production-like environment; tenant-isolation and restore/export checks pass; business owner signs go/no-go and support accepts handover.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Cross-wave delivery deliverables</h2>
+  <table class="t">
+    <thead><tr><th style="width:17%">Workstream</th><th style="width:37%">Deliverable</th><th style="width:29%">Acceptance evidence</th><th>Owner</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Product &amp; business</td><td>Approved module scope, workflow owners, configuration decisions, role/feature/action matrix and release exclusions.</td><td>Named business owner signs off every in-scope workflow and its accountable approver.</td><td>Product owner + nursery lead</td></tr>
+      <tr><td class="k">Data &amp; operations</td><td>Source-to-target mapping; trial and final import/reconciliation; operating procedures for attendance, health alerts, payment exceptions, and media approvals.</td><td>Import counts and financial totals reconcile; exception handling is demonstrated by trained users.</td><td>Data lead + operations</td></tr>
+      <tr><td class="k">Engineering &amp; quality</td><td>Migration/deployment record; role and tenant-isolation checks; end-to-end UAT evidence; regression report; defects with severity and owner.</td><td>Release-blocking defects are closed or explicitly accepted; database migration state matches the release.</td><td>Engineering lead + QA</td></tr>
+      <tr><td class="k">Integrations</td><td>Provider-by-provider status register for payments, email, SMS, WhatsApp and push; secrets owner; callback/retry/failure and reconciliation evidence where enabled.</td><td>A provider is labelled live only after a real end-to-end delivery/payment and failure-path test; otherwise it remains stubbed or out of scope.</td><td>Integration owner + finance</td></tr>
+      <tr><td class="k">Launch &amp; handover</td><td>Go/no-go decision; admin/staff/parent guides; role and settings register; incident contacts; backup/export/restore evidence; hypercare log and next-wave backlog.</td><td>Production smoke test passes; operations owner accepts the runbook and support responsibility.</td><td>Business owner + support lead</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Repository-specific readiness items to include in the plan</h2>
+  <div class="grid-2">
+    <div class="card">
+      <span class="tag">Quality baseline</span>
+      <p>The repository currently has no configured <code>test</code> script or matching unit-test files. An earlier <code>npm run typecheck</code> run on 8 October 2026 reported 115 TypeScript errors across 17 source files. Re-run the checks at project kickoff, record the new baseline, and agree remediation priorities before calling the application release-ready.</p>
+    </div>
+    <div class="card">
+      <span class="tag">Integration scope</span>
+      <p>The codebase contains email/SMS/WhatsApp provider stubs, a Paymob client that returns an empty checkout URL, and camera/transport schema without complete user-facing workflows. Treat these as explicit work packages or exclusions—not completed launch features.</p>
+    </div>
+  </div>
+
+  <h2>Go-live exit checklist</h2>
+  <div class="grid-2">
+    <div class="card">
+      <span class="tag">Business readiness</span>
+      <ul class="dots tight">
+        <li>Nursery owner, admin, finance and class leads are trained and know escalation contacts.</li>
+        <li>Representative children, guardians, classes, authorized pickups, packages and balances are reconciled.</li>
+        <li>Role tests confirm each user sees only permitted features and records.</li>
+        <li>Families receive clear instructions for login, attendance, payments and consent.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="tag">Technical readiness</span>
+      <ul class="dots tight">
+        <li>Production environment, secrets, backups, migration state and rollback plan are verified.</li>
+        <li>Critical routes and workflows pass smoke tests; errors and monitoring owners are defined.</li>
+        <li>External providers are explicitly marked connected, stubbed or out of launch scope.</li>
+        <li>Support, incident response, data export and recovery procedures are available.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <b>Planning assumptions</b>
+    <p>One pilot nursery, an available business decision-maker, timely data and user access, a named implementation owner, and no major net-new module build are assumed. The 12-week estimate covers configuration and rollout of capabilities already represented in the repository plus agreed validation and defect remediation. If production-readiness work reveals substantial missing implementation, unstable external providers, migration/data-quality issues, or unplanned scope (including Paymob, messaging, transport or CCTV), re-estimate the affected wave before committing dates.</p>
+  </div>
 </section>
 
 </body>

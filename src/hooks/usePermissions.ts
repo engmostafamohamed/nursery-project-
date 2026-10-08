@@ -38,6 +38,14 @@ const WITH_APPROVAL_ACTION_DECISION: FeatureActionDecision = {
 };
 
 /**
+ * Admin roles always have every permission — the same rule as public.user_can() on the server —
+ * so a nursery admin editing roles can never lock themselves out.
+ */
+function hasEveryPermission(subject: PermissionSubject): boolean {
+  return subject.role === 'xo_super_admin' || subject.role === 'chain_super_admin' || subject.role === 'branch_admin';
+}
+
+/**
  * Resolves the current signed-in user into a {@link PermissionSubject}.
  * Returns `null` while the profile is still loading.
  */
@@ -55,7 +63,7 @@ export function useCurrentSubject(): PermissionSubject | null {
  * Full per-feature decision including the set of CRUD actions.
  *
  * Resolution order:
- *  1. xo_super_admin → full access, all actions, no approval needed.
+ *  1. Admin roles (xo / chain / branch admin) → full access, all actions, no approval needed.
  *  2. DB-driven matrix → look up role_features for the user's role_id.
  *  3. Static fallback → src/lib/permissions/matrix.ts. The static engine
  *     doesn't know about per-action grants; assume 'full' = all actions.
@@ -68,7 +76,7 @@ export function useFeatureActions(feature: FeatureKey): FeatureActionDecision {
 
   return useMemo(() => {
     if (!subject) return NO_ACTION_DECISION;
-    if (subject.role === 'xo_super_admin') return FULL_ACTION_DECISION;
+    if (hasEveryPermission(subject)) return FULL_ACTION_DECISION;
 
     if (matrix.data) {
       const entry = matrix.data.get(feature);
@@ -111,6 +119,20 @@ export function useCan(feature: FeatureKey): boolean {
   return useFeatureAccess(feature).allowed;
 }
 
+/**
+ * False while the user's grants are still loading, so screens can wait instead of briefly
+ * showing "no access" (or a page the user may not see).
+ */
+export function usePermissionsReady(): boolean {
+  const subject = useCurrentSubject();
+  const { user } = useAuthSession();
+  const { data: profile } = useUserProfile(user?.id);
+  const matrix = usePermissionMatrix(profile?.role_id ?? null);
+  if (!subject) return false;
+  if (hasEveryPermission(subject) || !profile?.role_id) return true;
+  return !matrix.isPending;
+}
+
 /** All features the current user can access (e.g. to build a menu). */
 export function useAllowedFeatures(): FeatureKey[] {
   const subject = useCurrentSubject();
@@ -120,8 +142,8 @@ export function useAllowedFeatures(): FeatureKey[] {
 
   return useMemo(() => {
     if (!subject) return [];
-    if (subject.role === 'xo_super_admin') {
-      return allowedFeatures(subject);
+    if (hasEveryPermission(subject)) {
+      return allowedFeatures({ ...subject, role: 'xo_super_admin' });
     }
     if (matrix.data) {
       const list: FeatureKey[] = [];

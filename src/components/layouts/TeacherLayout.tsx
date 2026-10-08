@@ -9,6 +9,7 @@ import { HelpAiBundle } from '@/components/help/HelpAiBundle';
 import { NotificationCenterDrawer } from '@/components/notifications/NotificationCenterDrawer';
 import { ReminderAlertHost } from '@/components/notifications/ReminderAlertHost';
 import { BackButton } from '@/components/shared/BackButton';
+import { FeatureRouteGuard } from '@/components/shared/FeatureRouteGuard';
 import { OfflineIndicator } from '@/components/shared/OfflineIndicator';
 import { PWAInstallPrompt } from '@/components/shared/PWAInstallPrompt';
 import { UserMenu } from '@/components/shared/UserMenu';
@@ -17,7 +18,7 @@ import { ChatWidget } from '@/components/chat/ChatWidget';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useNurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
-import { useAllowedFeatures } from '@/hooks/usePermissions';
+import { useAllowedFeatures, usePermissionsReady } from '@/hooks/usePermissions';
 import { useWebPushSetup } from '@/hooks/useWebPushSetup';
 import { useNotificationsCenter } from '@/hooks/useNotificationsCenter';
 import { useUnreadMessagesCount } from '@/hooks/useUnreadMessagesCount';
@@ -36,17 +37,18 @@ const primaryNavItems: TeacherNavItem[] = [
   { to: '/teacher', key: 'home', icon: 'home' },
   { to: '/teacher/attendance', key: 'attendance', icon: 'fact_check', feature: 'dashboard_attendance' },
   { to: '/teacher/events', key: 'events', icon: 'event', feature: 'event_calendar' },
-  { to: '/teacher/courses', key: 'courses', icon: 'school' },
+  { to: '/teacher/courses', key: 'courses', icon: 'school', feature: 'courses' },
 ];
 
 const secondaryNavItems: TeacherNavItem[] = [
   { to: '/teacher/daily-reports', key: 'dailyReports', icon: 'description', feature: 'daily_reports' },
-  { to: '/teacher/milestones', key: 'milestones', icon: 'social_leaderboard' },
+  { to: '/teacher/milestones', key: 'milestones', icon: 'social_leaderboard', feature: 'daily_reports' },
   { to: '/teacher/reminders', key: 'reminders', icon: 'alarm' },
-  { to: '/teacher/chat', key: 'chat', icon: 'forum' },
+  { to: '/teacher/chat', key: 'chat', icon: 'forum', feature: 'chat' },
   { to: '/teacher/media', key: 'media', icon: 'photo_library', feature: 'media_library' },
-  { to: '/teacher/scanner', key: 'scanner', icon: 'qr_code_scanner', feature: 'qr_code' },
+  { to: '/teacher/scanner', key: 'scanner', icon: 'qr_code_scanner', feature: 'qr_scanner' },
   { to: '/teacher/classes', key: 'classes', icon: 'school', feature: 'classes' },
+  { to: '/teacher/community', key: 'community', icon: 'diversity_3', feature: 'community' },
   { to: '/teacher/profile', key: 'profile', icon: 'person' },
   { to: '/teacher/settings', key: 'settings', icon: 'settings' },
 ];
@@ -84,13 +86,14 @@ export function TeacherLayout() {
   );
   const { showPrompt, enablePush, dismissPrompt } = useWebPushSetup(user?.id);
 
-  // Dynamic feature-based filtering. xo_super_admin shortcircuits to "all".
-  // Until the matrix loads, allowedSet is null and both arrays render fully
+  // Dynamic feature-based filtering from the role the nursery admin gave this user.
+  // Until the grants load, allowedSet is null and both arrays render fully
   // (avoids a flash of empty nav while the DB query is in flight).
   const allowedFeatures = useAllowedFeatures();
+  const permissionsReady = usePermissionsReady();
   const allowedSet = useMemo<ReadonlySet<FeatureKey> | null>(
-    () => (allowedFeatures.length === 0 ? null : new Set(allowedFeatures)),
-    [allowedFeatures],
+    () => (permissionsReady ? new Set(allowedFeatures) : null),
+    [permissionsReady, allowedFeatures],
   );
   const visiblePrimary = useMemo(
     () => filterByFeatures(primaryNavItems, allowedSet),
@@ -238,7 +241,9 @@ export function TeacherLayout() {
             </div>
           </div>
         ) : null}
-        <Outlet />
+        <FeatureRouteGuard homePath="/teacher">
+          <Outlet />
+        </FeatureRouteGuard>
       </main>
 
       <nav

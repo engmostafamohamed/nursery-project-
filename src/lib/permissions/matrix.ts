@@ -15,6 +15,17 @@ import type { FeatureAccess, FeatureKey } from './types';
  */
 export const PERMISSION_MATRIX: Record<FeatureKey, FeatureAccess> = {
   dashboard_attendance: { topManagement: 'full', manager: 'full', teacher: 'full' },
+  qr_scanner: { topManagement: 'full', manager: 'full', teacher: 'full' },
+  invoices: { topManagement: 'full', manager: { requireDepartment: 'finance' }, teacher: 'none' },
+  payments: { topManagement: 'full', manager: { requireDepartment: 'finance' }, teacher: 'none' },
+  payroll: { topManagement: 'full', manager: { requireDepartment: 'hr' }, teacher: 'none' },
+  packages: { topManagement: 'full', manager: { requireDepartment: 'finance' }, teacher: 'none' },
+  deals: { topManagement: 'full', manager: { requireDepartment: 'finance' }, teacher: 'none' },
+  courses: { topManagement: 'full', manager: 'full', teacher: 'full' },
+  chat: { topManagement: 'full', manager: 'full', teacher: 'full' },
+  community: { topManagement: 'full', manager: 'full', teacher: 'full' },
+  settings: { topManagement: 'full', manager: 'none', teacher: 'none' },
+  roles_permissions: { topManagement: 'full', manager: 'none', teacher: 'none' },
   dashboard_finance: { topManagement: 'full', manager: { requireDepartment: 'finance' }, teacher: 'none' },
   newsfeed: { topManagement: 'full', manager: 'full', teacher: 'full' },
   kids_applications: { topManagement: 'full', manager: 'full', teacher: 'none' },

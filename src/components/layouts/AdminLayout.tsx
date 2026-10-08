@@ -9,6 +9,7 @@ import { HelpAiBundle } from '@/components/help/HelpAiBundle';
 import { NotificationCenterDrawer } from '@/components/notifications/NotificationCenterDrawer';
 import { ReminderAlertHost } from '@/components/notifications/ReminderAlertHost';
 import { BackButton } from '@/components/shared/BackButton';
+import { FeatureRouteGuard } from '@/components/shared/FeatureRouteGuard';
 import { OfflineIndicator } from '@/components/shared/OfflineIndicator';
 import { PWAInstallPrompt } from '@/components/shared/PWAInstallPrompt';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -61,7 +62,7 @@ const NAV_LINK_END_PATHS = new Set([
 
 /**
  * Each nav item may carry a `feature` from the permission matrix.
- * Items without a `feature` are always visible (e.g. cross-cutting/settings screens).
+ * Items without a `feature` are always visible (personal screens such as reminders).
  * The sidebar filters these against the current user so a Finance/HR manager only
  * sees what their department unlocks.
  */
@@ -74,13 +75,13 @@ const navItems: NavItem[] = [
   { to: '/admin/classes', key: 'classes', icon: 'school', feature: 'classes' },
   { to: '/admin/admissions/applications', key: 'admissions', icon: 'group_add', feature: 'admissions' },
   { to: '/admin/attendance', key: 'attendance', icon: 'how_to_reg', feature: 'dashboard_attendance' },
-  { to: '/admin/scanner', key: 'scanner', icon: 'qr_code_scanner', feature: 'dashboard_attendance' },
+  { to: '/admin/scanner', key: 'scanner', icon: 'qr_code_scanner', feature: 'qr_scanner' },
   { to: '/admin/events', key: 'events', icon: 'event', feature: 'event_calendar' },
-  { to: '/admin/courses', key: 'courses', icon: 'school' },
-  { to: '/admin/packages', key: 'packages', icon: 'package_2' },
-  { to: '/admin/deals', key: 'deals', icon: 'sell' },
+  { to: '/admin/courses', key: 'courses', icon: 'school', feature: 'courses' },
+  { to: '/admin/packages', key: 'packages', icon: 'package_2', feature: 'packages' },
+  { to: '/admin/deals', key: 'deals', icon: 'sell', feature: 'deals' },
   { to: '/admin/reports', key: 'reports', icon: 'grading', feature: 'daily_reports' },
-  { to: '/admin/chat', key: 'chat', icon: 'forum' },
+  { to: '/admin/chat', key: 'chat', icon: 'forum', feature: 'chat' },
   { to: '/admin/messages/broadcast', key: 'broadcastComposer', icon: 'campaign', feature: 'broadcast_messages' },
   { to: '/admin/surveys', key: 'surveys', icon: 'fact_check', feature: 'surveys' },
   { to: '/admin/financial/dashboard', key: 'financialDashboard', icon: 'account_balance', feature: 'dashboard_finance' },
@@ -111,8 +112,8 @@ const moreNavGroups: { titleKey: string; items: NavItem[] }[] = [
   {
     titleKey: 'moreGroupAdvanced',
     items: [
-      { to: '/admin/staff/payroll', key: 'payroll', icon: 'payments', feature: 'financial_reports' },
-      { to: '/admin/invoices', key: 'invoices', icon: 'receipt_long', feature: 'dashboard_finance' },
+      { to: '/admin/staff/payroll', key: 'payroll', icon: 'payments', feature: 'payroll' },
+      { to: '/admin/invoices', key: 'invoices', icon: 'receipt_long', feature: 'invoices' },
       { to: '/admin/reports/financial', key: 'reportsFinancial', icon: 'monitoring', feature: 'financial_reports' },
       { to: '/admin/attendance/dashboard', key: 'attendanceDashboard', icon: 'monitoring', feature: 'dashboard_attendance' },
       { to: '/admin/attendance/logs', key: 'attendanceLogs', icon: 'receipt_long', feature: 'dashboard_attendance' },
@@ -122,9 +123,9 @@ const moreNavGroups: { titleKey: string; items: NavItem[] }[] = [
       { to: '/admin/teacher-reminders', key: 'teacherReminders', icon: 'notifications_active', feature: 'notifications' },
       { to: '/admin/reminders', key: 'reminders', icon: 'alarm' },
       { to: '/admin/settings/positions', key: 'rbacPositions', icon: 'work', xoOnly: true },
-      { to: '/admin/settings/roles', key: 'rbacRoles', icon: 'shield_person', xoOnly: true },
+      { to: '/admin/settings/roles', key: 'rbacRoles', icon: 'shield_person', feature: 'roles_permissions' },
       { to: '/admin/settings/features', key: 'rbacFeatures', icon: 'extension', xoOnly: true },
-      { to: '/admin/settings', key: 'settings', icon: 'settings' },
+      { to: '/admin/settings', key: 'settings', icon: 'settings', feature: 'settings' },
     ],
   },
 ];
@@ -137,8 +138,8 @@ export function AdminLayout() {
   const { activeNurseryId, availableNurseries } = useActiveNurseryId();
   const { data: languagePref = 'both' } = useNurseryLanguagePref(profile?.nursery_id);
   const subject = useCurrentSubject();
-  // DB-driven feature set for the current user. Reflects custom roles created
-  // via /admin/settings/roles. xo_super_admin short-circuits to ALL features.
+  // DB-driven feature set for the current user. Reflects the roles the nursery admin manages
+  // in /admin/settings/roles. Admin roles (xo / chain / branch) short-circuit to ALL features.
   const allowedFeatures = useAllowedFeatures();
   const allowedSet = useMemo<ReadonlySet<FeatureKey> | null>(
     () => (subject == null ? null : new Set(allowedFeatures)),
@@ -462,7 +463,9 @@ export function AdminLayout() {
         </header>
         <main className="p-8">
           <PWAInstallPrompt />
-          <Outlet />
+          <FeatureRouteGuard homePath="/admin">
+            <Outlet />
+          </FeatureRouteGuard>
         </main>
       </div>
       <NotificationCenterDrawer
