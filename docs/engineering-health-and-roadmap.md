@@ -184,22 +184,26 @@ switch the pages to it, delete the old hooks, add tests for the moved logic.
 | Environment | Supabase | Frontend | Deployed when |
 |---|---|---|---|
 | Local | `supabase start` (Docker) + `seed.sql` | `npm run dev` | — |
-| Staging | separate Supabase project | Vercel preview / `staging` branch | every merge to `main` |
-| Production | `hlhlpjecinkqqsqrjpcj` | Vercel production | a release tag `vX.Y.Z` |
+| Staging | separate Supabase project | Vercel preview / `staging` branch | migration PR validation |
+| Production | `hlhlpjecinkqqsqrjpcj` | Vercel production | push to `main`, after migrations |
 
-Trunk-based: short-lived branches → PR → CI (typecheck, lint, unit, db tests, build) → merge to `main` → staging →
-tag → production. No direct pushes to `main`, no manual changes in production.
+Trunk-based: short-lived branches → PR (staging migration validation and CI) → verify staging → merge to `main`
+→ production migrations → production Vercel build/deploy. No direct pushes to `main`, no manual changes in production.
 
 ### 4.3 Database migrations
 
 - The timestamped files in `supabase/migrations/` **are** the schema's version history. Never edit an applied migration;
   add a new one.
-- Apply with `supabase db push` from CI: staging first, production on release. **Stop applying migrations by hand to
-  production** (done until 2026-10-07 through the Management API).
-- Staging migrations are run manually from the `main` branch using the
-  **Supabase staging migrations** workflow. Configure the `staging` GitHub environment with
+- Apply with `supabase db push` from CI only. **Never apply migrations by hand to production.**
+- Pull requests to `main` that modify migrations automatically preview and apply pending migrations to staging.
+  Verify the changes against staging before merging; configure the `staging` GitHub environment with
   `SUPABASE_ACCESS_TOKEN`, `SUPABASE_STAGING_PROJECT_REF`, and `SUPABASE_STAGING_DB_PASSWORD`.
-  The workflow previews pending migrations before applying them and never targets production.
+- A push to `main` first previews and applies pending migrations to the fixed production project, then builds and
+  deploys the application to Vercel. Configure the `production` GitHub environment with
+  `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PRODUCTION_DB_PASSWORD`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and
+  `VERCEL_PROJECT_ID`. Disable Vercel's automatic Git-based **production** deployments so they cannot deploy ahead
+  of the migration workflow; preview deployments may remain enabled. Protect `main` so changes can only enter through
+  reviewed pull requests after staging checks.
 - **Expand → migrate → contract:** add new columns/functions first, ship code that uses them, remove the old ones in a later
   release. A migration must never break the app version currently in users' browsers (the PWA may run old code for days).
 - Every migration runs in a transaction and is tested on staging with production-like data; run `supabase db diff` in CI

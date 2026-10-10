@@ -1,23 +1,24 @@
-name: Supabase staging migrations
+name: Staging validation and production deployment
 
 on:
-  workflow_dispatch:
-    inputs:
-      confirm_staging:
-        description: Apply all pending Supabase migrations to the staging project
-        required: true
-        type: boolean
+  pull_request:
+    branches: [main]
+    paths:
+      - "supabase/migrations/**"
+  push:
+    branches: [main]
 
 permissions:
   contents: read
 
 concurrency:
-  group: supabase-staging-migrations
+  group: database-deploy-${{ github.event_name == 'pull_request' && 'staging' || 'production' }}
   cancel-in-progress: false
 
 jobs:
-  migrate:
-    if: github.ref == 'refs/heads/main' && inputs.confirm_staging
+  staging:
+    name: Apply migrations to staging
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
     runs-on: ubuntu-latest
     environment: staging
     env:
@@ -47,3 +48,67 @@ jobs:
 
       - name: Apply pending migrations to staging
         run: supabase db push --linked
+
+  production:
+    name: Migrate production and deploy application
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: hlhlpjecinkqqsqrjpcj
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_PRODUCTION_DB_PASSWORD }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.120.0
+
+      - name: Validate production and Vercel credentials
+        shell: bash
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN" || { echo "::error::Missing production environment secret SUPABASE_ACCESS_TOKEN"; exit 1; }
+          test -n "$SUPABASE_DB_PASSWORD" || { echo "::error::Missing production environment secret SUPABASE_PRODUCTION_DB_PASSWORD"; exit 1; }
+          test "$SUPABASE_PROJECT_REF" = "hlhlpjecinkqqsqrjpcj" || { echo "::error::Production project ref mismatch"; exit 1; }
+          test -n "$VERCEL_TOKEN" || { echo "::error::Missing production environment secret VERCEL_TOKEN"; exit 1; }
+          test -n "$VERCEL_ORG_ID" || { echo "::error::Missing production environment secret VERCEL_ORG_ID"; exit 1; }
+          test -n "$VERCEL_PROJECT_ID" || { echo "::error::Missing production environment secret VERCEL_PROJECT_ID"; exit 1; }
+
+      - name: Link production Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Preview pending production migrations
+        run: supabase db push --linked --dry-run
+
+      - name: Apply pending production migrations
+        run: supabase db push --linked
+
+      - name: Install application dependencies
+        run: npm ci
+
+      - name: Pull production Vercel settings
+        run: npx --yes vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Build production application
+        run: npx --yes vercel@latest build --prod --token="$VERCEL_TOKEN"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Deploy production application
+        run: npx --yes vercel@latest deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
