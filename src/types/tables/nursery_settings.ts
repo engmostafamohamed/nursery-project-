@@ -26,6 +26,7 @@ export interface NurserySettingsRow {
   max_whatsapp_per_parent_per_day: number | null;
   allow_parent_quiet_hours_override: boolean | null;
   auto_payment_reminders_enabled: boolean | null;
+  invoice_reminder_days_before: number | null;
   auto_permission_reminders_enabled: boolean | null;
   auto_monthly_teacher_reminders_enabled: boolean | null;
   parent_registration_enabled: boolean | null;

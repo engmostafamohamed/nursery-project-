@@ -196,6 +196,10 @@ tag → production. No direct pushes to `main`, no manual changes in production.
   add a new one.
 - Apply with `supabase db push` from CI: staging first, production on release. **Stop applying migrations by hand to
   production** (done until 2026-10-07 through the Management API).
+- Staging migrations are run manually from the `main` branch using the
+  **Supabase staging migrations** workflow. Configure the `staging` GitHub environment with
+  `SUPABASE_ACCESS_TOKEN`, `SUPABASE_STAGING_PROJECT_REF`, and `SUPABASE_STAGING_DB_PASSWORD`.
+  The workflow previews pending migrations before applying them and never targets production.
 - **Expand → migrate → contract:** add new columns/functions first, ship code that uses them, remove the old ones in a later
   release. A migration must never break the app version currently in users' browsers (the PWA may run old code for days).
 - Every migration runs in a transaction and is tested on staging with production-like data; run `supabase db diff` in CI

@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
 
 import { getAdminClient } from '../_shared/admin.ts';
 import { corsHeaders, jsonResponse } from '../_shared/http.ts';
+import { hashQrManualCode } from '../_shared/qrManualCode.ts';
 
 const DEFAULT_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days for pickup/display QR
 const MIN_TTL_SECONDS = 60;
@@ -25,6 +26,43 @@ type PickupDetailsBody = {
 };
 
 const NATIONAL_ID_NUMBER = /^\d{14}$/;
+
+function generateSixDigitCode(): string {
+  const range = 0x1_0000_0000;
+  const limit = Math.floor(range / 1_000_000) * 1_000_000;
+  const value = new Uint32Array(1);
+  do {
+    crypto.getRandomValues(value);
+  } while (value[0] >= limit);
+  return String(value[0] % 1_000_000).padStart(6, '0');
+}
+
+async function issueManualCode(
+  admin: ReturnType<typeof getAdminClient>,
+  qrTokenId: string,
+  issuedBy: string,
+  nurseryId: string,
+): Promise<{ code: string; expires_at: string }> {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const code = generateSixDigitCode();
+    const codeHash = await hashQrManualCode(code);
+    const { data, error } = await admin.rpc('issue_qr_manual_code', {
+      p_qr_token_id: qrTokenId,
+      p_issued_by: issuedBy,
+      p_nursery_id: nurseryId,
+      p_code_hash: codeHash,
+    });
+
+    if (!error && typeof data === 'string') {
+      return {
+        code,
+        expires_at: data,
+      };
+    }
+    if (error && error.code !== '23505') throw error;
+  }
+  throw new Error('Could not generate a unique manual QR code');
+}
 
 /** Trims and bounds the custom-QR pickup person fields shared by create and edit. */
 function readPickupDetails(body: PickupDetailsBody, fallbackFullName: string) {
@@ -437,6 +475,7 @@ Deno.serve(async (req) => {
           .maybeSingle();
         const row = existing as { id: string; token: string; expires_at: string } | null;
         if (row && new Date(row.expires_at).getTime() > Date.now()) {
+          const manualCode = await issueManualCode(admin, row.id, authData.user.id, nursery_id);
           return jsonResponse({
             id: row.id,
             token: row.token,
@@ -445,6 +484,8 @@ Deno.serve(async (req) => {
             purpose: 'parent',
             delegate_name: null,
             single_use: false,
+            manual_code: manualCode.code,
+            manual_code_expires_at: manualCode.expires_at,
           });
         }
       }
@@ -471,8 +512,12 @@ Deno.serve(async (req) => {
         return jsonResponse({ error: insErr.message }, 500);
       }
       const inserted = insertedToken as { id: string } | null;
+      if (!inserted?.id) {
+        return jsonResponse({ error: 'QR token was created without an id' }, 500);
+      }
+      const manualCode = await issueManualCode(admin, inserted.id, authData.user.id, nursery_id);
       return jsonResponse({
-        id: inserted?.id ?? null,
+        id: inserted.id,
         token: newToken,
         expires_at: FAR_FUTURE_ISO,
         expires_in: 0,
@@ -486,6 +531,8 @@ Deno.serve(async (req) => {
         pickup_notes: null,
         require_id_capture: true,
         single_use: false,
+        manual_code: manualCode.code,
+        manual_code_expires_at: manualCode.expires_at,
       });
     }
 

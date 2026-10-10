@@ -1,7 +1,12 @@
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { templateNotificationRow } from '@/lib/notificationText';
+import {
+  createStaffPayroll,
+  generateMonthlyStaffPayroll,
+  markMonthlyStaffPayrollPaid,
+  markStaffPayrollPaid,
+} from '@/lib/payrollApi';
 import { supabase } from '@/lib/supabase';
 
 export type PayrollFilters = {
@@ -103,15 +108,20 @@ export function usePayroll(nurseryId?: string, userId?: string, filters?: Payrol
       deductions: number;
       payment_method: 'cash' | 'bank_transfer' | 'check';
       notes: string;
-      created_by?: string;
+      idempotencyKey: string;
     }) => {
-      const res = await supabase.from('staff_payroll').insert({
-        ...payload,
-        payment_status: 'pending',
-        payslip_url: 'pending://phase20-pdf',
-      } as never).select('id').single();
-      if (res.error) throw res.error;
-      return (res.data as { id: string }).id;
+      return createStaffPayroll({
+        staffId: payload.staff_id,
+        nurseryId: payload.nursery_id,
+        periodStart: payload.pay_period_start,
+        periodEnd: payload.pay_period_end,
+        baseSalary: payload.base_salary,
+        bonuses: payload.bonuses,
+        deductions: payload.deductions,
+        paymentMethod: payload.payment_method,
+        notes: payload.notes,
+        idempotencyKey: payload.idempotencyKey,
+      });
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['staff-payroll-admin'] });
@@ -120,26 +130,12 @@ export function usePayroll(nurseryId?: string, userId?: string, filters?: Payrol
   });
 
   const markPaid = useMutation({
-    mutationFn: async (args: { id: string; paidBy?: string; paymentDate?: string; staffUserId?: string; nurseryId?: string; amount?: number; month?: string }) => {
-      const payDate = args.paymentDate ?? new Date().toISOString().slice(0, 10);
-      const res = await supabase.from('staff_payroll').update({
-        payment_status: 'paid',
-        payment_date: payDate,
-        paid_by: args.paidBy ?? null,
-      } as never).eq('id', args.id);
-      if (res.error) throw res.error;
-      if (args.staffUserId && args.nurseryId) {
-        await supabase.from('notifications').insert(
-          templateNotificationRow({
-            nurseryId: args.nurseryId,
-            userId: args.staffUserId,
-            type: 'staff_payroll_paid',
-            params: { month: args.month ?? '', amount: Number(args.amount ?? 0), currency: 'EGP' },
-            actionLink: '/staff/payslips',
-            channel: 'push',
-          }) as never,
-        );
-      }
+    mutationFn: async (args: { id: string; paymentDate?: string; idempotencyKey: string }) => {
+      return markStaffPayrollPaid({
+        payrollId: args.id,
+        paymentDate: args.paymentDate ?? new Date().toISOString().slice(0, 10),
+        idempotencyKey: args.idempotencyKey,
+      });
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['staff-payroll-admin'] });
@@ -152,69 +148,14 @@ export function usePayroll(nurseryId?: string, userId?: string, filters?: Payrol
     mutationFn: async ({
       nurseryId,
       month,
-      createdBy,
+      idempotencyKey,
     }: {
       nurseryId: string;
       month: string;
-      createdBy?: string;
+      idempotencyKey: string;
     }) => {
-      const start = `${month}-01`;
-      const endDate = new Date(`${month}-01T00:00:00`);
-      endDate.setMonth(endDate.getMonth() + 1, 0);
-      const end = endDate.toISOString().slice(0, 10);
-
-      const profilesRes = await supabase
-        .from('staff_profiles')
-        .select('id, user_id, salary_amount')
-        .eq('nursery_id', nurseryId);
-      if (profilesRes.error) throw profilesRes.error;
-      const profiles = (profilesRes.data ?? []) as Array<{
-        id: string;
-        user_id: string;
-        salary_amount: string | number | null;
-      }>;
-      if (!profiles.length) return 0;
-
-      const userIds = profiles.map((p) => p.user_id);
-      const usersRes = await supabase.from('users').select('id, status').in('id', userIds);
-      if (usersRes.error) throw usersRes.error;
-      const statusByUser = new Map(
-        ((usersRes.data ?? []) as Array<{ id: string; status: string }>).map((u) => [u.id, u.status]),
-      );
-
-      const existingRes = await supabase
-        .from('staff_payroll')
-        .select('staff_id')
-        .eq('nursery_id', nurseryId)
-        .gte('pay_period_start', start)
-        .lte('pay_period_end', end);
-      if (existingRes.error) throw existingRes.error;
-      const existing = new Set((existingRes.data ?? []).map((r: { staff_id: string }) => r.staff_id));
-
-      const inserts: Array<Record<string, unknown>> = [];
-      for (const p of profiles) {
-        if (statusByUser.get(p.user_id) !== 'active') continue;
-        if (existing.has(p.id)) continue;
-        const base = Number(p.salary_amount ?? 0);
-        inserts.push({
-          staff_id: p.id,
-          nursery_id: nurseryId,
-          pay_period_start: start,
-          pay_period_end: end,
-          base_salary: base,
-          bonuses: 0,
-          deductions: 0,
-          payment_method: 'bank_transfer',
-          payment_status: 'pending',
-          notes: null,
-          created_by: createdBy ?? null,
-          payslip_url: 'pending://phase20-pdf',
-        });
-      }
-      if (!inserts.length) return 0;
-      const ins = await supabase.from('staff_payroll').insert(inserts as never);
-      if (ins.error) throw ins.error;
-      return inserts.length;
+      const result = await generateMonthlyStaffPayroll({ nurseryId, month, idempotencyKey });
+      return result.created_count ?? 0;
     },
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['staff-payroll-admin'] }),
   });
@@ -223,31 +164,14 @@ export function usePayroll(nurseryId?: string, userId?: string, filters?: Payrol
     mutationFn: async ({
       nurseryId,
       month,
-      paidBy,
+      idempotencyKey,
     }: {
       nurseryId: string;
       month: string;
-      paidBy?: string;
+      idempotencyKey: string;
     }) => {
-      const start = `${month}-01`;
-      const endDate = new Date(`${month}-01T00:00:00`);
-      endDate.setMonth(endDate.getMonth() + 1, 0);
-      const end = endDate.toISOString().slice(0, 10);
-      const payDate = new Date().toISOString().slice(0, 10);
-      const res = await supabase
-        .from('staff_payroll')
-        .update({
-          payment_status: 'paid',
-          payment_date: payDate,
-          paid_by: paidBy ?? null,
-        } as never)
-        .eq('nursery_id', nurseryId)
-        .eq('payment_status', 'pending')
-        .gte('pay_period_start', start)
-        .lte('pay_period_end', end)
-        .select('id');
-      if (res.error) throw res.error;
-      return (res.data ?? []).length;
+      const result = await markMonthlyStaffPayrollPaid({ nurseryId, month, idempotencyKey });
+      return result.paid_count ?? 0;
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['staff-payroll-admin'] });

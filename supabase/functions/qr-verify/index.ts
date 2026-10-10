@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
 
 import { getAdminClient } from '../_shared/admin.ts';
 import { corsHeaders, jsonResponse } from '../_shared/http.ts';
+import { hashQrManualCode } from '../_shared/qrManualCode.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -53,11 +54,44 @@ Deno.serve(async (req) => {
     const teacherNurseryId = profile.nursery_id as string;
 
     const admin = getAdminClient();
-    const { data: tok, error: tokErr } = await admin
-      .from('qr_tokens')
-      .select('id, child_id, nursery_id, event_id, expires_at, purpose, delegate_name, pickup_person_full_name, pickup_relationship, pickup_identity_type, pickup_identity_number, pickup_identity_image_path, pickup_identity_back_image_path, pickup_notes, require_id_capture, single_use, consumed_at, issued_by')
-      .eq('token', rawToken)
-      .maybeSingle();
+    const tokenColumns = 'id, child_id, nursery_id, event_id, expires_at, purpose, delegate_name, pickup_person_full_name, pickup_relationship, pickup_identity_type, pickup_identity_number, pickup_identity_image_path, pickup_identity_back_image_path, pickup_notes, require_id_capture, single_use, consumed_at, issued_by';
+    let tok: object | null = null;
+    let tokErr: { message: string } | null = null;
+
+    if (/^\d{6}$/.test(rawToken)) {
+      const codeHash = await hashQrManualCode(rawToken);
+      const { data: codeResult, error: codeErr } = await admin.rpc('lookup_qr_manual_code', {
+        p_staff_id: authData.user.id,
+        p_nursery_id: teacherNurseryId,
+        p_code_hash: codeHash,
+      });
+      if (codeErr) return jsonResponse({ error: codeErr.message }, 500);
+
+      const result = (Array.isArray(codeResult) ? codeResult[0] : codeResult) as {
+        qr_token_id: string | null;
+        rate_limited: boolean;
+      } | null;
+      if (result?.rate_limited) {
+        return jsonResponse({ error: 'Too many invalid manual QR codes. Try again in 10 minutes.' }, 429);
+      }
+      if (!result?.qr_token_id) return jsonResponse({ error: 'Invalid QR code' }, 404);
+
+      const lookup = await admin
+        .from('qr_tokens')
+        .select(tokenColumns)
+        .eq('id', result.qr_token_id)
+        .maybeSingle();
+      tok = lookup.data;
+      tokErr = lookup.error;
+    } else {
+      const lookup = await admin
+        .from('qr_tokens')
+        .select(tokenColumns)
+        .eq('token', rawToken)
+        .maybeSingle();
+      tok = lookup.data;
+      tokErr = lookup.error;
+    }
 
     if (tokErr || !tok) {
       return jsonResponse({ error: 'Invalid QR code' }, 404);

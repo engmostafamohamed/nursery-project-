@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 
 import { InvoiceLineItemsBuilder, type BuilderLineItem } from '@/components/admin/InvoiceLineItemsBuilder';
 import { PendingPaymentAttempts } from '@/components/admin/PendingPaymentAttempts';
+import { InvoicePaymentHistory } from '@/components/financial/InvoicePaymentHistory';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/button';
 import { confirm } from '@/components/ui/confirm';
@@ -370,6 +371,7 @@ export function AdminInvoiceDetailsPage() {
         </div>
 
         <div className="space-y-5">
+          <InvoicePaymentHistory payments={details?.payments ?? []} />
           {details ? (
             <PendingPaymentAttempts
               attempts={attemptsQuery.data ?? []}

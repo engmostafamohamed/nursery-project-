@@ -1,0 +1,49 @@
+name: Supabase staging migrations
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_staging:
+        description: Apply all pending Supabase migrations to the staging project
+        required: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-staging-migrations
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    if: github.ref == 'refs/heads/main' && inputs.confirm_staging
+    runs-on: ubuntu-latest
+    environment: staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_STAGING_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_STAGING_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.120.0
+
+      - name: Validate staging credentials
+        shell: bash
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN" || { echo "::error::Missing staging environment secret SUPABASE_ACCESS_TOKEN"; exit 1; }
+          test -n "$SUPABASE_PROJECT_REF" || { echo "::error::Missing staging environment secret SUPABASE_STAGING_PROJECT_REF"; exit 1; }
+          test -n "$SUPABASE_DB_PASSWORD" || { echo "::error::Missing staging environment secret SUPABASE_STAGING_DB_PASSWORD"; exit 1; }
+          test "$SUPABASE_PROJECT_REF" != "hlhlpjecinkqqsqrjpcj" || { echo "::error::Refusing to run a staging migration against the production project"; exit 1; }
+
+      - name: Link staging project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Preview pending migrations
+        run: supabase db push --linked --dry-run
+
+      - name: Apply pending migrations to staging
+        run: supabase db push --linked

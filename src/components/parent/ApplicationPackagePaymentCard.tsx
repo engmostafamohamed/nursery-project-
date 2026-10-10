@@ -18,8 +18,10 @@ type Props = {
   packages: ApplicationPaymentPackage[];
   invoice: ApplicationPackageInvoice | null;
   isLoading?: boolean;
+  isError?: boolean;
   isSelecting?: boolean;
   canChoose: boolean;
+  onRetry?: () => void;
   /** Overrides the default pay-now destination (used to return the parent to the application after paying). */
   payLink?: string | null;
   /** Terms must be accepted before the invoice is created; paying then submits the application. */
@@ -59,8 +61,10 @@ export function ApplicationPackagePaymentCard({
   packages,
   invoice,
   isLoading = false,
+  isError = false,
   isSelecting = false,
   canChoose,
+  onRetry,
   payLink = null,
   termsAccepted,
   onTermsChange,
@@ -134,6 +138,19 @@ export function ApplicationPackagePaymentCard({
 
       {isLoading ? (
         <p className="px-5 py-6 text-sm text-on-surface-variant">{t('common.loading')}</p>
+      ) : isError ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-6">
+          <p role="alert" className="text-sm text-error">
+            {t('applications.paymentPackage.loadError', {
+              defaultValue: 'Could not load package and invoice information. Please try again.',
+            })}
+          </p>
+          {onRetry ? (
+            <Button type="button" variant="outline" onClick={onRetry}>
+              {t('common.retry', { defaultValue: 'Retry' })}
+            </Button>
+          ) : null}
+        </div>
       ) : packages.length === 0 ? (
         <div className="flex items-start gap-3 px-5 py-6">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-surface-container text-on-surface-variant">

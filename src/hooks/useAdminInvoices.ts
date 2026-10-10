@@ -31,6 +31,9 @@ export type AdminInvoiceItem = {
   parentName: string;
   childNames: string[];
   amount: number;
+  paidAmount: number;
+  balance: number;
+  paidThisMonth: number;
   type: 'monthly' | 'event' | 'extra_hours' | 'other';
   status: 'pending' | 'paid' | 'overdue' | 'cancelled';
   dueDate: string;
@@ -68,7 +71,7 @@ export function useAdminInvoices(params: UseAdminInvoicesParams) {
 
       let queryBuilder = supabase
         .from('invoices')
-        .select('id, generated_invoice_number, parent_id, amount, invoice_type, status, due_date, created_at, paid_at, payment_method')
+        .select('id, generated_invoice_number, parent_id, amount, invoice_type, status, due_date, created_at, paid_at, payment_method, payments ( amount, status, paid_at )')
         .eq('nursery_id', params.nurseryId);
 
       if (params.type !== 'all') queryBuilder = queryBuilder.eq('invoice_type', params.type);
@@ -96,6 +99,7 @@ export function useAdminInvoices(params: UseAdminInvoicesParams) {
         created_at: string;
         paid_at: string | null;
         payment_method: string | null;
+        payments: Array<{ amount: string | number; status: string; paid_at: string }> | null;
       }>;
 
       const parentIds = [...new Set(invoices.map((row) => row.parent_id))];
@@ -141,13 +145,25 @@ export function useAdminInvoices(params: UseAdminInvoicesParams) {
         const now = new Date();
         const overdue = row.status === 'pending' && due.getTime() < now.getTime();
         const overdueDays = overdue ? Math.ceil((now.getTime() - due.getTime()) / 86400000) : 0;
+        const completedPayments = (row.payments ?? []).filter((payment) => payment.status === 'completed');
+        const paidAmount = completedPayments.reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0);
+        const paidThisMonth = completedPayments
+          .filter((payment) => {
+            const paidAt = new Date(payment.paid_at);
+            return paidAt.getFullYear() === now.getFullYear() && paidAt.getMonth() === now.getMonth();
+          })
+          .reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0);
+        const amount = Number(row.amount ?? 0);
         return {
           id: row.id,
           invoiceNumber: row.generated_invoice_number ?? row.id.slice(0, 8),
           parentId: row.parent_id,
           parentName: parentMap.get(row.parent_id) ?? 'Parent',
           childNames: childNamesByParent[row.parent_id] ?? [],
-          amount: Number(row.amount ?? 0),
+          amount,
+          paidAmount,
+          balance: row.status === 'paid' || row.status === 'cancelled' ? 0 : Math.max(0, amount - paidAmount),
+          paidThisMonth,
           type: row.invoice_type,
           status: overdue ? 'overdue' : row.status,
           dueDate: row.due_date,

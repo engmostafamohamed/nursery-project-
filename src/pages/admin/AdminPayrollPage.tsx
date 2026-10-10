@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import Papa from 'papaparse';
@@ -15,6 +15,7 @@ import { useAuthSession } from '@/hooks/useAuthSession';
 import { usePayroll } from '@/hooks/usePayroll';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { downloadPayslipPdf } from '@/lib/exports';
+import { newIdempotencyKey } from '@/lib/paymentApi';
 
 export function AdminPayrollPage() {
   const { t, i18n } = useTranslation();
@@ -24,6 +25,11 @@ export function AdminPayrollPage() {
   const [department, setDepartment] = useState('all');
   const [status, setStatus] = useState('all');
   const [search, setSearch] = useState('');
+  const bulkOperationKeys = useRef<{
+    generate?: { fingerprint: string; key: string };
+    paid?: { fingerprint: string; key: string };
+  }>({});
+  const payrollPaymentKeys = useRef(new Map<string, string>());
   const payroll = usePayroll(profile?.nursery_id ?? undefined, undefined, { month, department, status, search });
 
   const nf = useMemo(
@@ -69,12 +75,17 @@ export function AdminPayrollPage() {
 
   const onBulkGenerate = async () => {
     if (!profile?.nursery_id) return;
+    const fingerprint = `${profile.nursery_id}:${month}`;
+    if (bulkOperationKeys.current.generate?.fingerprint !== fingerprint) {
+      bulkOperationKeys.current.generate = { fingerprint, key: newIdempotencyKey() };
+    }
     try {
       const n = await payroll.generateMonthlyPayrollForAll({
         nurseryId: profile.nursery_id,
         month,
-        createdBy: user?.id,
+        idempotencyKey: bulkOperationKeys.current.generate.key,
       });
+      delete bulkOperationKeys.current.generate;
       toast.success(t('payroll.bulkGenerateDone', { count: n }));
     } catch {
       toast.error(t('payroll.actionError'));
@@ -83,13 +94,30 @@ export function AdminPayrollPage() {
 
   const onBulkPaid = async () => {
     if (!profile?.nursery_id) return;
+    const fingerprint = `${profile.nursery_id}:${month}`;
+    if (bulkOperationKeys.current.paid?.fingerprint !== fingerprint) {
+      bulkOperationKeys.current.paid = { fingerprint, key: newIdempotencyKey() };
+    }
     try {
       const n = await payroll.bulkMarkPendingPaidForMonth({
         nurseryId: profile.nursery_id,
         month,
-        paidBy: user?.id,
+        idempotencyKey: bulkOperationKeys.current.paid.key,
       });
+      delete bulkOperationKeys.current.paid;
       toast.success(t('payroll.bulkMarkPaidDone', { count: n }));
+    } catch {
+      toast.error(t('payroll.actionError'));
+    }
+  };
+
+  const onMarkPaid = async (payrollId: string) => {
+    const key = payrollPaymentKeys.current.get(payrollId) ?? newIdempotencyKey();
+    payrollPaymentKeys.current.set(payrollId, key);
+    try {
+      await payroll.markPaid({ id: payrollId, idempotencyKey: key });
+      payrollPaymentKeys.current.delete(payrollId);
+      toast.success(t('payroll.status.paid'));
     } catch {
       toast.error(t('payroll.actionError'));
     }
@@ -243,16 +271,7 @@ export function AdminPayrollPage() {
                           <Button
                             size="sm"
                             type="button"
-                            onClick={() =>
-                              void payroll.markPaid({
-                                id: String(payrollRow.id),
-                                paidBy: user?.id,
-                                staffUserId: String(profileRow.user_id),
-                                nurseryId: profile?.nursery_id ?? undefined,
-                                amount,
-                                month,
-                              })
-                            }
+                            onClick={() => void onMarkPaid(String(payrollRow.id))}
                           >
                             {t('payroll.markPaid')}
                           </Button>

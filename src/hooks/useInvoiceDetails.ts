@@ -18,6 +18,16 @@ export type InvoiceActivityItem = {
   actor: string;
 };
 
+export type InvoicePaymentItem = {
+  id: string;
+  amount: number;
+  method: string;
+  status: 'pending' | 'completed' | 'failed' | 'refunded';
+  paidAt: string;
+  createdAt: string;
+  reference: string | null;
+};
+
 export type InvoiceDetailsData = {
   id: string;
   invoiceNumber: string;
@@ -54,6 +64,7 @@ export type InvoiceDetailsData = {
   overdueDays: number;
   eventLink: { id: string; title: string } | null;
   activity: InvoiceActivityItem[];
+  payments: InvoicePaymentItem[];
 };
 
 function parseLineItems(raw: unknown, language: string): { items: InvoiceLineItem[]; notes: string; tax: number } {
@@ -176,7 +187,7 @@ export function useInvoiceDetails(invoiceId: string | undefined) {
         .from('notifications')
         .select('id, type, sent_at')
         .eq('user_id', invoice.parent_id)
-        .in('type', ['invoice_paid', 'invoice_reminder'])
+        .in('type', ['invoice_paid', 'invoice_reminder', 'invoice_due_reminder', 'invoice_overdue_reminder'])
         .eq('action_link', `/parent/invoices/${invoice.id}`)
         .order('sent_at', { ascending: true });
       if (notificationRes.error) throw notificationRes.error;
@@ -185,8 +196,9 @@ export function useInvoiceDetails(invoiceId: string | undefined) {
       const [paymentRes, attemptRes] = await Promise.all([
         supabase
           .from('payments')
-          .select('amount, status')
-          .eq('invoice_id', invoice.id),
+          .select('id, amount, method, status, paid_at, created_at, gateway_ref')
+          .eq('invoice_id', invoice.id)
+          .order('paid_at', { ascending: false }),
         supabase
           .from('payment_attempts')
           .select('id, status, amount')
@@ -195,9 +207,26 @@ export function useInvoiceDetails(invoiceId: string | undefined) {
       ]);
       if (paymentRes.error) throw paymentRes.error;
       if (attemptRes.error) throw attemptRes.error;
-      const paidAmount = ((paymentRes.data ?? []) as Array<{ amount: string | number; status: string }>)
+      const payments = ((paymentRes.data ?? []) as Array<{
+        id: string;
+        amount: string | number;
+        method: string;
+        status: InvoicePaymentItem['status'];
+        paid_at: string;
+        created_at: string;
+        gateway_ref: string | null;
+      }>).map((row) => ({
+        id: row.id,
+        amount: Number(row.amount ?? 0),
+        method: row.method,
+        status: row.status,
+        paidAt: row.paid_at,
+        createdAt: row.created_at,
+        reference: row.gateway_ref,
+      }));
+      const paidAmount = payments
         .filter((row) => row.status === 'completed')
-        .reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
+        .reduce((sum, row) => sum + row.amount, 0);
       const pendingAmount = ((attemptRes.data ?? []) as Array<{ amount: string | number; status: string }>)
         .filter((row) => row.status === 'pending_confirmation')
         .reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
@@ -265,6 +294,7 @@ export function useInvoiceDetails(invoiceId: string | undefined) {
         overdueDays: overdue ? Math.ceil((Date.now() - dueDate.getTime()) / 86400000) : 0,
         eventLink,
         activity,
+        payments,
       };
     },
     enabled: Boolean(invoiceId),

@@ -91,11 +91,8 @@ export function AdminInvoicesPage() {
   const summary = useMemo(() => {
     const outstanding = invoices
       .filter((row) => row.status === 'pending' || row.status === 'overdue')
-      .reduce((sum, row) => sum + row.amount, 0);
-    const now = new Date();
-    const paidThisMonth = invoices
-      .filter((row) => row.status === 'paid' && row.paidAt && new Date(row.paidAt).getMonth() === now.getMonth())
-      .reduce((sum, row) => sum + row.amount, 0);
+      .reduce((sum, row) => sum + row.balance, 0);
+    const paidThisMonth = invoices.reduce((sum, row) => sum + row.paidThisMonth, 0);
     const overdueCount = invoices.filter((row) => row.status === 'overdue').length;
     const paidRows = invoices.filter((row) => row.status === 'paid' && row.paidAt);
     const avgDays = paidRows.length

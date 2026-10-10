@@ -67,6 +67,7 @@ const QR_VERIFY_REFUSALS: ReadonlyArray<[RegExp, string]> = [
   [/different nursery|only nursery staff/i, 'attendance_forbidden'],
   [/not active/i, 'attendance_child_not_active'],
   [/child not found/i, 'attendance_child_not_found'],
+  [/too many invalid manual qr codes/i, 'attendance_qr_manual_rate_limited'],
   [/invalid qr|token is required|invalid event qr/i, 'attendance_qr_invalid'],
 ];
 

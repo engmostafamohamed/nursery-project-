@@ -2238,6 +2238,19 @@
       "subtotal": "Subtotal",
       "tax": "Tax",
       "activityLog": "Activity Log",
+      "paymentHistory": {
+        "title": "Payment history",
+        "empty": "No payments have been recorded for this invoice yet.",
+        "method": "Payment method",
+        "paidAt": "Payment date",
+        "reference": "Transaction reference",
+        "status": {
+          "pending": "Pending",
+          "completed": "Completed",
+          "failed": "Failed",
+          "refunded": "Refunded"
+        }
+      },
       "activity": {
         "created": "Invoice created",
         "reminder": "Reminder sent",
@@ -3965,6 +3978,7 @@
       "notSelected": "Not selected",
       "noPackages": "No active payment packages are available yet.",
       "noPackagesHint": "The nursery admin publishes packages from Settings → Financial. Once a package is active, it appears here and you can choose it and pay all or part of it.",
+      "loadError": "Could not load package and invoice information. Please try again.",
       "dailyHours": "{{hours}} hours/day",
       "monthlyPrice": "EGP {{amount}} monthly",
       "selected": "Selected",
@@ -4497,6 +4511,10 @@
       "attendance_qr_expired": "This QR code has expired.",
       "attendance_qr_wrong_type": "This QR code cannot be used here.",
       "attendance_qr_used": "This one-time QR code was already used.",
+      "attendance_qr_manual_rate_limited": "Too many incorrect codes. Wait 10 minutes before trying again.",
+      "attendance_qr_work_hours_not_configured": "The nursery's opening and closing hours must be configured before QR attendance can be used.",
+      "attendance_qr_checkin_outside_work_hours": "QR check-in is available only during the nursery's opening hours.",
+      "attendance_qr_checkout_outside_allowed_period": "The QR checkout period has ended. Please contact nursery staff to record the pickup.",
       "attendance_already_checked_out": "The child was already picked up today.",
       "attendance_not_checked_in": "The child has not been checked in today.",
       "attendance_too_soon": "Checked in less than {{minutes}} minutes ago. Scan again later to check out.",
@@ -4859,8 +4877,23 @@
   },
   "qr": {
     "refresh": "Refresh token",
-    "rotate": "Rotate code",
+    "rotate": "Refresh QR",
     "rotated": "QR code rotated. Old code no longer works.",
+    "refreshConfirm": {
+      "title": "Refresh this QR code?",
+      "description": "The current QR code and 6-digit backup code, including any copied or printed copies, will stop working immediately. Continue only if you can share the new codes.",
+      "confirm": "Refresh and revoke old code"
+    },
+    "showToken": "Show 6-digit code",
+    "hideToken": "Hide 6-digit code",
+    "copyToken": "Copy 6-digit code",
+    "tokenCopied": "6-digit code copied. Enter it in the scanner's manual entry if the camera cannot scan.",
+    "copyTokenFailed": "Could not copy the code. Reveal it here and select it to copy.",
+    "refreshManualCode": "Get a new code",
+    "manualCodeCountdown": "Code refreshes in",
+    "manualCodeExpired": "Code expired. A new code is being generated.",
+    "manualCodeRefreshed": "A new 6-digit code is ready. The previous code is no longer valid.",
+    "manualCodeRefreshHint": "This code refreshes every 5 minutes. Getting a new code immediately invalidates the previous one.",
     "print": "Print QR",
     "download": "Download",
     "copyLink": "Copy link",
@@ -4888,7 +4921,8 @@
       "subtitle": "Show this code at drop-off and pick-up.",
       "expiresInDaysFull": "This QR code expires in {{count}} day(s).",
       "alwaysAvailable": "Always available",
-      "alwaysAvailableHint": "Show this code at the gate. Tap Rotate if you ever lose your phone.",
+      "alwaysAvailableHint": "Show this code at the gate. Refresh it if you lose your phone or want to revoke an old copy.",
+      "manualHint": "If the camera cannot scan, copy or reveal this 6-digit code and enter it manually. It refreshes every 5 minutes.",
       "loadErrorTitle": "Could not load children",
       "loadErrorDescription": "Check your connection and try again.",
       "tabLive": "Live",
@@ -5634,7 +5668,11 @@
       },
       "auto_payment_reminders_enabled": {
         "label": "Automated payment reminders",
-        "helper": "Automatically remind parents about invoices 7/3/1 days before due and when overdue."
+        "helper": "Automatically send invoice payment reminders before the due date and while overdue."
+      },
+      "invoice_reminder_days_before": {
+        "label": "Reminder days before invoice due date",
+        "helper": "Send the automatic reminder this many days before the invoice due date. Set to 0 to remind on the due date."
       },
       "auto_permission_reminders_enabled": {
         "label": "Automated permission reminders",

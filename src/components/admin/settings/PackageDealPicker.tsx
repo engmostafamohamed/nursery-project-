@@ -56,7 +56,7 @@ export function PackageDealPicker({
       onChange(created.id);
       setCreatingCustom(false);
       setCustomForm(CUSTOM_FORM_DEFAULT);
-      toast.success('Custom discount created and assigned.');
+      toast.success('Custom discount created and selected. Save the package to apply it.');
     } catch (error) {
       toast.error('Could not create the discount.', { description: formatQueryError(error) });
     }

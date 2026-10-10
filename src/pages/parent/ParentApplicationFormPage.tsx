@@ -2071,8 +2071,10 @@ export function ParentApplicationFormPage() {
               packages={applicationPackagePayment.packages}
               invoice={applicationPackagePayment.invoice}
               isLoading={applicationPackagePayment.isLoading}
+              isError={applicationPackagePayment.isError}
               isSelecting={applicationPackagePayment.isSelecting || selectingPackage}
               canChoose={canChoosePackage}
+              onRetry={() => void applicationPackagePayment.refetch()}
               payLink={payLink}
               termsAccepted={terms}
               onTermsChange={setTerms}

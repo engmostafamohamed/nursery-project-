@@ -42,7 +42,6 @@ export function AdminPayslipCreatePage() {
       <PayslipForm
         staffOptions={options}
         nurseryId={profile.nursery_id}
-        createdBy={user?.id}
         onSubmit={async (payload) => {
           await payroll.createPayslip(payload);
           const staffName = options.find((o) => o.id === payload.staff_id)?.name ?? t('common.staff');

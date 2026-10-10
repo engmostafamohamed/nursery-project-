@@ -355,9 +355,12 @@ export function useApplicationPackagePayment({ applicationId, parentId, nurseryI
     selectedPackage,
     invoice: invoiceQuery.data ?? null,
     isLoading: packagesQuery.isLoading || invoiceQuery.isLoading,
+    isError: packagesQuery.isError || invoiceQuery.isError,
     selectPackage: (packageId: string, billingPeriod?: ApplicationPackageBillingPeriod) =>
       selectPackage.mutateAsync({ packageId, billingPeriod }),
     isSelecting: selectPackage.isPending,
-    refetch: invoiceQuery.refetch,
+    refetch: async () => {
+      await Promise.all([packagesQuery.refetch(), invoiceQuery.refetch()]);
+    },
   };
 }

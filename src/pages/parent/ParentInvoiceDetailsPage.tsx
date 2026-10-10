@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/button';
+import { InvoicePaymentHistory } from '@/components/financial/InvoicePaymentHistory';
 import { useInvoiceDetails, type InvoiceDetailsData } from '@/hooks/useInvoiceDetails';
 import { formatDate, formatDateTime } from '@/lib/datetime';
 import { downloadInvoicePdf } from '@/lib/exports';
@@ -301,6 +302,7 @@ export function ParentInvoiceDetailsPage() {
         </article>
 
         <aside className="no-print space-y-5">
+          <InvoicePaymentHistory payments={details?.payments ?? []} />
           <section className="rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
             <h2 className="text-base font-semibold text-on-surface">{t('payment.summary.title')}</h2>
             <div className="mt-4 grid gap-3">

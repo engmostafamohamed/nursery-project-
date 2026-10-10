@@ -20,6 +20,8 @@ export type QrTokenPayload = {
   pickup_notes: string | null;
   require_id_capture: boolean;
   single_use: boolean;
+  manual_code?: string;
+  manual_code_expires_at?: string;
 };
 
 type CachedQrRow = {
@@ -85,6 +87,8 @@ export function useQrTokenGeneration() {
         pickup_notes?: string | null;
         require_id_capture?: boolean | null;
         single_use?: boolean;
+        manual_code?: string;
+        manual_code_expires_at?: string;
         error?: string;
       };
       if (payload && typeof payload.error === 'string' && payload.error.length > 0) {
@@ -109,6 +113,8 @@ export function useQrTokenGeneration() {
         pickup_notes: payload.pickup_notes ?? null,
         require_id_capture: payload.require_id_capture ?? args.require_id_capture ?? true,
         single_use: Boolean(payload.single_use ?? args.single_use),
+        manual_code: payload.manual_code,
+        manual_code_expires_at: payload.manual_code_expires_at,
       } satisfies QrTokenPayload;
     },
     onSuccess: (data, vars) => {
@@ -129,7 +135,7 @@ export function useQrTokenGeneration() {
       };
       qc.setQueryData<CachedQrRow[]>(key, (old) => {
         if (!Array.isArray(old)) return [newRow];
-        return [newRow, ...old];
+        return [newRow, ...old.filter((row) => row.token !== data.token)];
       });
       // Still kick the refetch so any other tokens persisted server-side stay in sync.
       void qc.invalidateQueries({ queryKey: ['admin-qr-tokens', vars.nursery_id] });

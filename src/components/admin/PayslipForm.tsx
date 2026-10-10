@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { newIdempotencyKey } from '@/lib/paymentApi';
 
 type StaffOption = {
   id: string;
@@ -15,7 +16,6 @@ type StaffOption = {
 type Props = {
   staffOptions: StaffOption[];
   nurseryId: string;
-  createdBy?: string;
   onSubmit: (payload: {
     staff_id: string;
     nursery_id: string;
@@ -26,11 +26,11 @@ type Props = {
     deductions: number;
     payment_method: 'cash' | 'bank_transfer' | 'check';
     notes: string;
-    created_by?: string;
+    idempotencyKey: string;
   }) => Promise<void>;
 };
 
-export function PayslipForm({ staffOptions, nurseryId, createdBy, onSubmit }: Props) {
+export function PayslipForm({ staffOptions, nurseryId, onSubmit }: Props) {
   const { t } = useTranslation();
   const now = new Date();
   const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -41,6 +41,7 @@ export function PayslipForm({ staffOptions, nurseryId, createdBy, onSubmit }: Pr
   const [deductions, setDeductions] = useState(0);
   const [method, setMethod] = useState<'cash' | 'bank_transfer' | 'check'>('bank_transfer');
   const [notes, setNotes] = useState('');
+  const idempotencyKey = useRef<{ key: string; fingerprint: string } | null>(null);
 
   const total = useMemo(() => Math.max(0, baseSalary + bonuses - deductions), [baseSalary, bonuses, deductions]);
 
@@ -79,9 +80,15 @@ export function PayslipForm({ staffOptions, nurseryId, createdBy, onSubmit }: Pr
       <Button
         onClick={async () => {
           const start = `${month}-01`;
-          const endDate = new Date(`${month}-01T00:00:00`);
-          endDate.setMonth(endDate.getMonth() + 1, 0);
-          const end = endDate.toISOString().slice(0, 10);
+          const [year, monthNumber] = month.split('-').map(Number);
+          const lastDay = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
+          const end = `${month}-${String(lastDay).padStart(2, '0')}`;
+          const fingerprint = JSON.stringify([
+            nurseryId, staffId, start, end, baseSalary, bonuses, deductions, method, notes,
+          ]);
+          if (idempotencyKey.current?.fingerprint !== fingerprint) {
+            idempotencyKey.current = { key: newIdempotencyKey(), fingerprint };
+          }
           await onSubmit({
             staff_id: staffId,
             nursery_id: nurseryId,
@@ -92,8 +99,9 @@ export function PayslipForm({ staffOptions, nurseryId, createdBy, onSubmit }: Pr
             deductions,
             payment_method: method,
             notes,
-            created_by: createdBy,
+            idempotencyKey: idempotencyKey.current.key,
           });
+          idempotencyKey.current = null;
         }}
       >
         {t('payroll.createPayslip')}
