@@ -2118,6 +2118,7 @@
       "fawry": "Fawry",
       "instapay": "InstaPay",
       "vodafone_cash": "Vodafone Cash",
+      "etisalat_cash": "Etisalat Cash",
       "orange_cash": "Orange Cash"
     },
     "actions": {
@@ -2270,17 +2271,25 @@
         "label": "InstaPay",
         "help": "Transfer with InstaPay to the nursery's address, then enter the transaction number."
       },
+      "fawry": {
+        "label": "Fawry payment",
+        "help": "Pay using a Fawry reference supplied by the nursery, then enter the reference for manual verification."
+      },
       "vodafone_cash": {
         "label": "Vodafone Cash",
         "help": "Send from your wallet to the nursery's number, then enter the transaction number."
+      },
+      "etisalat_cash": {
+        "label": "Etisalat Cash",
+        "help": "Send from your Etisalat Cash wallet and submit your phone number, name, and payment screenshot for review."
       },
       "bank_transfer": {
         "label": "Bank transfer",
         "help": "Transfer to the nursery's bank account, then enter the transfer reference."
       },
       "cash": {
-        "label": "Cash at the nursery",
-        "help": "Pay at the nursery office; finance confirms when they receive it."
+        "label": "Cash on delivery (admin only)",
+        "help": "Admin-only method for recording cash collected on delivery."
       },
       "manual": {
         "label": "Payment for review",
@@ -2288,6 +2297,49 @@
       }
     },
     "instructionsTitle": "Where to send the money",
+    "fawry": {
+      "title": "Pay with Fawry",
+      "description": "Use the reference number supplied by the nursery to pay at a Fawry outlet or supported channel. The nursery will verify the payment manually.",
+      "reference": "Fawry reference number",
+      "referenceNotice": "A valid Fawry reference must be issued by the nursery or Fawry. This page does not generate payment codes."
+    },
+    "etisalatWallet": {
+      "title": "Etisalat Cash wallet payment",
+      "description": "Send the invoice amount from your Etisalat Cash wallet, then provide the wallet details and transfer screenshot for nursery review.",
+      "phone": "Wallet phone number",
+      "phoneInvalid": "Enter an 11-digit Egyptian mobile number starting with 010, 011, 012, or 015.",
+      "customerName": "Wallet customer's name",
+      "nameRequired": "Enter the name registered to the wallet.",
+      "namePlaceholder": "Name registered to the wallet",
+      "screenshot": "Payment screenshot",
+      "screenshotHelp": "Upload a clear PNG, JPG, or WebP receipt image, up to 5 MB.",
+      "completeRequired": "Enter valid wallet details and upload the payment screenshot.",
+      "fileTooLarge": "The screenshot must be 5 MB or smaller.",
+      "invalidFileType": "Choose a PNG, JPG, or WebP screenshot.",
+      "uploadFailed": "Could not upload the payment screenshot.",
+      "destination": "Nursery Etisalat Cash number",
+      "destinationNotConfigured": "The nursery has not configured its Etisalat Cash receiving number yet.",
+      "copyDestination": "Copy",
+      "destinationCopied": "Etisalat Cash number copied.",
+      "destinationCopyFailed": "Could not copy the Etisalat Cash number."
+    },
+    "instaPay": {
+      "title": "Pay with InstaPay",
+      "accountTitle": "Copy account details",
+      "accountDescription": "Transfer from your bank app using the nursery’s InstaPay account.",
+      "accountName": "Account name",
+      "accountNumber": "Account number / IPA",
+      "notConfigured": "Not configured",
+      "copyButton": "Copy account",
+      "copiedButton": "Copied",
+      "copied": "InstaPay account copied.",
+      "copyFailed": "Could not copy the InstaPay account.",
+      "qrTitle": "Scan the QR code",
+      "qrDescription": "Scan the nursery’s official InstaPay QR code from your bank app.",
+      "qrAlt": "Nursery InstaPay payment QR code",
+      "qrNotConfigured": "The nursery has not added an InstaPay QR code yet.",
+      "qrSafetyNote": "Before confirming in your bank app, check the recipient name and payment amount."
+    },
     "reference": "Transaction / reference number",
     "referencePlaceholder": "e.g. 123456789012",
     "referenceHelp": "Finance uses it to match your transfer.",
@@ -2305,10 +2357,15 @@
     "methodsTitle": "Payment Method",
     "noEnabledMethods": "The nursery has not enabled a payment method yet. Please contact the nursery.",
     "methods": {
-      "card": "Credit/Debit Card (Paymob)",
+      "card": "Paymob online checkout",
       "cash": "Cash",
       "bank_transfer": "Bank Transfer",
       "fawry": "Fawry (Paymob)",
+      "fawry_manual": "Fawry (manual verification)",
+      "fawry_manualHint": "Manual Fawry payment using a nursery-supplied reference; confirmed by nursery staff",
+      "etisalat_cash": "Etisalat Cash",
+      "etisalat_cashHint": "Manual Etisalat Cash wallet payment; parent submits wallet details and screenshot for review",
+      "etisalat_cash_account_number": "Etisalat Cash receiving number",
       "instapay": "InstaPay (Paymob)",
       "vodafone_cash": "Vodafone Cash (Paymob)",
       "orange_cash": "Orange Cash (Paymob)",
@@ -2348,6 +2405,7 @@
       "rejectReasonPlaceholder": "e.g. No transfer found with this reference",
       "rejectReasonHelp": "Optional, but it helps the parent fix the payment.",
       "pendingTitle": "Pending Payment Confirmation",
+      "testPaymentNotice": "TEST PAYMENT — no money was charged. This request cannot be confirmed as a real payment.",
       "paymobIntentionId": "Paymob reference",
       "paymobVerifyBeforeConfirm": "Verify Paymob intention {{id}} in the Paymob dashboard before confirming.",
       "method": "Method",
@@ -2355,6 +2413,8 @@
       "date": "Date",
       "parent": "Parent",
       "viewProof": "View proof image",
+      "proofLoading": "Loading secure proof link…",
+      "proofLoadFailed": "Could not open the payment proof.",
       "confirm": "Confirm Payment",
       "reject": "Reject",
       "confirmed": "Payment confirmed.",
@@ -5581,6 +5641,31 @@
         "label": "Payment instructions for parents",
         "helper": "Shown on the pay page: InstaPay address, Vodafone Cash number or bank account."
       },
+      "instapay_account_name": {
+        "label": "InstaPay account name",
+        "helper": "The recipient name shown to parents before they transfer."
+      },
+      "instapay_account_number": {
+        "label": "InstaPay account number / IPA",
+        "helper": "Parents can copy this account detail to their bank app."
+      },
+      "instapay_qr_image_url": {
+        "label": "Official InstaPay QR code",
+        "helper": "Upload the official InstaPay QR image (PNG, JPG or WebP; up to 5 MB). Do not upload a QR for a different recipient.",
+        "upload": "Upload QR image",
+        "replace": "Replace QR image",
+        "remove": "Remove",
+        "uploading": "Uploading…",
+        "uploaded": "InstaPay QR image uploaded.",
+        "uploadFailed": "Could not upload the InstaPay QR image.",
+        "invalidType": "Choose a PNG, JPG or WebP image.",
+        "tooLarge": "The QR image must be 5 MB or smaller.",
+        "previewAlt": "Uploaded InstaPay QR preview"
+      },
+      "etisalat_cash_account_number": {
+        "label": "Etisalat Cash receiving number",
+        "helper": "The nursery's wallet number parents should send the invoice payment to."
+      },
       "auto_late_pickup_billing_enabled": {
         "label": "Charge extra hours automatically",
         "helper": "While a child is still here after closing, extra hours are added every 15 minutes (up to the cap) and parents are notified."
@@ -5727,7 +5812,7 @@
       },
       "payment_methods_enabled": {
         "label": "Enabled payment methods",
-        "helper": "Only enabled methods appear during parent registration. Online methods are previews until a payment provider is connected; keep at least one available manual method enabled to accept payment requests."
+        "helper": "Parent signup offers one hosted Paymob checkout. Enable payment types only when the matching Paymob integration is configured; parents choose among enabled types on Paymob. Cash and bank transfer are not offered during signup."
       },
       "summer_pause_enabled": {
         "label": "Summer pause enabled",
@@ -5865,17 +5950,21 @@
       },
       "payment_methods_enabled": {
         "instapay": "InstaPay",
-        "instapayHint": "Manual transfer option and online-flow preview",
+        "instapayHint": "Hosted InstaPay option through the configured Paymob integration",
         "vodafone_cash": "Vodafone Cash",
         "vodafone_cashHint": "Manual wallet transfer, confirmed by nursery staff",
         "paymob": "Bank card (Paymob)",
-        "paymobHint": "Online checkout preview; requires Paymob integration",
-        "mobile_wallet": "Mobile wallet (Meeza)",
-        "mobile_walletHint": "Online wallet preview; requires provider integration",
-        "fawry": "Fawry",
-        "fawryHint": "Online Fawry preview; requires Fawry integration",
-        "cash": "Cash",
-        "cashHint": "Manual payment confirmed at the nursery",
+        "paymobHint": "Enable bank card checkout when the Paymob card integration is configured.",
+        "mobile_wallet": "Mobile wallets (Paymob)",
+        "mobile_walletHint": "Enable supported telecom wallets when the Paymob wallet integration is configured",
+        "fawry": "Fawry (Paymob)",
+        "fawryHint": "Enable Fawry checkout when the Paymob Fawry integration is configured",
+        "fawry_manual": "Fawry (manual verification)",
+        "fawry_manualHint": "Manual Fawry payment using a nursery-supplied reference; confirmed by nursery staff",
+        "etisalat_cash": "Etisalat Cash",
+        "etisalat_cashHint": "Manual Etisalat Cash wallet payment; parent submits wallet details and screenshot for review",
+        "cash": "Cash on delivery (admin only)",
+        "cashHint": "Admin-only option for cash collected on delivery; not available to parents during signup or online payment.",
         "bank_transfer": "Bank Transfer",
         "bank_transferHint": "Manual bank transfer, confirmed by nursery staff"
       },
@@ -6187,9 +6276,11 @@
     },
     "payment": {
       "title": "Tuition package and payment",
-      "description": "Choose a package and billing period, then submit your payment details for nursery confirmation.",
+      "description": "Choose a package and billing period, then pay securely using the nursery’s online payment options.",
       "loadError": "Payment packages are unavailable right now. Please try again later or contact the nursery.",
       "functionNeedsDeploy": "The payment service update is not deployed yet. Deploy the updated parent-signup-complete Edge Function, then retry.",
+      "etisalatMigrationRequired": "Etisalat Cash is temporarily unavailable because the nursery database update has not been applied. Other available payment methods can still be selected.",
+      "etisalatConfigurationRequired": "Etisalat Cash is unavailable because the nursery has not configured its receiving number. Other available payment methods can still be selected.",
       "choosePackage": "Choose a package",
       "billingPeriod": "Billing period",
       "amountDue": "Payment request amount",
@@ -6197,14 +6288,47 @@
       "totalDue": "Total payment",
       "discountSaved": "Discount: {{amount}} saved",
       "manualConfirmation": "Nursery-confirmed payment",
+      "onlineCheckoutTitle": "Online payment",
+      "onlineCheckoutOption": "Secure online checkout",
+      "onlineCheckoutUnavailable": "Secure online payment is not configured for this nursery yet.",
+      "testModeBadge": "TEST MODE · NO CHARGE",
+      "testPaymentTitle": "Test payment",
+      "testModeDescription": "Use the local-only card form to test registration. No payment provider is contacted and no money is charged.",
+      "testModeOption": "Simulated online payment",
+      "testModeOptionHint": "Enter fake card details to validate the card form. Never use a real card.",
+      "testModeNotice": "Test mode is active. Card details are checked only in this page, never sent or saved. Submitting creates a test payment request; no money is charged.",
+      "testModeSubmit": "Simulate test payment & submit application",
+      "testCard": {
+        "title": "Test bank card details",
+        "preview": "TEST CARD",
+        "previewNumber": "Card number preview",
+        "cardholder": "Cardholder name",
+        "namePlaceholder": "Name as shown on card",
+        "number": "Card number",
+        "cvv": "CVV / security code",
+        "expiry": "Valid until",
+        "month": "Month",
+        "year": "Year",
+        "expires": "Expires",
+        "localOnly": "Test only. Use fake card details; never enter a real card. These fields stay in this page and are not sent or saved.",
+        "nameRequired": "Enter the cardholder name.",
+        "numberRequired": "Enter the test card number.",
+        "numberLength": "Enter all 16 card digits.",
+        "numberInvalid": "Check the card number.",
+        "expiryRequired": "Select the expiry month and year.",
+        "expiryInvalid": "Enter a valid expiry date.",
+        "expiryPast": "The expiry date must be in the future.",
+        "cvvRequired": "Enter the test security code.",
+        "cvvInvalid": "Enter a 3 or 4 digit security code."
+      },
       "cardCheckout": {
-        "title": "Secure card checkout",
-        "description": "After you submit, Paymob opens its secure checkout for your card number, expiry date, and security code. Paymob validates the details and handles any bank verification.",
-        "securityNote": "Your card details are entered on Paymob and are never stored by the nursery.",
-        "reviewNote": "The nursery verifies the payment after you return from Paymob.",
-        "methodHint": "Continue to Paymob’s secure checkout to enter and validate your card details.",
-        "continue": "Continue to secure card checkout",
-        "unavailable": "Card payment is enabled by the nursery but is not configured yet. Please choose another method or contact the nursery."
+        "title": "Secure online payment",
+        "description": "After you submit, Paymob opens its secure checkout. Choose from the methods enabled for this nursery, such as bank card, InstaPay, supported mobile wallets, or Fawry.",
+        "securityNote": "Payment details are entered on Paymob and are never stored by the nursery.",
+        "reviewNote": "The application is submitted when checkout starts. Payment is confirmed after Paymob verifies the transaction.",
+        "methodHint": "Continue to Paymob’s secure checkout and choose an available payment method there.",
+        "continue": "Continue to secure online checkout",
+        "unavailable": "Online checkout is enabled by the nursery but is not configured yet. Please contact the nursery."
       },
       "prototype": {
         "title": "Explore online payment options",
@@ -6365,6 +6489,7 @@
       "title": "Application submitted!",
       "description": "Thank you for trusting us with your child. Your payment request was sent for confirmation, and the admissions team has received your application.",
       "paymobPending": "Paymob has returned you to the site. The application is submitted, but payment is not confirmed until the nursery verifies the transaction.",
+      "paymentTestMode": "Test flow completed. No money was charged and no payment provider was contacted. The application and test payment request were submitted for review.",
       "whatsNextTitle": "What happens next",
       "stepLabel": "Step {{num}}",
       "step1": "Our admissions team reviews your application and verifies the uploaded documents.",

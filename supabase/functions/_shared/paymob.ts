@@ -1,7 +1,7 @@
 type PaymobConfig = {
   secretKey: string;
   publicKey: string;
-  cardIntegrationId: number;
+  paymentMethodIntegrationIds: number[];
   amountMultiplier: 1 | 100;
   appBaseUrl: string;
 };
@@ -13,28 +13,44 @@ type PaymobIntentionInput = {
   customerEmail: string;
   customerPhone: string;
   address: string | null;
+  enabledPaymentMethods: string[] | null | undefined;
 };
 
 const PAYMOB_API_URL = 'https://accept.paymob.com/v1/intention/';
 const PAYMOB_CHECKOUT_URL = 'https://accept.paymob.com/unifiedcheckout/';
 
-export function getPaymobConfig(): PaymobConfig | null {
+export function getPaymobConfig(enabledMethods: string[] | null | undefined): PaymobConfig | null {
   const secretKey = Deno.env.get('PAYMOB_SECRET_KEY')?.trim();
   const publicKey = Deno.env.get('PAYMOB_PUBLIC_KEY')?.trim();
-  const integrationValue = Deno.env.get('PAYMOB_CARD_INTEGRATION_ID')?.trim();
   const amountMultiplierValue = Deno.env.get('PAYMOB_AMOUNT_MULTIPLIER')?.trim();
   const appBaseUrl = Deno.env.get('APP_BASE_URL')?.trim();
-  if (!secretKey || !publicKey || !integrationValue || !amountMultiplierValue || !appBaseUrl) return null;
-
-  const cardIntegrationId = Number(integrationValue);
-  if (!Number.isSafeInteger(cardIntegrationId) || cardIntegrationId <= 0) {
-    throw new Error('PAYMOB_CARD_INTEGRATION_ID must be a positive integer');
-  }
+  if (!secretKey || !publicKey || !amountMultiplierValue || !appBaseUrl) return null;
 
   const amountMultiplier = Number(amountMultiplierValue);
   if (amountMultiplier !== 1 && amountMultiplier !== 100) {
     throw new Error('PAYMOB_AMOUNT_MULTIPLIER must be 1 or 100');
   }
+
+  const integrationSettings = [
+    { setting: 'paymob', secret: 'PAYMOB_CARD_INTEGRATION_ID' },
+    { setting: 'instapay', secret: 'PAYMOB_INSTAPAY_INTEGRATION_ID' },
+    { setting: 'mobile_wallet', secret: 'PAYMOB_MOBILE_WALLET_INTEGRATION_ID' },
+    { setting: 'fawry', secret: 'PAYMOB_FAWRY_INTEGRATION_ID' },
+  ];
+  const paymentMethodIntegrationIds = [...new Set(
+    integrationSettings
+      .filter(({ setting }) => enabledMethods?.includes(setting))
+      .map(({ secret }) => Deno.env.get(secret)?.trim())
+      .filter((value): value is string => Boolean(value))
+      .map((value) => {
+        const id = Number(value);
+        if (!Number.isSafeInteger(id) || id <= 0) {
+          throw new Error('Paymob integration IDs must be positive integers');
+        }
+        return id;
+      }),
+  )];
+  if (paymentMethodIntegrationIds.length === 0) return null;
 
   const appUrl = new URL(appBaseUrl);
   if (appUrl.protocol !== 'https:' && appUrl.hostname !== 'localhost' && appUrl.hostname !== '127.0.0.1') {
@@ -44,7 +60,7 @@ export function getPaymobConfig(): PaymobConfig | null {
   return {
     secretKey,
     publicKey,
-    cardIntegrationId,
+    paymentMethodIntegrationIds,
     amountMultiplier,
     appBaseUrl: appUrl.origin,
   };
@@ -65,12 +81,12 @@ function nameParts(fullName: string): { firstName: string; lastName: string } {
   };
 }
 
-export async function createPaymobCardCheckout(input: PaymobIntentionInput): Promise<{
+export async function createPaymobCheckout(input: PaymobIntentionInput): Promise<{
   checkoutUrl: string;
   intentionId: string;
 }> {
-  const config = getPaymobConfig();
-  if (!config) throw new Error('Paymob card checkout is not fully configured');
+  const config = getPaymobConfig(input.enabledPaymentMethods);
+  if (!config) throw new Error('Paymob online checkout is not fully configured');
   const { firstName, lastName } = nameParts(input.customerName);
   const amount = Math.round(input.amount * config.amountMultiplier * 100) / 100;
 
@@ -83,7 +99,7 @@ export async function createPaymobCardCheckout(input: PaymobIntentionInput): Pro
     body: JSON.stringify({
       amount,
       currency: 'EGP',
-      payment_methods: [config.cardIntegrationId],
+      payment_methods: config.paymentMethodIntegrationIds,
       items: [{
         name: 'Nursery registration',
         amount,

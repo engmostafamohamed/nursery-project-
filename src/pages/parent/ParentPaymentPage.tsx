@@ -4,12 +4,14 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { PointsRedemptionWidget } from '@/components/parent/PointsRedemptionWidget';
+import { InstaPayTransferOptions } from '@/components/parent/InstaPayTransferOptions';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { confirm } from '@/components/ui/confirm';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useInvoiceDetails, type InvoiceDetailsData } from '@/hooks/useInvoiceDetails';
 import { useLoyalty } from '@/hooks/useLoyalty';
@@ -25,6 +27,7 @@ import {
   type ParentPaymentMethodCode,
 } from '@/lib/paymentApi';
 import { useSettings } from '@/lib/useSettings';
+import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 
 function invoiceStatusVariant(details: InvoiceDetailsData | null | undefined): 'default' | 'success' | 'warning' | 'error' | 'outline' {
@@ -103,6 +106,9 @@ export function ParentPaymentPage() {
   const method = methods.includes(selectedMethod) ? selectedMethod : methods[0] ?? 'manual';
   const [reference, setReference] = useState('');
   const [referenceTouched, setReferenceTouched] = useState(false);
+  const [walletPhone, setWalletPhone] = useState('');
+  const [walletCustomerName, setWalletCustomerName] = useState('');
+  const [walletReceipt, setWalletReceipt] = useState<File | null>(null);
   const submitPayment = useSubmitInvoicePayment();
   const payFlight = useSingleFlight();
   const redeemFlight = useSingleFlight();
@@ -111,10 +117,10 @@ export function ParentPaymentPage() {
   const paymentKeyRef = useRef<string | null>(null);
   const submitting = payFlight.running;
 
-  // A different amount, method or reference is a different payment: it gets its own key.
+  // Different payment details represent a different attempt and need a fresh idempotency key.
   useEffect(() => {
     paymentKeyRef.current = null;
-  }, [paymentAmount, method, reference]);
+  }, [paymentAmount, method, reference, walletPhone, walletCustomerName, walletReceipt]);
 
   const inReview = Boolean(invoice?.inReview);
   const balanceDue = invoice?.balanceDue ?? invoice?.amount ?? 0;
@@ -126,6 +132,12 @@ export function ParentPaymentPage() {
   const validPaymentAmount =
     Number.isFinite(parsedPaymentAmount) && parsedPaymentAmount > 0 && parsedPaymentAmount <= balanceDue;
   const needsReference = methodNeedsReference(method);
+  const isEtisalatWallet = method === 'etisalat_cash';
+  const walletPhoneValid = /^01[0125]\d{8}$/.test(walletPhone);
+  const walletDestinationConfigured = Boolean(settings.etisalat_cash_account_number?.trim());
+  const walletDetailsError = isEtisalatWallet && (
+    !walletDestinationConfigured || !walletPhoneValid || walletCustomerName.trim().length < 2 || !walletReceipt
+  );
   const referenceError = needsReference && reference.trim().length < 4 ? t('payment.referenceRequired') : null;
   const statusLabel = invoice?.inReview ? t('invoice.inReview') : t(`invoice.status.${invoice?.status ?? 'pending'}`);
   const typeLabel = invoice ? t(`invoice.types.${invoice.type}`) : '-';
@@ -211,6 +223,19 @@ export function ParentPaymentPage() {
     }
   };
 
+  const copyEtisalatDestination = async () => {
+    const destination = settings.etisalat_cash_account_number?.trim();
+    if (!destination) return;
+    try {
+      await navigator.clipboard.writeText(destination);
+      toast.success(t('payment.etisalatWallet.destinationCopied'));
+    } catch (error) {
+      toast.error(t('payment.etisalatWallet.destinationCopyFailed'), {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    }
+  };
+
   const handlePayNow = () =>
     payFlight.run(async () => {
       if (!invoice || !validPaymentAmount) return;
@@ -222,6 +247,10 @@ export function ParentPaymentPage() {
       }
       if (referenceError) {
         setReferenceTouched(true);
+        return;
+      }
+      if (walletDetailsError) {
+        toast.error(t('payment.etisalatWallet.completeRequired'));
         return;
       }
       const amountText = t('invoice.egpAmount', { amount: parsedPaymentAmount.toFixed(2) });
@@ -245,11 +274,32 @@ export function ParentPaymentPage() {
 
       paymentKeyRef.current ??= newIdempotencyKey();
       try {
+        let proofUrl: string | null = null;
+        if (isEtisalatWallet && walletReceipt) {
+          if (!user?.id || !nurseryId) throw new Error(t('payment.etisalatWallet.uploadFailed'));
+          if (!['image/png', 'image/jpeg', 'image/webp'].includes(walletReceipt.type)) {
+            throw new Error(t('payment.etisalatWallet.invalidFileType'));
+          }
+          const extension = walletReceipt.type === 'image/png' ? 'png' : walletReceipt.type === 'image/webp' ? 'webp' : 'jpg';
+          const path = `${nurseryId}/${user.id}/${invoice.id}/${Date.now()}.${extension}`;
+          const { error: uploadError } = await supabase.storage.from('payment-proofs').upload(path, walletReceipt, {
+            contentType: walletReceipt.type,
+            cacheControl: '3600',
+            upsert: false,
+          });
+          if (uploadError) throw uploadError;
+          proofUrl = path;
+        }
         const result = await submitPayment.mutateAsync({
           invoiceId: invoice.id,
           amount: parsedPaymentAmount,
           method,
-          reference: needsReference ? reference : null,
+          reference: isEtisalatWallet
+            ? `Wallet phone: ${walletPhone}; customer name: ${walletCustomerName.trim()}`
+            : needsReference
+              ? reference
+              : null,
+          proofUrl,
           idempotencyKey: paymentKeyRef.current,
         });
         paymentKeyRef.current = null;
@@ -260,7 +310,9 @@ export function ParentPaymentPage() {
         const { key, values } = paymentError(error);
         // A refused payment will not succeed on a retry; a new attempt gets a new key.
         if (key !== 'payment.errors.actionFailed') paymentKeyRef.current = null;
-        toast.error(t(key, values));
+        toast.error(t(key, values), {
+          description: error instanceof Error && key === 'payment.errors.actionFailed' ? error.message : undefined,
+        });
         void invoiceQuery.refetch();
       }
     });
@@ -523,6 +575,112 @@ export function ParentPaymentPage() {
                   </p>
                 ) : null}
 
+                {method === 'instapay' ? (
+                  <InstaPayTransferOptions
+                    accountName={settings.instapay_account_name}
+                    accountNumber={settings.instapay_account_number}
+                    qrImageUrl={settings.instapay_qr_image_url}
+                  />
+                ) : null}
+                {method === 'fawry' ? (
+                  <div className="space-y-2 rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
+                    <div className="flex items-start gap-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-yellow-100 text-yellow-800">
+                        <MaterialSymbol name="confirmation_number" />
+                      </span>
+                      <div>
+                        <h3 className="font-semibold text-on-surface">{t('payment.fawry.title')}</h3>
+                        <p className="mt-1 text-sm leading-5 text-on-surface-variant">{t('payment.fawry.description')}</p>
+                      </div>
+                    </div>
+                    <p className="rounded-lg bg-surface-container p-3 text-sm text-on-surface-variant">
+                      {t('payment.fawry.referenceNotice')}
+                    </p>
+                  </div>
+                ) : null}
+                {isEtisalatWallet ? (
+                  <fieldset className="space-y-3 rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
+                    <legend className="px-1 font-semibold text-on-surface">{t('payment.etisalatWallet.title')}</legend>
+                    <p className="text-sm leading-5 text-on-surface-variant">{t('payment.etisalatWallet.description')}</p>
+                    {!walletDestinationConfigured ? (
+                      <p role="alert" className="rounded-lg border border-warning/30 bg-warning/5 p-3 text-sm text-on-surface">
+                        {t('payment.etisalatWallet.destinationNotConfigured')}
+                      </p>
+                    ) : null}
+                    {settings.etisalat_cash_account_number?.trim() ? (
+                      <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-container p-3">
+                        <div className="min-w-0">
+                          <p className="text-xs text-on-surface-variant">{t('payment.etisalatWallet.destination')}</p>
+                          <p dir="ltr" className="mt-1 break-all font-mono font-bold text-primary">
+                            {settings.etisalat_cash_account_number.trim()}
+                          </p>
+                        </div>
+                        <Button type="button" variant="outline" size="sm" onClick={() => void copyEtisalatDestination()}>
+                          <MaterialSymbol name="content_copy" size="text-base" />
+                          {t('payment.etisalatWallet.copyDestination')}
+                        </Button>
+                      </div>
+                    ) : null}
+                    <div className="space-y-2">
+                      <Label htmlFor="etisalat-wallet-phone">{t('payment.etisalatWallet.phone')}</Label>
+                      <Input
+                        id="etisalat-wallet-phone"
+                        inputMode="numeric"
+                        autoComplete="tel"
+                        maxLength={11}
+                        value={walletPhone}
+                        aria-invalid={Boolean(walletPhone && !walletPhoneValid)}
+                        onChange={(event) => setWalletPhone(event.target.value.replace(/\D/g, '').slice(0, 11))}
+                        placeholder="01XXXXXXXXX"
+                      />
+                      {walletPhone && !walletPhoneValid ? (
+                        <p className="text-xs text-error">{t('payment.etisalatWallet.phoneInvalid')}</p>
+                      ) : null}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="etisalat-wallet-name">{t('payment.etisalatWallet.customerName')}</Label>
+                      <Input
+                        id="etisalat-wallet-name"
+                        autoComplete="name"
+                        maxLength={100}
+                        required
+                        aria-invalid={walletCustomerName.length > 0 && walletCustomerName.trim().length < 2}
+                        value={walletCustomerName}
+                        onChange={(event) => setWalletCustomerName(event.target.value)}
+                        placeholder={t('payment.etisalatWallet.namePlaceholder')}
+                      />
+                      {walletCustomerName.length > 0 && walletCustomerName.trim().length < 2 ? (
+                        <p className="text-xs text-error">{t('payment.etisalatWallet.nameRequired')}</p>
+                      ) : null}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="etisalat-wallet-receipt">{t('payment.etisalatWallet.screenshot')}</Label>
+                      <Input
+                        id="etisalat-wallet-receipt"
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        required
+                        onChange={(event) => {
+                          const file = event.target.files?.[0] ?? null;
+                          if (file && !['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+                            toast.error(t('payment.etisalatWallet.invalidFileType'));
+                            event.target.value = '';
+                            setWalletReceipt(null);
+                            return;
+                          }
+                          if (file && file.size > 5 * 1024 * 1024) {
+                            toast.error(t('payment.etisalatWallet.fileTooLarge'));
+                            event.target.value = '';
+                            setWalletReceipt(null);
+                            return;
+                          }
+                          setWalletReceipt(file);
+                        }}
+                      />
+                      <p className="text-xs text-on-surface-variant">{t('payment.etisalatWallet.screenshotHelp')}</p>
+                    </div>
+                  </fieldset>
+                ) : null}
                 {settings.payment_instructions?.trim() && method !== 'cash' ? (
                   <div className="rounded-lg border border-outline-variant bg-surface-container-lowest p-3 text-sm">
                     <p className="text-xs font-semibold text-on-surface-variant">{t('payment.instructionsTitle')}</p>
@@ -532,7 +690,7 @@ export function ParentPaymentPage() {
 
                 {needsReference ? (
                   <div className="space-y-1">
-                    <Label htmlFor="payment-reference">{t('payment.reference')}</Label>
+                    <Label htmlFor="payment-reference">{method === 'fawry' ? t('payment.fawry.reference') : t('payment.reference')}</Label>
                     <Input
                       id="payment-reference"
                       value={reference}
@@ -557,7 +715,7 @@ export function ParentPaymentPage() {
                 <Button
                   className="h-11 w-full rounded-md"
                   onClick={() => void handlePayNow()}
-                  disabled={submitting || !invoice || !validPaymentAmount || methods.length === 0}
+                  disabled={submitting || !invoice || !validPaymentAmount || methods.length === 0 || Boolean(walletDetailsError)}
                   aria-busy={submitting}
                 >
                   {submitting ? t('payment.submitting') : t('payment.payNowAmount', { amount: validPaymentAmount ? parsedPaymentAmount.toFixed(2) : '0.00' })}

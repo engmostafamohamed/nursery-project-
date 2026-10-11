@@ -42,6 +42,10 @@ export interface NurserySettingsRow {
   payment_methods_enabled: string[] | null;
   /** Where parents send transfers (InstaPay address, wallet number, bank account), shown on the pay page. */
   payment_instructions: string | null;
+  instapay_account_name: string | null;
+  instapay_account_number: string | null;
+  instapay_qr_image_url: string | null;
+  etisalat_cash_account_number: string | null;
   summer_pause_enabled: boolean | null;
   summer_pause_min_weeks: number | null;
   summer_pause_max_weeks: number | null;

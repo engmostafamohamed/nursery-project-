@@ -8,6 +8,7 @@ export type SubmitPaymentInput = {
   amount: number;
   method: ParentPaymentMethodCode;
   reference?: string | null;
+  proofUrl?: string | null;
   /** Same key for every retry of this one payment, so it is never recorded twice. */
   idempotencyKey: string;
 };

@@ -23,6 +23,7 @@ export type FieldType =
   | 'date'
   | 'color'
   | 'payment_methods'
+  | 'image_upload'
   | 'loyalty_thresholds'
   | 'text';
 
@@ -81,8 +82,12 @@ export const DEFAULT_SETTINGS: Record<SettingsKey, unknown> = {
   late_payment_fee_percentage: '5.00',
   sibling_discount_2nd_child_percentage: '10.00',
   sibling_discount_3rd_child_percentage: '15.00',
-  payment_methods_enabled: ['paymob', 'cash', 'bank_transfer'],
+  payment_methods_enabled: ['paymob'],
   payment_instructions: null,
+  instapay_account_name: null,
+  instapay_account_number: null,
+  instapay_qr_image_url: null,
+  etisalat_cash_account_number: null,
   summer_pause_enabled: true,
   summer_pause_min_weeks: 2,
   summer_pause_max_weeks: 16,
@@ -183,6 +188,10 @@ export const SETTINGS_TABS: SettingsTabConfig[] = [
       { key: 'sibling_discount_3rd_child_percentage', type: 'number', min: 0, max: 100, step: 0.01 },
       { key: 'payment_methods_enabled', type: 'payment_methods' },
       { key: 'payment_instructions', type: 'text' },
+      { key: 'instapay_account_name', type: 'text' },
+      { key: 'instapay_account_number', type: 'text' },
+      { key: 'instapay_qr_image_url', type: 'image_upload' },
+      { key: 'etisalat_cash_account_number', type: 'text' },
     ],
   },
   {

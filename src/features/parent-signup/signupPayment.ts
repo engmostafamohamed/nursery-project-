@@ -12,8 +12,11 @@ export type SignupPaymentOptions = {
   packages: ApplicationPaymentPackage[];
   extraHoursPackages: ApplicationExtraHoursPackage[];
   methods: ParentPaymentMethodCode[];
-  cardCheckoutUnavailable: boolean;
+  testMode: boolean;
+  paymobCheckoutUnavailable: boolean;
   instructions: string | null;
+  etisalatCashAccountNumber: string | null;
+  etisalatCashSetupIssue: 'migration' | 'configuration' | null;
 };
 
 export class SignupPaymentOptionsError extends Error {
@@ -54,8 +57,11 @@ export function useSignupPaymentOptions(nurseryId: string | undefined, enabled: 
         packages?: ApplicationPaymentPackage[];
         extra_hours_packages?: ApplicationExtraHoursPackage[];
         methods?: ParentPaymentMethodCode[];
-        card_checkout_unavailable?: boolean;
+        payment_test_mode?: boolean;
+        paymob_checkout_unavailable?: boolean;
         payment_instructions?: string | null;
+        etisalat_cash_account_number?: string | null;
+        etisalat_cash_setup_issue?: 'migration' | 'configuration' | null;
       } | null;
       if (!response || !Array.isArray(response.packages) || !Array.isArray(response.extra_hours_packages)) {
         throw new Error('Could not load payment options');
@@ -68,8 +74,11 @@ export function useSignupPaymentOptions(nurseryId: string | undefined, enabled: 
         packages: response.packages,
         extraHoursPackages: response.extra_hours_packages,
         methods: response.methods.filter(isParentPaymentMethodCode),
-        cardCheckoutUnavailable: response.card_checkout_unavailable === true,
+        testMode: response.payment_test_mode === true,
+        paymobCheckoutUnavailable: response.paymob_checkout_unavailable === true,
         instructions: response.payment_instructions?.trim() || null,
+        etisalatCashAccountNumber: response.etisalat_cash_account_number?.trim() || null,
+        etisalatCashSetupIssue: response.etisalat_cash_setup_issue ?? null,
       };
     },
   });

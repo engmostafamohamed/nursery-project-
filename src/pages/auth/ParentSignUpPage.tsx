@@ -1530,6 +1530,10 @@ export function ParentSignUpPage() {
   const [paymentBillingPeriod, setPaymentBillingPeriod] = useState<ApplicationPackageBillingPeriod>('monthly');
   const [paymentMethod, setPaymentMethod] = useState<ParentPaymentMethodCode>('manual');
   const [paymentReference, setPaymentReference] = useState('');
+  const [testCardValid, setTestCardValid] = useState(false);
+  const [walletPhone, setWalletPhone] = useState('');
+  const [walletCustomerName, setWalletCustomerName] = useState('');
+  const [walletReceipt, setWalletReceipt] = useState<File | null>(null);
 
   const initialDraft = useMemo(() => loadDraft(), []);
   const initialValues = useMemo(
@@ -1618,7 +1622,7 @@ export function ParentSignUpPage() {
     [signupPaymentOptions.data?.methods],
   );
   const requiresPaymentReference =
-    paymentMethod === 'instapay' || paymentMethod === 'vodafone_cash' || paymentMethod === 'bank_transfer';
+    paymentMethod === 'instapay' || paymentMethod === 'vodafone_cash' || paymentMethod === 'bank_transfer' || paymentMethod === 'fawry';
   useEffect(() => {
     if (availablePaymentMethods.length > 0 && !availablePaymentMethods.includes(paymentMethod)) {
       setPaymentMethod(availablePaymentMethods[0]);
@@ -1655,6 +1659,13 @@ export function ParentSignUpPage() {
     signupPaymentOptions.isSuccess &&
     Boolean(paymentPackageId) &&
     availablePaymentMethods.includes(paymentMethod) &&
+    (!signupPaymentOptions.data?.testMode || paymentMethod !== 'card' || testCardValid) &&
+    (paymentMethod !== 'etisalat_cash' || (
+      Boolean(signupPaymentOptions.data?.etisalatCashAccountNumber) &&
+      /^01[0125]\d{8}$/.test(walletPhone) &&
+      walletCustomerName.trim().length >= 2 &&
+      Boolean(walletReceipt)
+    )) &&
     (!requiresPaymentReference || paymentReference.trim().length >= 4);
   const canSubmit =
     SIGNUP_STEPS.every((step) => isStepComplete(step, liveValues, files, activeRegistrationTemplate)) &&
@@ -1769,6 +1780,15 @@ export function ParentSignUpPage() {
       toast.error(t('payment.referenceRequired'));
       return;
     }
+    if (paymentMethod === 'etisalat_cash' && (
+      !signupPaymentOptions.data?.etisalatCashAccountNumber ||
+      !/^01[0125]\d{8}$/.test(walletPhone) ||
+      walletCustomerName.trim().length < 2 ||
+      !walletReceipt
+    )) {
+      toast.error(t('payment.etisalatWallet.completeRequired'));
+      return;
+    }
     autosave.flush();
     setSubmitting(true);
     try {
@@ -1779,10 +1799,17 @@ export function ParentSignUpPage() {
         method: paymentMethod,
         reference: requiresPaymentReference ? paymentReference.trim() : null,
         idempotencyKey: newIdempotencyKey(),
+        walletPhone: paymentMethod === 'etisalat_cash' ? walletPhone : null,
+        walletCustomerName: paymentMethod === 'etisalat_cash' ? walletCustomerName : null,
+        walletReceipt: paymentMethod === 'etisalat_cash' ? walletReceipt : null,
       });
       clearDraft();
       if (result.checkoutUrl) {
         window.location.assign(result.checkoutUrl);
+        return;
+      }
+      if (result.paymentTestMode) {
+        navigate('/signup/success?payment=test');
         return;
       }
       // signup.success is the success page's namespace object — the toast needs its title.
@@ -1884,9 +1911,17 @@ export function ParentSignUpPage() {
               onMethodChange={(method) => {
                 setPaymentMethod(method);
                 setPaymentReference('');
+                setTestCardValid(false);
               }}
               reference={paymentReference}
               onReferenceChange={setPaymentReference}
+              onTestCardValidityChange={setTestCardValid}
+              walletPhone={walletPhone}
+              onWalletPhoneChange={setWalletPhone}
+              walletCustomerName={walletCustomerName}
+              onWalletCustomerNameChange={setWalletCustomerName}
+              walletReceipt={walletReceipt}
+              onWalletReceiptChange={setWalletReceipt}
             />
           </div>
         );
@@ -1931,6 +1966,8 @@ export function ParentSignUpPage() {
                       ? t('signup.documentsRequired')
                       : !paymentSelectionComplete && requiresPaymentReference && paymentReference.trim().length < 4
                         ? t('payment.referenceRequired')
+                        : !paymentSelectionComplete && paymentMethod === 'etisalat_cash'
+                          ? t('payment.etisalatWallet.completeRequired')
                         : !paymentSelectionComplete
                     ? t('signup.payment.completeSelection', {
                         defaultValue: 'Choose a tuition package, billing period, and payment method before submitting.',
@@ -1947,10 +1984,15 @@ export function ParentSignUpPage() {
               >
               {submitting
                 ? t('common.loading')
-                : paymentMethod === 'card'
-                  ? t('signup.payment.cardCheckout.continue', { defaultValue: 'Continue to secure card checkout' })
-                  : t('signup.payment.submitPaymentAndApplication', { defaultValue: 'Submit payment & application' })}
-              <MaterialSymbol name={paymentMethod === 'card' ? 'open_in_new' : 'send'} size="text-base" />
+                : paymentMethod === 'card' && signupPaymentOptions.data?.testMode
+                  ? t('signup.payment.testModeSubmit', { defaultValue: 'Simulate test payment & submit application' })
+                  : paymentMethod === 'card'
+                    ? t('signup.payment.cardCheckout.continue', { defaultValue: 'Continue to secure online checkout' })
+                    : t('signup.payment.submitPaymentAndApplication', { defaultValue: 'Submit payment & application' })}
+              <MaterialSymbol
+                name={paymentMethod === 'card' && !signupPaymentOptions.data?.testMode ? 'open_in_new' : 'send'}
+                size="text-base"
+              />
               </Button>
             </div>
           ) : (

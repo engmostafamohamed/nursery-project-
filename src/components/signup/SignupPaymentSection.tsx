@@ -1,12 +1,14 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
-import { HostedCardCheckoutNotice } from '@/components/payment/HostedCardCheckoutNotice';
+import { HostedOnlineCheckoutNotice } from '@/components/payment/HostedOnlineCheckoutNotice';
+import { TestBankCardForm } from '@/components/payment/TestBankCardForm';
 import {
   computePackageBillingQuote,
   type ApplicationPackageBillingPeriod,
@@ -27,9 +29,11 @@ const billingPeriods: Array<{ value: ApplicationPackageBillingPeriod; label: str
 ];
 
 const methodIcons: Record<ParentPaymentMethodCode, string> = {
-  card: 'credit_card',
+  card: 'payments',
   instapay: 'account_balance',
   vodafone_cash: 'phone_iphone',
+  etisalat_cash: 'phone_iphone',
+  fawry: 'confirmation_number',
   bank_transfer: 'account_balance',
   cash: 'payments',
   manual: 'receipt_long',
@@ -56,6 +60,13 @@ type Props = {
   onMethodChange: (value: ParentPaymentMethodCode) => void;
   reference: string;
   onReferenceChange: (value: string) => void;
+  onTestCardValidityChange: (isValid: boolean) => void;
+  walletPhone: string;
+  onWalletPhoneChange: (value: string) => void;
+  walletCustomerName: string;
+  onWalletCustomerNameChange: (value: string) => void;
+  walletReceipt: File | null;
+  onWalletReceiptChange: (file: File | null) => void;
 };
 
 export function SignupPaymentSection({
@@ -75,6 +86,13 @@ export function SignupPaymentSection({
   onMethodChange,
   reference,
   onReferenceChange,
+  onTestCardValidityChange,
+  walletPhone,
+  onWalletPhoneChange,
+  walletCustomerName,
+  onWalletCustomerNameChange,
+  walletReceipt,
+  onWalletReceiptChange,
 }: Props) {
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language.startsWith('ar');
@@ -90,7 +108,15 @@ export function SignupPaymentSection({
     : null;
   const totalDue = (quote?.total ?? 0) + (extraHoursQuote?.displayPrice ?? 0);
   const totalSavings = (quote?.discountAmount ?? 0) + (extraHoursQuote?.discountAmount ?? 0);
-  const needsReference = method === 'instapay' || method === 'vodafone_cash' || method === 'bank_transfer';
+  const needsReference = method === 'instapay' || method === 'vodafone_cash' || method === 'bank_transfer' || method === 'fawry';
+  const isEtisalatWallet = method === 'etisalat_cash';
+  const walletPhoneValid = /^01[0125]\d{8}$/.test(walletPhone);
+  const walletDetailsValid = !isEtisalatWallet || (
+    Boolean(options?.etisalatCashAccountNumber) &&
+    walletPhoneValid &&
+    walletCustomerName.trim().length >= 2 &&
+    Boolean(walletReceipt)
+  );
   const periodLabel = t(
     `applications.paymentPackage.period.${billingPeriod === 'half_annual' ? 'halfAnnual' : billingPeriod}`,
     { defaultValue: billingPeriods.find((period) => period.value === billingPeriod)?.label },
@@ -110,10 +136,15 @@ export function SignupPaymentSection({
               <h3 className="text-lg font-bold tracking-tight text-on-surface sm:text-xl">
                 {t('signup.payment.title', { defaultValue: 'Tuition package and payment' })}
               </h3>
+              {options?.testMode && method === 'card' ? (
+                <span className="rounded-full border border-warning/30 bg-warning/10 px-2.5 py-1 text-xs font-semibold text-warning">
+                  {t('signup.payment.testModeBadge', { defaultValue: 'TEST MODE · NO CHARGE' })}
+                </span>
+              ) : null}
             </div>
             <p className="mt-1 max-w-2xl text-sm leading-5 text-on-surface-variant">
               {t('signup.payment.description', {
-                defaultValue: 'Choose a package and billing period, then submit your payment details for nursery confirmation.',
+                defaultValue: 'Choose a package and billing period, then pay securely using the nursery’s online payment options.',
               })}
             </p>
           </div>
@@ -157,6 +188,20 @@ export function SignupPaymentSection({
           </div>
         ) : (
           <div className="space-y-6">
+            {options.etisalatCashSetupIssue ? (
+              <p role="status" className="rounded-xl border border-warning/30 bg-warning/5 p-3 text-sm text-on-surface">
+                {t(
+                  options.etisalatCashSetupIssue === 'migration'
+                    ? 'signup.payment.etisalatMigrationRequired'
+                    : 'signup.payment.etisalatConfigurationRequired',
+                  {
+                    defaultValue: options.etisalatCashSetupIssue === 'migration'
+                      ? 'Etisalat Cash is temporarily unavailable because the nursery database update has not been applied. Other available payment methods can still be selected.'
+                      : 'Etisalat Cash is unavailable because the nursery has not configured its receiving number. Other available payment methods can still be selected.',
+                  },
+                )}
+              </p>
+            ) : null}
             <div className="space-y-6">
               <fieldset className="space-y-3">
                 <legend className="mb-3 flex items-center gap-3">
@@ -438,14 +483,22 @@ export function SignupPaymentSection({
               </div>
 
                 <fieldset className="space-y-3">
-                  <legend className="font-semibold text-on-surface">{t('payment.methodsTitle')}</legend>
+                  <legend className="font-semibold text-on-surface">
+                    {t(options.testMode && method === 'card' ? 'signup.payment.testPaymentTitle' : 'payment.methodsTitle', {
+                      defaultValue: options.testMode ? 'Test payment' : 'Payment method',
+                    })}
+                  </legend>
                   <p className="mb-3 text-xs text-on-surface-variant">
-                    {method === 'card'
-                      ? t('signup.payment.cardCheckout.methodHint', {
-                          defaultValue: 'Continue to Paymob’s secure checkout to enter and validate your card details.',
+                    {options.testMode && method === 'card'
+                      ? t('signup.payment.testModeDescription', {
+                          defaultValue: 'Use the local-only card form to test registration. No payment provider is contacted and no money is charged.',
                         })
-                      : t('signup.payment.manualMethodsHint', {
-                          defaultValue: 'Available now — payment is submitted to the nursery for confirmation.',
+                      : method === 'etisalat_cash'
+                        ? t('payment.etisalatWallet.description')
+                        : method === 'fawry'
+                          ? t('payment.fawry.description')
+                          : t('signup.payment.cardCheckout.methodHint', {
+                          defaultValue: 'Continue to Paymob’s secure checkout and choose an available payment method there.',
                         })}
                   </p>
                   {options.methods.length > 0 ? (
@@ -475,15 +528,23 @@ export function SignupPaymentSection({
                         <span className="min-w-0 flex-1">
                           <span className="block font-semibold text-on-surface">
                             {paymentMethod === 'card'
-                              ? t('payment.methods.card', { defaultValue: 'Bank card' })
+                              ? t(options.testMode ? 'signup.payment.testModeOption' : 'signup.payment.onlineCheckoutOption', {
+                                  defaultValue: options.testMode ? 'Simulated bank card' : 'Secure bank card checkout',
+                                })
                               : t(`payment.manualMethods.${paymentMethod}.label`)}
                           </span>
                           <span className="mt-0.5 block text-xs leading-5 text-on-surface-variant">
-                            {paymentMethod === 'card'
-                              ? t('signup.payment.cardCheckout.methodHint', {
-                                  defaultValue: 'Secure online card payment with Paymob.',
+                            {paymentMethod === 'etisalat_cash'
+                              ? t('payment.manualMethods.etisalat_cash.help')
+                              : paymentMethod === 'fawry'
+                                ? t('payment.manualMethods.fawry.help')
+                                : options.testMode
+                              ? t('signup.payment.testModeOptionHint', {
+                                  defaultValue: 'Enter fake card details to validate the card form. Never use a real card.',
                                 })
-                              : t(`payment.manualMethods.${paymentMethod}.help`)}
+                              : t('signup.payment.cardCheckout.methodHint', {
+                                  defaultValue: 'Choose card, InstaPay, a supported mobile wallet, or Fawry in Paymob checkout.',
+                                })}
                           </span>
                         </span>
                         <span className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${active ? 'border-primary bg-primary text-primary-foreground' : 'border-outline-variant text-transparent'}`}>
@@ -495,22 +556,116 @@ export function SignupPaymentSection({
                   </div>
                   ) : (
                     <p role="alert" className="rounded-xl border border-warning/30 bg-warning/5 p-3 text-sm text-on-surface">
-                      {t('signup.payment.noManualMethods', {
-                        defaultValue: 'The nursery has not enabled a payment method that can submit a payment request yet.',
+                      {t('signup.payment.onlineCheckoutUnavailable', {
+                        defaultValue: 'Secure online payment is not configured for this nursery yet.',
                       })}
                     </p>
                   )}
                 </fieldset>
 
-              {options.cardCheckoutUnavailable ? (
+              {options.testMode && method === 'card' ? (
+                <div role="status" className="flex items-start gap-3 rounded-xl border border-warning/30 bg-warning/5 p-4 text-sm">
+                  <MaterialSymbol name="science" className="mt-0.5 text-warning" />
+                  <p className="leading-5 text-on-surface">
+                    {t('signup.payment.testModeNotice', {
+                      defaultValue: 'Test mode is active. Card details are checked only in this page, never sent or saved. Submitting creates a test payment request; no money is charged.',
+                    })}
+                  </p>
+                </div>
+              ) : null}
+
+              {options.testMode && method === 'card' ? (
+                <TestBankCardForm onValidityChange={onTestCardValidityChange} />
+              ) : null}
+
+              {method === 'fawry' ? (
+                <div className="space-y-2 rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
+                  <h4 className="font-semibold text-on-surface">{t('payment.fawry.title')}</h4>
+                  <p className="text-sm leading-5 text-on-surface-variant">{t('payment.fawry.referenceNotice')}</p>
+                </div>
+              ) : null}
+
+              {isEtisalatWallet ? (
+                <fieldset className="space-y-3 rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
+                  <legend className="px-1 font-semibold text-on-surface">{t('payment.etisalatWallet.title')}</legend>
+                  <p className="text-sm leading-5 text-on-surface-variant">{t('payment.etisalatWallet.description')}</p>
+                  {options.etisalatCashAccountNumber ? (
+                    <div className="rounded-lg bg-surface-container p-3">
+                      <p className="text-xs text-on-surface-variant">{t('payment.etisalatWallet.destination')}</p>
+                      <p dir="ltr" className="mt-1 break-all font-mono text-lg font-bold text-primary">{options.etisalatCashAccountNumber}</p>
+                    </div>
+                  ) : (
+                    <p role="alert" className="rounded-lg border border-warning/30 bg-warning/5 p-3 text-sm text-on-surface">
+                      {t('payment.etisalatWallet.destinationNotConfigured')}
+                    </p>
+                  )}
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-etisalat-phone">{t('payment.etisalatWallet.phone')}</Label>
+                    <Input
+                      id="signup-etisalat-phone"
+                      inputMode="numeric"
+                      autoComplete="tel"
+                      maxLength={11}
+                      value={walletPhone}
+                      onChange={(event) => onWalletPhoneChange(event.target.value.replace(/\D/g, '').slice(0, 11))}
+                      placeholder="01XXXXXXXXX"
+                      aria-invalid={Boolean(walletPhone && !walletPhoneValid)}
+                    />
+                    {walletPhone && !walletPhoneValid ? <p className="text-xs text-error">{t('payment.etisalatWallet.phoneInvalid')}</p> : null}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-etisalat-name">{t('payment.etisalatWallet.customerName')}</Label>
+                    <Input
+                      id="signup-etisalat-name"
+                      autoComplete="name"
+                      maxLength={100}
+                      value={walletCustomerName}
+                      onChange={(event) => onWalletCustomerNameChange(event.target.value)}
+                      placeholder={t('payment.etisalatWallet.namePlaceholder')}
+                      aria-invalid={Boolean(walletCustomerName && walletCustomerName.trim().length < 2)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-etisalat-receipt">{t('payment.etisalatWallet.screenshot')}</Label>
+                    <Input
+                      id="signup-etisalat-receipt"
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0] ?? null;
+                        if (file && !['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+                          toast.error(t('payment.etisalatWallet.invalidFileType'));
+                          onWalletReceiptChange(null);
+                          event.target.value = '';
+                          return;
+                        }
+                        if (file && file.size > 5 * 1024 * 1024) {
+                          toast.error(t('payment.etisalatWallet.fileTooLarge'));
+                          onWalletReceiptChange(null);
+                          event.target.value = '';
+                          return;
+                        }
+                        onWalletReceiptChange(file);
+                      }}
+                    />
+                    <p className="text-xs text-on-surface-variant">{t('payment.etisalatWallet.screenshotHelp')}</p>
+                    {walletReceipt ? <p className="text-xs text-on-surface-variant">{walletReceipt.name}</p> : null}
+                    {!walletDetailsValid && (!options.etisalatCashAccountNumber || !walletPhoneValid || walletCustomerName.trim().length < 2 || !walletReceipt) ? (
+                      <p className="text-xs text-warning">{t('payment.etisalatWallet.completeRequired')}</p>
+                    ) : null}
+                  </div>
+                </fieldset>
+              ) : null}
+
+              {!options.testMode && method === 'card' && options.paymobCheckoutUnavailable ? (
                 <p role="status" className="rounded-xl border border-warning/30 bg-warning/5 p-3 text-sm text-on-surface">
                   {t('signup.payment.cardCheckout.unavailable', {
-                    defaultValue: 'Card payment is enabled by the nursery but is not configured yet. Please choose another method or contact the nursery.',
+                    defaultValue: 'Online checkout is enabled by the nursery but is not configured yet. Please contact the nursery.',
                   })}
                 </p>
               ) : null}
 
-              {method === 'card' ? <HostedCardCheckoutNotice amount={price(totalDue)} /> : null}
+              {method === 'card' && !options.testMode ? <HostedOnlineCheckoutNotice amount={price(totalDue)} /> : null}
 
               {options.instructions && method !== 'cash' && method !== 'card' ? (
                 <div className="rounded-xl border border-outline-variant bg-surface p-4">
@@ -527,7 +682,7 @@ export function SignupPaymentSection({
               {needsReference ? (
                 <div className="space-y-2">
                   <Label htmlFor="signup-payment-reference" className="font-semibold">
-                    {t('payment.reference')}
+                    {t(method === 'fawry' ? 'payment.fawry.reference' : 'payment.reference')}
                   </Label>
                   <Input
                     id="signup-payment-reference"

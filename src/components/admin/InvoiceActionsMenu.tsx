@@ -15,6 +15,7 @@ type PaymentMethod =
   | 'bank_transfer'
   | 'paymob'
   | 'fawry'
+  | 'etisalat_cash'
   | 'instapay'
   | 'vodafone_cash'
   | 'orange_cash';
@@ -33,6 +34,7 @@ const PAYMENT_METHODS: PaymentMethod[] = [
   'bank_transfer',
   'paymob',
   'fawry',
+  'etisalat_cash',
   'instapay',
   'vodafone_cash',
   'orange_cash',

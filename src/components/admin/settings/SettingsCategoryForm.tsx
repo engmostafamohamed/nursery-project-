@@ -3,6 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import type { NurserySettingsRow } from '@/types/tables/nursery_settings';
 
+import { InstaPayQrUploadField } from './InstaPayQrUploadField';
 import type { SettingsField } from './settingsConfig';
 
 interface Props {
@@ -15,8 +16,8 @@ interface Props {
   isSaving: boolean;
 }
 
-// instapay / vodafone_cash: parents transfer directly and finance confirms by reference number.
-const PAYMENT_METHODS = ['paymob', 'mobile_wallet', 'instapay', 'fawry', 'vodafone_cash', 'cash', 'bank_transfer'];
+// Manual methods are verified by nursery staff; Paymob methods require their provider integrations.
+const PAYMENT_METHODS = ['paymob', 'mobile_wallet', 'instapay', 'fawry', 'fawry_manual', 'vodafone_cash', 'etisalat_cash', 'cash', 'bank_transfer'];
 const LOYALTY_TIERS = ['silver', 'gold', 'platinum'] as const;
 
 export function SettingsCategoryForm({
@@ -110,6 +111,18 @@ export function SettingsCategoryForm({
           </div>
           <p className="text-xs text-on-surface-variant">{helper}</p>
         </fieldset>
+      );
+    }
+
+    if (field.type === 'image_upload') {
+      return (
+        <div className="space-y-2">
+          <Label>{label}</Label>
+          <InstaPayQrUploadField
+            value={String(value ?? '')}
+            onChange={(url) => onChange(field.key, url || null)}
+          />
+        </div>
       );
     }
 

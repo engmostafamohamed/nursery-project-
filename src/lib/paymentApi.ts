@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase';
  */
 
 /** Methods a parent can declare for a payment the nursery verifies by hand. */
-export const MANUAL_PAYMENT_METHODS = ['instapay', 'vodafone_cash', 'bank_transfer', 'cash'] as const;
+export const MANUAL_PAYMENT_METHODS = ['instapay', 'vodafone_cash', 'etisalat_cash', 'bank_transfer', 'fawry', 'cash'] as const;
 export type ManualPaymentMethod = (typeof MANUAL_PAYMENT_METHODS)[number];
 export type ParentPaymentMethodCode = ManualPaymentMethod | 'manual' | 'card';
 
@@ -17,14 +17,16 @@ export function isParentPaymentMethodCode(value: unknown): value is ParentPaymen
 
 /** Transfers are matched by their reference number, so the parent must give one. */
 export function methodNeedsReference(method: ParentPaymentMethodCode): boolean {
-  return method === 'instapay' || method === 'vodafone_cash' || method === 'bank_transfer';
+  return method === 'instapay' || method === 'vodafone_cash' || method === 'bank_transfer' || method === 'fawry';
 }
 
 /** Manual methods this nursery accepts (nursery_settings.payment_methods_enabled). */
 export function enabledManualMethods(enabled: string[] | null | undefined): ParentPaymentMethodCode[] {
   if (enabled == null) return ['manual'];
   const list = enabled;
-  const methods = MANUAL_PAYMENT_METHODS.filter((m) => list.includes(m));
+  const methods = MANUAL_PAYMENT_METHODS.filter(
+    (method) => method !== 'cash' && (method === 'fawry' ? list.includes('fawry_manual') : list.includes(method)),
+  );
   return methods;
 }
 

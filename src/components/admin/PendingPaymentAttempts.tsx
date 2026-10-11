@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
+import { SignedPaymentProofLink } from '@/components/admin/SignedPaymentProofLink';
 import { confirm } from '@/components/ui/confirm';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -114,6 +115,13 @@ export function PendingPaymentAttempts({ attempts, onUpdated }: Props) {
       <div className="space-y-3">
         {pending.map((attempt) => (
           <div key={attempt.id} className="rounded-lg border border-outline-variant bg-surface-container-lowest p-3 text-sm">
+            {attempt.notes?.startsWith('[TEST PAYMENT]') ? (
+              <p role="status" className="mb-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs font-medium text-warning">
+                {t('payment.admin.testPaymentNotice', {
+                  defaultValue: 'TEST PAYMENT — no money was charged. This request cannot be confirmed as a real payment.',
+                })}
+              </p>
+            ) : null}
             <div className="mb-3 flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="font-semibold text-on-surface">{t('invoice.egpAmount', { amount: attempt.amount.toFixed(2) })}</p>
@@ -146,16 +154,13 @@ export function PendingPaymentAttempts({ attempts, onUpdated }: Props) {
               ) : null}
             </dl>
             {attempt.proofUrl ? (
-              <a className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary underline" href={attempt.proofUrl} target="_blank" rel="noreferrer">
-                <span className="material-symbols-outlined text-sm" aria-hidden>attach_file</span>
-                {t('payment.admin.viewProof')}
-              </a>
+              <SignedPaymentProofLink proofUrl={attempt.proofUrl} />
             ) : null}
             <div className="mt-3 grid grid-cols-2 gap-2">
               <Button
                 className="h-9 rounded-md gap-1"
                 size="sm"
-                disabled={flight.running}
+                disabled={flight.running || attempt.notes?.startsWith('[TEST PAYMENT]') === true}
                 onClick={() => void confirmAttempt(attempt)}
               >
                 <span className="material-symbols-outlined text-base" aria-hidden>check</span>

@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
 
 import { getAdminClient } from '../_shared/admin.ts';
 import { corsHeaders, jsonResponse } from '../_shared/http.ts';
-import { createPaymobCardCheckout, getPaymobConfig } from '../_shared/paymob.ts';
+import { createPaymobCheckout, getPaymobConfig } from '../_shared/paymob.ts';
 
 type ParentPayload = {
   full_name: string;
@@ -57,6 +57,9 @@ type Body = {
     extra_hours_package_id: string | null;
     method: string;
     reference: string | null;
+    wallet_phone?: string | null;
+    wallet_customer_name?: string | null;
+    wallet_receipt?: SignupFilePayload | null;
     idempotency_key: string;
   } | null;
   primary_auth_id?: string | null;
@@ -295,25 +298,57 @@ async function findAuthUserByEmail(admin: ReturnType<typeof getAdminClient>, ema
  */
 const USERNAME_EMAIL_DOMAIN = 'parents.xo.local';
 const USERNAME_PATTERN = /^[a-zA-Z0-9._-]{4,32}$/;
-const MANUAL_PAYMENT_METHODS = ['instapay', 'vodafone_cash', 'bank_transfer', 'cash'] as const;
-
 export function usernameToAuthEmail(username: string): string {
   return `${username.trim().toLowerCase()}@${USERNAME_EMAIL_DOMAIN}`;
 }
 
-function paymobCardCheckoutConfigured(): boolean {
-  return getPaymobConfig() !== null;
+function paymobCheckoutConfigured(enabled: string[] | null | undefined): boolean {
+  return getPaymobConfig(enabled) !== null;
+}
+
+function signupPaymentTestMode(): boolean {
+  return Deno.env.get('SIGNUP_PAYMENT_TEST_MODE')?.trim().toLowerCase() === 'true';
 }
 
 function signupPaymentMethods(enabled: string[] | null | undefined): string[] {
-  if (enabled == null) return ['manual'];
-  const methods: string[] = MANUAL_PAYMENT_METHODS.filter((method) => enabled.includes(method));
-  if (enabled.includes('paymob') && paymobCardCheckoutConfigured()) methods.push('card');
-  return [...methods];
+  const methods: string[] = [];
+  if (signupPaymentTestMode() || paymobCheckoutConfigured(enabled)) methods.push('card');
+  if (enabled?.includes('fawry_manual')) methods.push('fawry');
+  if (enabled?.includes('etisalat_cash')) methods.push('etisalat_cash');
+  return methods;
 }
 
 function paymentMethodNeedsReference(method: string): boolean {
-  return method === 'instapay' || method === 'vodafone_cash' || method === 'bank_transfer';
+  return method === 'instapay' || method === 'vodafone_cash' || method === 'bank_transfer' || method === 'fawry';
+}
+
+function isMissingEtisalatCashAccountColumn(error: { code?: string; message?: string } | null): boolean {
+  const message = error?.message?.toLowerCase() ?? '';
+  return Boolean(
+    error &&
+    ['42703', 'PGRST204'].includes(error.code ?? '') &&
+    message.includes('etisalat_cash_account_number') &&
+    (message.includes('does not exist') || message.includes('could not find')),
+  );
+}
+
+async function getEtisalatCashAccountNumber(
+  admin: ReturnType<typeof getAdminClient>,
+  nurseryId: string,
+): Promise<{ accountNumber: string | null; migrationRequired: boolean }> {
+  const { data, error } = await admin
+    .from('nursery_settings')
+    .select('etisalat_cash_account_number')
+    .eq('nursery_id', nurseryId)
+    .maybeSingle();
+  if (isMissingEtisalatCashAccountColumn(error)) {
+    return { accountNumber: null, migrationRequired: true };
+  }
+  if (error) throw new Error(error.message);
+  return {
+    accountNumber: data?.etisalat_cash_account_number?.trim() || null,
+    migrationRequired: false,
+  };
 }
 
 async function getSignupPaymentOptions(admin: ReturnType<typeof getAdminClient>, nurseryId: string) {
@@ -334,6 +369,10 @@ async function getSignupPaymentOptions(admin: ReturnType<typeof getAdminClient>,
   if (settings?.parent_registration_enabled === false) {
     throw new SignupHttpError(403, 'registration_closed', 'Registration is currently closed for this nursery.');
   }
+  const etisalatEnabled = settings?.payment_methods_enabled?.includes('etisalat_cash') ?? false;
+  const etisalatSetup = etisalatEnabled
+    ? await getEtisalatCashAccountNumber(admin, nurseryId)
+    : { accountNumber: null, migrationRequired: false };
 
   const { data, error } = await admin
     .from('tuition_packages')
@@ -465,11 +504,24 @@ async function getSignupPaymentOptions(admin: ReturnType<typeof getAdminClient>,
   return jsonResponse({
     packages,
     extra_hours_packages: extraHoursPackages,
-    methods: signupPaymentMethods(settings?.payment_methods_enabled),
-    card_checkout_unavailable: Boolean(
-      settings?.payment_methods_enabled?.includes('paymob') && !paymobCardCheckoutConfigured(),
+    methods: signupPaymentMethods(settings?.payment_methods_enabled).filter(
+      (method) => method !== 'etisalat_cash' || Boolean(etisalatSetup.accountNumber),
+    ),
+    etisalat_cash_setup_issue: etisalatEnabled
+      ? etisalatSetup.migrationRequired
+        ? 'migration'
+        : etisalatSetup.accountNumber
+          ? null
+          : 'configuration'
+      : null,
+    payment_test_mode: signupPaymentTestMode(),
+    paymob_checkout_unavailable: !signupPaymentTestMode() && Boolean(
+      ['paymob', 'instapay', 'mobile_wallet', 'fawry'].some((method) =>
+        settings?.payment_methods_enabled?.includes(method),
+      ) && !paymobCheckoutConfigured(settings?.payment_methods_enabled),
     ),
     payment_instructions: settings?.payment_instructions ?? null,
+    etisalat_cash_account_number: etisalatSetup.accountNumber,
   });
 }
 
@@ -529,12 +581,12 @@ Deno.serve(async (req) => {
   let signupCommitted = false;
   let paymentRequested = false;
   let paymentAttemptId: string | null = null;
-  let cardPaymentRequested = false;
+  let paymobCheckoutRequested = false;
 
   try {
     const body = (await req.json()) as Body;
     paymentRequested = Boolean(body.payment);
-    cardPaymentRequested = body.payment?.method === 'card';
+    paymobCheckoutRequested = body.payment?.method === 'card' && !signupPaymentTestMode();
     const admin = getAdminClient();
 
     if (body.action === 'payment_options') {
@@ -585,6 +637,38 @@ Deno.serve(async (req) => {
       }
       if (paymentMethodNeedsReference(payment.method) && (payment.reference?.trim().length ?? 0) < 4) {
         return jsonResponse({ error: 'A valid payment reference is required' }, 400);
+      }
+      if (payment.method === 'etisalat_cash') {
+        const etisalatSetup = await getEtisalatCashAccountNumber(admin, body.nursery_id);
+        if (etisalatSetup.migrationRequired) {
+          throw new SignupHttpError(
+            503,
+            'payment_configuration_incomplete',
+            'Etisalat Cash is unavailable until the nursery database migration has been applied.',
+          );
+        }
+        if (!/^01[0125]\d{8}$/.test(payment.wallet_phone?.trim() ?? '')) {
+          return jsonResponse({ error: 'A valid Etisalat Cash phone number is required' }, 400);
+        }
+        if ((payment.wallet_customer_name?.trim().length ?? 0) < 2 || (payment.wallet_customer_name?.trim().length ?? 0) > 100) {
+          return jsonResponse({ error: 'A valid Etisalat Cash customer name is required' }, 400);
+        }
+        if (!payment.wallet_receipt || !['image/jpeg', 'image/png', 'image/webp'].includes(payment.wallet_receipt.type)) {
+          return jsonResponse({ error: 'An Etisalat Cash payment screenshot is required' }, 400);
+        }
+        if (
+          !payment.wallet_receipt.base64 ||
+          payment.wallet_receipt.base64.length > Math.ceil(5 * 1024 * 1024 * 4 / 3) ||
+          !/^[A-Za-z0-9+/]+={0,2}$/.test(payment.wallet_receipt.base64)
+        ) {
+          return jsonResponse({ error: 'The Etisalat Cash payment screenshot is invalid' }, 400);
+        }
+        if (atob(payment.wallet_receipt.base64).length > 5 * 1024 * 1024) {
+          return jsonResponse({ error: 'The Etisalat Cash payment screenshot is too large' }, 400);
+        }
+        if (!etisalatSetup.accountNumber) {
+          return jsonResponse({ error: 'Etisalat Cash is not configured for this nursery' }, 400);
+        }
       }
       const { data: packageRow, error: packageError } = await admin
         .from('tuition_packages')
@@ -956,12 +1040,27 @@ Deno.serve(async (req) => {
         if (invoiceUpdateError) throw new Error(`Could not add extra-hours package to the invoice: ${invoiceUpdateError.message}`);
       }
 
+      let paymentProofPath: string | null = null;
+      if (payment.method === 'etisalat_cash' && payment.wallet_receipt) {
+        paymentProofPath = await uploadSignupFile(
+          admin,
+          'payment-proofs',
+          payment.wallet_receipt,
+          `${body.nursery_id}/${primaryUser.user.id}/${invoiceId}/signup-${crypto.randomUUID()}.${extFromFile(payment.wallet_receipt)}`,
+          uploadedObjects,
+        );
+      }
+      const paymentReference = payment.method === 'etisalat_cash'
+        ? `Etisalat Cash wallet phone: ${payment.wallet_phone?.trim()}; customer name: ${payment.wallet_customer_name?.trim()}`
+        : paymentMethodNeedsReference(payment.method)
+          ? payment.reference?.trim() || null
+          : null;
       const { data: attempt, error: paymentError } = await paymentClient.rpc('submit_invoice_payment' as never, {
         p_invoice_id: invoiceId,
         p_amount: invoiceAmount,
         p_method: payment.method,
-        p_reference: paymentMethodNeedsReference(payment.method) ? payment.reference?.trim() || null : null,
-        p_proof_url: null,
+        p_reference: paymentReference,
+        p_proof_url: paymentProofPath,
         p_idempotency_key: payment.idempotency_key,
       } as never);
       if (paymentError) throw new Error(`Could not submit the payment request: ${paymentError.message}`);
@@ -971,22 +1070,31 @@ Deno.serve(async (req) => {
 
       let checkoutUrl: string | undefined;
       if (payment.method === 'card') {
-        const primaryParent = body.mother ?? body.father;
-        if (!primaryParent) throw new Error('A parent contact is required for card checkout');
-        const checkout = await createPaymobCardCheckout({
-          amount: invoiceAmount,
-          attemptId: paymentAttemptId,
-          customerName: primaryParent.full_name,
-          customerEmail: primaryParent.email?.trim() || primaryUser.user.email || '',
-          customerPhone: primaryParent.mobile,
-          address: body.family.address,
-        });
-        checkoutUrl = checkout.checkoutUrl;
-        const { error: intentionUpdateError } = await admin
-          .from('payment_attempts')
-          .update({ paymob_intention_id: checkout.intentionId })
-          .eq('id', paymentAttemptId);
-        if (intentionUpdateError) throw new Error(`Could not save the Paymob checkout reference: ${intentionUpdateError.message}`);
+        if (signupPaymentTestMode()) {
+          const { error: testNoteError } = await admin
+            .from('payment_attempts')
+            .update({ notes: '[TEST PAYMENT] No money was charged. Do not confirm as a real payment.' })
+            .eq('id', paymentAttemptId);
+          if (testNoteError) throw new Error(`Could not mark the payment as a test: ${testNoteError.message}`);
+        } else {
+          const primaryParent = body.mother ?? body.father;
+          if (!primaryParent) throw new Error('A parent contact is required for card checkout');
+          const checkout = await createPaymobCheckout({
+            amount: invoiceAmount,
+            attemptId: paymentAttemptId,
+            customerName: primaryParent.full_name,
+            customerEmail: primaryParent.email?.trim() || primaryUser.user.email || '',
+            customerPhone: primaryParent.mobile,
+            address: body.family.address,
+            enabledPaymentMethods: signupSettings?.payment_methods_enabled,
+          });
+          checkoutUrl = checkout.checkoutUrl;
+          const { error: intentionUpdateError } = await admin
+            .from('payment_attempts')
+            .update({ paymob_intention_id: checkout.intentionId })
+            .eq('id', paymentAttemptId);
+          if (intentionUpdateError) throw new Error(`Could not save the Paymob checkout reference: ${intentionUpdateError.message}`);
+        }
       }
 
       const { data: submittedApplication, error: applicationStatusError } = await admin
@@ -1007,6 +1115,14 @@ Deno.serve(async (req) => {
           checkout_url: checkoutUrl,
         });
       }
+      if (signupPaymentTestMode() && payment.method === 'card') {
+        return jsonResponse({
+          child_id: childId,
+          application_id: applicationId,
+          payment_attempt_id: paymentAttemptId,
+          payment_test_mode: true,
+        });
+      }
     }
 
     return jsonResponse({ child_id: childId, application_id: applicationId, payment_attempt_id: paymentAttemptId });
@@ -1017,7 +1133,7 @@ Deno.serve(async (req) => {
       await removeUploadedFiles(admin, uploadedObjects);
     }
     if (signupCommitted && paymentRequested) {
-      if (cardPaymentRequested && paymentAttemptId) {
+      if (paymobCheckoutRequested && paymentAttemptId) {
         const { error: failAttemptError } = await getAdminClient()
           .from('payment_attempts')
           .update({ status: 'failed', notes: 'Paymob checkout could not be initialized.' })

@@ -21,6 +21,9 @@ export type SignupPaymentSelection = {
   method: ParentPaymentMethodCode;
   reference: string | null;
   idempotencyKey: string;
+  walletPhone?: string | null;
+  walletCustomerName?: string | null;
+  walletReceipt?: File | null;
 };
 
 // children.school_preference is CHECK-constrained to these values. The field used to be a
@@ -157,7 +160,11 @@ async function invokeParentSignupComplete(body: unknown) {
     throw new Error(message);
   }
 
-  return (await response.json()) as { error?: string; checkout_url?: string };
+  return (await response.json()) as {
+    error?: string;
+    checkout_url?: string;
+    payment_test_mode?: boolean;
+  };
 }
 
 export async function submitParentSignUp(
@@ -166,7 +173,7 @@ export async function submitParentSignUp(
   registrationTemplate?: RegistrationTemplatePayload | null,
   customRegistrationAnswers: Record<string, unknown> = {},
   payment?: SignupPaymentSelection,
-): Promise<{ success: boolean; checkoutUrl?: string }> {
+): Promise<{ success: boolean; checkoutUrl?: string; paymentTestMode?: boolean }> {
   // The family gets one account (username + password). A parent block is sent when
   // their name is filled — the emails on it are contact details, not credentials.
   const hasFather = v.fatherFullName.trim().length > 0;
@@ -174,6 +181,12 @@ export async function submitParentSignUp(
   const visibleFiles = filesForTemplate(files, registrationTemplate);
 
   const filePayload = await filesToPayload(visibleFiles);
+  const walletReceiptPayload = payment?.method === 'etisalat_cash'
+    ? await fileToPayload(payment.walletReceipt ?? null)
+    : null;
+  if (walletReceiptPayload && estimatePayloadSize([...Object.values(filePayload), walletReceiptPayload]) > MAX_TOTAL_FILE_PAYLOAD_BYTES) {
+    throw new Error('signupFilesTooLarge');
+  }
 
   // Staff screens read food_allergies as one line, so flatten the picked list.
   const allergySummary = v.hasAllergy
@@ -338,6 +351,9 @@ export async function submitParentSignUp(
             extra_hours_package_id: payment.extraHoursPackageId,
             method: payment.method,
             reference: payment.reference,
+            wallet_phone: payment.method === 'etisalat_cash' ? payment.walletPhone?.trim() ?? null : null,
+            wallet_customer_name: payment.method === 'etisalat_cash' ? payment.walletCustomerName?.trim() ?? null : null,
+            wallet_receipt: walletReceiptPayload,
             idempotency_key: payment.idempotencyKey,
           }
         : null,
@@ -355,5 +371,5 @@ export async function submitParentSignUp(
     return { success: true, checkoutUrl: checkoutUrl.toString() };
   }
 
-  return { success: true };
+  return { success: true, paymentTestMode: payload?.payment_test_mode === true };
 }

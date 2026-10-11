@@ -10,6 +10,7 @@ export function SignupSuccessPage() {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const returnedFromPaymob = searchParams.get('payment') === 'processing';
+  const paymentTestMode = searchParams.get('payment') === 'test';
 
   useEffect(() => {
     // Best-effort confetti-adjacent nudge via document title
@@ -38,7 +39,13 @@ export function SignupSuccessPage() {
           {t('signup.success.title')}
         </h1>
         <p className="mb-8 max-w-lg text-base text-on-surface-variant">
-          {t(returnedFromPaymob ? 'signup.success.paymobPending' : 'signup.success.description')}
+          {t(
+            paymentTestMode
+              ? 'signup.success.paymentTestMode'
+              : returnedFromPaymob
+                ? 'signup.success.paymobPending'
+                : 'signup.success.description',
+          )}
         </p>
 
         <div className="w-full space-y-3 rounded-3xl bg-surface-container-lowest p-6 text-start shadow-sm sm:p-8">
