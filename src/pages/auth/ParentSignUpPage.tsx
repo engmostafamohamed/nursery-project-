@@ -16,6 +16,7 @@ import { FileDropzoneWithPreview } from '@/components/signup/FileDropzoneWithPre
 import { SignupShell } from '@/components/signup/SignupShell';
 import { StepMedicationConsents } from '@/components/signup/StepMedicationConsents';
 import { StepReview } from '@/components/signup/StepReview';
+import { SignupPaymentSection } from '@/components/signup/SignupPaymentSection';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { childDateOfBirthBounds, isChildAgeValid } from '@/lib/onboardingDateBounds';
 import { nationalityOptions } from '@/lib/nationalities';
@@ -50,9 +51,21 @@ import {
   validateCrossFieldRules,
   type ParentSignUpFormValues,
 } from '@/features/parent-signup/parentSignUpValidation';
-import { submitParentSignUp } from '@/features/parent-signup/submitParentSignUp';
+import {
+  SignupPaymentAfterCreateError,
+  submitParentSignUp,
+} from '@/features/parent-signup/submitParentSignUp';
+import {
+  SignupPaymentOptionsError,
+  useSignupPaymentOptions,
+} from '@/features/parent-signup/signupPayment';
 import { SIGNUP_STEPS, STEP_FIELDS, type SignUpStep } from '@/features/parent-signup/parentSignUpTypes';
 import { clearDraft, loadDraft, useApplicationDraft } from '@/hooks/useApplicationDraft';
+import {
+  newIdempotencyKey,
+  type ParentPaymentMethodCode,
+} from '@/lib/paymentApi';
+import type { ApplicationPackageBillingPeriod } from '@/hooks/useApplicationPackagePayment';
 
 function Field({ label, error, required, children }: { label: string; error?: string; required?: boolean; children: React.ReactNode }) {
   const { t } = useTranslation();
@@ -158,6 +171,7 @@ function templateFieldOptions(
  * active built-in field, or an active custom question the admin added for it. When no
  * template has loaded yet, every built-in field falls back to active, so nothing hides. */
 function stepHasActiveContent(step: SignUpStep, template: RegistrationTemplatePayload | null | undefined) {
+  if (step === 'review' || step === 'payment') return true;
   if (template?.stepsMeta?.[step as (typeof REGISTRATION_TEMPLATE_STEPS)[number]]?.hidden) return false;
   const knownKeys = KNOWN_FIELD_KEYS_BY_STEP[step as (typeof REGISTRATION_TEMPLATE_STEPS)[number]] ?? [];
   if (knownKeys.some((key) => isTemplateFieldActive(template, key))) return true;
@@ -369,7 +383,7 @@ function firstIncompleteStep(
   files: ParentSignUpFileBundle,
   template?: RegistrationTemplatePayload | null,
 ): SignUpStep | null {
-  return SIGNUP_STEPS.find((step) => step !== 'review' && !isStepComplete(step, values, files, template)) ?? null;
+  return SIGNUP_STEPS.find((step) => step !== 'review' && step !== 'payment' && !isStepComplete(step, values, files, template)) ?? null;
 }
 
 function signupErrorMessage(error: unknown, t: (k: string, opts?: Record<string, unknown>) => string) {
@@ -1511,6 +1525,11 @@ export function ParentSignUpPage() {
   const [submitting, setSubmitting] = useState(false);
   const [files, setFiles] = useState<ParentSignUpFileBundle>(emptyParentSignUpFiles);
   const [templateAnswers, setTemplateAnswers] = useState<Record<string, unknown>>({});
+  const [paymentPackageId, setPaymentPackageId] = useState('');
+  const [extraHoursPackageId, setExtraHoursPackageId] = useState<string | null>(null);
+  const [paymentBillingPeriod, setPaymentBillingPeriod] = useState<ApplicationPackageBillingPeriod>('monthly');
+  const [paymentMethod, setPaymentMethod] = useState<ParentPaymentMethodCode>('manual');
+  const [paymentReference, setPaymentReference] = useState('');
 
   const initialDraft = useMemo(() => loadDraft(), []);
   const initialValues = useMemo(
@@ -1545,10 +1564,10 @@ export function ParentSignUpPage() {
 
   // Step order follows whatever order the admin's template has (derived from the same
   // questions_json the editor reorders), falling back to the canonical order when there's
-  // no template. Steps with nothing active in them drop out entirely; 'review' stays last.
+  // no template. Review and payment always remain the final two steps.
   const visibleSteps = useMemo(() => {
-    const ordered = [...deriveStepOrder(activeRegistrationTemplate?.questions ?? []), 'review'] as SignUpStep[];
-    return ordered.filter((step) => step === 'review' || stepHasActiveContent(step, activeRegistrationTemplate));
+    const ordered = [...deriveStepOrder(activeRegistrationTemplate?.questions ?? []), 'review', 'payment'] as SignUpStep[];
+    return ordered.filter((step) => step === 'review' || step === 'payment' || stepHasActiveContent(step, activeRegistrationTemplate));
   }, [activeRegistrationTemplate]);
   // The template resolves asynchronously (after nurseries load), so a step count that
   // was valid a moment ago can shrink — keep the current/furthest indices in range.
@@ -1593,6 +1612,25 @@ export function ParentSignUpPage() {
 
   const safeStepIndex = Math.min(stepIndex, Math.max(visibleSteps.length - 1, 0));
   const currentStep = visibleSteps[safeStepIndex];
+  const signupPaymentOptions = useSignupPaymentOptions(selectedNursery?.id, currentStep === 'payment');
+  const availablePaymentMethods = useMemo(
+    () => signupPaymentOptions.data?.methods ?? [],
+    [signupPaymentOptions.data?.methods],
+  );
+  const requiresPaymentReference =
+    paymentMethod === 'instapay' || paymentMethod === 'vodafone_cash' || paymentMethod === 'bank_transfer';
+  useEffect(() => {
+    if (availablePaymentMethods.length > 0 && !availablePaymentMethods.includes(paymentMethod)) {
+      setPaymentMethod(availablePaymentMethods[0]);
+      setPaymentReference('');
+    }
+  }, [availablePaymentMethods, paymentMethod]);
+  useEffect(() => {
+    setPaymentPackageId('');
+    setExtraHoursPackageId(null);
+    setPaymentBillingPeriod('monthly');
+    setPaymentReference('');
+  }, [selectedNursery?.id]);
   const isFirst = safeStepIndex === 0;
   const isLast = safeStepIndex === visibleSteps.length - 1;
   const customQuestionsForStep = useMemo(
@@ -1613,9 +1651,15 @@ export function ParentSignUpPage() {
   const currentTemplateStepComplete = customQuestionsForStep
     .every((question) => templateValidationPasses(question, templateAnswers[question.id]));
   const canContinue = isStepComplete(currentStep, liveValues, files, activeRegistrationTemplate) && currentTemplateStepComplete;
+  const paymentSelectionComplete =
+    signupPaymentOptions.isSuccess &&
+    Boolean(paymentPackageId) &&
+    availablePaymentMethods.includes(paymentMethod) &&
+    (!requiresPaymentReference || paymentReference.trim().length >= 4);
   const canSubmit =
     SIGNUP_STEPS.every((step) => isStepComplete(step, liveValues, files, activeRegistrationTemplate)) &&
-    templateRequiredQuestionsComplete;
+    templateRequiredQuestionsComplete &&
+    paymentSelectionComplete;
   const firstMissingStep = useMemo(
     () => firstIncompleteStep(liveValues, files, activeRegistrationTemplate),
     [activeRegistrationTemplate, files, liveValues],
@@ -1628,9 +1672,9 @@ export function ParentSignUpPage() {
       const fields = STEP_FIELDS[step];
       if (fields.some((f) => errs[f as keyof typeof errs])) set.add(step);
     }
-    if (currentStep === 'review') {
+    if (currentStep === 'review' || currentStep === 'payment') {
       for (const step of SIGNUP_STEPS) {
-        if (step !== 'review' && !isStepComplete(step, liveValues, files, activeRegistrationTemplate)) set.add(step);
+        if (step !== 'review' && step !== 'payment' && !isStepComplete(step, liveValues, files, activeRegistrationTemplate)) set.add(step);
       }
     }
     return set;
@@ -1685,6 +1729,11 @@ export function ParentSignUpPage() {
     setFiles(emptyParentSignUpFiles());
     setStepIndex(0);
     setFurthestReached(0);
+    setPaymentPackageId('');
+    setExtraHoursPackageId(null);
+    setPaymentBillingPeriod('monthly');
+    setPaymentMethod('manual');
+    setPaymentReference('');
     toast.success(t('signup.draftCleared'));
   };
 
@@ -1710,15 +1759,46 @@ export function ParentSignUpPage() {
       goToStepByName('documents');
       return;
     }
+    if (!signupPaymentOptions.isSuccess || !paymentPackageId || !availablePaymentMethods.includes(paymentMethod)) {
+      toast.error(t('signup.payment.completeSelection', {
+        defaultValue: 'Choose a tuition package, billing period, and payment method before submitting.',
+      }));
+      return;
+    }
+    if (requiresPaymentReference && paymentReference.trim().length < 4) {
+      toast.error(t('payment.referenceRequired'));
+      return;
+    }
     autosave.flush();
     setSubmitting(true);
     try {
-      await submitParentSignUp(values, files, activeRegistrationTemplate, templateAnswers);
+      const result = await submitParentSignUp(values, files, activeRegistrationTemplate, templateAnswers, {
+        packageId: paymentPackageId,
+        billingPeriod: paymentBillingPeriod,
+        extraHoursPackageId,
+        method: paymentMethod,
+        reference: requiresPaymentReference ? paymentReference.trim() : null,
+        idempotencyKey: newIdempotencyKey(),
+      });
       clearDraft();
+      if (result.checkoutUrl) {
+        window.location.assign(result.checkoutUrl);
+        return;
+      }
       // signup.success is the success page's namespace object — the toast needs its title.
       toast.success(t('signup.success.title'));
       navigate('/signup/success');
     } catch (err: unknown) {
+      if (err instanceof SignupPaymentAfterCreateError) {
+        clearDraft();
+        toast.error(t('signup.payment.accountCreatedButPaymentFailed'), {
+          description: t('signup.payment.signInToComplete', {
+            defaultValue: 'Your account and application were created. Sign in to finish the payment from your application page.',
+          }),
+        });
+        navigate('/login');
+        return;
+      }
       toast.error(signupErrorMessage(err, t), {
         description: t('signup.draftKeptAfterError'),
       });
@@ -1784,6 +1864,32 @@ export function ParentSignUpPage() {
             onJumpTo={(step) => jumpTo(visibleSteps.indexOf(step))}
           />
         );
+      case 'payment':
+        return (
+          <div className="space-y-5">
+            <SignupPaymentSection
+              options={signupPaymentOptions.data}
+              isLoading={signupPaymentOptions.isLoading}
+              isError={signupPaymentOptions.isError}
+              errorMessage={signupPaymentOptions.error instanceof Error ? signupPaymentOptions.error.message : null}
+              outdatedFunction={signupPaymentOptions.error instanceof SignupPaymentOptionsError && signupPaymentOptions.error.outdatedFunction}
+              onRetry={() => void signupPaymentOptions.refetch()}
+              packageId={paymentPackageId}
+              onPackageChange={setPaymentPackageId}
+              extraHoursPackageId={extraHoursPackageId}
+              onExtraHoursPackageChange={setExtraHoursPackageId}
+              billingPeriod={paymentBillingPeriod}
+              onBillingPeriodChange={setPaymentBillingPeriod}
+              method={paymentMethod}
+              onMethodChange={(method) => {
+                setPaymentMethod(method);
+                setPaymentReference('');
+              }}
+              reference={paymentReference}
+              onReferenceChange={setPaymentReference}
+            />
+          </div>
+        );
       default:
         return null;
     }
@@ -1823,12 +1929,28 @@ export function ParentSignUpPage() {
                     ? t('signup.pickupPhotoRequired')
                     : firstMissingStep === 'documents'
                       ? t('signup.documentsRequired')
+                      : !paymentSelectionComplete && requiresPaymentReference && paymentReference.trim().length < 4
+                        ? t('payment.referenceRequired')
+                        : !paymentSelectionComplete
+                    ? t('signup.payment.completeSelection', {
+                        defaultValue: 'Choose a tuition package, billing period, and payment method before submitting.',
+                      })
                       : t('signup.completeRequiredBeforeSubmit')}
                 </p>
               ) : null}
-              <Button type="submit" className="btn-gradient text-primary-foreground" disabled={submitting}>
-              {submitting ? t('common.loading') : t('signup.submit')}
-              <MaterialSymbol name="send" size="text-base" />
+              <Button
+                type="submit"
+                className={`btn-gradient text-primary-foreground ${
+                  currentStep === 'payment' ? 'min-h-12 px-6 shadow-md shadow-primary/20' : ''
+                }`}
+                disabled={submitting || !canSubmit}
+              >
+              {submitting
+                ? t('common.loading')
+                : paymentMethod === 'card'
+                  ? t('signup.payment.cardCheckout.continue', { defaultValue: 'Continue to secure card checkout' })
+                  : t('signup.payment.submitPaymentAndApplication', { defaultValue: 'Submit payment & application' })}
+              <MaterialSymbol name={paymentMethod === 'card' ? 'open_in_new' : 'send'} size="text-base" />
               </Button>
             </div>
           ) : (

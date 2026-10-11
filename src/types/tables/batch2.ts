@@ -254,6 +254,7 @@ export interface PaymentAttemptsRow {
   status: 'pending_confirmation' | 'confirmed' | 'failed' | 'cancelled';
   proof_url: string | null;
   paymob_transaction_id: string | null;
+  paymob_intention_id: string | null;
   created_at: string;
   confirmed_at: string | null;
   confirmed_by: string | null;

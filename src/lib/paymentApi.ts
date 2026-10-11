@@ -9,7 +9,11 @@ import { supabase } from '@/lib/supabase';
 /** Methods a parent can declare for a payment the nursery verifies by hand. */
 export const MANUAL_PAYMENT_METHODS = ['instapay', 'vodafone_cash', 'bank_transfer', 'cash'] as const;
 export type ManualPaymentMethod = (typeof MANUAL_PAYMENT_METHODS)[number];
-export type ParentPaymentMethodCode = ManualPaymentMethod | 'manual';
+export type ParentPaymentMethodCode = ManualPaymentMethod | 'manual' | 'card';
+
+export function isParentPaymentMethodCode(value: unknown): value is ParentPaymentMethodCode {
+  return value === 'manual' || value === 'card' || MANUAL_PAYMENT_METHODS.some((method) => method === value);
+}
 
 /** Transfers are matched by their reference number, so the parent must give one. */
 export function methodNeedsReference(method: ParentPaymentMethodCode): boolean {
@@ -18,9 +22,10 @@ export function methodNeedsReference(method: ParentPaymentMethodCode): boolean {
 
 /** Manual methods this nursery accepts (nursery_settings.payment_methods_enabled). */
 export function enabledManualMethods(enabled: string[] | null | undefined): ParentPaymentMethodCode[] {
-  const list = enabled ?? [];
+  if (enabled == null) return ['manual'];
+  const list = enabled;
   const methods = MANUAL_PAYMENT_METHODS.filter((m) => list.includes(m));
-  return methods.length ? methods : ['manual'];
+  return methods;
 }
 
 /** One key per payment intent: create it when the parent starts paying, reuse it on retries. */

@@ -16,7 +16,7 @@ interface Props {
 }
 
 // instapay / vodafone_cash: parents transfer directly and finance confirms by reference number.
-const PAYMENT_METHODS = ['paymob', 'cash', 'bank_transfer', 'instapay', 'vodafone_cash'];
+const PAYMENT_METHODS = ['paymob', 'mobile_wallet', 'instapay', 'fawry', 'vodafone_cash', 'cash', 'bank_transfer'];
 const LOYALTY_TIERS = ['silver', 'gold', 'platinum'] as const;
 
 export function SettingsCategoryForm({
@@ -74,13 +74,21 @@ export function SettingsCategoryForm({
     if (field.type === 'payment_methods') {
       const current = Array.isArray(value) ? value.map(String) : [];
       return (
-        <div className="space-y-2">
-          <Label>{label}</Label>
-          <div className="grid gap-2 sm:grid-cols-3">
+        <fieldset className="space-y-3">
+          <legend className="font-medium text-on-surface">{label}</legend>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {PAYMENT_METHODS.map((method) => (
-              <label key={method} className="flex items-center gap-2 rounded-lg border border-outline-variant p-2 text-sm">
+              <label
+                key={method}
+                className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 text-sm transition-colors ${
+                  current.includes(method)
+                    ? 'border-primary bg-primary/5'
+                    : 'border-outline-variant bg-surface hover:border-primary/50'
+                }`}
+              >
                 <input
                   type="checkbox"
+                  className="h-4 w-4 accent-primary"
                   checked={current.includes(method)}
                   onChange={(e) => {
                     const next = e.target.checked
@@ -89,12 +97,19 @@ export function SettingsCategoryForm({
                     onChange(field.key, next);
                   }}
                 />
-                {t(`settings.options.payment_methods_enabled.${method}`)}
+                <span className="min-w-0 flex-1">
+                  <span className="block font-medium text-on-surface">
+                    {t(`settings.options.payment_methods_enabled.${method}`)}
+                  </span>
+                  <span className="mt-0.5 block text-xs text-on-surface-variant">
+                    {t(`settings.options.payment_methods_enabled.${method}Hint`)}
+                  </span>
+                </span>
               </label>
             ))}
           </div>
           <p className="text-xs text-on-surface-variant">{helper}</p>
-        </div>
+        </fieldset>
       );
     }
 

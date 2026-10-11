@@ -13,6 +13,7 @@ export const SIGNUP_STEPS = [
   'documents',
   'consents',
   'review',
+  'payment',
 ] as const;
 
 export type SignUpStep = (typeof SIGNUP_STEPS)[number];
@@ -33,4 +34,5 @@ export const STEP_FIELDS: Record<SignUpStep, string[]> = {
   documents: [],
   consents: ['agreeHealthPolicy', 'agreeFinancialAgreement', 'agreePolicies', 'agreeInfoAccuracy'],
   review: [],
+  payment: [],
 };

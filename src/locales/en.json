@@ -2262,6 +2262,10 @@
   },
   "payment": {
     "manualMethods": {
+      "card": {
+        "label": "Bank card",
+        "help": "Pay securely with a card through Paymob."
+      },
       "instapay": {
         "label": "InstaPay",
         "help": "Transfer with InstaPay to the nursery's address, then enter the transaction number."
@@ -2299,6 +2303,7 @@
     "comingSoon": "Coming soon",
     "comingSoonMessage": "Paymob integration coming in Feature 4. For now, use Cash or Bank Transfer.",
     "methodsTitle": "Payment Method",
+    "noEnabledMethods": "The nursery has not enabled a payment method yet. Please contact the nursery.",
     "methods": {
       "card": "Credit/Debit Card (Paymob)",
       "cash": "Cash",
@@ -2343,6 +2348,8 @@
       "rejectReasonPlaceholder": "e.g. No transfer found with this reference",
       "rejectReasonHelp": "Optional, but it helps the parent fix the payment.",
       "pendingTitle": "Pending Payment Confirmation",
+      "paymobIntentionId": "Paymob reference",
+      "paymobVerifyBeforeConfirm": "Verify Paymob intention {{id}} in the Paymob dashboard before confirming.",
       "method": "Method",
       "amount": "Amount",
       "date": "Date",
@@ -5720,7 +5727,7 @@
       },
       "payment_methods_enabled": {
         "label": "Enabled payment methods",
-        "helper": "Enabled payment methods - Controls this nursery behavior."
+        "helper": "Only enabled methods appear during parent registration. Online methods are previews until a payment provider is connected; keep at least one available manual method enabled to accept payment requests."
       },
       "summer_pause_enabled": {
         "label": "Summer pause enabled",
@@ -5858,10 +5865,19 @@
       },
       "payment_methods_enabled": {
         "instapay": "InstaPay",
+        "instapayHint": "Manual transfer option and online-flow preview",
         "vodafone_cash": "Vodafone Cash",
-        "paymob": "Paymob",
+        "vodafone_cashHint": "Manual wallet transfer, confirmed by nursery staff",
+        "paymob": "Bank card (Paymob)",
+        "paymobHint": "Online checkout preview; requires Paymob integration",
+        "mobile_wallet": "Mobile wallet (Meeza)",
+        "mobile_walletHint": "Online wallet preview; requires provider integration",
+        "fawry": "Fawry",
+        "fawryHint": "Online Fawry preview; requires Fawry integration",
         "cash": "Cash",
-        "bank_transfer": "Bank Transfer"
+        "cashHint": "Manual payment confirmed at the nursery",
+        "bank_transfer": "Bank Transfer",
+        "bank_transferHint": "Manual bank transfer, confirmed by nursery staff"
       },
       "loyalty_tier_thresholds": {
         "silver": "Silver",
@@ -6166,7 +6182,95 @@
       "medicationConsents": "Medication Consents",
       "documents": "Documents",
       "consents": "Agreements & Consents",
-      "review": "Review & Submit"
+      "review": "Review",
+      "payment": "Payment"
+    },
+    "payment": {
+      "title": "Tuition package and payment",
+      "description": "Choose a package and billing period, then submit your payment details for nursery confirmation.",
+      "loadError": "Payment packages are unavailable right now. Please try again later or contact the nursery.",
+      "functionNeedsDeploy": "The payment service update is not deployed yet. Deploy the updated parent-signup-complete Edge Function, then retry.",
+      "choosePackage": "Choose a package",
+      "billingPeriod": "Billing period",
+      "amountDue": "Payment request amount",
+      "tuitionPlan": "Tuition plan",
+      "totalDue": "Total payment",
+      "discountSaved": "Discount: {{amount}} saved",
+      "manualConfirmation": "Nursery-confirmed payment",
+      "cardCheckout": {
+        "title": "Secure card checkout",
+        "description": "After you submit, Paymob opens its secure checkout for your card number, expiry date, and security code. Paymob validates the details and handles any bank verification.",
+        "securityNote": "Your card details are entered on Paymob and are never stored by the nursery.",
+        "reviewNote": "The nursery verifies the payment after you return from Paymob.",
+        "methodHint": "Continue to Paymob’s secure checkout to enter and validate your card details.",
+        "continue": "Continue to secure card checkout",
+        "unavailable": "Card payment is enabled by the nursery but is not configured yet. Please choose another method or contact the nursery."
+      },
+      "prototype": {
+        "title": "Explore online payment options",
+        "subtitle": "These examples are not connected to a payment provider and will not charge you.",
+        "previewBadge": "Demo only",
+        "demoNotice": "Demo only. No payment will be made, and no card details, PINs, or OTP codes should be entered here.",
+        "providerRequired": "Provider connection required",
+        "cardTitle": "Card details stay with the secure provider",
+        "cardDescription": "In the live version, card number, expiry date, and security code will be entered only on the payment provider’s hosted checkout.",
+        "walletPhone": "Wallet phone number",
+        "previewRequest": "Preview request",
+        "previewCheckout": "Preview secure checkout",
+        "previewWaiting": "Preview waiting screen",
+        "previewReference": "Preview reference screen",
+        "checkoutStage": "Secure provider checkout (preview)",
+        "walletCheckoutStage": "Meeza wallet checkout (preview)",
+        "verificationStage": "Bank verification (3-D Secure preview)",
+        "walletVerificationStage": "Wallet PIN and OTP step (preview)",
+        "awaitingStage": "Waiting for payment confirmation (preview)",
+        "completeStage": "Demo flow complete",
+        "checkoutDescription": "The live provider would collect payment details on its secure hosted page. No payment information is collected in this preview.",
+        "walletCheckoutDescription": "The live provider would now send a request to your wallet. This demo does not contact Meeza or your wallet.",
+        "walletVerificationDescription": "In the live flow, the wallet PIN and OTP are entered only on the provider’s secure page. This preview never asks for them.",
+        "verificationDescription": "A real bank may request a one-time code on its own page. Never enter your real OTP in a website demo.",
+        "awaitingDescription": "A live site would wait for the provider notification here. No payment request was sent by this demo.",
+        "completeDescription": "This was only a visual simulation. No money was charged and no payment was recorded.",
+        "continueVerification": "Preview bank verification",
+        "continueWalletVerification": "Preview wallet verification",
+        "simulateReturn": "Simulate return to nursery",
+        "invalidWalletPhone": "Enter a valid 11-digit Egyptian mobile number.",
+        "walletReady": "Number format is valid. A live wallet request requires provider integration.",
+        "walletHint": "Use an Egyptian mobile number starting with 010, 011, 012, or 015. This demo does not send a request.",
+        "qrOption": "QR code",
+        "addressOption": "InstaPay address",
+        "qrTitle": "Payment QR appears here",
+        "qrDescription": "A real QR code can only be created by an integrated payment provider. No sample code is shown.",
+        "addressLabel": "InstaPay address (IPA)",
+        "invalidAddress": "Enter a valid address containing @ and a domain.",
+        "addressReady": "Address format is valid. A collect request requires provider integration.",
+        "addressHint": "The collect request flow will be available after provider integration.",
+        "fawryTitle": "Fawry reference code",
+        "fawryDescription": "A real reference number and expiry countdown will be provided here after Fawry is connected. Demo codes are intentionally not generated.",
+        "notConnected": "Not connected yet",
+        "methods": {
+          "card": "Bank card",
+          "wallet": "Mobile wallet",
+          "instapay": "InstaPay",
+          "fawry": "Fawry"
+        }
+      },
+      "manualMethodsHint": "Available now — payment is submitted to the nursery for confirmation.",
+      "chooseTuitionHint": "Select the plan that best fits your family.",
+      "discountBadge": "Deal",
+      "billingPeriodHint": "Your selected billing period is included in the total below.",
+      "extraHoursHint": "Add prepaid hours for flexible pickups.",
+      "orderSummary": "Order summary",
+      "pricesIncludeDiscounts": "Current package prices and discounts",
+      "discount": "Discount",
+      "totalSavings": "You save {{amount}}",
+      "selectPlanForTotal": "Choose a tuition plan to see your total.",
+      "chooseMethodHint": "Choose how you will pay the nursery.",
+      "submitPaymentAndApplication": "Submit payment & application",
+      "reviewNote": "Submitting this request sends the application to the nursery for review. Payment is pending nursery confirmation.",
+      "completeSelection": "Choose a tuition package, billing period, and payment method before submitting.",
+      "accountCreatedButPaymentFailed": "Your account was created, but the payment request could not be completed.",
+      "signInToComplete": "Sign in to finish payment from your application page. Your registration information is saved."
     },
     "stepOf": "Step {{current}} of {{total}}",
     "childFirstName": "Child’s Name",
@@ -6259,12 +6363,13 @@
     "submit": "Submit Registration",
     "success": {
       "title": "Application submitted!",
-      "description": "Thank you for trusting us with your child. Our admissions team has received your application and will be in touch soon.",
+      "description": "Thank you for trusting us with your child. Your payment request was sent for confirmation, and the admissions team has received your application.",
+      "paymobPending": "Paymob has returned you to the site. The application is submitted, but payment is not confirmed until the nursery verifies the transaction.",
       "whatsNextTitle": "What happens next",
       "stepLabel": "Step {{num}}",
       "step1": "Our admissions team reviews your application and verifies the uploaded documents.",
       "step2": "You'll receive an email with the decision — usually within 3 business days.",
-      "step3": "Once approved, we'll set up your parent account and your child's first day.",
+      "step3": "Sign in to your parent account to follow the payment confirmation and application review.",
       "backToLogin": "Go to login",
       "backToHome": "Back to home",
       "contactNote": "Questions? Reach out to the nursery admin at any time."
@@ -6357,12 +6462,12 @@
     },
     "review": {
       "title": "Review your application",
-      "description": "Please check every section below. Use the Edit buttons to make changes. When everything looks correct, submit your application for review.",
+      "description": "Review your information before continuing to the separate payment step. Your application will be submitted with your payment request.",
       "edit": "Edit",
       "medicationHint": "Medications you authorize the nursery to administer in minor emergencies.",
       "medicationSelected": "Authorized medications",
       "medicationNone": "None selected",
-      "readyToSubmit": "You're all set! Click Submit to send your application to the nursery admissions team."
+      "readyToSubmit": "Everything looks good. Continue to the Payment tab to choose your plan and submit your application."
     },
     "loginSectionTitle": "Account login",
     "loginSectionHint": "One username and password for the family. Password reset is available later from the parent dashboard.",

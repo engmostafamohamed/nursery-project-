@@ -99,7 +99,8 @@ export function ParentPaymentPage() {
   const invoiceRef = useRef<HTMLElement | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
   const methods = useMemo(() => enabledManualMethods(settings.payment_methods_enabled), [settings.payment_methods_enabled]);
-  const [method, setMethod] = useState<ParentPaymentMethodCode>(methods[0]);
+  const [selectedMethod, setMethod] = useState<ParentPaymentMethodCode>(methods[0] ?? 'manual');
+  const method = methods.includes(selectedMethod) ? selectedMethod : methods[0] ?? 'manual';
   const [reference, setReference] = useState('');
   const [referenceTouched, setReferenceTouched] = useState(false);
   const submitPayment = useSubmitInvoicePayment();
@@ -109,10 +110,6 @@ export function ParentPaymentPage() {
   // server returns the first result instead of recording it again.
   const paymentKeyRef = useRef<string | null>(null);
   const submitting = payFlight.running;
-
-  useEffect(() => {
-    if (!methods.includes(method)) setMethod(methods[0]);
-  }, [method, methods]);
 
   // A different amount, method or reference is a different payment: it gets its own key.
   useEffect(() => {
@@ -217,6 +214,12 @@ export function ParentPaymentPage() {
   const handlePayNow = () =>
     payFlight.run(async () => {
       if (!invoice || !validPaymentAmount) return;
+      if (!methods.includes(method)) {
+        toast.error(t('payment.noEnabledMethods', {
+          defaultValue: 'The nursery has not enabled a payment method yet. Please contact the nursery.',
+        }));
+        return;
+      }
       if (referenceError) {
         setReferenceTouched(true);
         return;
@@ -485,7 +488,7 @@ export function ParentPaymentPage() {
                   </p>
                 ) : null}
 
-                {methods.length > 1 || methods[0] !== 'manual' ? (
+                {methods.length > 0 && (methods.length > 1 || methods[0] !== 'manual') ? (
                   <fieldset className="space-y-2">
                     <legend className="mb-1 text-sm font-medium text-on-surface">{t('payment.methodsTitle')}</legend>
                     {methods.map((m) => (
@@ -511,6 +514,13 @@ export function ParentPaymentPage() {
                       </label>
                     ))}
                   </fieldset>
+                ) : null}
+                {methods.length === 0 ? (
+                  <p role="alert" className="rounded-lg border border-warning/30 bg-warning/5 p-3 text-sm text-on-surface">
+                    {t('payment.noEnabledMethods', {
+                      defaultValue: 'The nursery has not enabled a payment method yet. Please contact the nursery.',
+                    })}
+                  </p>
                 ) : null}
 
                 {settings.payment_instructions?.trim() && method !== 'cash' ? (
@@ -547,7 +557,7 @@ export function ParentPaymentPage() {
                 <Button
                   className="h-11 w-full rounded-md"
                   onClick={() => void handlePayNow()}
-                  disabled={submitting || !invoice || !validPaymentAmount}
+                  disabled={submitting || !invoice || !validPaymentAmount || methods.length === 0}
                   aria-busy={submitting}
                 >
                   {submitting ? t('payment.submitting') : t('payment.payNowAmount', { amount: validPaymentAmount ? parsedPaymentAmount.toFixed(2) : '0.00' })}

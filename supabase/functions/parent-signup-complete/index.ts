@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
 
 import { getAdminClient } from '../_shared/admin.ts';
 import { corsHeaders, jsonResponse } from '../_shared/http.ts';
+import { createPaymobCardCheckout, getPaymobConfig } from '../_shared/paymob.ts';
 
 type ParentPayload = {
   full_name: string;
@@ -49,6 +50,15 @@ type AuthUserRef = {
 };
 
 type Body = {
+  action?: string;
+  payment?: {
+    package_id: string;
+    billing_period: string;
+    extra_hours_package_id: string | null;
+    method: string;
+    reference: string | null;
+    idempotency_key: string;
+  } | null;
   primary_auth_id?: string | null;
   signup_nonce?: string | null;
   secondary_auth_id?: string | null;
@@ -285,9 +295,182 @@ async function findAuthUserByEmail(admin: ReturnType<typeof getAdminClient>, ema
  */
 const USERNAME_EMAIL_DOMAIN = 'parents.xo.local';
 const USERNAME_PATTERN = /^[a-zA-Z0-9._-]{4,32}$/;
+const MANUAL_PAYMENT_METHODS = ['instapay', 'vodafone_cash', 'bank_transfer', 'cash'] as const;
 
 export function usernameToAuthEmail(username: string): string {
   return `${username.trim().toLowerCase()}@${USERNAME_EMAIL_DOMAIN}`;
+}
+
+function paymobCardCheckoutConfigured(): boolean {
+  return getPaymobConfig() !== null;
+}
+
+function signupPaymentMethods(enabled: string[] | null | undefined): string[] {
+  if (enabled == null) return ['manual'];
+  const methods: string[] = MANUAL_PAYMENT_METHODS.filter((method) => enabled.includes(method));
+  if (enabled.includes('paymob') && paymobCardCheckoutConfigured()) methods.push('card');
+  return [...methods];
+}
+
+function paymentMethodNeedsReference(method: string): boolean {
+  return method === 'instapay' || method === 'vodafone_cash' || method === 'bank_transfer';
+}
+
+async function getSignupPaymentOptions(admin: ReturnType<typeof getAdminClient>, nurseryId: string) {
+  const { data: nursery, error: nurseryError } = await admin
+    .from('nurseries')
+    .select('id')
+    .eq('id', nurseryId)
+    .maybeSingle();
+  if (nurseryError) throw new Error(nurseryError.message);
+  if (!nursery) throw new SignupHttpError(400, 'invalid_nursery', 'Invalid nursery');
+
+  const { data: settings, error: settingsError } = await admin
+    .from('nursery_settings')
+    .select('parent_registration_enabled, payment_methods_enabled, payment_instructions')
+    .eq('nursery_id', nurseryId)
+    .maybeSingle();
+  if (settingsError) throw new Error(settingsError.message);
+  if (settings?.parent_registration_enabled === false) {
+    throw new SignupHttpError(403, 'registration_closed', 'Registration is currently closed for this nursery.');
+  }
+
+  const { data, error } = await admin
+    .from('tuition_packages')
+    .select(`
+      id, name_ar, name_en, description_ar, description_en, daily_hours, features_json, price,
+      deals (id, name_ar, name_en, discount_type, discount_value, starts_at, ends_at, active),
+      tuition_package_billing_periods (billing_period, duration_months, price, active)
+    `)
+    .eq('nursery_id', nurseryId)
+    .eq('active', true)
+    .order('price', { ascending: true });
+  if (error) throw new Error(error.message);
+
+  const { data: extraHoursRows, error: extraHoursError } = await admin
+    .from('packages')
+    .select(`
+      id, name_ar, name_en, description_ar, description_en, coverage_type,
+      included_hours, price, validity_value, validity_unit,
+      deals (id, name_ar, name_en, discount_type, discount_value, starts_at, ends_at, active)
+    `)
+    .eq('nursery_id', nurseryId)
+    .eq('active', true)
+    .order('price', { ascending: true });
+  if (extraHoursError) throw new Error(extraHoursError.message);
+
+  type DealRow = {
+    id: string;
+    name_ar: string;
+    name_en: string;
+    discount_type: 'percentage' | 'fixed_amount';
+    discount_value: number | string;
+    starts_at: string | null;
+    ends_at: string | null;
+    active: boolean;
+  };
+  type PeriodRow = {
+    billing_period: string;
+    duration_months: number;
+    price: number | string;
+    active: boolean;
+  };
+  const packages = ((data ?? []) as Array<{
+    id: string;
+    name_ar: string;
+    name_en: string;
+    description_ar: string | null;
+    description_en: string | null;
+    daily_hours: number | null;
+    features_json: unknown;
+    price: number | string;
+    deals: DealRow | DealRow[] | null;
+    tuition_package_billing_periods: PeriodRow[] | null;
+  }>).map((pkg) => {
+    const deal = Array.isArray(pkg.deals) ? pkg.deals[0] : pkg.deals;
+    return {
+      id: pkg.id,
+      nameAr: pkg.name_ar,
+      nameEn: pkg.name_en,
+      descriptionAr: pkg.description_ar,
+      descriptionEn: pkg.description_en,
+      price: Number(pkg.price),
+      dailyHours: pkg.daily_hours,
+      featuresJson: Array.isArray(pkg.features_json)
+        ? pkg.features_json
+            .filter((item): item is { ar?: unknown; en?: unknown } => Boolean(item) && typeof item === 'object')
+            .map((item) => ({ ar: String(item.ar ?? ''), en: String(item.en ?? '') }))
+        : [],
+      deal: deal
+        ? {
+            id: deal.id,
+            nameAr: deal.name_ar,
+            nameEn: deal.name_en,
+            discountType: deal.discount_type,
+            discountValue: Number(deal.discount_value),
+            startsAt: deal.starts_at,
+            endsAt: deal.ends_at,
+            active: deal.active,
+          }
+        : null,
+      billingPeriods: (pkg.tuition_package_billing_periods ?? [])
+        .filter((period) => period.active && ['monthly', 'quarterly', 'half_annual', 'annual'].includes(period.billing_period))
+        .map((period) => ({
+          billingPeriod: period.billing_period,
+          durationMonths: period.duration_months,
+          price: Number(period.price),
+        })),
+    };
+  });
+  const extraHoursPackages = ((extraHoursRows ?? []) as Array<{
+    id: string;
+    name_ar: string;
+    name_en: string;
+    description_ar: string | null;
+    description_en: string | null;
+    coverage_type: 'unlimited' | 'hours_quota';
+    included_hours: number | null;
+    price: number | string;
+    validity_value: number | null;
+    validity_unit: 'months' | 'years' | null;
+    deals: DealRow | DealRow[] | null;
+  }>).map((pkg) => {
+    const deal = Array.isArray(pkg.deals) ? pkg.deals[0] : pkg.deals;
+    return {
+      id: pkg.id,
+      nameAr: pkg.name_ar,
+      nameEn: pkg.name_en,
+      descriptionAr: pkg.description_ar,
+      descriptionEn: pkg.description_en,
+      coverageType: pkg.coverage_type,
+      includedHours: pkg.included_hours,
+      price: Number(pkg.price),
+      validityValue: pkg.validity_value,
+      validityUnit: pkg.validity_unit,
+      deal: deal
+        ? {
+            id: deal.id,
+            nameAr: deal.name_ar,
+            nameEn: deal.name_en,
+            discountType: deal.discount_type,
+            discountValue: Number(deal.discount_value),
+            startsAt: deal.starts_at,
+            endsAt: deal.ends_at,
+            active: deal.active,
+          }
+        : null,
+    };
+  });
+
+  return jsonResponse({
+    packages,
+    extra_hours_packages: extraHoursPackages,
+    methods: signupPaymentMethods(settings?.payment_methods_enabled),
+    card_checkout_unavailable: Boolean(
+      settings?.payment_methods_enabled?.includes('paymob') && !paymobCardCheckoutConfigured(),
+    ),
+    payment_instructions: settings?.payment_instructions ?? null,
+  });
 }
 
 async function createParentAuthUser(
@@ -343,15 +526,25 @@ Deno.serve(async (req) => {
 
   const createdAuthUserIds: string[] = [];
   const uploadedObjects: UploadedObject[] = [];
+  let signupCommitted = false;
+  let paymentRequested = false;
+  let paymentAttemptId: string | null = null;
+  let cardPaymentRequested = false;
 
   try {
     const body = (await req.json()) as Body;
+    paymentRequested = Boolean(body.payment);
+    cardPaymentRequested = body.payment?.method === 'card';
+    const admin = getAdminClient();
+
+    if (body.action === 'payment_options') {
+      if (!body.nursery_id) return jsonResponse({ error: 'Missing nursery_id' }, 400);
+      return await getSignupPaymentOptions(admin, body.nursery_id);
+    }
 
     if (!body.nursery_id || !body.child?.full_name_ar?.trim() || !body.child?.dob) {
       return jsonResponse({ error: 'Missing required fields' }, 400);
     }
-
-    const admin = getAdminClient();
 
     const { data: nursery } = await admin
       .from('nurseries')
@@ -362,7 +555,7 @@ Deno.serve(async (req) => {
 
     const { data: signupSettings, error: signupSettingsErr } = await admin
       .from('nursery_settings')
-      .select('parent_registration_enabled')
+      .select('parent_registration_enabled, payment_methods_enabled')
       .eq('nursery_id', body.nursery_id)
       .maybeSingle();
     if (signupSettingsErr) throw new Error(signupSettingsErr.message);
@@ -374,6 +567,45 @@ Deno.serve(async (req) => {
         },
         403,
       );
+    }
+
+    if (body.payment) {
+      const payment = body.payment;
+      if (!body.credentials && !req.headers.get('Authorization')) {
+        return jsonResponse({ error: 'Payment requires an authenticated parent' }, 400);
+      }
+      if (!['monthly', 'quarterly', 'half_annual', 'annual'].includes(payment.billing_period)) {
+        return jsonResponse({ error: 'Invalid billing period' }, 400);
+      }
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(payment.idempotency_key)) {
+        return jsonResponse({ error: 'Invalid payment idempotency key' }, 400);
+      }
+      if (!signupPaymentMethods(signupSettings?.payment_methods_enabled).includes(payment.method)) {
+        return jsonResponse({ error: 'Selected payment method is not enabled' }, 400);
+      }
+      if (paymentMethodNeedsReference(payment.method) && (payment.reference?.trim().length ?? 0) < 4) {
+        return jsonResponse({ error: 'A valid payment reference is required' }, 400);
+      }
+      const { data: packageRow, error: packageError } = await admin
+        .from('tuition_packages')
+        .select('id')
+        .eq('id', payment.package_id)
+        .eq('nursery_id', body.nursery_id)
+        .eq('active', true)
+        .maybeSingle();
+      if (packageError) throw new Error(packageError.message);
+      if (!packageRow) return jsonResponse({ error: 'Selected payment package is not available' }, 400);
+      if (payment.extra_hours_package_id) {
+        const { data: extraHoursPackage, error: extraHoursPackageError } = await admin
+          .from('packages')
+          .select('id')
+          .eq('id', payment.extra_hours_package_id)
+          .eq('nursery_id', body.nursery_id)
+          .eq('active', true)
+          .maybeSingle();
+        if (extraHoursPackageError) throw new Error(extraHoursPackageError.message);
+        if (!extraHoursPackage) return jsonResponse({ error: 'Selected extra-hours package is not available' }, 400);
+      }
     }
 
     let primaryUser: AuthUserRef;
@@ -538,8 +770,8 @@ Deno.serve(async (req) => {
       nursery_id: body.nursery_id,
       parent_id: primaryParentId,
       child_id: childId,
-      status: 'submitted',
-      submitted_at: new Date().toISOString(),
+      status: body.payment ? 'draft' : 'submitted',
+      submitted_at: body.payment ? null : new Date().toISOString(),
       parent_info_json: {
         father: publicParentPayload(body.father),
         mother: publicParentPayload(body.mother),
@@ -556,30 +788,251 @@ Deno.serve(async (req) => {
         body.consents.policies &&
         body.consents.info_accuracy,
     } as never).select('id').single();
-    if (appErr) {
-      // Non-fatal: child + parent rows are already written; log the gap for admin follow-up.
-      console.error('applications row insert failed', appErr.message);
-    } else if (applicationRow) {
-      try {
-        await createApplicationDocuments(
-          admin,
-          body.nursery_id,
-          (applicationRow as { id: string }).id,
-          body.files,
-          Boolean(body.mother),
-          uploadedObjects,
+    if (appErr || !applicationRow) throw new Error(appErr?.message ?? 'applications row insert failed');
+    const applicationId = (applicationRow as { id: string }).id;
+    signupCommitted = true;
+
+    try {
+      await createApplicationDocuments(
+        admin,
+        body.nursery_id,
+        applicationId,
+        body.files,
+        Boolean(body.mother),
+        uploadedObjects,
+      );
+    } catch (docErr) {
+      if (body.payment) throw docErr;
+      console.error('application documents insert failed', docErr);
+    }
+
+    if (body.payment) {
+      const payment = body.payment;
+      const { data: documentsComplete, error: documentsCheckError } = await admin.rpc(
+        'application_has_required_documents' as never,
+        { p_application_id: applicationId } as never,
+      );
+      if (documentsCheckError) throw new Error(`Could not verify required application documents: ${documentsCheckError.message}`);
+      if (documentsComplete !== true) throw new Error('Upload all required application documents before paying.');
+
+      const paymentClient = createClient(supabaseUrl, anonKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+        ...(body.credentials
+          ? {}
+          : { global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } } }),
+      });
+
+      if (body.credentials) {
+        const { error: signInError } = await paymentClient.auth.signInWithPassword({
+          email: usernameToAuthEmail(body.credentials.username),
+          password: body.credentials.password,
+        });
+        if (signInError) throw new Error(`Could not authenticate parent for payment: ${signInError.message}`);
+      }
+
+      const { data: invoiceId, error: packageSelectionError } = await paymentClient.rpc(
+        'select_application_payment_package' as never,
+        {
+          p_application_id: applicationId,
+          p_package_id: payment.package_id,
+          p_billing_period: payment.billing_period,
+        } as never,
+      );
+      if (packageSelectionError) throw new Error(`Could not create the package invoice: ${packageSelectionError.message}`);
+      if (typeof invoiceId !== 'string') throw new Error('Package selection did not return an invoice');
+
+      const { data: invoice, error: invoiceError } = await admin
+        .from('invoices')
+        .select('amount, line_items_json')
+        .eq('id', invoiceId)
+        .single();
+      if (invoiceError || !invoice) throw new Error(invoiceError?.message ?? 'Package invoice not found');
+
+      const { error: extraHoursSelectionError } = await paymentClient.rpc(
+        'select_application_extra_hours_package' as never,
+        {
+          p_application_id: applicationId,
+          p_package_id: payment.extra_hours_package_id,
+        } as never,
+      );
+      if (extraHoursSelectionError) {
+        throw new Error(`Could not save the extra-hours package: ${extraHoursSelectionError.message}`);
+      }
+
+      let invoiceAmount = Number(invoice.amount);
+      const lineItems = invoice.line_items_json && typeof invoice.line_items_json === 'object' && !Array.isArray(invoice.line_items_json)
+        ? invoice.line_items_json as Record<string, unknown>
+        : {};
+      const invoiceItems = Array.isArray(lineItems.items) ? [...lineItems.items] : [];
+
+      if (payment.extra_hours_package_id) {
+        const { data: extraHoursPackage, error: extraHoursPackageError } = await admin
+          .from('packages')
+          .select(`
+            id, name_ar, name_en, price,
+            deals (id, name_ar, name_en, discount_type, discount_value, starts_at, ends_at, active)
+          `)
+          .eq('id', payment.extra_hours_package_id)
+          .eq('nursery_id', body.nursery_id)
+          .eq('active', true)
+          .single();
+        if (extraHoursPackageError || !extraHoursPackage) {
+          throw new Error(extraHoursPackageError?.message ?? 'Selected extra-hours package is not available');
+        }
+
+        type ExtraHoursDealRow = {
+          id: string;
+          name_ar: string;
+          name_en: string;
+          discount_type: 'percentage' | 'fixed_amount';
+          discount_value: string | number;
+          starts_at: string | null;
+          ends_at: string | null;
+          active: boolean;
+        };
+        const extraPackage = extraHoursPackage as {
+          id: string;
+          name_ar: string;
+          name_en: string;
+          price: string | number;
+          deals: ExtraHoursDealRow | ExtraHoursDealRow[] | null;
+        };
+        const deal = Array.isArray(extraPackage.deals) ? extraPackage.deals[0] : extraPackage.deals;
+        const extraSubtotal = Number(extraPackage.price);
+        if (!Number.isFinite(extraSubtotal) || extraSubtotal < 0) throw new Error('Invalid extra-hours package price');
+        const dealIsActive = Boolean(
+          deal?.active &&
+          (!deal.starts_at || new Date(deal.starts_at).getTime() <= Date.now()) &&
+          (!deal.ends_at || new Date(deal.ends_at).getTime() > Date.now()),
         );
-      } catch (docErr) {
-        console.error('application documents insert failed', docErr);
+        let extraDiscount = 0;
+        if (dealIsActive && deal) {
+          extraDiscount = deal.discount_type === 'percentage'
+            ? Math.round(extraSubtotal * Number(deal.discount_value)) / 100
+            : Number(deal.discount_value);
+          extraDiscount = Math.round(Math.min(Math.max(extraDiscount, 0), extraSubtotal) * 100) / 100;
+        }
+        const extraTotal = Math.max(extraSubtotal - extraDiscount, 0);
+        invoiceAmount = Math.round((invoiceAmount + extraTotal) * 100) / 100;
+
+        invoiceItems.push({
+          kind: 'extra_hours_package',
+          name_ar: extraPackage.name_ar,
+          name_en: extraPackage.name_en,
+          description: extraPackage.name_en || extraPackage.name_ar || 'Extra hours package',
+          quantity: 1,
+          unitPrice: extraSubtotal,
+          unit_price: extraSubtotal,
+          total: extraSubtotal,
+        });
+        if (extraDiscount > 0 && deal) {
+          invoiceItems.push({
+            kind: 'discount',
+            name_ar: deal.name_ar,
+            name_en: deal.name_en,
+            description: deal.name_en || deal.name_ar || 'Discount',
+            quantity: 1,
+            unitPrice: -extraDiscount,
+            unit_price: -extraDiscount,
+            total: -extraDiscount,
+          });
+        }
+
+        const { error: invoiceUpdateError } = await admin
+          .from('invoices')
+          .update({
+            amount: invoiceAmount,
+            line_items_json: {
+              ...lineItems,
+              extra_hours_package_id: extraPackage.id,
+              extra_hours_package_name_ar: extraPackage.name_ar,
+              extra_hours_package_name_en: extraPackage.name_en,
+              extra_hours_subtotal: extraSubtotal,
+              extra_hours_discount_amount: extraDiscount,
+              items: invoiceItems,
+            },
+          } as never)
+          .eq('id', invoiceId);
+        if (invoiceUpdateError) throw new Error(`Could not add extra-hours package to the invoice: ${invoiceUpdateError.message}`);
+      }
+
+      const { data: attempt, error: paymentError } = await paymentClient.rpc('submit_invoice_payment' as never, {
+        p_invoice_id: invoiceId,
+        p_amount: invoiceAmount,
+        p_method: payment.method,
+        p_reference: paymentMethodNeedsReference(payment.method) ? payment.reference?.trim() || null : null,
+        p_proof_url: null,
+        p_idempotency_key: payment.idempotency_key,
+      } as never);
+      if (paymentError) throw new Error(`Could not submit the payment request: ${paymentError.message}`);
+      const attemptResult = attempt as { attempt_id?: unknown } | null;
+      paymentAttemptId = typeof attemptResult?.attempt_id === 'string' ? attemptResult.attempt_id : null;
+      if (!paymentAttemptId) throw new Error('The payment request was created without an attempt ID');
+
+      let checkoutUrl: string | undefined;
+      if (payment.method === 'card') {
+        const primaryParent = body.mother ?? body.father;
+        if (!primaryParent) throw new Error('A parent contact is required for card checkout');
+        const checkout = await createPaymobCardCheckout({
+          amount: invoiceAmount,
+          attemptId: paymentAttemptId,
+          customerName: primaryParent.full_name,
+          customerEmail: primaryParent.email?.trim() || primaryUser.user.email || '',
+          customerPhone: primaryParent.mobile,
+          address: body.family.address,
+        });
+        checkoutUrl = checkout.checkoutUrl;
+        const { error: intentionUpdateError } = await admin
+          .from('payment_attempts')
+          .update({ paymob_intention_id: checkout.intentionId })
+          .eq('id', paymentAttemptId);
+        if (intentionUpdateError) throw new Error(`Could not save the Paymob checkout reference: ${intentionUpdateError.message}`);
+      }
+
+      const { data: submittedApplication, error: applicationStatusError } = await admin
+        .from('applications')
+        .select('status')
+        .eq('id', applicationId)
+        .single();
+      if (applicationStatusError) throw new Error(applicationStatusError.message);
+      if (submittedApplication.status !== 'submitted') {
+        throw new Error('Payment was recorded, but the application could not be sent for review. Contact the nursery.');
+      }
+
+      if (checkoutUrl) {
+        return jsonResponse({
+          child_id: childId,
+          application_id: applicationId,
+          payment_attempt_id: paymentAttemptId,
+          checkout_url: checkoutUrl,
+        });
       }
     }
 
-    return jsonResponse({ child_id: childId });
+    return jsonResponse({ child_id: childId, application_id: applicationId, payment_attempt_id: paymentAttemptId });
   } catch (e) {
-    if (createdAuthUserIds.length > 0 || uploadedObjects.length > 0) {
+    if (!signupCommitted && (createdAuthUserIds.length > 0 || uploadedObjects.length > 0)) {
       const admin = getAdminClient();
       await Promise.all(createdAuthUserIds.map((id) => admin.auth.admin.deleteUser(id)));
       await removeUploadedFiles(admin, uploadedObjects);
+    }
+    if (signupCommitted && paymentRequested) {
+      if (cardPaymentRequested && paymentAttemptId) {
+        const { error: failAttemptError } = await getAdminClient()
+          .from('payment_attempts')
+          .update({ status: 'failed', notes: 'Paymob checkout could not be initialized.' })
+          .eq('id', paymentAttemptId)
+          .eq('status', 'pending_confirmation');
+        if (failAttemptError) console.error('Could not mark the failed Paymob attempt:', failAttemptError.message);
+      }
+      return jsonResponse(
+        {
+          error: 'signup_created_payment_failed',
+          error_message: e instanceof Error ? e.message : String(e),
+          account_created: true,
+        },
+        409,
+      );
     }
     if (e instanceof SignupHttpError) {
       return jsonResponse({ error: e.code, error_message: e.errorMessage }, e.status);

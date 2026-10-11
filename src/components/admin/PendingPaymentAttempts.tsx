@@ -63,6 +63,9 @@ export function PendingPaymentAttempts({ attempts, onUpdated }: Props) {
             method: methodLabel(attempt.method),
           }),
           attempt.reference ? t('payment.confirm.reference', { reference: attempt.reference }) : '',
+          attempt.paymobIntentionId
+            ? t('payment.admin.paymobVerifyBeforeConfirm', { id: attempt.paymobIntentionId })
+            : '',
         ]
           .filter(Boolean)
           .join(' '),
@@ -133,6 +136,12 @@ export function PendingPaymentAttempts({ attempts, onUpdated }: Props) {
                 <div className="flex justify-between gap-3">
                   <dt className="text-on-surface-variant">{t('payment.reference')}</dt>
                   <dd className="break-all text-end font-mono font-medium text-on-surface">{attempt.reference}</dd>
+                </div>
+              ) : null}
+              {attempt.paymobIntentionId ? (
+                <div className="flex justify-between gap-3">
+                  <dt className="text-on-surface-variant">{t('payment.admin.paymobIntentionId')}</dt>
+                  <dd className="break-all text-end font-mono font-medium text-on-surface">{attempt.paymobIntentionId}</dd>
                 </div>
               ) : null}
             </dl>

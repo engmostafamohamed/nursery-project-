@@ -32,12 +32,12 @@ Set these in the Replit Secrets panel:
 
 A multi-step sign-up wizard at `/signup` allows parents to register themselves and their child. Features:
 
-- **9-step form**: Child Info → Parents → Family → Enrollment → Health → Emergency → Daily Care → Pickups → Consents
+- **Registration wizard**: The final Review & Submit step includes tuition package, billing-period, and payment-method selection
 - **Dual-parent login**: Either mother or father email can be used; both get Supabase auth accounts
 - **Per-step validation**: Required fields are validated before allowing navigation to the next step
 - **Bilingual**: Full Arabic and English translations
 - **Data models**: `ChildrenRow`, `UsersRow`, `ParentChildrenRow`, `AuthorizedPickupsRow` updated with new fields (name parts, nationality, department, daily care preferences, emergency contacts, occupation, authorization levels)
-- **Submission**: Creates Supabase auth user, then calls `parent-signup-complete` edge function for enrollment persistence
+- **Submission**: `parent-signup-complete` creates the account and draft application, selects the tuition package, and records the configured manual payment request; the payment trigger then submits the application for review
 
 ### Key files:
 - `src/features/parent-signup/` — Types, validation schema, defaults, submission logic

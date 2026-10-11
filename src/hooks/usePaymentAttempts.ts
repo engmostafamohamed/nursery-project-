@@ -14,6 +14,7 @@ export type PaymentAttemptItem = {
   proofUrl: string | null;
   /** Transfer / transaction number the parent gave (InstaPay, wallet, bank). */
   reference: string | null;
+  paymobIntentionId: string | null;
   createdAt: string;
   confirmedAt: string | null;
   notes: string | null;
@@ -26,7 +27,7 @@ export function usePaymentAttempts(invoiceId: string | undefined) {
       if (!invoiceId) return [];
       const attemptsRes = await supabase
         .from('payment_attempts')
-        .select('id, invoice_id, parent_id, nursery_id, amount, payment_method, status, proof_url, reference, created_at, confirmed_at, notes')
+        .select('id, invoice_id, parent_id, nursery_id, amount, payment_method, status, proof_url, reference, paymob_intention_id, created_at, confirmed_at, notes')
         .eq('invoice_id', invoiceId)
         .order('created_at', { ascending: false });
       if (attemptsRes.error) throw attemptsRes.error;
@@ -40,6 +41,7 @@ export function usePaymentAttempts(invoiceId: string | undefined) {
         status: 'pending_confirmation' | 'confirmed' | 'failed' | 'cancelled';
         proof_url: string | null;
         reference: string | null;
+        paymob_intention_id: string | null;
         created_at: string;
         confirmed_at: string | null;
         notes: string | null;
@@ -66,6 +68,7 @@ export function usePaymentAttempts(invoiceId: string | undefined) {
         status: row.status,
         proofUrl: row.proof_url,
         reference: row.reference,
+        paymobIntentionId: row.paymob_intention_id,
         createdAt: row.created_at,
         confirmedAt: row.confirmed_at,
         notes: row.notes,

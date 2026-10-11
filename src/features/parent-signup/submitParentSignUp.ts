@@ -7,8 +7,21 @@ import {
   buildRegistrationAnswers,
   type RegistrationTemplatePayload,
 } from './registrationTemplates';
+import type { ApplicationPackageBillingPeriod } from '@/hooks/useApplicationPackagePayment';
+import type { ParentPaymentMethodCode } from '@/lib/paymentApi';
 
 const MAX_TOTAL_FILE_PAYLOAD_BYTES = 4.5 * 1024 * 1024;
+
+export class SignupPaymentAfterCreateError extends Error {}
+
+export type SignupPaymentSelection = {
+  packageId: string;
+  billingPeriod: ApplicationPackageBillingPeriod;
+  extraHoursPackageId: string | null;
+  method: ParentPaymentMethodCode;
+  reference: string | null;
+  idempotencyKey: string;
+};
 
 // children.school_preference is CHECK-constrained to these values. The field used to be a
 // free-text input, so a restored draft can still hold arbitrary text — drop it rather than
@@ -100,20 +113,27 @@ async function filesToPayload(files: ParentSignUpFileBundle) {
   return payload;
 }
 
-async function readFunctionError(response?: Response): Promise<string | null> {
-  if (!response) return null;
+async function readFunctionError(response?: Response): Promise<{ message: string | null; accountCreated: boolean }> {
+  if (!response) return { message: null, accountCreated: false };
 
   try {
     const contentType = response.headers.get('Content-Type') ?? '';
     if (contentType.includes('application/json')) {
-      const body = (await response.clone().json()) as { error?: string; error_message?: string };
-      return body.error_message ?? body.error ?? null;
+      const body = (await response.clone().json()) as {
+        error?: string;
+        error_message?: string;
+        account_created?: boolean;
+      };
+      return {
+        message: body.error_message ?? body.error ?? null,
+        accountCreated: body.account_created === true,
+      };
     }
 
     const text = await response.clone().text();
-    return text.trim() || null;
+    return { message: text.trim() || null, accountCreated: false };
   } catch {
-    return null;
+    return { message: null, accountCreated: false };
   }
 }
 
@@ -131,11 +151,13 @@ async function invokeParentSignupComplete(body: unknown) {
   });
 
   if (!response.ok) {
-    const functionMessage = await readFunctionError(response);
-    throw new Error(functionMessage || `parent-signup-complete failed with status ${response.status}`);
+    const functionError = await readFunctionError(response);
+    const message = functionError.message || `parent-signup-complete failed with status ${response.status}`;
+    if (functionError.accountCreated) throw new SignupPaymentAfterCreateError(message);
+    throw new Error(message);
   }
 
-  return (await response.json()) as { error?: string };
+  return (await response.json()) as { error?: string; checkout_url?: string };
 }
 
 export async function submitParentSignUp(
@@ -143,7 +165,8 @@ export async function submitParentSignUp(
   files: ParentSignUpFileBundle,
   registrationTemplate?: RegistrationTemplatePayload | null,
   customRegistrationAnswers: Record<string, unknown> = {},
-): Promise<{ success: boolean }> {
+  payment?: SignupPaymentSelection,
+): Promise<{ success: boolean; checkoutUrl?: string }> {
   // The family gets one account (username + password). A parent block is sent when
   // their name is filled — the emails on it are contact details, not credentials.
   const hasFather = v.fatherFullName.trim().length > 0;
@@ -308,10 +331,28 @@ export async function submitParentSignUp(
         ...buildRegistrationAnswers(registrationTemplate ?? null, v, visibleFiles),
         ...customRegistrationAnswers,
       },
+      payment: payment
+        ? {
+            package_id: payment.packageId,
+            billing_period: payment.billingPeriod,
+            extra_hours_package_id: payment.extraHoursPackageId,
+            method: payment.method,
+            reference: payment.reference,
+            idempotency_key: payment.idempotencyKey,
+          }
+        : null,
   });
 
   if (payload?.error) {
     throw new Error(payload.error);
+  }
+
+  if (payload?.checkout_url) {
+    const checkoutUrl = new URL(payload.checkout_url);
+    if (checkoutUrl.origin !== 'https://accept.paymob.com' || !checkoutUrl.pathname.startsWith('/unifiedcheckout/')) {
+      throw new Error('The payment provider returned an invalid checkout URL');
+    }
+    return { success: true, checkoutUrl: checkoutUrl.toString() };
   }
 
   return { success: true };

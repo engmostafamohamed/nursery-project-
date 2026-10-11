@@ -24,8 +24,7 @@ export type ApplicationExtraHoursPackage = {
   includedHours: number | null;
   validityValue: number | null;
   validityUnit: 'months' | 'years' | null;
-  /** Display only — this package is never invoiced at application time, so a deal here is
-   * cosmetic (no charge to actually discount). */
+  /** The deal is applied to the signup invoice; later extra-hours selections remain separate. */
   deal: ApplicationExtraHoursPackageDeal | null;
 };
 
@@ -45,7 +44,7 @@ export function isExtraHoursDealActive(
   return true;
 }
 
-/** Cosmetic-only preview of the discounted price — mirrors the admin deal math, never charged. */
+/** Discounted display price, also used to preview the amount added to the signup invoice. */
 export function computeExtraHoursDisplayPrice(pkg: Pick<ApplicationExtraHoursPackage, 'price' | 'deal'>): {
   discountAmount: number;
   displayPrice: number;

@@ -14,7 +14,7 @@ export const REGISTRATION_TEMPLATE_STEPS = [
   'medicationConsents',
   'documents',
   'consents',
-] as const satisfies readonly Exclude<SignUpStep, 'review'>[];
+] as const satisfies readonly Exclude<SignUpStep, 'review' | 'payment'>[];
 
 export type RegistrationTemplateStep = (typeof REGISTRATION_TEMPLATE_STEPS)[number];
 
