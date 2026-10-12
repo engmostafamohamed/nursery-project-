@@ -25,24 +25,21 @@ function formatBytes(bytes: number): string {
 
 export function FileDropzoneWithPreview({ label, hint, file, onChange, required, error }: Props) {
   const { t } = useTranslation();
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [preview, setPreview] = useState<{ file: File; url: string } | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    if (!file) {
-      setPreviewUrl(null);
-      return;
-    }
-    if (!file.type.startsWith('image/')) {
-      setPreviewUrl(null);
-      return;
-    }
+    if (!file || !file.type.startsWith('image/')) return;
     const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
+    // The object URL is created here and revoked on cleanup, so it has to live in an effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPreview({ file, url });
     return () => URL.revokeObjectURL(url);
   }, [file]);
+  // A preview made for an earlier file is never shown.
+  const previewUrl = preview && preview.file === file ? preview.url : null;
 
   const validateAndSet = useCallback(
     (next: File | null) => {

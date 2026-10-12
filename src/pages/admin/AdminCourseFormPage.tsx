@@ -18,6 +18,7 @@ import { adminCoursesListQueryKey } from '@/hooks/useAdminCoursesList';
 import { adminCourseDetailQueryKey } from '@/hooks/useAdminCourseDetail';
 import { isValidIsoDate } from '@/lib/onboardingDateBounds';
 import { supabase } from '@/lib/supabase';
+import type { CoursesRow, UsersRow } from '@/types/tables';
 
 const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
 const CATEGORIES = ['sport', 'art', 'music', 'academic', 'language', 'other'] as const;
@@ -55,7 +56,8 @@ const courseSchema = z
     }
   });
 
-type FormValues = z.infer<typeof courseSchema>;
+type FormInput = z.input<typeof courseSchema>;
+type FormValues = z.output<typeof courseSchema>;
 
 export function AdminCourseCreatePage() {
   return <AdminCourseFormPage mode="create" />;
@@ -77,7 +79,7 @@ function AdminCourseFormPage({ mode }: { mode: 'create' | 'edit' }) {
   const showAr = langPref === 'both' || langPref === 'ar';
   const showEn = langPref === 'both' || langPref === 'en';
 
-  const form = useForm<FormValues>({
+  const form = useForm<FormInput, unknown, FormValues>({
     resolver: zodResolver(courseSchema),
     defaultValues: {
       title_en: '',
@@ -103,7 +105,7 @@ function AdminCourseFormPage({ mode }: { mode: 'create' | 'edit' }) {
       if (!courseId) return null;
       const { data, error } = await supabase.from('courses').select('*').eq('id', courseId).maybeSingle();
       if (error) throw error;
-      return data;
+      return data as CoursesRow | null;
     },
     enabled: mode === 'edit' && Boolean(courseId),
   });
@@ -140,7 +142,7 @@ function AdminCourseFormPage({ mode }: { mode: 'create' | 'edit' }) {
         .eq('role', 'teacher')
         .order('name_en');
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as Pick<UsersRow, 'id' | 'name_en' | 'name_ar'>[];
     },
     enabled: Boolean(nurseryId),
   });

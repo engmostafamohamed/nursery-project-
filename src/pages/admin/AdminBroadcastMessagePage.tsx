@@ -19,6 +19,21 @@ import type { BroadcastAudienceScope, BroadcastChannel } from '@/types/tables/ba
 
 type ClassRow = { id: string; name_ar: string; name_en: string };
 
+const PREFILL_KEY = 'xo_ai_prefill';
+
+/** A broadcast the AI assistant drafted for this page, waiting in sessionStorage. */
+function readBroadcastPrefill(): { message: string } | null {
+  try {
+    const raw = sessionStorage.getItem(PREFILL_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw) as Record<string, unknown>;
+    if (data.type !== 'broadcast') return null;
+    return { message: typeof data.message === 'string' ? data.message : '' };
+  } catch {
+    return null;
+  }
+}
+
 export function AdminBroadcastMessagePage() {
   const { t } = useTranslation();
   const { user } = useAuthSession();
@@ -28,32 +43,23 @@ export function AdminBroadcastMessagePage() {
   const [audienceMode, setAudienceMode] = useState<AudienceMode>('all_parents');
   const [classId, setClassId] = useState('');
   const [rolePick, setRolePick] = useState<UserRole>('parent');
-  const [contentAr, setContentAr] = useState('');
-  const [contentEn, setContentEn] = useState('');
+  const [prefill] = useState(readBroadcastPrefill);
+  const [contentAr, setContentAr] = useState(prefill?.message ?? '');
+  const [contentEn, setContentEn] = useState(prefill?.message ?? '');
   const [channels, setChannels] = useState<BroadcastChannel[]>(['in_app']);
   const [sendMode, setSendMode] = useState<'now' | 'later'>('now');
   const [scheduledLocal, setScheduledLocal] = useState('');
   const [previewOpen, setPreviewOpen] = useState(false);
 
+  // The draft is used once; the audience already defaults to all parents.
   useEffect(() => {
+    if (!prefill) return;
     try {
-      const raw = sessionStorage.getItem('xo_ai_prefill');
-      if (!raw) return;
-      const data = JSON.parse(raw) as Record<string, unknown>;
-      if (data.type !== 'broadcast') return;
-      sessionStorage.removeItem('xo_ai_prefill');
-      if (typeof data.message === 'string' && data.message) {
-        const msg = data.message;
-        setContentAr(msg);
-        setContentEn(msg);
-      }
-      if (data.audience === 'all_parents') {
-        setAudienceMode('all_parents');
-      }
+      sessionStorage.removeItem(PREFILL_KEY);
     } catch {
       /* ignore */
     }
-  }, []);
+  }, [prefill]);
 
   const classesQuery = useQuery({
     queryKey: ['broadcast-classes', profile?.nursery_id],

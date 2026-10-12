@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -37,20 +37,24 @@ export function HealthAllergyDialog({ open, onOpenChange, initial, onSubmit, isB
   const { t } = useTranslation();
   const [fields, setFields] = useState<Fields>(DEFAULT_FIELDS);
 
-  useEffect(() => {
-    if (!open) return;
-    setFields(
-      initial
-        ? {
-            allergen_name: initial.allergen_name,
-            reaction_type: initial.reaction_type ?? '',
-            severity: initial.severity,
-            treatment_protocol: initial.treatment_protocol ?? '',
-            last_reaction_date: initial.last_reaction_date ?? '',
-          }
-        : DEFAULT_FIELDS,
-    );
-  }, [open, initial]);
+  // Reset the fields each time the dialog opens, or opens for another record.
+  const [filledFor, setFilledFor] = useState<{ open: boolean; initial: typeof initial } | null>(null);
+  if (filledFor?.open !== open || filledFor?.initial !== initial) {
+    setFilledFor({ open, initial });
+    if (open) {
+      setFields(
+        initial
+          ? {
+              allergen_name: initial.allergen_name,
+              reaction_type: initial.reaction_type ?? '',
+              severity: initial.severity,
+              treatment_protocol: initial.treatment_protocol ?? '',
+              last_reaction_date: initial.last_reaction_date ?? '',
+            }
+          : DEFAULT_FIELDS,
+      );
+    }
+  }
 
   const set = <K extends keyof Fields>(key: K, value: Fields[K]) =>
     setFields((prev) => ({ ...prev, [key]: value }));

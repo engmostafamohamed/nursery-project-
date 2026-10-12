@@ -1,5 +1,5 @@
 import { CalendarClock, CircleDollarSign, Clock3, ReceiptText } from 'lucide-react';
-import { useMemo } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,7 @@ function typeIcon(type: ParentInvoiceItem['type']) {
 
 export function InvoiceCard({ invoice, onPayNow, onView, highlighted, submitting }: Props) {
   const { t } = useTranslation();
-  const nowMs = useMemo(() => Date.now(), []);
+  const [nowMs] = useState(() => Date.now());
   const dueDate = new Date(invoice.dueDate);
   const countdown = Math.ceil((dueDate.getTime() - nowMs) / 86400000);
   const showCountdown = invoice.status === 'pending' && countdown >= 0;

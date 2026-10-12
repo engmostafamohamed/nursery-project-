@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { BroadcastHistoryDetailDialog } from '@/components/broadcast/BroadcastHistoryDetailDialog';
-import { CHANNEL_LABEL_KEY } from '@/components/broadcast/BroadcastChannelCheckboxes';
+import { CHANNEL_LABEL_KEY } from '@/components/broadcast/channelLabels';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/EmptyState';

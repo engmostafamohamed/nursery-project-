@@ -3,7 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Toaster } from 'sonner';
 
-import { ConfirmHost } from '@/components/ui/confirm';
+import { ConfirmHost } from '@/components/ui/ConfirmHost';
 import { cn } from '@/lib/utils';
 
 /**

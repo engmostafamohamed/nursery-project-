@@ -36,6 +36,5 @@ export interface NurseryStats {
   activeParents: number;
 }
 
-export interface NurseryUserSummary
-  extends Pick<UsersRow, 'id' | 'role' | 'name_ar' | 'name_en' | 'email' | 'phone' | 'status'> {}
+export type NurseryUserSummary = Pick<UsersRow, 'id' | 'role' | 'name_ar' | 'name_en' | 'email' | 'phone' | 'status'>;
 

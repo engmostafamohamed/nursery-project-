@@ -2,6 +2,14 @@ import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
+import type {
+  ChildrenRow,
+  CourseEnrollmentsRow,
+  CourseInvoicesRow,
+  CoursesRow,
+  ParentChildrenRow,
+  UsersRow,
+} from '@/types/tables';
 
 export type ParentCourseRow = {
   enrollment_id: string;
@@ -52,7 +60,7 @@ export function useParentCourses(parentUserId: string | undefined) {
         .select('child_id')
         .eq('parent_id', parentUserId);
 
-      const childIds = (links ?? []).map((l) => l.child_id);
+      const childIds = ((links ?? []) as Pick<ParentChildrenRow, 'child_id'>[]).map((l) => l.child_id);
       if (childIds.length === 0) return { enrollments: [], invoices: [] };
 
       const { data: children } = await supabase
@@ -60,21 +68,26 @@ export function useParentCourses(parentUserId: string | undefined) {
         .select('id, full_name_en, full_name_ar')
         .in('id', childIds);
 
-      const { data: enrollments, error: enrollErr } = await supabase
+      const { data: enrollmentData, error: enrollErr } = await supabase
         .from('course_enrollments')
         .select('id, course_id, child_id, status')
         .in('child_id', childIds)
         .eq('status', 'active');
       if (enrollErr) throw enrollErr;
-      if (!enrollments || enrollments.length === 0) return { enrollments: [], invoices: [] };
+      const enrollments = (enrollmentData ?? []) as Pick<CourseEnrollmentsRow, 'id' | 'course_id' | 'child_id' | 'status'>[];
+      if (enrollments.length === 0) return { enrollments: [], invoices: [] };
 
       const courseIds = [...new Set(enrollments.map((e) => e.course_id))];
-      const { data: courses } = await supabase
+      const { data: courseData } = await supabase
         .from('courses')
         .select('id, title_en, title_ar, category, price_per_month, schedule_days, schedule_time_start, schedule_time_end, status, teacher_user_id')
         .in('id', courseIds);
+      const courses = (courseData ?? []) as Pick<
+        CoursesRow,
+        'id' | 'title_en' | 'title_ar' | 'category' | 'price_per_month' | 'schedule_days' | 'schedule_time_start' | 'schedule_time_end' | 'status' | 'teacher_user_id'
+      >[];
 
-      const teacherIds = [...new Set((courses ?? []).map((c) => c.teacher_user_id).filter(Boolean))] as string[];
+      const teacherIds = [...new Set(courses.map((c) => c.teacher_user_id).filter(Boolean))] as string[];
       const [teachersRes, invoicesRes] = await Promise.all([
         teacherIds.length
           ? supabase.from('users').select('id, name_en, name_ar').in('id', teacherIds)
@@ -86,9 +99,14 @@ export function useParentCourses(parentUserId: string | undefined) {
           .order('billing_month', { ascending: false }),
       ]);
 
-      const childMap = new Map((children ?? []).map((c) => [c.id, c]));
-      const courseMap = new Map((courses ?? []).map((c) => [c.id, c]));
-      const teacherMap = new Map((teachersRes.data ?? []).map((u) => [u.id, u]));
+      const childMap = new Map(
+        ((children ?? []) as Pick<ChildrenRow, 'id' | 'full_name_en' | 'full_name_ar'>[]).map((c) => [c.id, c]),
+      );
+      const courseMap = new Map(courses.map((c) => [c.id, c]));
+      const teacherMap = new Map(
+        ((teachersRes.data ?? []) as Pick<UsersRow, 'id' | 'name_en' | 'name_ar'>[]).map((u) => [u.id, u]),
+      );
+      const invoices = (invoicesRes.data ?? []) as Omit<CourseInvoicesRow, 'nursery_id' | 'notes' | 'created_at' | 'updated_at'>[];
 
       const enrollmentRows: ParentCourseRow[] = enrollments.map((e) => {
         const child = childMap.get(e.child_id);
@@ -113,7 +131,7 @@ export function useParentCourses(parentUserId: string | undefined) {
         };
       });
 
-      const invoiceRows: ParentCourseInvoiceRow[] = (invoicesRes.data ?? []).map((inv) => {
+      const invoiceRows: ParentCourseInvoiceRow[] = invoices.map((inv) => {
         const child = childMap.get(inv.child_id);
         const course = courseMap.get(inv.course_id);
         return {

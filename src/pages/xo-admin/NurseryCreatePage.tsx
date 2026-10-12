@@ -23,6 +23,7 @@ export function NurseryCreatePage() {
         opensAt: values.opensAt,
         closesAt: values.closesAt,
         workingDays: values.workingDays,
+        departments: values.departments,
         subscriptionPlan: values.subscriptionPlan,
         pricingModel: values.pricingModel,
         baseFee: values.baseFee ? Number(values.baseFee) : null,

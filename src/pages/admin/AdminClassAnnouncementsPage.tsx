@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 
 import { ClassAnnouncementComposer } from '@/components/broadcast/ClassAnnouncementComposer';
-import { CHANNEL_LABEL_KEY } from '@/components/broadcast/BroadcastChannelCheckboxes';
+import { CHANNEL_LABEL_KEY } from '@/components/broadcast/channelLabels';
 import { Card, CardContent } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/skeleton';

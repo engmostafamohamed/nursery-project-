@@ -140,10 +140,10 @@ export function NurseryDetailPage() {
           defaultValue: 'Nursery details updated successfully',
         }),
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Form submission error:', error);
       toast.error(
-        error?.message ||
+        (error instanceof Error && error.message) ||
           t('xoAdmin.nurseryDetail.saveError', {
             defaultValue: 'Failed to update nursery details',
           }),
@@ -214,7 +214,7 @@ export function NurseryDetailPage() {
 
   const currentLogo = logoPreview || (isDisplayableLogoUrl(nursery.logo_url) ? nursery.logo_url : null);
   const operationalStatus = getOperationalStatus(nursery);
-  const adminUsers = users.filter((user) => user.role === 'branch_admin' || user.role === 'admin');
+  const adminUsers = users.filter((user) => user.role === 'branch_admin');
 
   const submitNewAdmin = async () => {
     if (!nurseryId) return;
@@ -302,7 +302,7 @@ export function NurseryDetailPage() {
         updates: updatesByStatus[status],
       });
       toast.success(t('xoAdmin.nurseryDetail.statusUpdateSuccess'));
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Nursery status update failed:', error);
       toast.error(t('xoAdmin.nurseryDetail.statusUpdateError'));
     }

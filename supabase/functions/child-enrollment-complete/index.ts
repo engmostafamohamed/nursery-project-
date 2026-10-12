@@ -159,7 +159,7 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'Forbidden' }, 403);
     }
 
-    let fatherId = body.father?.mobile ? await ensureParentUser(admin, body.nursery_id, body.father) : null;
+    const fatherId = body.father?.mobile ? await ensureParentUser(admin, body.nursery_id, body.father) : null;
     let motherId = body.mother?.mobile ? await ensureParentUser(admin, body.nursery_id, body.mother) : null;
     if (fatherId && motherId && fatherId === motherId) {
       motherId = null;

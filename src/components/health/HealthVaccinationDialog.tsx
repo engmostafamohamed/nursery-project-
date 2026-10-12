@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -44,22 +44,26 @@ export function HealthVaccinationDialog({ open, onOpenChange, initial, onSubmit,
   const { t } = useTranslation();
   const [fields, setFields] = useState<Fields>(DEFAULT_FIELDS);
 
-  useEffect(() => {
-    if (!open) return;
-    setFields(
-      initial
-        ? {
-            preset: 'other',
-            customName: initial.vaccine_name,
-            dose_number: initial.dose_number,
-            date_administered: initial.date_administered ?? '',
-            next_due_date: initial.next_due_date ?? '',
-            administered_by: initial.administered_by ?? '',
-            batch_number: initial.batch_number ?? '',
-          }
-        : DEFAULT_FIELDS,
-    );
-  }, [open, initial]);
+  // Reset the fields each time the dialog opens, or opens for another record.
+  const [filledFor, setFilledFor] = useState<{ open: boolean; initial: typeof initial } | null>(null);
+  if (filledFor?.open !== open || filledFor?.initial !== initial) {
+    setFilledFor({ open, initial });
+    if (open) {
+      setFields(
+        initial
+          ? {
+              preset: 'other',
+              customName: initial.vaccine_name,
+              dose_number: initial.dose_number,
+              date_administered: initial.date_administered ?? '',
+              next_due_date: initial.next_due_date ?? '',
+              administered_by: initial.administered_by ?? '',
+              batch_number: initial.batch_number ?? '',
+            }
+          : DEFAULT_FIELDS,
+      );
+    }
+  }
 
   const set = <K extends keyof Fields>(key: K, value: Fields[K]) =>
     setFields((prev) => ({ ...prev, [key]: value }));

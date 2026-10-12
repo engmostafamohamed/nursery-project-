@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -84,16 +84,18 @@ export function AdminClassDetailPage() {
   const [capacity, setCapacity] = useState('');
   const [leadId, setLeadId] = useState('');
 
-  useEffect(() => {
+  // Refill the form whenever a new copy of the class arrives.
+  const [filledFrom, setFilledFrom] = useState<typeof classQuery.data>(undefined);
+  if (classQuery.data && classQuery.data !== filledFrom) {
     const c = classQuery.data;
-    if (!c) return;
+    setFilledFrom(c);
     setNameAr(c.name_ar ?? '');
     setNameEn(c.name_en ?? '');
     setGradeLevel(c.grade_level ?? '');
     setRoomNumber(c.room_number ?? '');
     setCapacity(c.capacity != null ? String(c.capacity) : '');
     setLeadId(c.lead?.id ?? '');
-  }, [classQuery.data]);
+  }
 
   // Pickers.
   const [assistantPick, setAssistantPick] = useState('');

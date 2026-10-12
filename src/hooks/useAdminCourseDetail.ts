@@ -2,6 +2,17 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
 import { supabase } from '@/lib/supabase';
+import type {
+  ChildrenRow,
+  CourseEnrollmentsRow,
+  CourseInvoicesRow,
+  CoursesRow,
+  ParentChildrenRow,
+  UsersRow,
+} from '@/types/tables';
+
+type ChildNameRow = Pick<ChildrenRow, 'id' | 'full_name_en' | 'full_name_ar'>;
+type UserNameRow = Pick<UsersRow, 'id' | 'name_en' | 'name_ar'>;
 
 export const adminCourseDetailQueryKey = (courseId: string | null | undefined) =>
   ['admin-course-detail', courseId] as const;
@@ -72,22 +83,23 @@ export function useAdminCourseDetail(courseId: string | null | undefined) {
     queryKey: key,
     queryFn: async (): Promise<CourseDetailRow | null> => {
       if (!courseId) return null;
-      const { data, error } = await supabase
+      const { data: row, error } = await supabase
         .from('courses')
         .select('*')
         .eq('id', courseId)
         .maybeSingle();
       if (error) throw error;
+      const data = row as CoursesRow | null;
       if (!data) return null;
 
-      let teacher: { name_en: string | null; name_ar: string | null } | null = null;
+      let teacher: Pick<UsersRow, 'name_en' | 'name_ar'> | null = null;
       if (data.teacher_user_id) {
         const { data: u } = await supabase
           .from('users')
           .select('name_en, name_ar')
           .eq('id', data.teacher_user_id)
           .maybeSingle();
-        teacher = u ?? null;
+        teacher = (u as Pick<UsersRow, 'name_en' | 'name_ar'> | null) ?? null;
       }
 
       return {
@@ -122,13 +134,17 @@ export function useAdminCourseEnrollments(courseId: string | null | undefined) {
     queryFn: async (): Promise<CourseEnrollmentRow[]> => {
       if (!courseId) return [];
 
-      const { data: enrollments, error } = await supabase
+      const { data: enrollmentData, error } = await supabase
         .from('course_enrollments')
         .select('id, course_id, child_id, status, enrolled_at, unenrolled_at')
         .eq('course_id', courseId)
         .order('enrolled_at', { ascending: false });
       if (error) throw error;
-      if (!enrollments || enrollments.length === 0) return [];
+      const enrollments = (enrollmentData ?? []) as Pick<
+        CourseEnrollmentsRow,
+        'id' | 'course_id' | 'child_id' | 'status' | 'enrolled_at' | 'unenrolled_at'
+      >[];
+      if (enrollments.length === 0) return [];
 
       const childIds = enrollments.map((e) => e.child_id);
       const { data: children } = await supabase
@@ -136,19 +152,20 @@ export function useAdminCourseEnrollments(courseId: string | null | undefined) {
         .select('id, full_name_en, full_name_ar')
         .in('id', childIds);
 
-      const { data: parentLinks } = await supabase
+      const { data: linkData } = await supabase
         .from('parent_children')
         .select('child_id, parent_id')
         .in('child_id', childIds);
+      const parentLinks = (linkData ?? []) as Pick<ParentChildrenRow, 'child_id' | 'parent_id'>[];
 
-      const parentIds = [...new Set((parentLinks ?? []).map((p) => p.parent_id))];
+      const parentIds = [...new Set(parentLinks.map((p) => p.parent_id))];
       const { data: parents } = parentIds.length
         ? await supabase.from('users').select('id, name_en, name_ar').in('id', parentIds)
-        : Promise.resolve({ data: [], error: null });
+        : { data: [] };
 
-      const childMap = new Map((children ?? []).map((c) => [c.id, c]));
-      const parentLinkMap = new Map((parentLinks ?? []).map((p) => [p.child_id, p.parent_id]));
-      const parentMap = new Map((parents ?? []).map((p) => [p.id, p]));
+      const childMap = new Map(((children ?? []) as ChildNameRow[]).map((c) => [c.id, c]));
+      const parentLinkMap = new Map(parentLinks.map((p) => [p.child_id, p.parent_id]));
+      const parentMap = new Map(((parents ?? []) as UserNameRow[]).map((p) => [p.id, p]));
 
       return enrollments.map((e) => {
         const child = childMap.get(e.child_id);
@@ -190,13 +207,14 @@ export function useAdminCourseInvoices(courseId: string | null | undefined) {
     queryFn: async (): Promise<CourseInvoiceRow[]> => {
       if (!courseId) return [];
 
-      const { data: invoices, error } = await supabase
+      const { data: invoiceData, error } = await supabase
         .from('course_invoices')
         .select('id, course_id, enrollment_id, child_id, billing_month, amount, currency, status, due_date, paid_at, invoice_number, notes')
         .eq('course_id', courseId)
         .order('billing_month', { ascending: false });
       if (error) throw error;
-      if (!invoices || invoices.length === 0) return [];
+      const invoices = (invoiceData ?? []) as Omit<CourseInvoicesRow, 'nursery_id' | 'created_at' | 'updated_at'>[];
+      if (invoices.length === 0) return [];
 
       const childIds = [...new Set(invoices.map((i) => i.child_id))];
       const { data: children } = await supabase
@@ -204,7 +222,7 @@ export function useAdminCourseInvoices(courseId: string | null | undefined) {
         .select('id, full_name_en, full_name_ar')
         .in('id', childIds);
 
-      const childMap = new Map((children ?? []).map((c) => [c.id, c]));
+      const childMap = new Map(((children ?? []) as ChildNameRow[]).map((c) => [c.id, c]));
 
       return invoices.map((inv) => {
         const child = childMap.get(inv.child_id);

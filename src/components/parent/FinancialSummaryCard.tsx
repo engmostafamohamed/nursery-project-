@@ -5,7 +5,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useParentInvoices } from '@/hooks/useParentInvoices';
-import { useParentChildren, type ChildOption } from '@/components/parent/ChildSelector';
+import { useParentChildren, type ChildOption } from '@/hooks/useParentChildren';
 import { formatDate } from '@/lib/datetime';
 
 type ChildBreakdown = {

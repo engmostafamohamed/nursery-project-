@@ -15,7 +15,8 @@ import {
   YAxis,
 } from 'recharts';
 
-import { ChildSelector, useParentChildren } from '@/components/parent/ChildSelector';
+import { ChildSelector } from '@/components/parent/ChildSelector';
+import { useParentChildren } from '@/hooks/useParentChildren';
 import { ReportAbsencePanel } from '@/components/parent/ReportAbsencePanel';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FilterMenu, type FilterMenuOption } from '@/components/ui/FilterMenu';

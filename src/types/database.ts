@@ -71,6 +71,9 @@ import type {
   PostsRow,
   PostCommentsRow,
   ContentLibraryRow,
+  CoursesRow,
+  CourseEnrollmentsRow,
+  CourseInvoicesRow,
   UsersRow,
   UserPushSubscriptionsRow,
 } from './tables';
@@ -164,6 +167,9 @@ export type Database = {
       posts: TableModel<PostsRow>;
       post_comments: TableModel<PostCommentsRow>;
       content_library: TableModel<ContentLibraryRow>;
+      courses: TableModel<CoursesRow>;
+      course_enrollments: TableModel<CourseEnrollmentsRow>;
+      course_invoices: TableModel<CourseInvoicesRow>;
       users: TableModel<UsersRow>;
       user_push_subscriptions: TableModel<UserPushSubscriptionsRow>;
     };

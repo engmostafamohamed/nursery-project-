@@ -108,7 +108,7 @@ const main = async (): Promise<void> => {
   const parentNames = ['محمد علي','أحمد عمر','خالد يوسف','مصطفى هشام','طارق نادر','رامي عادل','أمجد صلاح','حسام نبيل','يوسف فؤاد','مروان سمير','محمود جابر','شريف مدحت','سعيد عبد الله','كريم رفعت','وائل أشرف','مها سامي','سارة أيمن','هبة خالد','نجلاء سامح','دينا نادر','منة الله عادل','ريم مصطفى','ياسمين طارق','نورهان أحمد','إيمان رفعت'];
   const parents = parentNames.map((name, i) => ({ role: 'parent', name_ar: name, name_en: `Parent ${i + 1}`, email: `parent${i + 1}@demo-ls.eg`, phone: `+20105555${String(100 + i)}` }));
   const userSeeds = [admin, ...teachers, ...staff, ...parents];
-  let authByEmail = await buildAuthEmailToIdMap(supabase);
+  const authByEmail = await buildAuthEmailToIdMap(supabase);
   const withIds = [] as Array<{ id: string; role: string; name_ar: string; name_en: string; email: string; phone: string }>;
   for (const u of userSeeds) {
     const key = u.email.toLowerCase();

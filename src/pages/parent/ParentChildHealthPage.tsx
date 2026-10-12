@@ -38,12 +38,13 @@ export function ParentChildHealthPage() {
     toast.message(t('health.toast.printReady'));
   }, [t]);
 
+  const childNurseryId = q.data?.child.nursery_id;
   const submitRequest = useCallback(async () => {
-    if (!childId || !q.data?.child.nursery_id) return;
+    if (!childId || !childNurseryId) return;
     try {
       await requestUpdate.mutateAsync({
         childId,
-        nurseryId: q.data.child.nursery_id,
+        nurseryId: childNurseryId,
         notes: notes.trim(),
       });
       setNotes('');
@@ -51,7 +52,7 @@ export function ParentChildHealthPage() {
     } catch (e) {
       toast.error(`${t('health.toast.error')} ${formatQueryError(e)}`);
     }
-  }, [childId, q.data?.child.nursery_id, notes, requestUpdate, t]);
+  }, [childId, childNurseryId, notes, requestUpdate, t]);
 
   if (q.isLoading) return <LoadingSkeleton />;
   if (q.isError || !q.data) {

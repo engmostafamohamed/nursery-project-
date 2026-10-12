@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-import { ChildSelector, useParentChildren } from '@/components/parent/ChildSelector';
+import { ChildSelector } from '@/components/parent/ChildSelector';
+import { useParentChildren } from '@/hooks/useParentChildren';
 import { InvoiceCard } from '@/components/parent/InvoiceCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import {

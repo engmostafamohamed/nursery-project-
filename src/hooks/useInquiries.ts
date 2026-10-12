@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { templateNotificationRow } from '@/lib/notificationText';
@@ -132,7 +132,7 @@ export function useInquiries(nurseryId?: string, filters?: InquiryFilters) {
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['admin-inquiries'] }),
   });
 
-  const nowMs = useMemo(() => Date.now(), []);
+  const [nowMs] = useState(() => Date.now());
   const stats = useMemo(() => {
     const rows = adminQuery.data ?? [];
     const weekAgo = nowMs - 7 * 24 * 3600 * 1000;

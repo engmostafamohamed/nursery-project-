@@ -108,18 +108,7 @@ async function createDemoAccounts() {
 
   for (const account of demoAccounts) {
     try {
-      const { data: existingUser, error: existingError } = await supabase.auth.admin.listUsers({
-        page: 1,
-        perPage: 1,
-        email: account.email,
-      } as any);
-
-      if (existingError) {
-        console.error(`❌ Failed to check existing user for ${account.email}:`, existingError.message);
-      } else if (existingUser?.users?.length) {
-        console.log(`ℹ️ Auth user already exists for ${account.email}, skipping auth creation.`);
-      }
-
+      // An existing account makes createUser fail with "already registered", which is reported below.
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email: account.email,
         password: DEMO_PASSWORD,

@@ -84,7 +84,7 @@ export function ParentReportDetailModal({ open, report, reaction, onOpenChange, 
                 {t('parent.reports.sections.nap')}
               </p>
               <p className="text-sm">
-                {t('parent.reports.nap.napped')}: {Boolean(report.nap.napped) ? t('common.yes') : t('common.no')}
+                {t('parent.reports.nap.napped')}: {report.nap.napped ? t('common.yes') : t('common.no')}
               </p>
               <p className="text-sm">
                 {t('parent.reports.nap.duration')}: {Number(report.nap.duration_minutes ?? 0)} {t('parent.reports.minutes')}

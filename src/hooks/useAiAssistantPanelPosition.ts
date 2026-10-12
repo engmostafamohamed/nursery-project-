@@ -66,14 +66,12 @@ export function useAiAssistantPanelPosition(userId: string, aiOpen: boolean) {
   const [position, setPosition] = useState<AiPanelPoint>(() =>
     typeof window === 'undefined' ? { x: 0, y: 0 } : loadSavedPosition(storageKeyForUser(userId)),
   );
-  const prevUserIdRef = useRef(userId);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (prevUserIdRef.current === userId) return;
-    prevUserIdRef.current = userId;
-    setPosition(loadSavedPosition(storageKeyForUser(userId)));
-  }, [userId]);
+  // Each user has their own saved position; load it when the user changes.
+  const [positionUserId, setPositionUserId] = useState(userId);
+  if (positionUserId !== userId) {
+    setPositionUserId(userId);
+    if (typeof window !== 'undefined') setPosition(loadSavedPosition(storageKeyForUser(userId)));
+  }
   const [isDesktop, setIsDesktop] = useState(
     () => typeof window !== 'undefined' && window.matchMedia(`(min-width: ${MD_MIN_WIDTH}px)`).matches,
   );

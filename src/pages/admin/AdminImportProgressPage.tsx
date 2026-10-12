@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -19,32 +19,19 @@ interface ImportJob {
 export function AdminImportProgressPage() {
   const { jobId } = useParams();
   const navigate = useNavigate();
-  const [job, setJob] = useState<ImportJob | null>(null);
-  const [progress, setProgress] = useState(0);
-
-  const loadJobStatus = useCallback(async () => {
-    if (!jobId) return;
-
-    const { data } = await (supabase as any)
-      .from('import_jobs')
-      .select('*')
-      .eq('id', jobId)
-      .single();
-
-    if (data) {
-      setJob(data as ImportJob);
-      const percent = data.total_rows > 0
-        ? Math.round((data.processed_rows / data.total_rows) * 100)
-        : 0;
-      setProgress(percent);
-    }
-  }, [jobId]);
-
-  useEffect(() => {
-    loadJobStatus();
-    const interval = setInterval(loadJobStatus, 1000);
-    return () => clearInterval(interval);
-  }, [loadJobStatus]);
+  // Poll every second until the import finishes.
+  const { data: job } = useQuery({
+    queryKey: ['import-job', jobId],
+    enabled: Boolean(jobId),
+    queryFn: async (): Promise<ImportJob> => {
+      const { data, error } = await supabase.from('import_jobs').select('*').eq('id', jobId as string).single();
+      if (error) throw error;
+      return data as ImportJob;
+    },
+    refetchInterval: (query) =>
+      query.state.data?.status === 'completed' || query.state.data?.status === 'failed' ? false : 1000,
+  });
+  const progress = job && job.total_rows > 0 ? Math.round((job.processed_rows / job.total_rows) * 100) : 0;
 
   if (!job) {
     return (

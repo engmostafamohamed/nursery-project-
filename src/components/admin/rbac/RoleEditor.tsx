@@ -14,28 +14,13 @@ import {
   useDeleteRole,
   useRoleFeatures,
   useSaveRole,
-  type RoleDepartment,
   type RoleRow,
-  type StaffBaseRole,
 } from '@/hooks/useRoles';
 
 import { PermissionGrid } from './PermissionGrid';
 import { draftFromRows, draftToGrants, sameDraft, type GrantDraft } from './permissionDraft';
 import { roleLabel } from './roleLabel';
-
-/** The role "type": which app its people use (teacher app or admin dashboard) and their department. */
-export type RoleType = 'teacher' | 'manager:operations' | 'manager:hr' | 'manager:finance';
-export const ROLE_TYPES: readonly RoleType[] = ['teacher', 'manager:operations', 'manager:hr', 'manager:finance'];
-
-export function roleTypeOf(role: Pick<RoleRow, 'base_role' | 'base_department'>): RoleType {
-  if (role.base_role === 'manager') return `manager:${role.base_department ?? 'operations'}` as RoleType;
-  return 'teacher';
-}
-
-function splitType(type: RoleType): { baseRole: StaffBaseRole; department: RoleDepartment | null } {
-  if (type === 'teacher') return { baseRole: 'teacher', department: null };
-  return { baseRole: 'manager', department: type.split(':')[1] as RoleDepartment };
-}
+import { ROLE_TYPES, roleTypeOf, splitRoleType, type RoleType } from './roleType';
 
 interface RoleEditorProps {
   /** null = a new role. */
@@ -151,7 +136,7 @@ function RoleForm({
     }
     busy.current = true;
     try {
-      const { baseRole, department } = splitType(type);
+      const { baseRole, department } = splitRoleType(type);
       const id = await saveRole.mutateAsync({
         roleId: role?.id ?? null,
         nurseryId,

@@ -14,7 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { fetchBroadcastDeliveryStats } from '@/lib/broadcastOps';
 import type { BroadcastMessagesRow } from '@/types/tables/batch3';
 
-import { CHANNEL_LABEL_KEY } from './BroadcastChannelCheckboxes';
+import { CHANNEL_LABEL_KEY } from './channelLabels';
 
 type Props = {
   open: boolean;

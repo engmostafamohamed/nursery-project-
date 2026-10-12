@@ -44,53 +44,48 @@ export function useApplicationDraft(
   furthestStepIndex: number,
   enabled: boolean = true,
 ) {
-  const [state, setState] = useState<AutosaveState>('idle');
+  // RHF returns a new values object every render, so the draft is compared as text.
+  const valuesJson = JSON.stringify(values);
+  const snapshot = `${valuesJson}|${currentStepIndex}|${furthestStepIndex}`;
+  // The outcome of the last write and the snapshot it wrote; anything newer is still "saving".
+  const [result, setResult] = useState<{ snapshot: string; status: 'saved' | 'error' } | null>(null);
   const [savedAt, setSavedAt] = useState<number | null>(null);
-  const [agoSeconds, setAgoSeconds] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    if (!enabled) {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-      setState('idle');
-      return;
+  const write = useCallback(() => {
+    try {
+      const at = Date.now();
+      window.localStorage.setItem(DRAFT_STORAGE_KEY, valuesJson);
+      window.localStorage.setItem(
+        DRAFT_META_KEY,
+        JSON.stringify({
+          savedAt: at,
+          furthestStepIndex,
+          currentStepIndex,
+        } satisfies DraftMeta),
+      );
+      setSavedAt(at);
+      setNow(at);
+      setResult({ snapshot, status: 'saved' });
+    } catch {
+      setResult({ snapshot, status: 'error' });
     }
-    setState('saving');
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      try {
-        const now = Date.now();
-        window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(values));
-        window.localStorage.setItem(
-          DRAFT_META_KEY,
-          JSON.stringify({
-            savedAt: now,
-            furthestStepIndex,
-            currentStepIndex,
-          } satisfies DraftMeta),
-        );
-        setSavedAt(now);
-        setState('saved');
-      } catch {
-        setState('error');
-      }
-    }, DEBOUNCE_MS);
+  }, [valuesJson, snapshot, currentStepIndex, furthestStepIndex]);
 
+  useEffect(() => {
+    if (!enabled) return;
+    timerRef.current = setTimeout(write, DEBOUNCE_MS);
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = null;
     };
-    // Stringify values for a stable dependency; RHF returns a new object every render
-  }, [JSON.stringify(values), currentStepIndex, furthestStepIndex, enabled]);
+  }, [enabled, write]);
 
-  // Track a "seconds ago" indicator for UI
+  // Refresh the "saved N seconds ago" indicator.
   useEffect(() => {
     if (savedAt === null) return;
-    const update = () => setAgoSeconds(Math.max(0, Math.round((Date.now() - savedAt) / 1000)));
-    update();
-    const id = setInterval(update, 10_000);
+    const id = setInterval(() => setNow(Date.now()), 10_000);
     return () => clearInterval(id);
   }, [savedAt]);
 
@@ -99,23 +94,11 @@ export function useApplicationDraft(
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-    try {
-      const now = Date.now();
-      window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(values));
-      window.localStorage.setItem(
-        DRAFT_META_KEY,
-        JSON.stringify({
-          savedAt: now,
-          furthestStepIndex,
-          currentStepIndex,
-        } satisfies DraftMeta),
-      );
-      setSavedAt(now);
-      setState('saved');
-    } catch {
-      setState('error');
-    }
-  }, [values, currentStepIndex, furthestStepIndex]);
+    write();
+  }, [write]);
+
+  const state: AutosaveState = !enabled ? 'idle' : result?.snapshot === snapshot ? result.status : 'saving';
+  const agoSeconds = savedAt === null ? null : Math.max(0, Math.round((now - savedAt) / 1000));
 
   return { state, savedAt, agoSeconds, flush };
 }

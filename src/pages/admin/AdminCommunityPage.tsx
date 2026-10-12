@@ -55,8 +55,8 @@ export function AdminCommunityPage() {
               <p className="font-medium">{String(post.title)}</p>
               <div className="flex gap-2">
                 <span className="text-xs text-on-surface-variant">{t(`community.postTypes.${String(post.post_type)}`)}</span>
-                {Boolean(post.pinned) ? <span className="text-xs text-secondary">{t('community.pinned')}</span> : null}
-                <Button size="sm" variant="outline" onClick={() => void community.updatePost({ id: String(post.id), updates: { pinned: !Boolean(post.pinned) } })}>{t('community.togglePin')}</Button>
+                {post.pinned ? <span className="text-xs text-secondary">{t('community.pinned')}</span> : null}
+                <Button size="sm" variant="outline" onClick={() => void community.updatePost({ id: String(post.id), updates: { pinned: !post.pinned } })}>{t('community.togglePin')}</Button>
               </div>
             </div>
             <p className="mt-1 text-sm text-on-surface-variant">{String(post.content)}</p>

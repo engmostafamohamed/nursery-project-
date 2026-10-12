@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
@@ -53,12 +53,12 @@ function invoiceOrder(sort: AdminInvoiceSort): { column: string; ascending: bool
 }
 
 export function useAdminInvoices(params: UseAdminInvoicesParams) {
-  const [page, setPage] = useState(1);
   const pageSize = 50;
-
-  useEffect(() => {
-    setPage(1);
-  }, [params.dateField, params.fromDate, params.search, params.sort, params.status, params.toDate, params.type]);
+  // Changing any filter starts again from the first page.
+  const filterKey = JSON.stringify([params.dateField, params.fromDate, params.search, params.sort, params.status, params.toDate, params.type]);
+  const [paging, setPaging] = useState({ filterKey, page: 1 });
+  const page = paging.filterKey === filterKey ? paging.page : 1;
+  const setPage = (next: number) => setPaging({ filterKey, page: next });
 
   const query = useQuery({
     queryKey: ['admin-invoices', params, page],

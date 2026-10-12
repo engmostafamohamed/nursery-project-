@@ -92,7 +92,7 @@ export function OnboardingDetailsPage() {
       }
 
       navigate(`/admin/onboarding/hours${qs}`);
-    } catch (error) {
+    } catch {
       toast.error(t('onboarding.errors.saveFailed'));
     } finally {
       setSubmitting(false);

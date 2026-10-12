@@ -34,10 +34,10 @@ export function useStaffIdentityExists(
   return useQuery<StaffIdentityCheckResult>({
     queryKey: ['staff-identity-exists', emailValue.toLowerCase(), mobileValue.replace(/\D/g, '')],
     queryFn: async (): Promise<StaffIdentityCheckResult> => {
-      const { data, error } = await supabase.rpc('check_staff_identity_exists', {
+      const { data, error } = await supabase.rpc('check_staff_identity_exists' as never, {
         p_email: emailValue || null,
         p_mobile: mobileValue || null,
-      });
+      } as never);
       if (error) throw error;
       const row = (data as Array<{ email_taken: boolean; mobile_taken: boolean }>)?.[0];
       return {

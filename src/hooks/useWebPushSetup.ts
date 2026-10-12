@@ -37,10 +37,12 @@ export function useWebPushSetup(userId: string | undefined) {
   const queueRef = useRef<AttendancePayload[]>([]);
   const timeoutRef = useRef<number | null>(null);
 
-  useEffect(() => {
-    if (!userId) return;
+  // Decide once per signed-in user whether to offer push notifications.
+  const [promptCheckedFor, setPromptCheckedFor] = useState<string | undefined>(undefined);
+  if (userId && userId !== promptCheckedFor) {
+    setPromptCheckedFor(userId);
     setShowPrompt(shouldShowPushPrompt());
-  }, [userId]);
+  }
 
   useEffect(() => {
     if (!userId) return;

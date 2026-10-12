@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { confirm } from '@/components/ui/confirm';
@@ -21,7 +21,6 @@ import {
   type CourseEnrollmentRow,
   type CourseInvoiceRow,
 } from '@/hooks/useAdminCourseDetail';
-import { nurseryChildrenPickerQueryKey } from '@/hooks/useNurseryChildrenPicker';
 import { useNurseryChildrenPicker } from '@/hooks/useNurseryChildrenPicker';
 import { supabase } from '@/lib/supabase';
 

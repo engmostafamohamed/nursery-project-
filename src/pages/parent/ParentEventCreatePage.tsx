@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -39,7 +39,7 @@ export function ParentEventCreatePage() {
   const { user } = useAuthSession();
   const profileQuery = useUserProfile(user?.id);
 
-  const startDefault = useMemo(() => new Date(Date.now() + 60 * 60 * 1000), []);
+  const [startDefault] = useState(() => new Date(Date.now() + 60 * 60 * 1000));
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');

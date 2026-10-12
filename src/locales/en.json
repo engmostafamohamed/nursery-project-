@@ -436,7 +436,23 @@
   "nav": {
     "language": "Language"
   },
-  "auth": {
+  "auth": {
+
+    "showPassword": "Show password",
+
+    "hidePassword": "Hide password",
+
+    "passwordRecoveryContact": "Password reset contact",
+
+    "passwordRecoveryContactEmpty": "Add a parent's phone or email first",
+
+    "recoveryFatherEmail": "Father's email",
+
+    "recoveryFatherMobile": "Father's mobile",
+
+    "recoveryMotherEmail": "Mother's email",
+
+    "recoveryMotherMobile": "Mother's mobile",
     "loginTitle": "Sign in",
     "loginSubtitle": "Manage your nursery operations in one place",
     "email": "Email",
@@ -3309,7 +3325,9 @@
       "openMedia": "Open media",
       "noMediaToday": "No photos uploaded today. Tap to upload."
     },
-    "nav": {
+    "nav": {
+
+      "community": "Community",
       "bottomBarLabel": "Teacher app main sections",
       "home": "Home",
       "inbox": "Inbox",
@@ -6404,6 +6422,16 @@
     "childDob": "Date of Birth",
     "childNationality": "Nationality",
     "fatherInfo": "Father Information",
+    "father": "Father",
+    "mother": "Mother",
+    "sendsExtraSnacks": "Sends extra snacks",
+    "snackType": "Snack type",
+    "unfinishedSnackAction": "If the snack is not finished",
+    "nurseryMealsPreference": "Nursery meals preference",
+    "timeBetweenMeals": "Time between meals",
+    "waterPreference": "Water preference",
+    "extraMealPreference": "Extra meals preference",
+    "diaperChangeSchedule": "Diaper change schedule",
     "fatherFullName": "Father Full Name",
     "fatherJob": "Father Occupation",
     "fatherMobile": "Father Mobile",
@@ -6632,5 +6660,160 @@
     "acceptMineralWater": "Do you accept to offer your child mineral water when needed?",
     "vitaminDetails": "If yes, please specify time and dosage",
     "vitaminDetailsHint": "e.g. one spoon after lunch, 1 pm"
+  },
+  "rbac": {
+    "page": {
+      "title": "Roles & permissions",
+      "subtitle": "Each role decides which parts of the app your staff can open and what they can do there. Admins always have every permission.",
+      "templatesHint": "Platform templates: every new nursery starts with a copy of these roles. Changes here do not affect nurseries that already exist.",
+      "scopeNursery": "This nursery",
+      "scopeTemplates": "Platform templates",
+      "noNursery": "Choose a nursery first to manage its roles.",
+      "readOnly": "You can view roles here, but only the nursery admin can change them.",
+      "loadError": "Roles could not be loaded. Check your connection and try again.",
+      "selectHint": "Choose a role from the list to see or change its permissions.",
+      "listTitle": "Roles ({{total}})",
+      "newRole": "New role",
+      "empty": "No staff roles yet.",
+      "usersCount_one": "{{count}} person",
+      "usersCount_other": "{{count}} people",
+      "discardTitle": "Discard your changes?",
+      "discardBody": "You have changes to this role that are not saved yet.",
+      "discardConfirm": "Discard"
+    },
+    "editor": {
+      "newTitle": "New role",
+      "newHint": "Name the role, choose its type, then pick what it can do.",
+      "usersOnRole_one": "{{count}} staff member has this role",
+      "usersOnRole_other": "{{count}} staff members have this role",
+      "systemBadge": "Built-in",
+      "systemHint": "This is a built-in role. You can rename it and change its permissions, but not its type or delete it.",
+      "nameAr": "Name (Arabic)",
+      "nameEn": "Name (English)",
+      "nameRequired": "Enter a name in Arabic or English.",
+      "type": "Role type",
+      "typeHint": "Teachers use the teacher app; managers use the admin dashboard. The department decides which data a manager can reach.",
+      "permissions": "Permissions",
+      "permissionsHint": "Turn on the actions this role may take in each part of the app. Any action also allows viewing.",
+      "unsaved": "Unsaved changes",
+      "allSaved": "All changes saved",
+      "delete": "Delete role",
+      "discard": "Discard changes",
+      "saving": "Saving…",
+      "create": "Create role",
+      "save": "Save changes",
+      "deleteTitle": "Delete this role?",
+      "deleteBody": "\"{{name}}\" will be deleted. This cannot be undone.",
+      "typeChangeTitle": "Change the role type?",
+      "typeChangeBody_one": "{{count}} staff member has this role and will move to the app for the new type.",
+      "typeChangeBody_other": "{{count}} staff members have this role and will move to the app for the new type."
+    },
+    "grid": {
+      "summary_one": "{{count}} of {{total}} modules allowed",
+      "summary_other": "{{count}} of {{total}} modules allowed",
+      "search": "Search modules",
+      "noMatch": "No module matches your search.",
+      "clearAll": "Clear all",
+      "selectAll": "Allow all",
+      "requiresApproval": "Needs approval"
+    },
+    "actions": {
+      "view": "View",
+      "create": "Add",
+      "update": "Edit",
+      "delete": "Delete",
+      "approve": "Approve",
+      "export": "Export"
+    },
+    "categories": {
+      "operations": "Daily operations",
+      "children": "Children",
+      "staff": "Staff",
+      "finance": "Finance",
+      "communication": "Communication",
+      "content": "Content",
+      "settings": "Settings",
+      "other": "Other"
+    },
+    "types": {
+      "teacher": "Teacher",
+      "manager_operations": "Manager — operations",
+      "manager_hr": "Manager — HR",
+      "manager_finance": "Manager — finance"
+    },
+    "systemRoles": {
+      "teacher": "Teacher",
+      "manager_operations": "Operations manager",
+      "manager_hr": "HR manager",
+      "manager_finance": "Finance manager",
+      "branch_admin": "Branch admin",
+      "chain_admin": "Chain admin",
+      "super_admin": "Super admin",
+      "parent": "Parent"
+    },
+    "features": {
+      "dashboard_attendance": "Attendance",
+      "qr_scanner": "QR scanner",
+      "classes": "Classes",
+      "event_calendar": "Events calendar",
+      "daily_reports": "Daily reports",
+      "meals": "Meals",
+      "inventory": "Inventory",
+      "kids_applications": "Children & applications",
+      "child_enrollment": "Child enrollment",
+      "admissions": "Admissions",
+      "health_alerts": "Health alerts",
+      "permissions": "Permission slips",
+      "qr_code": "QR codes",
+      "staff": "Staff",
+      "staff_onboarding": "Staff onboarding",
+      "payroll": "Payroll",
+      "dashboard_finance": "Financial overview",
+      "invoices": "Invoices",
+      "payments": "Payments",
+      "financial_reports": "Financial reports",
+      "packages": "Packages",
+      "deals": "Deals & discounts",
+      "loyalty": "Loyalty",
+      "newsfeed": "Newsfeed",
+      "notifications": "Notifications",
+      "messages": "Messages",
+      "chat": "Chat",
+      "broadcast_messages": "Broadcasts",
+      "surveys": "Surveys",
+      "community": "Community",
+      "media_library": "Media library",
+      "upload_media": "Upload media",
+      "content_library": "Content library",
+      "courses": "Courses",
+      "settings": "Settings",
+      "roles_permissions": "Roles & permissions"
+    },
+    "toast": {
+      "created": "Role created",
+      "saved": "Role saved",
+      "deleted": "Role deleted"
+    },
+    "errors": {
+      "generic": "Something went wrong. Please try again.",
+      "loadGrants": "This role's permissions could not be loaded. Please try again.",
+      "rbac_role_not_found": "This role no longer exists. Refresh the page.",
+      "rbac_forbidden": "You are not allowed to change roles for this nursery.",
+      "rbac_name_required": "Enter a name in Arabic or English.",
+      "rbac_invalid_base_role": "Choose a valid role type.",
+      "rbac_invalid_grants": "The permissions could not be saved. Please try again.",
+      "rbac_system_role_type_locked": "The type of a built-in role cannot be changed.",
+      "rbac_system_role_locked": "Built-in roles cannot be deleted.",
+      "rbac_unknown_feature": "One of the modules no longer exists. Refresh the page and try again.",
+      "rbac_role_in_use": "Move everyone off this role before deleting it.",
+      "rbac_cannot_change_own_role": "You cannot change your own role.",
+      "rbac_user_not_staff": "Only managers and teachers can be given a role.",
+      "rbac_role_wrong_nursery": "This role belongs to another nursery.",
+      "rbac_user_not_found": "This staff member no longer exists."
+    },
+    "noAccess": {
+      "title": "No access",
+      "body": "Your role does not include \"{{feature}}\". Ask your nursery admin if you need it."
+    }
   }
 }

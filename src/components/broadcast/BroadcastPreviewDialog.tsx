@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import type { BroadcastChannel } from '@/types/tables/batch3';
 
-import { CHANNEL_LABEL_KEY } from './BroadcastChannelCheckboxes';
+import { CHANNEL_LABEL_KEY } from './channelLabels';
 
 type Props = {
   open: boolean;

@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
-import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import type { AnswersMap, FormQuestion, QuestionType, SurveyType } from '@/types/survey';

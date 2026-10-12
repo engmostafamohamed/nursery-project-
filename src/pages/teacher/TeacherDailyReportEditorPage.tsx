@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -53,15 +54,26 @@ export function TeacherDailyReportEditorPage() {
     [reports.children, i18n.language],
   );
 
-  const loadExisting = useCallback(async (childId: string, date: string) => {
-    const row = await loadDailyReport(childId, date);
-    setForm((prev) => hydrateDailyReportFormFromRow(row, { ...prev, childId, reportDate: date }));
-  }, []);
+  // The saved report for this child and date, read fresh each time the editor opens it.
+  const existing = useQuery({
+    queryKey: ['teacher-daily-report-editor', childIdParam, dateParam],
+    enabled: validParams && childAllowed,
+    queryFn: () => loadDailyReport(childIdParam as string, dateParam as string),
+    gcTime: 0,
+    refetchOnReconnect: false,
+  });
 
-  useEffect(() => {
-    if (!validParams || !childIdParam || !dateParam || !childAllowed) return;
-    void loadExisting(childIdParam, dateParam);
-  }, [validParams, childIdParam, dateParam, childAllowed, loadExisting]);
+  // Fill the form once per child and date. Later refetches (live updates refresh every query)
+  // must not overwrite what the teacher is typing.
+  const loadedKey = `${childIdParam}|${dateParam}`;
+  const [filledKey, setFilledKey] = useState<string | null>(null);
+  if (existing.isSuccess && filledKey !== loadedKey) {
+    const row = existing.data;
+    setFilledKey(loadedKey);
+    setForm((prev) =>
+      hydrateDailyReportFormFromRow(row, { ...prev, childId: childIdParam as string, reportDate: dateParam as string }),
+    );
+  }
 
   const validate = () => {
     if (!form.childId) {

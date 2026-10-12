@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
+import type { ChildrenRow, CourseEnrollmentsRow, CoursesRow } from '@/types/tables';
 
 export type TeacherCourseRow = {
   id: string;
@@ -38,14 +39,15 @@ export function useTeacherCourses(userId: string | undefined) {
     queryFn: async (): Promise<TeacherCourseRow[]> => {
       if (!userId) return [];
 
-      const { data: courses, error } = await supabase
+      const { data: courseData, error } = await supabase
         .from('courses')
         .select('id, title_ar, title_en, description_ar, description_en, category, price_per_month, schedule_days, schedule_time_start, schedule_time_end, starts_on, ends_on, status')
         .eq('teacher_user_id', userId)
         .neq('status', 'cancelled')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      if (!courses || courses.length === 0) return [];
+      const courses = (courseData ?? []) as Omit<CoursesRow, 'nursery_id' | 'max_students' | 'teacher_user_id' | 'created_at' | 'updated_at'>[];
+      if (courses.length === 0) return [];
 
       const { data: enrollments } = await supabase
         .from('course_enrollments')
@@ -54,7 +56,7 @@ export function useTeacherCourses(userId: string | undefined) {
         .eq('status', 'active');
 
       const countMap = new Map<string, number>();
-      for (const e of enrollments ?? []) {
+      for (const e of (enrollments ?? []) as Pick<CourseEnrollmentsRow, 'course_id'>[]) {
         countMap.set(e.course_id, (countMap.get(e.course_id) ?? 0) + 1);
       }
 
@@ -89,14 +91,15 @@ export function useTeacherCourseEnrollees(courseId: string | null | undefined) {
     queryFn: async (): Promise<TeacherCourseEnrolleeRow[]> => {
       if (!courseId) return [];
 
-      const { data: enrollments, error } = await supabase
+      const { data: enrollmentData, error } = await supabase
         .from('course_enrollments')
         .select('id, child_id, status, enrolled_at')
         .eq('course_id', courseId)
         .eq('status', 'active')
         .order('enrolled_at', { ascending: true });
       if (error) throw error;
-      if (!enrollments || enrollments.length === 0) return [];
+      const enrollments = (enrollmentData ?? []) as Pick<CourseEnrollmentsRow, 'id' | 'child_id' | 'status' | 'enrolled_at'>[];
+      if (enrollments.length === 0) return [];
 
       const childIds = enrollments.map((e) => e.child_id);
       const { data: children } = await supabase
@@ -104,7 +107,9 @@ export function useTeacherCourseEnrollees(courseId: string | null | undefined) {
         .select('id, full_name_en, full_name_ar')
         .in('id', childIds);
 
-      const childMap = new Map((children ?? []).map((c) => [c.id, c]));
+      const childMap = new Map(
+        ((children ?? []) as Pick<ChildrenRow, 'id' | 'full_name_en' | 'full_name_ar'>[]).map((c) => [c.id, c]),
+      );
 
       return enrollments.map((e) => {
         const child = childMap.get(e.child_id);

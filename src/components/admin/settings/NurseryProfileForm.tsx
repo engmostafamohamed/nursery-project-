@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
@@ -59,8 +59,10 @@ export function NurseryProfileForm({ nurseryId }: Props) {
   const uploadLogo = useUploadNurseryLogo();
   const [draft, setDraft] = useState<NurseryProfileDraft>(EMPTY_DRAFT);
 
-  useEffect(() => {
-    if (!nursery) return;
+  // Refill the form whenever a new copy of the nursery arrives.
+  const [filledFrom, setFilledFrom] = useState<typeof nursery>(undefined);
+  if (nursery && nursery !== filledFrom) {
+    setFilledFrom(nursery);
     setDraft({
       name_ar: nursery.name_ar ?? '',
       name_en: nursery.name_en ?? '',
@@ -75,7 +77,7 @@ export function NurseryProfileForm({ nurseryId }: Props) {
       instagram_url: typeof nursery.instagram_url === 'string' ? nursery.instagram_url : '',
       tiktok_url: typeof nursery.tiktok_url === 'string' ? nursery.tiktok_url : '',
     });
-  }, [nursery]);
+  }
 
   const isBusy = updateNursery.isPending || uploadLogo.isPending;
   const logoUrl = nursery?.logo_url ?? '';

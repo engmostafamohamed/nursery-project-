@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -42,22 +42,26 @@ export function HealthMedicationDialog({ open, onOpenChange, initial, onSubmit, 
   const { t } = useTranslation();
   const [fields, setFields] = useState<Fields>(DEFAULT_FIELDS);
 
-  useEffect(() => {
-    if (!open) return;
-    setFields(
-      initial
-        ? {
-            name: initial.name,
-            dosage: initial.dosage ?? '',
-            administration_times: initial.administration_times ?? '',
-            administration_method: initial.administration_method,
-            storage_requirements: initial.storage_requirements ?? '',
-            expiry_date: initial.expiry_date ?? '',
-            parent_consent_status: initial.parent_consent_status,
-          }
-        : DEFAULT_FIELDS,
-    );
-  }, [open, initial]);
+  // Reset the fields each time the dialog opens, or opens for another record.
+  const [filledFor, setFilledFor] = useState<{ open: boolean; initial: typeof initial } | null>(null);
+  if (filledFor?.open !== open || filledFor?.initial !== initial) {
+    setFilledFor({ open, initial });
+    if (open) {
+      setFields(
+        initial
+          ? {
+              name: initial.name,
+              dosage: initial.dosage ?? '',
+              administration_times: initial.administration_times ?? '',
+              administration_method: initial.administration_method,
+              storage_requirements: initial.storage_requirements ?? '',
+              expiry_date: initial.expiry_date ?? '',
+              parent_consent_status: initial.parent_consent_status,
+            }
+          : DEFAULT_FIELDS,
+      );
+    }
+  }
 
   const set = <K extends keyof Fields>(key: K, value: Fields[K]) =>
     setFields((prev) => ({ ...prev, [key]: value }));

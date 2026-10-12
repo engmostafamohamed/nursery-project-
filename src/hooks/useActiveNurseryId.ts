@@ -19,7 +19,8 @@ import type { UserRow } from '@/types/user';
 export function useActiveNurseryId() {
   const queryClient = useQueryClient();
   const { user } = useAuthSession();
-  const { data: profile } = useUserProfile(user?.id);
+  const userId = user?.id;
+  const { data: profile } = useUserProfile(userId);
   const role = profile?.role ?? null;
   const profileNurseryId = profile?.nursery_id ?? null;
   const chainId = profile?.chain_id ?? null;
@@ -44,13 +45,13 @@ export function useActiveNurseryId() {
         }
       }
 
-      if (user?.id && isMultiNurseryAdmin) {
-        queryClient.setQueryData<UserRow | null>(['user-profile', user.id], (current) =>
+      if (userId && isMultiNurseryAdmin) {
+        queryClient.setQueryData<UserRow | null>(['user-profile', userId], (current) =>
           current ? { ...current, nursery_id: id } : current,
         );
       }
     },
-    [isMultiNurseryAdmin, queryClient, setSelectedNurseryId, user?.id],
+    [isMultiNurseryAdmin, queryClient, setSelectedNurseryId, userId],
   );
 
   // Resolve the active nursery id.

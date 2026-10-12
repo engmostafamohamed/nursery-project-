@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
+import type { CourseEnrollmentsRow, CoursesRow, UsersRow } from '@/types/tables';
 
 export const adminCoursesListQueryKey = (nurseryId: string | null | undefined) =>
   ['admin-courses-list', nurseryId] as const;
@@ -34,13 +35,17 @@ export function useAdminCoursesList(nurseryId: string | null | undefined) {
     queryFn: async (): Promise<AdminCoursesListRow[]> => {
       if (!nurseryId) return [];
 
-      const { data: courses, error } = await supabase
+      const { data: courseData, error } = await supabase
         .from('courses')
         .select('id, title_ar, title_en, category, price_per_month, max_students, starts_on, ends_on, status, teacher_user_id')
         .eq('nursery_id', nurseryId)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      if (!courses || courses.length === 0) return [];
+      const courses = (courseData ?? []) as Pick<
+        CoursesRow,
+        'id' | 'title_ar' | 'title_en' | 'category' | 'price_per_month' | 'max_students' | 'starts_on' | 'ends_on' | 'status' | 'teacher_user_id'
+      >[];
+      if (courses.length === 0) return [];
 
       const teacherIds = [...new Set(courses.map((c) => c.teacher_user_id).filter(Boolean))] as string[];
       const [teachersRes, enrollmentsRes] = await Promise.all([
@@ -55,10 +60,10 @@ export function useAdminCoursesList(nurseryId: string | null | undefined) {
       ]);
 
       const teacherMap = new Map(
-        (teachersRes.data ?? []).map((u) => [u.id, u]),
+        ((teachersRes.data ?? []) as Pick<UsersRow, 'id' | 'name_ar' | 'name_en'>[]).map((u) => [u.id, u]),
       );
       const countMap = new Map<string, number>();
-      for (const e of enrollmentsRes.data ?? []) {
+      for (const e of (enrollmentsRes.data ?? []) as Pick<CourseEnrollmentsRow, 'course_id'>[]) {
         countMap.set(e.course_id, (countMap.get(e.course_id) ?? 0) + 1);
       }
 

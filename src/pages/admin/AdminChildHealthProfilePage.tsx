@@ -54,8 +54,9 @@ export function AdminChildHealthProfilePage() {
     toast.message(t('health.toast.printReady'));
   }, [t]);
 
+  const childNurseryId = q.data?.child.nursery_id;
   const shareWithParents = useCallback(async () => {
-    if (!childId || !q.data?.child.nursery_id) return;
+    if (!childId || !childNurseryId) return;
     try {
       const ids = await fetchParentUserIdsForChild(childId);
       if (!ids.length) {
@@ -63,7 +64,7 @@ export function AdminChildHealthProfilePage() {
         return;
       }
       await notifyParentUsers({
-        nurseryId: q.data.child.nursery_id,
+        nurseryId: childNurseryId,
         parentUserIds: ids,
         type: 'child_health_shared',
         actionLink: `/parent/children/${childId}/health`,
@@ -72,7 +73,7 @@ export function AdminChildHealthProfilePage() {
     } catch {
       toast.error(t('health.toast.error'));
     }
-  }, [childId, q.data?.child.nursery_id, t]);
+  }, [childId, childNurseryId, t]);
 
   const saveOverview = useCallback(
     async (patch: Parameters<typeof updateRecord.mutateAsync>[0]) => {

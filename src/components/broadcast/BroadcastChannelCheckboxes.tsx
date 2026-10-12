@@ -4,14 +4,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import type { BroadcastChannel } from '@/types/tables/batch3';
 
-const ALL_CHANNELS: BroadcastChannel[] = ['in_app', 'whatsapp', 'sms', 'email'];
+import { CHANNEL_LABEL_KEY } from './channelLabels';
 
-export const CHANNEL_LABEL_KEY: Record<BroadcastChannel, string> = {
-  in_app: 'broadcastPage.channelInApp',
-  whatsapp: 'broadcastPage.channelWhatsapp',
-  sms: 'broadcastPage.channelSms',
-  email: 'broadcastPage.channelEmail',
-};
+const ALL_CHANNELS: BroadcastChannel[] = ['in_app', 'whatsapp', 'sms', 'email'];
 
 type Props = {
   value: BroadcastChannel[];

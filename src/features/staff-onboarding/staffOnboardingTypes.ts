@@ -55,7 +55,8 @@ export type StaffOnboardingFormValues = {
   newEmail: string;
   existingUserId: string;
   employeeId: string;
-  position: StaffPosition;
+  /** Position key from `public.positions`; the built-in keys are listed in {@link StaffPosition}. */
+  position: string;
   department: string;
   employmentType: StaffEmploymentUi;
   startDate: string;

@@ -149,7 +149,7 @@ export function useCreateNursery() {
       }
 
       const result = data as CreateNurseryResult | FunctionErrorPayload | null;
-      if (!result || 'error' in result) {
+      if (!result || !('nursery' in result)) {
         const message = result?.error_message || result?.error || 'create_nursery_failed';
         const err = new Error(message);
         (err as Error & { code?: string }).code = message;

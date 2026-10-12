@@ -48,12 +48,16 @@ export function ParentMediaGalleryPage() {
       .eq('read', false);
   }, [user?.id]);
 
-  useEffect(() => {
-    const id = searchParams.get('id');
-    if (!id || !media.media.length) return;
-    const found = media.media.find((m) => m.id === id);
-    if (found) setActiveItem(found);
-  }, [searchParams, media.media]);
+  // A link with ?id= opens that item once, as soon as the gallery has it.
+  const linkedId = searchParams.get('id');
+  const [openedLinkId, setOpenedLinkId] = useState<string | null>(null);
+  if (linkedId && linkedId !== openedLinkId) {
+    const found = media.media.find((m) => m.id === linkedId);
+    if (found) {
+      setOpenedLinkId(linkedId);
+      setActiveItem(found);
+    }
+  }
 
   useEffect(() => {
     if (!activeItem) return;

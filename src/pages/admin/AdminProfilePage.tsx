@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
@@ -20,14 +20,16 @@ export function AdminProfilePage() {
 
   const [fields, setFields] = useState({ nameAr: '', nameEn: '', phone: '' });
 
-  useEffect(() => {
-    if (!profile) return;
+  // Refill the form whenever a new copy of the profile arrives.
+  const [filledFrom, setFilledFrom] = useState<typeof profile>(undefined);
+  if (profile && profile !== filledFrom) {
+    setFilledFrom(profile);
     setFields({
       nameAr: profile.name_ar ?? '',
       nameEn: profile.name_en ?? '',
       phone: profile.phone ?? '',
     });
-  }, [profile]);
+  }
 
   const saveMutation = useMutation({
     mutationFn: async () => {

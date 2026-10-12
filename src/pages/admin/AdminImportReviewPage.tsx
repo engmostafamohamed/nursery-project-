@@ -44,7 +44,7 @@ export function AdminImportReviewPage() {
       return;
     }
     try {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('import_jobs')
         .select('*')
         .eq('id', jobId)
@@ -76,14 +76,14 @@ export function AdminImportReviewPage() {
     try {
       if (!jobId) throw new Error('Missing import job id');
 
-      await (supabase as any)
+      await supabase
         .from('import_jobs')
         .update({
           user_confirmed_mapping: {
             mappings: job.ai_detected_format.mappings,
             confirmedAt: new Date().toISOString(),
           },
-        })
+        } as never)
         .eq('id', jobId);
 
       const { data: { session } } = await supabase.auth.getSession();

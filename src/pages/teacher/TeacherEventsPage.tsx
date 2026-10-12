@@ -135,7 +135,7 @@ export function TeacherEventsPage() {
     return allEvents.filter((e) => e.category === categoryFilter);
   }, [allEvents, categoryFilter]);
 
-  const nowMs = useMemo(() => Date.now(), []);
+  const [nowMs] = useState(() => Date.now());
   const listEvents = useMemo(() => {
     let list = calendarEvents;
     if (selectedDateKey && viewMode === 'calendar') {
@@ -314,7 +314,8 @@ function EventListRow({
 }) {
   const isAr = locale.startsWith('ar');
   const title = isAr ? event.title_ar || event.title_en : event.title_en || event.title_ar;
-  const isPast = new Date(event.starts_at).getTime() < Date.now();
+  const [nowMs] = useState(() => Date.now());
+  const isPast = new Date(event.starts_at).getTime() < nowMs;
   const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short', hour12: true });
 
   return (

@@ -5,9 +5,15 @@ import { useTranslation } from 'react-i18next';
 
 import { cn } from '@/lib/utils';
 
-export const Dialog = DialogPrimitive.Root;
-export const DialogTrigger = DialogPrimitive.Trigger;
-export const DialogClose = DialogPrimitive.Close;
+export function Dialog(props: React.ComponentProps<typeof DialogPrimitive.Root>) {
+  return <DialogPrimitive.Root {...props} />;
+}
+export function DialogTrigger(props: React.ComponentProps<typeof DialogPrimitive.Trigger>) {
+  return <DialogPrimitive.Trigger {...props} />;
+}
+export function DialogClose(props: React.ComponentProps<typeof DialogPrimitive.Close>) {
+  return <DialogPrimitive.Close {...props} />;
+}
 
 export const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,

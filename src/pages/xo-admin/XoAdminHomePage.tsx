@@ -1,5 +1,5 @@
 import { Activity, Building2, CreditCard, Users } from 'lucide-react';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
@@ -15,7 +15,7 @@ export function XoAdminHomePage() {
   const navigate = useNavigate();
   const { data, isLoading, error, refetch } = useXoAdminStats();
   const { setActiveNurseryId } = useActiveNurseryId();
-  const nowMs = useMemo(() => Date.now(), []);
+  const [nowMs] = useState(() => Date.now());
 
   const openNurseryDashboard = useCallback((nurseryId: string) => {
     setActiveNurseryId(nurseryId);

@@ -48,7 +48,7 @@ export function useCreateFeature() {
     mutationFn: async (input: CreateFeatureInput) => {
       const { data, error } = await supabase
         .from('features')
-        .insert({ ...input, is_seed: false })
+        .insert({ ...input, is_seed: false } as never)
         .select()
         .single();
       if (error) throw error;

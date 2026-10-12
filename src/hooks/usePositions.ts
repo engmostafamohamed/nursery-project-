@@ -57,7 +57,7 @@ export function useCreatePosition() {
     mutationFn: async (input: CreatePositionInput) => {
       const { data, error } = await supabase
         .from('positions')
-        .insert({ ...input, is_seed: false })
+        .insert({ ...input, is_seed: false } as never)
         .select()
         .single();
       if (error) throw error;

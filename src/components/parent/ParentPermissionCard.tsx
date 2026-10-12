@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useState } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
@@ -79,7 +79,7 @@ export function ParentPermissionCardView({
 }: Props) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const nowMs = useMemo(() => Date.now(), []);
+  const [nowMs] = useState(() => Date.now());
 
   const displayTitle = (r: Row) =>
     (i18n.language.startsWith('ar') ? r.title_ar : r.title_en) || r.title_en || r.title_ar;

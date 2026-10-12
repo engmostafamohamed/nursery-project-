@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -40,7 +40,7 @@ export function FormRenderer({
   submitting = false,
 }: FormRendererProps) {
   const { t, i18n } = useTranslation();
-  const [step, setStep] = useState(0);
+  const [requestedStep, setStep] = useState(0);
   const [error, setError] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
@@ -56,11 +56,8 @@ export function FormRenderer({
     [visibleQuestions],
   );
 
-  useEffect(() => {
-    if (step >= visibleQuestions.length) {
-      setStep(Math.max(0, visibleQuestions.length - 1));
-    }
-  }, [visibleQuestions.length, step]);
+  // Answers can hide questions; stay on the last one that is still shown.
+  const step = Math.min(requestedStep, Math.max(0, visibleQuestions.length - 1));
 
   const current = visibleQuestions[step];
   const isSection = current?.type === 'section_header';
@@ -97,7 +94,8 @@ export function FormRenderer({
     if (mode === 'respond') setSubmitted(true);
   };
 
-  const deadlineMs = deadline ? new Date(deadline).getTime() - Date.now() : null;
+  const [nowMs] = useState(() => Date.now());
+  const deadlineMs = deadline ? new Date(deadline).getTime() - nowMs : null;
   const deadlinePassed = deadlineMs !== null && deadlineMs < 0;
   const deadlineLabel = deadline
     ? deadlinePassed

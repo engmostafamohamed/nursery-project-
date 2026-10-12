@@ -21,7 +21,7 @@ export function InquiryDetailModal({ open, onOpenChange, inquiry, classes, onUpd
   const [note, setNote] = useState(String(inquiry?.admin_notes ?? ''));
   const [waitlistClassId, setWaitlistClassId] = useState('');
 
-  const nowMs = useMemo(() => Date.now(), []);
+  const [nowMs] = useState(() => Date.now());
   const age = useMemo(() => {
     if (!inquiry?.child_dob) return '-';
     const years = Math.floor((nowMs - +new Date(String(inquiry.child_dob))) / (365.25 * 24 * 3600 * 1000));

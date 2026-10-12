@@ -18,7 +18,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   other: 'bg-surface-container text-on-surface',
 };
 
-function RosterPanel({ courseId, locale }: { courseId: string; locale: string }) {
+function RosterPanel({ courseId }: { courseId: string }) {
   const { t, i18n } = useTranslation();
   const isAr = i18n.language.startsWith('ar');
   const { data: enrollees = [], isPending } = useTeacherCourseEnrollees(courseId);
@@ -142,7 +142,7 @@ export function TeacherCoursesPage() {
                     <p className="mb-2 text-xs font-medium text-on-surface-variant uppercase tracking-wide">
                       {t('teacher.courses.rosterHeading')}
                     </p>
-                    <RosterPanel courseId={course.id} locale={locale} />
+                    <RosterPanel courseId={course.id} />
                   </div>
                 ) : null}
               </div>
