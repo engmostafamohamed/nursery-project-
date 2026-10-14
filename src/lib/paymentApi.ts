@@ -129,6 +129,10 @@ export async function redeemLoyaltyPoints(input: { invoiceId: string; points: nu
 
 const PAYMENT_ERROR_CODES = [
   'payment_exceeds_balance',
+  'payment_full_amount_required',
+  'payment_checkout_unavailable',
+  'payment_checkout_invalid_url',
+  'payment_checkout_failed',
   'payment_duplicate',
   'payment_invoice_closed',
   'payment_invoice_not_yours',
@@ -150,7 +154,7 @@ export function paymentError(error: unknown): { key: string; values: Record<stri
   const message = typeof e.message === 'string' ? e.message : String(error ?? '');
   const code = PAYMENT_ERROR_CODES.find((c) => message.includes(c));
   if (!code) return { key: 'payment.errors.actionFailed', values: {} };
-  // payment_exceeds_balance carries the amount still payable in its detail.
+  // payment_exceeds_balance and payment_full_amount_required carry the amount still payable in their detail.
   const amount = typeof e.details === 'string' && /^\d+(\.\d+)?$/.test(e.details) ? Number(e.details).toFixed(2) : '';
   return { key: `payment.errors.${code}`, values: { amount } };
 }

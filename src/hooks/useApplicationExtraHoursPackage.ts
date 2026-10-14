@@ -148,6 +148,10 @@ export function useApplicationExtraHoursPackage({ applicationId, nurseryId }: Pa
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['application-detail'] });
+      // The package price is on the application invoice, so its amount changed too.
+      void queryClient.invalidateQueries({ queryKey: ['application-package-invoice'] });
+      void queryClient.invalidateQueries({ queryKey: ['parent-invoices'] });
+      void queryClient.invalidateQueries({ queryKey: ['invoice-details'] });
     },
   });
 

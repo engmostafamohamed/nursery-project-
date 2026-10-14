@@ -18,6 +18,7 @@ import { Label } from '@/components/ui/label';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ExtraHoursHourlyRateCard } from '@/components/admin/settings/ExtraHoursHourlyRateCard';
 import { FormSection } from '@/components/admin/settings/FormSection';
 import { PackageDealPicker } from '@/components/admin/settings/PackageDealPicker';
 import { TuitionPackagesEditor } from '@/components/admin/settings/TuitionPackagesEditor';
@@ -310,6 +311,8 @@ export function AdminPackagesPage() {
         </TabsContent>
 
         <TabsContent value="hours" className="space-y-6">
+          <ExtraHoursHourlyRateCard nurseryId={nurseryId} />
+
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-base font-semibold text-on-surface">{t('packages.title')}</h2>

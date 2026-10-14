@@ -26,6 +26,44 @@ ID are offered to Paymob. Confirm each integration ID and supported payment type
 the nursery's Paymob account. Never put Paymob secrets in client code, commit them,
 or collect payment credentials in this app.
 
+## Paying an existing invoice (parent dashboard)
+
+Invoices that already exist (application packages, tuition, events) are paid from the
+application's **Payment** step (after Review and Packages) or the invoice payment page. Both render the shared
+`InvoiceCheckoutPanel` (`src/components/payment/`), which offers every method the nursery
+enabled: Paymob online checkout first (when configured), then InstaPay, Vodafone Cash,
+Etisalat Cash, Fawry (manual) and bank transfer.
+
+Online checkout goes through the `invoice-checkout` Edge Function. It records the payment
+request with `submit_invoice_payment` as the signed-in parent (ownership, balance, duplicate
+and full-payment rules all apply), creates the Paymob Intention for exactly the amount the
+parent confirmed, and returns Paymob's checkout URL. Paymob sends the parent back to the page
+they paid from with `?payment=processing`. It uses the same secrets as signup; deploy it with
+`supabase functions deploy invoice-checkout`. If it is not deployed, online checkout is simply
+not offered and the manual methods keep working.
+
+Every payment is sent once: double clicks are dropped and each retry of the same payment
+reuses one idempotency key, so the server returns the first result instead of recording it
+again.
+
+### One payment for application invoices
+
+An invoice created for an application (`line_items_json.application_id`) is paid in one
+payment of everything still due. The app only offers the full amount, and migration
+`20261014000000_application_invoice_full_payment.sql` makes the database refuse a smaller
+parent payment with `payment_full_amount_required`. Other invoices still accept partial
+payments. Staff-recorded payments are not affected.
+
+### Extra hours on the same payment
+
+In the application's Packages step the parent also chooses how extra time is paid. The
+default is **pay per hour**: late pickup is billed afterwards at the nursery's
+`late_pickup_fee_per_hour`, after the grace period (Admin → Packages → hours tab, or
+Settings). A prepaid extra-hours package instead goes onto the application invoice (price
+minus any live deal) and is paid in the same single payment as the tuition package
+(migration `20261015000000_application_invoice_extra_hours.sql`). The choice is locked once a
+payment is made or submitted.
+
 ## Test-only signup simulation
 
 For a development/test Supabase project, set the Edge Function secret

@@ -109,7 +109,7 @@ export function ParentApplicationsPage() {
     if (status === 'rejected') return t('parent.applications.nextRejected', { defaultValue: 'Not accepted. Check nursery messages for details.' });
     if (status === 'documents_pending') return t('parent.applications.nextDocuments', { defaultValue: 'The nursery requested documents. Upload them and submit again.' });
     if (status === 'submitted' || status === 'under_review') return t('parent.applications.nextReview', { defaultValue: 'With nursery admissions. You will be notified when it is reviewed.' });
-    return t('parent.applications.nextDraft', { defaultValue: 'Complete the information, choose a package, and pay all or part of it. It is sent for review as soon as a payment is submitted.' });
+    return t('parent.applications.nextDraft');
   };
 
   const addChild = async () => {

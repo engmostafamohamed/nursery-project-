@@ -14,10 +14,24 @@ type PaymobIntentionInput = {
   customerPhone: string;
   address: string | null;
   enabledPaymentMethods: string[] | null | undefined;
+  /** App path Paymob sends the parent back to; it must start with `/`. Defaults to the signup success page. */
+  returnPath?: string;
+  /** Line shown on Paymob's checkout page. */
+  item?: { name: string; description: string };
 };
 
 const PAYMOB_API_URL = 'https://accept.paymob.com/v1/intention/';
 const PAYMOB_CHECKOUT_URL = 'https://accept.paymob.com/unifiedcheckout/';
+const DEFAULT_RETURN_PATH = '/signup/success?payment=processing';
+const DEFAULT_ITEM = { name: 'Nursery registration', description: 'Tuition and selected extra-hours package' };
+
+/**
+ * Test-only switch (never on production): online checkout is simulated, no Paymob request is
+ * made, and the payment attempt is marked `[TEST PAYMENT]` so it can never be confirmed.
+ */
+export function onlinePaymentTestMode(): boolean {
+  return Deno.env.get('SIGNUP_PAYMENT_TEST_MODE')?.trim().toLowerCase() === 'true';
+}
 
 export function getPaymobConfig(enabledMethods: string[] | null | undefined): PaymobConfig | null {
   const secretKey = Deno.env.get('PAYMOB_SECRET_KEY')?.trim();
@@ -70,7 +84,8 @@ function paymobPhoneNumber(phone: string): string {
   const normalized = phone.replace(/[^\d+]/g, '');
   if (normalized.startsWith('+')) return normalized;
   if (normalized.startsWith('0')) return `+20${normalized.slice(1)}`;
-  return normalized;
+  // Paymob requires the field; 'NA' is its placeholder for unknown billing values.
+  return normalized || 'NA';
 }
 
 function nameParts(fullName: string): { firstName: string; lastName: string } {
@@ -89,6 +104,9 @@ export async function createPaymobCheckout(input: PaymobIntentionInput): Promise
   if (!config) throw new Error('Paymob online checkout is not fully configured');
   const { firstName, lastName } = nameParts(input.customerName);
   const amount = Math.round(input.amount * config.amountMultiplier * 100) / 100;
+  const returnPath = input.returnPath ?? DEFAULT_RETURN_PATH;
+  if (!returnPath.startsWith('/') || returnPath.startsWith('//')) throw new Error('Invalid Paymob return path');
+  const item = input.item ?? DEFAULT_ITEM;
 
   const response = await fetch(PAYMOB_API_URL, {
     method: 'POST',
@@ -101,9 +119,9 @@ export async function createPaymobCheckout(input: PaymobIntentionInput): Promise
       currency: 'EGP',
       payment_methods: config.paymentMethodIntegrationIds,
       items: [{
-        name: 'Nursery registration',
+        name: item.name,
         amount,
-        description: 'Tuition and selected extra-hours package',
+        description: item.description,
         quantity: 1,
       }],
       billing_data: {
@@ -125,7 +143,7 @@ export async function createPaymobCheckout(input: PaymobIntentionInput): Promise
         phone_number: paymobPhoneNumber(input.customerPhone),
       },
       special_reference: input.attemptId,
-      redirection_url: `${config.appBaseUrl}/signup/success?payment=processing`,
+      redirection_url: `${config.appBaseUrl}${returnPath}`,
     }),
   });
 

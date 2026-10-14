@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { submitInvoicePayment, type ParentPaymentMethodCode } from '@/lib/paymentApi';
@@ -12,6 +12,20 @@ export type SubmitPaymentInput = {
   /** Same key for every retry of this one payment, so it is never recorded twice. */
   idempotencyKey: string;
 };
+
+/** Refreshes everything a parent payment changes, whichever way it was paid. */
+export function invalidatePaymentQueries(queryClient: QueryClient, parentId: string | undefined) {
+  void queryClient.invalidateQueries({ queryKey: ['parent-invoices', parentId] });
+  void queryClient.invalidateQueries({ queryKey: ['parent-pending-payment-attempts', parentId] });
+  void queryClient.invalidateQueries({ queryKey: ['invoice-details'] });
+  void queryClient.invalidateQueries({ queryKey: ['payment-history'] });
+  void queryClient.invalidateQueries({ queryKey: ['application-package-invoice'] });
+  // A payment on an application invoice submits the application (DB trigger).
+  void queryClient.invalidateQueries({ queryKey: ['application-detail'] });
+  void queryClient.invalidateQueries({ queryKey: ['parent-applications'] });
+  void queryClient.invalidateQueries({ queryKey: ['parent-dashboard-feed'] });
+  void queryClient.invalidateQueries({ queryKey: ['parent-dashboard-children'] });
+}
 
 /**
  * A parent's payment goes to the nursery's finance team for confirmation. The server checks the
@@ -27,17 +41,6 @@ export function useSubmitInvoicePayment() {
       if (!Number.isFinite(input.amount) || input.amount <= 0) throw new Error('payment_invalid_amount');
       return submitInvoicePayment(input);
     },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['parent-invoices', user?.id] });
-      void queryClient.invalidateQueries({ queryKey: ['parent-pending-payment-attempts', user?.id] });
-      void queryClient.invalidateQueries({ queryKey: ['invoice-details'] });
-      void queryClient.invalidateQueries({ queryKey: ['payment-history'] });
-      void queryClient.invalidateQueries({ queryKey: ['application-package-invoice'] });
-      // A payment on an application invoice submits the application (DB trigger).
-      void queryClient.invalidateQueries({ queryKey: ['application-detail'] });
-      void queryClient.invalidateQueries({ queryKey: ['parent-applications'] });
-      void queryClient.invalidateQueries({ queryKey: ['parent-dashboard-feed'] });
-      void queryClient.invalidateQueries({ queryKey: ['parent-dashboard-children'] });
-    },
+    onSuccess: () => invalidatePaymentQueries(queryClient, user?.id),
   });
 }

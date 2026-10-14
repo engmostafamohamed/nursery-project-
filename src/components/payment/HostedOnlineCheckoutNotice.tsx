@@ -4,9 +4,11 @@ import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 
 type Props = {
   amount: string;
+  /** Replaces the signup wording about when the application is submitted. */
+  note?: string;
 };
 
-export function HostedOnlineCheckoutNotice({ amount }: Props) {
+export function HostedOnlineCheckoutNotice({ amount, note }: Props) {
   const { t } = useTranslation();
 
   return (
@@ -36,7 +38,7 @@ export function HostedOnlineCheckoutNotice({ amount }: Props) {
             })}
           </p>
           <p className="mt-2 text-xs leading-5 text-on-surface-variant">
-            {t('signup.payment.cardCheckout.reviewNote', {
+            {note ?? t('signup.payment.cardCheckout.reviewNote', {
               defaultValue: 'The application is submitted after checkout starts. Payment is confirmed after Paymob verifies the transaction.',
             })}
           </p>

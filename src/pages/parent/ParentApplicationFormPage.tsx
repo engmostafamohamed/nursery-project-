@@ -1,4 +1,4 @@
-import { Children, cloneElement, createContext, isValidElement, useContext, useEffect, useMemo, useState, type FocusEventHandler, type ReactNode } from 'react';
+import { Children, cloneElement, createContext, isValidElement, useContext, useEffect, useMemo, useRef, useState, type FocusEventHandler, type ReactNode } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -7,22 +7,40 @@ import { ApplicationDocumentPreview } from '@/components/applications/Applicatio
 import { PaymentHistoryTable } from '@/components/financial/PaymentHistoryTable';
 import { ApplicationExtraHoursPackageCard } from '@/components/parent/ApplicationExtraHoursPackageCard';
 import { ApplicationPackagePaymentCard } from '@/components/parent/ApplicationPackagePaymentCard';
+import { ApplicationPaymentStep } from '@/components/parent/ApplicationPaymentStep';
+import { ApplicationReviewSummary, type ApplicationReviewSection } from '@/components/parent/ApplicationReviewSummary';
 import { ApplicationSteps } from '@/components/parent/ApplicationSteps';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { useApplications } from '@/hooks/useApplications';
-import { useApplicationExtraHoursPackage } from '@/hooks/useApplicationExtraHoursPackage';
+import { computeExtraHoursDisplayPrice, useApplicationExtraHoursPackage } from '@/hooks/useApplicationExtraHoursPackage';
 import { useApplicationPackagePayment, type ApplicationPackageBillingPeriod } from '@/hooks/useApplicationPackagePayment';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useParentAccountProfile, type ParentAccountProfile } from '@/hooks/useParentAccountProfile';
 import { usePaymentHistory } from '@/hooks/usePaymentHistory';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { useSettings } from '@/lib/useSettings';
 import { NAP_DURATION_VALUES } from '@/features/parent-signup/parentSignUpValidation';
+import {
+  DAILY_ROUTINE_YES_NO_FIELDS,
+  diaperSupplyOptions,
+  genderOptions,
+  napDurationOptions,
+  optionLabel,
+  pickupAuthorizationOptions,
+  referralSourceOptions,
+  schoolPreferenceOptions,
+  toiletTrainingOptions,
+  withEmptyOption,
+  yesNoOptions,
+  type FormOption,
+} from '@/lib/admissions/applicationFormOptions';
 import { MEDICATION_CONSENT_OPTIONS } from '@/lib/admissions/medicationConsentOptions';
 import { ALLERGY_OPTIONS, OTHER_ALLERGY_VALUE, allergyLabel } from '@/lib/allergies';
 import { nationalityOptions } from '@/lib/nationalities';
+import { formatDate } from '@/lib/datetime';
 import { childDateOfBirthBounds, isChildAgeValid, isValidIsoDate } from '@/lib/onboardingDateBounds';
 import { egyptianMobilePattern } from '@/lib/phoneValidation';
 import { cn } from '@/lib/utils';
@@ -31,8 +49,23 @@ const requiredDocs = ['birth_certificate', 'vaccination_card', 'parent_id', 'pro
 const applicationDocumentTypes = [...requiredDocs, 'medical_report', 'other'] as const;
 const requiredParentFields = ['full_name', 'email', 'phone', 'address', 'emergency_contact'] as const;
 const requiredChildFields = ['first_name', 'middle_name', 'last_name', 'nickname', 'dob', 'nationality'] as const;
-type ApplicationWorkspaceTab = 'information' | 'packages' | 'payments';
-const APPLICATION_STEP_COUNT = 11;
+type ApplicationWorkspaceTab = 'information' | 'payments';
+const DOCUMENTS_STEP = 10;
+const REVIEW_STEP = 11;
+// The package and its payment come after the parent has reviewed every answer.
+const PACKAGES_STEP = 12;
+const PAYMENT_STEP = 13;
+const APPLICATION_STEP_COUNT = PAYMENT_STEP;
+
+/** The step a link opens: `?step=packages|payment` (older links use `?tab=packages|checkout`). */
+function initialApplicationStep(searchParams: URLSearchParams): number {
+  const target = searchParams.get('step') ?? searchParams.get('tab');
+  if (target === 'packages') return PACKAGES_STEP;
+  if (target === 'payment' || target === 'checkout') return PAYMENT_STEP;
+  // A new child starts at the child step; the step gate sends the parent back to any earlier
+  // step whose copied parent/family data is incomplete.
+  return searchParams.get('newChild') === '1' ? 3 : 1;
+}
 
 const applicationStepIcons = [
   'account_circle',
@@ -46,6 +79,8 @@ const applicationStepIcons = [
   'medication',
   'upload_file',
   'task_alt',
+  'inventory_2',
+  'credit_card',
 ];
 
 function latestDocumentsByType(docs: Array<Record<string, unknown>>) {
@@ -137,9 +172,7 @@ function statusPresentation(
     icon: 'edit_document',
     tone: 'border-outline-variant bg-surface text-on-surface',
     title: t('applications.statusDraftTitle', { defaultValue: 'Draft application' }),
-    body: t('applications.statusDraftBody', {
-      defaultValue: 'Complete the information, upload required documents, choose a package, and pay all or part of it. It is sent for review as soon as a payment is submitted.',
-    }),
+    body: t('applications.statusDraftBody'),
   };
 }
 
@@ -154,6 +187,33 @@ function PanelHeader({ icon, title, body }: { icon: string; title: string; body?
         {body ? <p className="mt-1 text-xs leading-5 text-on-surface-variant">{body}</p> : null}
       </div>
     </div>
+  );
+}
+
+function InformationLockedNotice({
+  title,
+  message,
+  onCompleteInformation,
+}: {
+  title: string;
+  message: string;
+  onCompleteInformation: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <section className="rounded-xl border border-outline-variant bg-surface px-4 py-8 shadow-sm sm:px-6">
+      <div className="mx-auto flex max-w-md flex-col items-center text-center">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-warning/15 text-warning">
+          <span className="material-symbols-outlined text-2xl" aria-hidden>lock</span>
+        </span>
+        <h2 className="mt-3 text-base font-semibold text-on-surface">{title}</h2>
+        <p className="mt-1 text-sm leading-6 text-on-surface-variant">{message}</p>
+        <Button type="button" className="mt-4 gap-1" onClick={onCompleteInformation}>
+          <span className="material-symbols-outlined text-base" aria-hidden>edit_document</span>
+          {t('applications.paymentPackage.completeInformation', { defaultValue: 'Complete information' })}
+        </Button>
+      </div>
+    </section>
   );
 }
 
@@ -412,33 +472,15 @@ function DocumentUploadTile({
 function ApplicationWorkspaceTabs({
   activeTab,
   setActiveTab,
-  packagesLocked,
 }: {
   activeTab: ApplicationWorkspaceTab;
   setActiveTab: (tab: ApplicationWorkspaceTab) => void;
-  packagesLocked: boolean;
 }) {
   const { t } = useTranslation();
-  const tabs = [
-    {
-      id: 'information',
-      icon: 'assignment',
-      label: t('applications.tabs.information', { defaultValue: 'Application information' }),
-      locked: false,
-    },
-    {
-      id: 'packages',
-      icon: 'inventory_2',
-      label: t('applications.tabs.packages', { defaultValue: 'Packages' }),
-      locked: packagesLocked,
-    },
-    {
-      id: 'payments',
-      icon: 'receipt_long',
-      label: t('applications.tabs.paymentHistory', { defaultValue: 'Payment history' }),
-      locked: false,
-    },
-  ] as const;
+  const tabs: Array<{ id: ApplicationWorkspaceTab; icon: string; label: string }> = [
+    { id: 'information', icon: 'assignment', label: t('applications.tabs.information', { defaultValue: 'Application information' }) },
+    { id: 'payments', icon: 'receipt_long', label: t('applications.tabs.paymentHistory', { defaultValue: 'Payment history' }) },
+  ];
 
   return (
     <section className="rounded-xl border border-outline-variant bg-surface p-2 shadow-sm">
@@ -450,11 +492,7 @@ function ApplicationWorkspaceTabs({
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              title={tab.locked
-                ? t('applications.paymentPackage.completeInformationFirst', {
-                    defaultValue: 'Complete all application information and required documents before choosing a package.',
-                  })
-                : undefined}
+              aria-pressed={active}
               className={cn(
                 'flex h-11 shrink-0 items-center gap-2 rounded-md border px-3 text-sm font-semibold transition',
                 active
@@ -464,17 +502,6 @@ function ApplicationWorkspaceTabs({
             >
               <span className="material-symbols-outlined text-base" aria-hidden>{tab.icon}</span>
               {tab.label}
-              {tab.locked ? (
-                <span
-                  className={cn(
-                    'material-symbols-outlined text-base',
-                    active ? 'text-on-primary/80' : 'text-warning',
-                  )}
-                  aria-label={t('applications.paymentPackage.lockedBadge', { defaultValue: 'Locked' })}
-                >
-                  lock
-                </span>
-              ) : null}
             </button>
           );
         })}
@@ -909,6 +936,158 @@ function applicationStepFieldErrors(step: number, parentForm: ParentApplicationP
   return errors;
 }
 
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+/** Every answer of the application, grouped by step, as the review step shows it. */
+function applicationReviewSections({
+  parentForm,
+  childForm,
+  latestDocs,
+  stepLabels,
+  nationalities,
+  isArabic,
+  t,
+}: {
+  parentForm: ParentApplicationParentForm;
+  childForm: ParentApplicationChildForm;
+  latestDocs: Record<string, Record<string, unknown>>;
+  stepLabels: string[];
+  nationalities: FormOption[];
+  isArabic: boolean;
+  t: Translate;
+}): ApplicationReviewSection[] {
+  const yesNo = (value: boolean) => (value ? t('common.yes', { defaultValue: 'Yes' }) : t('common.no', { defaultValue: 'No' }));
+  const choice = (options: FormOption[], value: string) => (value ? optionLabel(options, value) : null);
+  const yesNoChoices = yesNoOptions(t);
+  const section = (step: number, groups: ApplicationReviewSection['groups']): ApplicationReviewSection => ({
+    step,
+    title: stepLabels[step - 1],
+    icon: applicationStepIcons[step - 1],
+    groups,
+  });
+  const parentRows = (prefix: 'father' | 'mother') => [
+    { label: t(`signup.${prefix}FullName`), value: parentForm[`${prefix}_full_name`] },
+    { label: t(`signup.${prefix}Job`), value: parentForm[`${prefix}_job`] },
+    { label: t(`signup.${prefix}Mobile`), value: parentForm[`${prefix}_mobile`] },
+    { label: t(`signup.${prefix}Email`), value: parentForm[`${prefix}_email`] },
+    { label: t('applications.nationalId', { defaultValue: 'National ID' }), value: parentForm[`${prefix}_national_id`] },
+  ];
+  const contactRows = (n: 1 | 2) => [
+    { label: t('signup.contactName'), value: childForm[`emergency_${n}_name`] },
+    { label: t('signup.contactPhone'), value: childForm[`emergency_${n}_phone`] },
+    { label: t('signup.contactRelationship'), value: childForm[`emergency_${n}_relationship`] },
+  ];
+  const pickupRows = (n: 1 | 2) => [
+    { label: t('signup.pickupName'), value: parentForm[`pickup_${n}_name`] },
+    { label: t('signup.pickupPhone'), value: parentForm[`pickup_${n}_phone`] },
+    { label: t('signup.pickupRelation'), value: parentForm[`pickup_${n}_relation`] },
+    { label: t('signup.pickupAuthorization'), value: choice(pickupAuthorizationOptions(t), parentForm[`pickup_${n}_authorization`]) },
+  ];
+  const consents = MEDICATION_CONSENT_OPTIONS.filter((option) => childForm.medication_consents.includes(option.id));
+
+  return [
+    section(1, [
+      { title: t('signup.fatherInfo', { defaultValue: 'Father information' }), rows: parentRows('father') },
+      { title: t('signup.motherInfo', { defaultValue: 'Mother information' }), rows: parentRows('mother') },
+    ]),
+    section(2, [{
+      rows: [
+        { label: t('signup.maritalStatus'), value: parentForm.marital_status },
+        { label: t('applications.address'), value: parentForm.address },
+        { label: t('applications.emergencyContact'), value: parentForm.emergency_contact },
+        { label: t('signup.hasSiblings', { defaultValue: 'Has siblings' }), value: yesNo(childForm.has_siblings) },
+        ...(childForm.has_siblings ? [{ label: t('signup.siblingAges'), value: childForm.sibling_ages }] : []),
+      ],
+    }]),
+    section(3, [{
+      rows: [
+        { label: t('signup.childFirstName'), value: childForm.first_name },
+        { label: t('signup.childMiddleName'), value: childForm.middle_name },
+        { label: t('signup.childLastName'), value: childForm.last_name },
+        { label: t('signup.childNickname'), value: childForm.nickname },
+        { label: t('applications.childDob'), value: childForm.dob ? formatDate(childForm.dob) : null },
+        { label: t('applications.gender'), value: choice(genderOptions(t), childForm.gender) },
+        { label: t('signup.childNationality'), value: choice(nationalities, childForm.nationality) },
+      ],
+    }]),
+    section(4, [{
+      rows: [
+        { label: t('signup.department'), value: childForm.department },
+        { label: t('signup.schoolPreference'), value: choice(schoolPreferenceOptions(t), childForm.school_preference) },
+        { label: t('signup.schoolAdmissionsPlan'), value: childForm.school_admissions_plan },
+        { label: t('signup.academicYear'), value: childForm.academic_year },
+        { label: t('signup.referralSource'), value: choice(referralSourceOptions(t), parentForm.referral_source) },
+      ],
+    }]),
+    section(5, [{
+      rows: [
+        { label: t('signup.hasAllergy'), value: yesNo(childForm.has_allergy) },
+        ...(childForm.has_allergy
+          ? [
+              {
+                label: t('signup.allergyTypes'),
+                value: childForm.allergy_types.map((value) => allergyLabel(value, isArabic)).join(isArabic ? '، ' : ', '),
+              },
+              ...(childForm.allergy_types.includes(OTHER_ALLERGY_VALUE)
+                ? [{ label: t('signup.allergyDetails'), value: childForm.allergy_details }]
+                : []),
+              { label: t('applications.allergies'), value: childForm.allergies },
+            ]
+          : []),
+        { label: t('signup.hasMedicalCondition'), value: yesNo(childForm.has_medical_condition) },
+        ...(childForm.has_medical_condition
+          ? [{ label: t('applications.medicalConditions'), value: childForm.medical_conditions }]
+          : []),
+        { label: t('applications.specialNeeds'), value: childForm.special_needs },
+        { label: t('applications.photoPrivacyConsent'), value: yesNo(childForm.photo_privacy) },
+      ],
+    }]),
+    section(6, [
+      { title: t('applications.review.contactN', { n: 1 }), rows: contactRows(1) },
+      { title: t('applications.review.contactN', { n: 2 }), rows: contactRows(2) },
+    ]),
+    section(7, [{
+      rows: [
+        { label: t('signup.arrivalTime'), value: childForm.arrival_time },
+        ...DAILY_ROUTINE_YES_NO_FIELDS.map(([field, labelKey]) => ({ label: t(labelKey), value: choice(yesNoChoices, childForm[field]) })),
+        ...(childForm.sends_vitamins === 'Yes' ? [{ label: t('signup.vitaminDetails'), value: childForm.vitamin_details }] : []),
+        { label: t('signup.diaperSupplyMethod'), value: choice(diaperSupplyOptions(t), childForm.diaper_supply_method) },
+        { label: t('signup.dailyDiaperCount'), value: childForm.daily_diaper_count },
+        { label: t('signup.rashCreamUsage'), value: childForm.rash_cream_usage },
+        { label: t('signup.diaperChangeFrequency'), value: childForm.diaper_change_frequency },
+        { label: t('signup.toiletTrainingStatus'), value: choice(toiletTrainingOptions(t), childForm.toilet_training_status) },
+        { label: t('signup.napTimePreference'), value: choice(yesNoChoices, childForm.nap_time_preference) },
+        ...(childForm.nap_time_preference === 'Yes'
+          ? [{ label: t('signup.maxNapTime'), value: choice(napDurationOptions(t), childForm.max_nap_time) }]
+          : []),
+      ],
+    }]),
+    section(8, [
+      { title: t('applications.review.pickupN', { n: 1 }), rows: pickupRows(1) },
+      { title: t('applications.review.pickupN', { n: 2 }), rows: pickupRows(2) },
+    ]),
+    section(9, [{
+      chips: consents.map((option) => (isArabic ? option.labelAr : option.labelEn)),
+      emptyText: t('applications.review.noneSelected'),
+    }]),
+    section(DOCUMENTS_STEP, [{
+      rows: applicationDocumentTypes.map((docType) => {
+        const uploaded = hasDocumentFile(latestDocs[docType]);
+        const required = requiredDocs.some((requiredDoc) => requiredDoc === docType);
+        return {
+          label: t(`applications.documentTypes.${docType}`),
+          value: uploaded
+            ? t('applications.review.documentUploaded')
+            : required
+              ? t('applications.review.documentMissing')
+              : t('applications.review.documentNotUploaded'),
+          tone: uploaded ? 'success' as const : required ? 'warning' as const : 'muted' as const,
+        };
+      }),
+    }]),
+  ];
+}
+
 function hasCompleteApplicationStep(step: number, parentForm: ParentApplicationParentForm, childForm: ParentApplicationChildForm) {
   return Object.keys(applicationStepFieldErrors(step, parentForm, childForm)).length === 0;
 }
@@ -1049,11 +1228,12 @@ export function ParentApplicationFormPage() {
   const { user } = useAuthSession();
   const { data: profile } = useUserProfile(user?.id);
   const apps = useApplications({ applicationId: id, parentId: user?.id });
-  const [step, setStep] = useState(searchParams.get('newChild') === '1' ? 3 : 1);
-  const [activeTab, setActiveTab] = useState<ApplicationWorkspaceTab>(() => {
-    const tab = searchParams.get('tab');
-    return tab === 'packages' || tab === 'payments' ? tab : 'information';
-  });
+  const [step, setStep] = useState(() => initialApplicationStep(searchParams));
+  const [activeTab, setActiveTab] = useState<ApplicationWorkspaceTab>(
+    () => (searchParams.get('tab') === 'payments' ? 'payments' : 'information'),
+  );
+  // Set by Paymob's redirect back to this page (invoice-checkout return path).
+  const returnedFromCheckout = searchParams.get('payment') === 'processing';
   const [terms, setTerms] = useState(false);
   const [submittingApplication, setSubmittingApplication] = useState(false);
   const [selectingPackage, setSelectingPackage] = useState(false);
@@ -1084,6 +1264,16 @@ export function ParentApplicationFormPage() {
   });
   const selectedExtraHoursPackageId =
     typeof app?.extra_hours_package_id === 'string' ? app.extra_hours_package_id : null;
+  // Without an extra-hours package, extra time is billed per hour at the nursery's late-pickup rate.
+  const { settings: nurserySettings } = useSettings();
+  const hourlyRate = Number(nurserySettings.late_pickup_fee_per_hour);
+  const extraHoursHourlyPlan = Number.isFinite(hourlyRate) && hourlyRate >= 0
+    ? {
+        rate: hourlyRate,
+        graceMinutes: Number(nurserySettings.late_pickup_grace_minutes ?? 0) || 0,
+        closingTime: nurserySettings.standard_end_time ? String(nurserySettings.standard_end_time).slice(0, 5) : null,
+      }
+    : null;
   const previousChildInfo = useMemo(() => {
     const previousApplication = apps.parentApplications.find((row) => {
       if (String(row.id ?? '') === id) return false;
@@ -1106,13 +1296,19 @@ export function ParentApplicationFormPage() {
     byType: Record<string, Record<string, unknown>>;
   } | null>(null);
 
+  // Which data the forms were last filled from, so the step gate never judges half-loaded forms.
+  const [seededFrom, setSeededFrom] = useState<string | null>(null);
+  const stepContentRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (!app) return;
     setParentForm(parentFormFromApplication(parentInfo, childInfo, profile, parentAccount.data, previousChildInfo));
     setChildForm(childFormFromApplication(childInfo, previousChildInfo));
     setTerms(Boolean(app.terms_accepted));
+    setSeededFrom(`${String(app.id)}|${parentAccount.data ? 'account' : 'no-account'}`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [app?.id, parentAccount.data?.sourceApplicationId, previousChildInfo]);
+  const formsReady =
+    !parentAccount.isLoading && seededFrom === `${id}|${parentAccount.data ? 'account' : 'no-account'}`;
 
   const localDocsForApplication = useMemo(
     () => {
@@ -1175,7 +1371,7 @@ export function ParentApplicationFormPage() {
   const [revealedFields, setRevealedFields] = useState<ReadonlySet<string>>(() => new Set());
   const [focusedField, setFocusedField] = useState<string | null>(null);
   // First step the parent still has to finish (form data, then required documents) before a package can be chosen.
-  const firstIncompleteInformationStep = firstInvalidInformationStep ?? (missingRequired.length > 0 ? 10 : null);
+  const firstIncompleteInformationStep = firstInvalidInformationStep ?? (missingRequired.length > 0 ? DOCUMENTS_STEP : null);
   const isInformationComplete = firstIncompleteInformationStep === null;
   const childDobBounds = childDateOfBirthBounds();
   const childNationalityOptions = useMemo(() => {
@@ -1209,8 +1405,11 @@ export function ParentApplicationFormPage() {
   const statusUi = statusPresentation(status, t);
   const packageInvoice = applicationPackagePayment.invoice;
   const hasSubmittedPackagePayment = Boolean(packageInvoice && (packageInvoice.pendingAmount > 0 || packageInvoice.paidAmount > 0));
-  // Submit stays locked until a package is chosen (and paid in full or part) and the terms are accepted.
+  // Submit stays locked until a package is chosen and paid and the terms are accepted.
   const isSubmitReady = terms && hasSubmittedPackagePayment;
+  // A payment submits a draft by itself; the button is only for sending it again (requested
+  // documents uploaded) or when the automatic submit did not happen.
+  const needsManualSubmit = canSubmitApplication && hasSubmittedPackagePayment;
   const nextPaymentDate = packageInvoice?.dueDate ? new Date(packageInvoice.dueDate).toLocaleDateString() : '-';
   const balanceLabel = packageInvoice
     ? t('invoice.egpAmount', { amount: packageInvoice.balanceDue.toFixed(2) })
@@ -1227,6 +1426,8 @@ export function ParentApplicationFormPage() {
     t('signup.steps.medicationConsents', { defaultValue: 'Medication Consents' }),
     t('applications.steps.documents', { defaultValue: 'Documents' }),
     t('applications.steps.review', { defaultValue: 'Review' }),
+    t('applications.steps.packages'),
+    t('applications.steps.payment'),
   ];
   const setParentField = <K extends keyof ParentApplicationParentForm>(field: K, value: ParentApplicationParentForm[K]) => {
     setParentForm((prev) => ({ ...prev, [field]: value }));
@@ -1276,10 +1477,48 @@ export function ParentApplicationFormPage() {
     });
     return true;
   };
-  const goToNextStep = () => {
-    if (revealStepErrors(step)) return;
-    setStep((s) => Math.min(APPLICATION_STEP_COUNT, s + 1));
+  // Step gate: the parent cannot move past a step until it is complete: its required fields,
+  // the required documents, the accepted terms (review), then a chosen package. Steps the parent
+  // can no longer change are only browsed.
+  const firstBlockingStep =
+    canEditApplication && firstInvalidInformationStep !== null
+      ? firstInvalidInformationStep
+      : canUploadDocuments && missingRequired.length > 0
+        ? DOCUMENTS_STEP
+        : canEditApplication && !terms
+          ? REVIEW_STEP
+          : !packageInvoice
+            ? PACKAGES_STEP
+            : null;
+  // Judge only fully loaded data, so a slow query never sends the parent back a step.
+  const gateReady = formsReady && !applicationPackagePayment.isLoading;
+  const lastReachableStep = firstBlockingStep ?? APPLICATION_STEP_COUNT;
+  const activeStep = gateReady ? Math.min(step, lastReachableStep) : step;
+  const activeStepBlocked = gateReady && activeStep === firstBlockingStep;
+  const activeStepGateMessage = !activeStepBlocked
+    ? null
+    : activeStep === DOCUMENTS_STEP
+      ? t('applications.stepGate.documentsMissing', { count: missingRequired.length })
+      : activeStep === REVIEW_STEP
+        ? t('applications.stepGate.termsRequired')
+        : activeStep === PACKAGES_STEP
+          ? t('applications.stepGate.packageRequired')
+          : t('applications.stepGate.fieldsMissing', {
+              count: Object.keys(applicationStepFieldErrors(activeStep, parentForm, childForm)).length,
+            });
+  /** Opens a step and, when its top is scrolled out of view (e.g. Next at the bottom), brings it back. */
+  const openStep = (target: number) => {
+    setStep(target);
+    requestAnimationFrame(() => {
+      const content = stepContentRef.current;
+      if (content && content.getBoundingClientRect().top < 0) content.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   };
+  const goToNextStep = () => {
+    if (activeStepBlocked || (canEditApplication && revealStepErrors(activeStep))) return;
+    openStep(Math.min(APPLICATION_STEP_COUNT, activeStep + 1));
+  };
+  const goToStep = (target: number) => openStep(Math.min(target, lastReachableStep));
   const draftUpdates = () => ({
     parent_info_json: mergeParentInfo(parentInfo, parentForm),
     child_info_json: mergeChildInfo(childInfo, childForm),
@@ -1288,7 +1527,7 @@ export function ParentApplicationFormPage() {
   });
   const informationIncompleteMessage = firstIncompleteInformationStep === null
     ? ''
-    : firstIncompleteInformationStep === 10
+    : firstIncompleteInformationStep === DOCUMENTS_STEP
       ? t('applications.paymentPackage.uploadDocumentsFirst', {
           defaultValue: 'Upload all required documents before choosing a package.',
         })
@@ -1302,16 +1541,35 @@ export function ParentApplicationFormPage() {
     setActiveTab('information');
     if (firstInvalidInformationStep !== null) revealStepErrors(firstInvalidInformationStep);
   };
-  const payReturnTo = encodeURIComponent(`/parent/applications/${id}?tab=packages`);
-  const payLink = packageInvoice ? `/parent/invoices/${packageInvoice.id}/pay?returnTo=${payReturnTo}` : null;
+  // A payment submits the application (DB trigger), so it must carry the terms and the latest edits.
+  const prepareApplicationForPayment = async () => {
+    if (!terms) {
+      toast.error(t('applications.submitTermsValidation', { defaultValue: 'Please accept the terms before submitting.' }));
+      setStep(REVIEW_STEP);
+      return false;
+    }
+    if (canEditApplication) await apps.saveApplicationDraft({ id, updates: draftUpdates() });
+    return true;
+  };
   const canChoosePackage =
     isInformationComplete &&
     status !== 'rejected' &&
     !packageInvoice?.paidAmount &&
     !packageInvoice?.pendingAmount;
-  // Extra hours has no invoice/payment gate of its own — it's a free, optional pick
-  // right up until the application is finally decided.
-  const canChooseExtraHours = isInformationComplete && status !== 'approved' && status !== 'rejected';
+  // The extra-hours package is billed on the application invoice, so like the tuition package
+  // it is final once a payment is made or submitted.
+  const canChooseExtraHours =
+    isInformationComplete && status !== 'approved' && status !== 'rejected' && !hasSubmittedPackagePayment;
+  const selectedExtraHoursPackage = extraHoursPackage.packages.find((pkg) => pkg.id === selectedExtraHoursPackageId) ?? null;
+  const extraHoursChoice = selectedExtraHoursPackage
+    ? {
+        name: i18n.language.startsWith('ar')
+          ? selectedExtraHoursPackage.nameAr || selectedExtraHoursPackage.nameEn
+          : selectedExtraHoursPackage.nameEn || selectedExtraHoursPackage.nameAr,
+        subtotal: selectedExtraHoursPackage.price,
+        discountAmount: computeExtraHoursDisplayPrice(selectedExtraHoursPackage).discountAmount,
+      }
+    : null;
 
   const selectExtraHoursPackage = async (packageId: string | null) => {
     try {
@@ -1322,7 +1580,12 @@ export function ParentApplicationFormPage() {
           : t('applications.extraHoursPackage.cleared', { defaultValue: 'Extra hours package removed.' }),
       );
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('applications.paymentPackage.selectFailed', { defaultValue: 'Could not update the selection.' }));
+      const message = errorMessageOf(error);
+      toast.error(
+        message.includes('extra_hours_locked_after_payment')
+          ? t('applications.extraHoursPackage.lockedAfterPayment')
+          : `${t('applications.paymentPackage.selectFailed', { defaultValue: 'Could not update the selection.' })}${message ? ` (${message})` : ''}`,
+      );
     }
   };
 
@@ -1343,9 +1606,8 @@ export function ParentApplicationFormPage() {
         await apps.saveApplicationDraft({ id, updates: draftUpdates() });
       }
       await applicationPackagePayment.selectPackage(packageId, billingPeriod);
-      toast.success(t('applications.paymentPackage.selectedToast', {
-        defaultValue: 'Package selected. Pay all or part of it - the application is sent for review automatically.',
-      }));
+      toast.success(t('applications.paymentPackage.selectedToast'));
+      setStep(PAYMENT_STEP);
     } catch (error) {
       const message = errorMessageOf(error);
       toast.error(
@@ -1373,14 +1635,14 @@ export function ParentApplicationFormPage() {
       }
       if (missingRequired.length) {
         toast.error(t('applications.submitValidation'));
-        setStep(10);
+        setStep(DOCUMENTS_STEP);
         return;
       }
       if (!hasRequestedUpload) {
         toast.error(t('applications.requestedDocumentsValidation', {
           defaultValue: 'Please upload or replace at least one requested document before submitting again.',
         }));
-        setStep(10);
+        setStep(DOCUMENTS_STEP);
         return;
       }
       toast.error(t('applications.submitTermsValidation', { defaultValue: 'Please accept the terms before submitting.' }));
@@ -1390,14 +1652,12 @@ export function ParentApplicationFormPage() {
       toast.error(t('applications.paymentPackage.selectBeforeSubmit', {
         defaultValue: 'Please choose a package before submitting the application.',
       }));
-      setActiveTab('packages');
+      setStep(PACKAGES_STEP);
       return;
     }
     if (!hasSubmittedPackagePayment) {
-      toast.error(t('applications.paymentPackage.payBeforeSubmit', {
-        defaultValue: 'Please submit a full or partial package payment before sending the application for review.',
-      }));
-      setActiveTab('packages');
+      toast.error(t('applications.paymentPackage.payBeforeSubmit'));
+      setStep(PAYMENT_STEP);
       return;
     }
     setSubmittingApplication(true);
@@ -1415,12 +1675,12 @@ export function ParentApplicationFormPage() {
       const message = error instanceof Error ? error.message : '';
       if (message === 'missing_required_documents') {
         toast.error(t('applications.submitValidation'));
-        setStep(10);
+        setStep(DOCUMENTS_STEP);
       } else if (message === 'requested_documents_not_updated') {
         toast.error(t('applications.requestedDocumentsValidation', {
           defaultValue: 'Please upload or replace at least one requested document before submitting again.',
         }));
-        setStep(10);
+        setStep(DOCUMENTS_STEP);
       } else {
         toast.error(t('payment.errors.actionFailed'));
       }
@@ -1479,21 +1739,25 @@ export function ParentApplicationFormPage() {
       <ApplicationWorkspaceTabs
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        packagesLocked={!isInformationComplete && !packageInvoice}
       />
 
       {activeTab === 'information' ? (
         <FieldValidationContext.Provider value={fieldValidation}>
-          <div className="grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-[260px_minmax(0,1fr)]">
             <ApplicationSteps
-              step={step}
+              step={activeStep}
+              lastReachableStep={gateReady ? lastReachableStep : activeStep}
               labels={applicationStepLabels}
               icons={applicationStepIcons}
-              onStepClick={setStep}
+              onStepClick={goToStep}
+              groups={[
+                { label: t('applications.stepper.detailsGroup'), from: 1, to: DOCUMENTS_STEP },
+                { label: t('applications.stepper.reviewGroup'), from: REVIEW_STEP, to: PAYMENT_STEP },
+              ]}
             />
 
-            <div className="min-w-0">
-              {step === 1 ? (
+            <div ref={stepContentRef} className="min-w-0 scroll-mt-24">
+              {activeStep === 1 ? (
                 <fieldset disabled={!canEditApplication} className={stepCardClassName(1)}>
                   <PanelHeader icon="account_circle" title={applicationStepLabels[0]} />
                   <div className="grid gap-4">
@@ -1517,7 +1781,7 @@ export function ParentApplicationFormPage() {
                 </fieldset>
               ) : null}
 
-              {step === 2 ? (
+              {activeStep === 2 ? (
                 <fieldset disabled={!canEditApplication} className={stepCardClassName(2)}>
                   <PanelHeader icon="home" title={applicationStepLabels[1]} />
                   <div className="grid gap-4 md:grid-cols-2">
@@ -1535,7 +1799,7 @@ export function ParentApplicationFormPage() {
                 </fieldset>
               ) : null}
 
-              {step === 3 ? (
+              {activeStep === 3 ? (
                 <fieldset disabled={!canEditApplication} className={stepCardClassName(3)}>
                   <PanelHeader icon="child_care" title={applicationStepLabels[2]} body={t('applications.newChildInfoHint', { defaultValue: 'Parent and family data is already copied. Add the new child details here.' })} />
                   <div className="grid gap-4 md:grid-cols-2">
@@ -1548,11 +1812,7 @@ export function ParentApplicationFormPage() {
                       <StyledSelect
                         value={childForm.gender}
                         onChange={(value) => setChildField('gender', value)}
-                        options={[
-                          { value: '', label: t('common.select') },
-                          { value: 'male', label: t('common.genderMale', { defaultValue: 'Male' }) },
-                          { value: 'female', label: t('common.genderFemale', { defaultValue: 'Female' }) },
-                        ]}
+                        options={withEmptyOption(t, genderOptions(t))}
                       />
                     </FormField>
                     <FormField name="nationality" label={t('signup.childNationality')} className="md:col-span-2">
@@ -1568,7 +1828,7 @@ export function ParentApplicationFormPage() {
                 </fieldset>
               ) : null}
 
-              {step === 4 ? (
+              {activeStep === 4 ? (
                 <fieldset disabled={!canEditApplication} className={stepCardClassName(4)}>
                   <PanelHeader icon="school" title={applicationStepLabels[3]} />
                   <div className="grid gap-5 md:grid-cols-2">
@@ -1577,16 +1837,7 @@ export function ParentApplicationFormPage() {
                       <StyledSelect
                         value={childForm.school_preference}
                         onChange={(value) => setChildField('school_preference', value)}
-                        options={[
-                          { value: '', label: t('common.select') },
-                          { value: 'british', label: t('signup.schoolBritish', { defaultValue: 'British' }) },
-                          { value: 'american', label: t('signup.schoolAmerican', { defaultValue: 'American' }) },
-                          { value: 'national', label: t('signup.schoolNational', { defaultValue: 'National' }) },
-                          { value: 'ib', label: t('signup.schoolIb', { defaultValue: 'IB' }) },
-                          { value: 'french', label: t('signup.schoolFrench', { defaultValue: 'French' }) },
-                          { value: 'canadian', label: t('signup.schoolCanadian', { defaultValue: 'Canadian' }) },
-                          { value: 'other', label: t('signup.schoolOther', { defaultValue: 'Other' }) },
-                        ]}
+                        options={withEmptyOption(t, schoolPreferenceOptions(t))}
                       />
                     </FormField>
                     <FormField label={t('signup.schoolAdmissionsPlan')}><Input placeholder={t('signup.examples.schoolAdmissionsPlan')} value={childForm.school_admissions_plan} onChange={(e) => setChildField('school_admissions_plan', e.target.value)} /></FormField>
@@ -1595,22 +1846,14 @@ export function ParentApplicationFormPage() {
                       <StyledSelect
                         value={parentForm.referral_source}
                         onChange={(value) => setParentField('referral_source', value)}
-                        options={[
-                          { value: '', label: t('common.select') },
-                          { value: 'social_media', label: t('signup.refSocialMedia') },
-                          { value: 'tiktok', label: t('signup.refTikTok') },
-                          { value: 'friend', label: t('signup.refFriend') },
-                          { value: 'website', label: t('signup.refWebsite') },
-                          { value: 'walkIn', label: t('signup.refWalkIn') },
-                          { value: 'other', label: t('signup.refOther') },
-                        ]}
+                        options={withEmptyOption(t, referralSourceOptions(t))}
                       />
                     </FormField>
                   </div>
                 </fieldset>
               ) : null}
 
-              {step === 5 ? (
+              {activeStep === 5 ? (
                 <fieldset disabled={!canEditApplication} className={stepCardClassName(5)}>
                   <PanelHeader icon="health_and_safety" title={applicationStepLabels[4]} />
                   <div className="grid gap-4 lg:grid-cols-2">
@@ -1684,7 +1927,7 @@ export function ParentApplicationFormPage() {
                 </fieldset>
               ) : null}
 
-              {step === 6 ? (
+              {activeStep === 6 ? (
                 <fieldset disabled={!canEditApplication} className={stepCardClassName(6)}>
                   <PanelHeader icon="emergency" title={applicationStepLabels[5]} />
                   <div className="grid gap-4">
@@ -1702,28 +1945,17 @@ export function ParentApplicationFormPage() {
                 </fieldset>
               ) : null}
 
-              {step === 7 ? (
+              {activeStep === 7 ? (
                 <fieldset disabled={!canEditApplication} className={stepCardClassName(7)}>
                   <PanelHeader icon="restaurant" title={applicationStepLabels[6]} />
                   <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                     <FormField label={t('signup.arrivalTime')}><Input type="time" value={childForm.arrival_time} onChange={(e) => setChildField('arrival_time', e.target.value)} /></FormField>
-                    {[
-                      ['takes_breakfast_at_home', t('signup.takesBreakfastAtHome')],
-                      ['eats_nursery_meals', t('signup.eatsNurseryMeals')],
-                      ['extra_meal_preference', t('signup.acceptExtraMeals')],
-                      ['sends_extra_snacks', t('signup.acceptExtraSnacks')],
-                      ['water_preference', t('signup.acceptMineralWater')],
-                      ['sends_vitamins', t('signup.sendsVitamins')],
-                    ].map(([field, label]) => (
-                      <FormField key={field} label={label}>
+                    {DAILY_ROUTINE_YES_NO_FIELDS.map(([field, labelKey]) => (
+                      <FormField key={field} label={t(labelKey)}>
                         <StyledSelect
-                          value={childForm[field as keyof ParentApplicationChildForm] as string}
-                          onChange={(value) => setChildField(field as keyof ParentApplicationChildForm, value)}
-                          options={[
-                            { value: '', label: t('common.select') },
-                            { value: 'Yes', label: t('common.yes', { defaultValue: 'Yes' }) },
-                            { value: 'No', label: t('common.no', { defaultValue: 'No' }) },
-                          ]}
+                          value={childForm[field]}
+                          onChange={(value) => setChildField(field, value)}
+                          options={withEmptyOption(t, yesNoOptions(t))}
                         />
                       </FormField>
                     ))}
@@ -1734,11 +1966,7 @@ export function ParentApplicationFormPage() {
                       <StyledSelect
                         value={childForm.diaper_supply_method}
                         onChange={(value) => setChildField('diaper_supply_method', value)}
-                        options={[
-                          { value: '', label: t('common.select') },
-                          { value: 'Stock', label: t('signup.stock') },
-                          { value: 'On daily basis', label: t('signup.daily') },
-                        ]}
+                        options={withEmptyOption(t, diaperSupplyOptions(t))}
                       />
                     </FormField>
                     <FormField label={t('signup.dailyDiaperCount')}><Input type="number" placeholder={t('signup.examples.dailyDiaperCount')} value={childForm.daily_diaper_count} onChange={(e) => setChildField('daily_diaper_count', e.target.value)} /></FormField>
@@ -1748,12 +1976,7 @@ export function ParentApplicationFormPage() {
                       <StyledSelect
                         value={childForm.toilet_training_status}
                         onChange={(value) => setChildField('toilet_training_status', value)}
-                        options={[
-                          { value: '', label: t('common.select') },
-                          { value: 'not_started', label: t('signup.notStarted') },
-                          { value: 'in_progress', label: t('signup.inProgress') },
-                          { value: 'completed', label: t('signup.completed') },
-                        ]}
+                        options={withEmptyOption(t, toiletTrainingOptions(t))}
                       />
                     </FormField>
                     <FormField name="nap_time_preference" label={t('signup.napTimePreference')}>
@@ -1763,11 +1986,7 @@ export function ParentApplicationFormPage() {
                           setChildField('nap_time_preference', value);
                           if (value !== 'Yes') setChildField('max_nap_time', '');
                         }}
-                        options={[
-                          { value: '', label: t('common.select') },
-                          { value: 'Yes', label: t('common.yes', { defaultValue: 'Yes' }) },
-                          { value: 'No', label: t('common.no', { defaultValue: 'No' }) },
-                        ]}
+                        options={withEmptyOption(t, yesNoOptions(t))}
                       />
                     </FormField>
                     {childForm.nap_time_preference === 'Yes' ? (
@@ -1775,15 +1994,7 @@ export function ParentApplicationFormPage() {
                         <StyledSelect
                           value={childForm.max_nap_time}
                           onChange={(value) => setChildField('max_nap_time', value)}
-                          options={[
-                            { value: '', label: t('common.select') },
-                            ...NAP_DURATION_VALUES.map((value) => ({
-                              value,
-                              label: value === '1'
-                                ? t('signup.napDurationOneHour')
-                                : t('signup.napDurationHours', { hours: value }),
-                            })),
-                          ]}
+                          options={withEmptyOption(t, napDurationOptions(t))}
                         />
                       </FormField>
                     ) : null}
@@ -1791,7 +2002,7 @@ export function ParentApplicationFormPage() {
                 </fieldset>
               ) : null}
 
-              {step === 8 ? (
+              {activeStep === 8 ? (
                 <fieldset disabled={!canEditApplication} className={stepCardClassName(8)}>
                   <PanelHeader icon="directions_car" title={applicationStepLabels[7]} />
                   <div className="grid gap-4 xl:grid-cols-2">
@@ -1803,11 +2014,7 @@ export function ParentApplicationFormPage() {
                         <StyledSelect
                           value={parentForm.pickup_1_authorization}
                           onChange={(value) => setParentField('pickup_1_authorization', value)}
-                          options={[
-                            { value: 'anytime', label: t('signup.anytime', { defaultValue: 'Anytime' }) },
-                            { value: 'scheduled', label: t('signup.scheduled', { defaultValue: 'Scheduled' }) },
-                            { value: 'emergency_only', label: t('signup.emergencyOnly', { defaultValue: 'Emergency only' }) },
-                          ]}
+                          options={pickupAuthorizationOptions(t)}
                         />
                       </FormField>
                     </div>
@@ -1819,11 +2026,7 @@ export function ParentApplicationFormPage() {
                         <StyledSelect
                           value={parentForm.pickup_2_authorization}
                           onChange={(value) => setParentField('pickup_2_authorization', value)}
-                          options={[
-                            { value: 'anytime', label: t('signup.anytime', { defaultValue: 'Anytime' }) },
-                            { value: 'scheduled', label: t('signup.scheduled', { defaultValue: 'Scheduled' }) },
-                            { value: 'emergency_only', label: t('signup.emergencyOnly', { defaultValue: 'Emergency only' }) },
-                          ]}
+                          options={pickupAuthorizationOptions(t)}
                         />
                       </FormField>
                     </div>
@@ -1831,7 +2034,7 @@ export function ParentApplicationFormPage() {
                 </fieldset>
               ) : null}
 
-              {step === 9 ? (
+              {activeStep === 9 ? (
                 <fieldset disabled={!canEditApplication} className={stepCardClassName(9)}>
                   <PanelHeader
                     icon="medication"
@@ -1904,8 +2107,8 @@ export function ParentApplicationFormPage() {
                 </fieldset>
               ) : null}
 
-              {step === 10 ? (
-                <div className={stepCardClassName(10)}>
+              {activeStep === DOCUMENTS_STEP ? (
+                <div className={stepCardClassName(DOCUMENTS_STEP)}>
                   <PanelHeader
                     icon="upload_file"
                     title={applicationStepLabels[9]}
@@ -1977,9 +2180,9 @@ export function ParentApplicationFormPage() {
                 </div>
               ) : null}
 
-              {step === 11 ? (
-                <fieldset disabled={!canEditApplication} className={stepCardClassName(11)}>
-                  <PanelHeader icon="task_alt" title={applicationStepLabels[10]} body={t('applications.reviewText')} />
+              {activeStep === REVIEW_STEP ? (
+                <div className={stepCardClassName(REVIEW_STEP)}>
+                  <PanelHeader icon="task_alt" title={applicationStepLabels[REVIEW_STEP - 1]} body={t('applications.reviewText')} />
                   <div className="grid gap-2">
                     <p className={`rounded-lg border px-3 py-2 text-xs ${
                       missingRequired.length ? 'border-error/30 bg-error/10 text-error' : 'border-success/30 bg-success/10 text-success'
@@ -2001,45 +2204,110 @@ export function ParentApplicationFormPage() {
                         })}
                       </p>
                     ) : null}
-                    {!packageInvoice || !hasSubmittedPackagePayment ? (
-                      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
-                        <span>
-                          {!packageInvoice
-                            ? t('applications.paymentPackage.selectBeforeSubmit', {
-                                defaultValue: 'Please choose a package before submitting the application.',
-                              })
-                            : t('applications.paymentPackage.payBeforeSubmit', {
-                                defaultValue: 'Please submit a full or partial package payment before sending the application for review.',
-                              })}
-                        </span>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="gap-1 border-warning/40 text-warning hover:bg-warning/10"
-                          onClick={() => setActiveTab('packages')}
-                        >
-                          <span className="material-symbols-outlined text-base" aria-hidden>inventory_2</span>
-                          {t('applications.paymentPackage.goToPackages', { defaultValue: 'Go to packages' })}
-                        </Button>
-                      </div>
-                    ) : null}
                   </div>
-                  <div className="space-y-1">
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold text-on-surface">{t('applications.review.answersTitle')}</h3>
+                    <ApplicationReviewSummary
+                      sections={applicationReviewSections({
+                        parentForm,
+                        childForm,
+                        latestDocs,
+                        stepLabels: applicationStepLabels,
+                        nationalities: childNationalityOptions,
+                        isArabic: i18n.language.startsWith('ar'),
+                        t,
+                      })}
+                      editable={canEditApplication}
+                      onOpenStep={goToStep}
+                    />
+                  </div>
+                  <fieldset disabled={!canEditApplication} className="space-y-1 rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
                     <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} />{t('applications.termsAccept')}</label>
                     {!terms ? (
                       <p className="text-xs font-medium text-warning">
                         {t('applications.submitTermsValidation', { defaultValue: 'Please accept the terms before submitting.' })}
                       </p>
-                    ) : null}
+                    ) : (
+                      <p className="text-xs text-on-surface-variant">{t('applications.review.nextStepsHint')}</p>
+                    )}
+                  </fieldset>
+                </div>
+              ) : null}
+
+              {activeStep === PACKAGES_STEP ? (
+                isInformationComplete || packageInvoice ? (
+                  <div className="space-y-4">
+                    <ApplicationPackagePaymentCard
+                      packages={applicationPackagePayment.packages}
+                      invoice={applicationPackagePayment.invoice}
+                      isLoading={applicationPackagePayment.isLoading}
+                      isError={applicationPackagePayment.isError}
+                      isSelecting={applicationPackagePayment.isSelecting || selectingPackage}
+                      canChoose={canChoosePackage}
+                      onRetry={() => void applicationPackagePayment.refetch()}
+                      onPayNow={() => setStep(PAYMENT_STEP)}
+                      termsAccepted={terms}
+                      onTermsChange={setTerms}
+                      onSelect={selectPackage}
+                      extraHoursChoice={extraHoursChoice}
+                      extraHoursSection={
+                        <ApplicationExtraHoursPackageCard
+                          embedded
+                          packages={extraHoursPackage.packages}
+                          selectedPackageId={selectedExtraHoursPackageId}
+                          hourlyPlan={extraHoursHourlyPlan}
+                          isLoading={extraHoursPackage.isLoading}
+                          isSelecting={extraHoursPackage.isSelecting}
+                          canChoose={canChooseExtraHours}
+                          onSelect={selectExtraHoursPackage}
+                        />
+                      }
+                    />
                   </div>
-                </fieldset>
+                ) : (
+                  <InformationLockedNotice
+                    title={t('applications.paymentPackage.lockedTitle', { defaultValue: 'Package selection is locked' })}
+                    message={informationIncompleteMessage}
+                    onCompleteInformation={goToFirstIncompleteStep}
+                  />
+                )
+              ) : null}
+
+              {activeStep === PAYMENT_STEP ? (
+                canEditApplication && !isInformationComplete ? (
+                  <InformationLockedNotice
+                    title={t('applications.paymentTab.lockedTitle')}
+                    message={informationIncompleteMessage}
+                    onCompleteInformation={goToFirstIncompleteStep}
+                  />
+                ) : (
+                  <ApplicationPaymentStep
+                    applicationId={id}
+                    invoice={packageInvoice}
+                    isLoading={applicationPackagePayment.isLoading}
+                    rejected={status === 'rejected'}
+                    returnedFromCheckout={returnedFromCheckout}
+                    onGoToPackages={() => setStep(PACKAGES_STEP)}
+                    beforePay={prepareApplicationForPayment}
+                  />
+                )
               ) : null}
             </div>
           </div>
 
-          <div className="sticky bottom-4 z-10 flex flex-col gap-2 rounded-xl border border-outline-variant bg-surface/95 p-3 shadow-lg backdrop-blur sm:flex-row sm:justify-between">
-            <Button variant="outline" disabled={step === 1} onClick={() => setStep((s) => Math.max(1, s - 1))}>{t('common.previous')}</Button>
+          <div className="sticky bottom-4 z-10 flex flex-col gap-2 rounded-xl border border-outline-variant bg-surface/95 p-3 shadow-lg backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+            <Button variant="outline" disabled={activeStep === 1} onClick={() => openStep(Math.max(1, activeStep - 1))}>{t('common.previous')}</Button>
+            {activeStepGateMessage ? (
+              <p className="flex flex-1 flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-xs font-medium text-warning" aria-live="polite">
+                <span className="material-symbols-outlined text-base" aria-hidden>lock</span>
+                {activeStepGateMessage}
+                {activeStep < DOCUMENTS_STEP ? (
+                  <button type="button" className="font-semibold text-primary underline" onClick={() => revealStepErrors(activeStep)}>
+                    {t('applications.stepGate.showMissing')}
+                  </button>
+                ) : null}
+              </p>
+            ) : null}
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button
                 variant="outline"
@@ -2049,63 +2317,27 @@ export function ParentApplicationFormPage() {
               >
                 {t('applications.saveDraft')}
               </Button>
-              {step < APPLICATION_STEP_COUNT ? (
-                <Button onClick={goToNextStep}>{t('common.next')}</Button>
-              ) : (
+              {needsManualSubmit && activeStep >= REVIEW_STEP ? (
                 <Button
-                  disabled={!canSubmitApplication || !isSubmitReady || submittingApplication}
+                  variant={activeStep < APPLICATION_STEP_COUNT ? 'outline' : 'default'}
+                  disabled={!isSubmitReady || submittingApplication}
                   onClick={() => void submitApplication()}
                 >
                   {submittingApplication ? t('common.saving') : t('applications.submit')}
                 </Button>
-              )}
+              ) : null}
+              {activeStep < APPLICATION_STEP_COUNT ? (
+                <Button
+                  disabled={activeStepBlocked}
+                  title={activeStepBlocked ? t('applications.stepGate.nextDisabledHint') : undefined}
+                  onClick={goToNextStep}
+                >
+                  {t('common.next')}
+                </Button>
+              ) : null}
             </div>
           </div>
         </FieldValidationContext.Provider>
-      ) : null}
-
-      {activeTab === 'packages' ? (
-        isInformationComplete || packageInvoice ? (
-          <div className="space-y-4">
-            <ApplicationPackagePaymentCard
-              packages={applicationPackagePayment.packages}
-              invoice={applicationPackagePayment.invoice}
-              isLoading={applicationPackagePayment.isLoading}
-              isError={applicationPackagePayment.isError}
-              isSelecting={applicationPackagePayment.isSelecting || selectingPackage}
-              canChoose={canChoosePackage}
-              onRetry={() => void applicationPackagePayment.refetch()}
-              payLink={payLink}
-              termsAccepted={terms}
-              onTermsChange={setTerms}
-              onSelect={selectPackage}
-            />
-            <ApplicationExtraHoursPackageCard
-              packages={extraHoursPackage.packages}
-              selectedPackageId={selectedExtraHoursPackageId}
-              isLoading={extraHoursPackage.isLoading}
-              isSelecting={extraHoursPackage.isSelecting}
-              canChoose={canChooseExtraHours}
-              onSelect={selectExtraHoursPackage}
-            />
-          </div>
-        ) : (
-          <section className="rounded-xl border border-outline-variant bg-surface px-4 py-8 shadow-sm sm:px-6">
-            <div className="mx-auto flex max-w-md flex-col items-center text-center">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-warning/15 text-warning">
-                <span className="material-symbols-outlined text-2xl" aria-hidden>lock</span>
-              </span>
-              <h2 className="mt-3 text-base font-semibold text-on-surface">
-                {t('applications.paymentPackage.lockedTitle', { defaultValue: 'Package selection is locked' })}
-              </h2>
-              <p className="mt-1 text-sm leading-6 text-on-surface-variant">{informationIncompleteMessage}</p>
-              <Button type="button" className="mt-4 gap-1" onClick={goToFirstIncompleteStep}>
-                <span className="material-symbols-outlined text-base" aria-hidden>edit_document</span>
-                {t('applications.paymentPackage.completeInformation', { defaultValue: 'Complete information' })}
-              </Button>
-            </div>
-          </section>
-        )
       ) : null}
 
       {activeTab === 'payments' ? (

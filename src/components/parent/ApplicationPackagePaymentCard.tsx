@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { DiscountCountdown } from '@/components/parent/DiscountCountdown';
 import {
   computePackageBillingQuote,
@@ -12,6 +13,8 @@ import {
   type ApplicationPaymentPackage,
   type ApplicationPackageInvoice,
 } from '@/hooks/useApplicationPackagePayment';
+import { formatMoneyAmount } from '@/lib/money';
+import { payableNow as payableNowFor } from '@/lib/paymentMethods';
 import { cn } from '@/lib/utils';
 
 type Props = {
@@ -22,12 +25,16 @@ type Props = {
   isSelecting?: boolean;
   canChoose: boolean;
   onRetry?: () => void;
-  /** Overrides the default pay-now destination (used to return the parent to the application after paying). */
-  payLink?: string | null;
+  /** Opens the payment step for the created invoice. */
+  onPayNow: () => void;
   /** Terms must be accepted before the invoice is created; paying then submits the application. */
   termsAccepted: boolean;
   onTermsChange: (accepted: boolean) => void;
   onSelect: (packageId: string, billingPeriod: ApplicationPackageBillingPeriod) => Promise<unknown>;
+  /** How extra time is paid, shown as its own section before the summary. */
+  extraHoursSection?: ReactNode;
+  /** The extra-hours package chosen so far (null = pay per hour), for the summary preview. */
+  extraHoursChoice?: { name: string; subtotal: number; discountAmount: number } | null;
 };
 
 const billingPeriodOptions: Array<{
@@ -46,6 +53,10 @@ function packageName(pkg: ApplicationPaymentPackage, isAr: boolean): string {
   return isAr ? pkg.nameAr || pkg.nameEn : pkg.nameEn || pkg.nameAr;
 }
 
+function packageDescription(pkg: ApplicationPaymentPackage, isAr: boolean): string | null {
+  return isAr ? pkg.descriptionAr || pkg.descriptionEn : pkg.descriptionEn || pkg.descriptionAr;
+}
+
 function statusVariant(status: ApplicationPackageInvoice['status'] | 'not_selected') {
   if (status === 'paid') return 'success';
   if (status === 'partial' || status === 'in_review') return 'warning';
@@ -53,8 +64,47 @@ function statusVariant(status: ApplicationPackageInvoice['status'] | 'not_select
   return 'secondary';
 }
 
-function packageDescription(pkg: ApplicationPaymentPackage, isAr: boolean): string | null {
-  return isAr ? pkg.descriptionAr || pkg.descriptionEn : pkg.descriptionEn || pkg.descriptionAr;
+/** How much cheaper a longer period is than paying the same months one by one (before any deal). */
+function periodSavingPercent(pkg: ApplicationPaymentPackage, period: ApplicationPackageBillingPeriod): number {
+  const quote = computePackageBillingQuote(pkg, period);
+  const monthByMonth = pkg.price * quote.billingMonths;
+  if (monthByMonth <= 0 || quote.subtotal >= monthByMonth) return 0;
+  return Math.round((1 - quote.subtotal / monthByMonth) * 100);
+}
+
+function SectionHeading({ index, title, hint, action }: { index: number; title: string; hint?: string; action?: ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-2">
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="mt-px flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
+          {index}
+        </span>
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold text-on-surface">{title}</h3>
+          {hint ? <p className="mt-0.5 text-xs leading-5 text-on-surface-variant">{hint}</p> : null}
+        </div>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+function SummaryLine({ label, value, tone }: { label: string; value: string; tone?: 'success' | 'warning' | 'total' }) {
+  return (
+    <div className={cn('flex items-baseline justify-between gap-3', tone === 'total' && 'border-t border-outline-variant pt-3')}>
+      <dt className={cn('text-on-surface-variant', tone === 'total' && 'font-semibold text-on-surface')}>{label}</dt>
+      <dd
+        className={cn(
+          'font-medium tabular-nums text-on-surface',
+          tone === 'success' && 'text-success',
+          tone === 'warning' && 'text-warning',
+          tone === 'total' && 'text-xl font-bold tracking-tight',
+        )}
+      >
+        {value}
+      </dd>
+    </div>
+  );
 }
 
 export function ApplicationPackagePaymentCard({
@@ -65,16 +115,19 @@ export function ApplicationPackagePaymentCard({
   isSelecting = false,
   canChoose,
   onRetry,
-  payLink = null,
+  onPayNow,
   termsAccepted,
   onTermsChange,
   onSelect,
+  extraHoursSection,
+  extraHoursChoice = null,
 }: Props) {
   const { t, i18n } = useTranslation();
   const isAr = i18n.language.startsWith('ar');
+  const money = (amount: number) => t('invoice.egpAmount', { amount: formatMoneyAmount(amount) });
   const selectedId = invoice?.packageId ?? '';
   const [draftBillingPeriod, setDraftBillingPeriod] = useState<ApplicationPackageBillingPeriod | null>(null);
-  // Clicking a card only stages it; the invoice is created from the confirm button in the side panel.
+  // Clicking a card only stages it; the invoice is created from the confirm button in the summary.
   const [draftPackageId, setDraftPackageId] = useState<string | null>(null);
   const billingPeriod = draftBillingPeriod ?? invoice?.billingPeriod ?? 'monthly';
   const activeId = draftPackageId ?? selectedId;
@@ -87,419 +140,463 @@ export function ApplicationPackagePaymentCard({
     () => packages.find((pkg) => pkg.id === activeId) ?? null,
     [packages, activeId],
   );
-  const billingOption = billingPeriodOptions.find((option) => option.value === billingPeriod) ?? billingPeriodOptions[0];
+  // Best saving a period offers across the packages, shown on the period switch.
+  const bestSavingByPeriod = useMemo(
+    () => Object.fromEntries(
+      billingPeriodOptions.map((option) => [
+        option.value,
+        Math.max(0, ...packages.map((pkg) => periodSavingPercent(pkg, option.value))),
+      ]),
+    ) as Record<ApplicationPackageBillingPeriod, number>,
+    [packages],
+  );
+  const periodLabel = (period: ApplicationPackageBillingPeriod) => {
+    const option = billingPeriodOptions.find((candidate) => candidate.value === period) ?? billingPeriodOptions[0];
+    return t(option.labelKey, { defaultValue: option.defaultLabel });
+  };
   const paymentStarted = (invoice?.paidAmount ?? 0) > 0 || (invoice?.pendingAmount ?? 0) > 0;
   // What can still be paid once amounts already awaiting finance confirmation are excluded.
-  const payableNow = invoice ? Math.max(0, invoice.balanceDue - invoice.pendingAmount) : 0;
+  const payableNow = invoice ? payableNowFor(invoice) : 0;
   const selectionDisabled = !canChoose || isSelecting || paymentStarted;
   // Something staged that the invoice does not reflect yet (new invoice, or a different package/period).
   const hasPendingChange = Boolean(activePackage) && (activeId !== selectedId || billingPeriod !== invoice?.billingPeriod);
   const pendingQuote = activePackage ? computePackageBillingQuote(activePackage, billingPeriod) : null;
-  const pendingTotal = pendingQuote?.total ?? 0;
+  const extraHoursNet = extraHoursChoice ? Math.max(0, extraHoursChoice.subtotal - extraHoursChoice.discountAmount) : 0;
+  const summaryIndex = extraHoursSection ? 4 : 3;
+  /** The extra-hours lines of a summary: the chosen package, or the default per-hour billing. */
+  const extraHoursLines = (extra: { name: string; subtotal: number; discountAmount: number } | null) =>
+    extra ? (
+      <>
+        <SummaryLine label={`${t('applications.extraHoursPackage.title', { defaultValue: 'Extra hours' })} · ${extra.name}`} value={money(extra.subtotal)} />
+        {extra.discountAmount > 0 ? (
+          <SummaryLine
+            label={t('applications.extraHoursPackage.discount', { defaultValue: 'Discount' })}
+            value={`−${money(extra.discountAmount)}`}
+            tone="success"
+          />
+        ) : null}
+      </>
+    ) : extraHoursSection ? (
+      <SummaryLine
+        label={t('applications.extraHoursPackage.title', { defaultValue: 'Extra hours' })}
+        value={t('applications.extraHoursPackage.payPerHourBilledLater')}
+      />
+    ) : null;
+  const statusLabel = invoice
+    ? t(
+        invoice.status === 'partial'
+          ? 'financial.paymentHistory.partial'
+          : invoice.status === 'unpaid'
+            ? 'invoice.status.pending'
+            : invoice.status === 'in_review'
+              ? 'invoice.inReview'
+              : `invoice.status.${invoice.status}`,
+        { defaultValue: invoice.status },
+      )
+    : t('applications.paymentPackage.notSelected', { defaultValue: 'Not selected' });
 
   const resetDraft = () => {
     setDraftPackageId(null);
     setDraftBillingPeriod(null);
   };
 
+  const dealLabel = (pkg: ApplicationPaymentPackage) =>
+    pkg.deal?.discountType === 'percentage'
+      ? t('applications.paymentPackage.dealPercentOff', { value: pkg.deal.discountValue, defaultValue: '{{value}}% OFF' })
+      : t('applications.paymentPackage.dealAmountOff', {
+          value: formatMoneyAmount(pkg.deal?.discountValue ?? 0),
+          defaultValue: 'EGP {{value}} OFF',
+        });
+
   return (
-    <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-outline-variant bg-surface-container-lowest px-4 py-4 sm:px-5">
+    <section className="overflow-hidden rounded-2xl border border-outline-variant bg-surface shadow-sm">
+      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-outline-variant px-5 py-4">
         <div className="flex min-w-0 items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-            <span className="material-symbols-outlined text-xl" aria-hidden>payments</span>
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <MaterialSymbol name="workspace_premium" size="text-2xl" />
           </span>
           <div className="min-w-0">
-            <h2 className="text-base font-semibold text-on-surface">
+            <h2 className="text-lg font-semibold tracking-tight text-on-surface">
               {t('applications.paymentPackage.title', { defaultValue: 'Payment package' })}
             </h2>
-            <p className="mt-1 max-w-2xl text-xs leading-5 text-on-surface-variant">
-              {t('applications.paymentPackage.subtitle', {
-                defaultValue: 'Choose a package and pay all or part of it before final approval.',
-              })}
+            <p className="mt-0.5 max-w-2xl text-sm leading-5 text-on-surface-variant">
+              {t('applications.paymentPackage.subtitle')}
             </p>
           </div>
         </div>
-        <Badge variant={statusVariant(invoice?.status ?? 'not_selected')}>
-          {invoice
-            ? t(
-                invoice.status === 'partial'
-                  ? 'financial.paymentHistory.partial'
-                  : invoice.status === 'unpaid'
-                    ? 'invoice.status.pending'
-                    : invoice.status === 'in_review'
-                      ? 'invoice.inReview'
-                      : `invoice.status.${invoice.status}`,
-                { defaultValue: invoice.status },
-              )
-            : t('applications.paymentPackage.notSelected', { defaultValue: 'Not selected' })}
-        </Badge>
-      </div>
+        <Badge variant={statusVariant(invoice?.status ?? 'not_selected')}>{statusLabel}</Badge>
+      </header>
 
       {isLoading ? (
-        <p className="px-5 py-6 text-sm text-on-surface-variant">{t('common.loading')}</p>
+        <div role="status" className="flex items-center gap-3 px-5 py-8 text-sm text-on-surface-variant">
+          <MaterialSymbol name="progress_activity" className="animate-spin text-primary" />
+          {t('common.loading')}
+        </div>
       ) : isError ? (
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-6">
-          <p role="alert" className="text-sm text-error">
+          <p role="alert" className="flex items-center gap-2 text-sm text-error">
+            <MaterialSymbol name="error" />
             {t('applications.paymentPackage.loadError', {
               defaultValue: 'Could not load package and invoice information. Please try again.',
             })}
           </p>
           {onRetry ? (
             <Button type="button" variant="outline" onClick={onRetry}>
+              <MaterialSymbol name="refresh" size="text-base" />
               {t('common.retry', { defaultValue: 'Retry' })}
             </Button>
           ) : null}
         </div>
       ) : packages.length === 0 ? (
-        <div className="flex items-start gap-3 px-5 py-6">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-surface-container text-on-surface-variant">
-            <span className="material-symbols-outlined text-xl" aria-hidden>inventory_2</span>
+        <div className="flex flex-col items-center px-5 py-10 text-center">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-container text-on-surface-variant">
+            <MaterialSymbol name="inventory_2" size="text-2xl" />
           </span>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-on-surface">
-              {t('applications.paymentPackage.noPackages', {
-                defaultValue: 'No active payment packages are available yet.',
-              })}
-            </p>
-            <p className="mt-1 text-xs leading-5 text-on-surface-variant">
-              {t('applications.paymentPackage.noPackagesHint', {
-                defaultValue: 'The nursery admin publishes packages from Admin → Packages. Once a package is active, it appears here and you can choose it and pay all or part of it.',
-              })}
-            </p>
-          </div>
+          <p className="mt-3 text-sm font-semibold text-on-surface">
+            {t('applications.paymentPackage.noPackages', { defaultValue: 'No active payment packages are available yet.' })}
+          </p>
+          <p className="mt-1 max-w-md text-xs leading-5 text-on-surface-variant">{t('applications.paymentPackage.noPackagesHint')}</p>
         </div>
       ) : (
-        <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
-          <div className="space-y-4 p-4 sm:p-5">
-            <div className="grid gap-2 sm:grid-cols-4">
-              {billingPeriodOptions.map((option) => {
-                const active = option.value === billingPeriod;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    disabled={selectionDisabled}
-                    onClick={() => setDraftBillingPeriod(option.value)}
-                    className={cn(
-                      'h-11 rounded-lg border px-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-70',
-                      active
-                        ? 'border-primary bg-primary text-primary-foreground shadow-sm'
-                        : 'border-outline-variant bg-surface-container-lowest text-on-surface hover:border-primary hover:bg-primary/5',
-                    )}
-                  >
-                    {t(option.labelKey, { defaultValue: option.defaultLabel })}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {packages.map((pkg) => {
-              const active = pkg.id === activeId;
-              const description = packageDescription(pkg, isAr);
-              const quote = computePackageBillingQuote(pkg, billingPeriod);
-              const dealLive = Boolean(pkg.deal && isApplicationDealActive(pkg.deal));
-              return (
-                <button
-                  key={pkg.id}
-                  type="button"
-                  disabled={selectionDisabled}
-                  aria-pressed={active}
-                  onClick={() => setDraftPackageId(pkg.id)}
-                  className={cn(
-                    'group flex min-h-[168px] flex-col rounded-lg border p-4 text-start text-sm transition-all disabled:cursor-not-allowed disabled:opacity-70',
-                    active
-                      ? 'border-primary bg-primary/10 shadow-sm ring-2 ring-primary/10'
-                      : 'border-outline-variant bg-surface-container-lowest hover:border-primary hover:bg-primary/5',
-                  )}
-                >
-                  {dealLive ? (
-                    <span className="mb-2 flex flex-wrap items-center gap-1.5">
-                      <Badge variant="error">
-                        {pkg.deal?.discountType === 'percentage'
-                          ? t('applications.paymentPackage.dealPercentOff', {
-                              value: pkg.deal.discountValue,
-                              defaultValue: '{{value}}% OFF',
-                            })
-                          : t('applications.paymentPackage.dealAmountOff', {
-                              value: pkg.deal?.discountValue.toFixed(2),
-                              defaultValue: 'EGP {{value}} OFF',
-                            })}
-                      </Badge>
-                      <DiscountCountdown endsAt={pkg.deal?.endsAt ?? null} />
-                    </span>
-                  ) : null}
-                  <span className="flex items-start justify-between gap-3">
-                    <span className="min-w-0">
-                      <span className="block text-sm font-semibold text-on-surface">{packageName(pkg, isAr)}</span>
-                      {pkg.dailyHours ? (
-                        <span className="mt-1 block text-xs text-on-surface-variant">
-                          {t('applications.paymentPackage.dailyHours', {
-                            hours: pkg.dailyHours,
-                            defaultValue: '{{hours}} hours/day',
-                          })}
-                        </span>
-                      ) : null}
-                    </span>
-                    <span
+        <>
+          <div className="space-y-7 p-5">
+            <div className="space-y-3">
+              <SectionHeading
+                index={1}
+                title={t('applications.paymentPackage.sections.period')}
+                hint={t('applications.paymentPackage.periodHint')}
+              />
+              <div
+                role="radiogroup"
+                aria-label={t('applications.paymentPackage.sections.period')}
+                className="grid grid-cols-2 gap-1 rounded-xl bg-surface-container p-1 sm:grid-cols-4"
+              >
+                {billingPeriodOptions.map((option) => {
+                  const active = option.value === billingPeriod;
+                  const saving = bestSavingByPeriod[option.value];
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      disabled={selectionDisabled}
+                      onClick={() => setDraftBillingPeriod(option.value)}
                       className={cn(
-                        'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border',
-                        active ? 'border-primary bg-primary text-primary-foreground' : 'border-outline-variant text-on-surface-variant',
+                        'flex min-h-[3.25rem] flex-col items-center justify-center rounded-lg px-3 py-1.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-60',
+                        active
+                          ? 'bg-surface text-primary shadow-sm ring-1 ring-primary/20'
+                          : 'text-on-surface-variant hover:bg-surface/60 hover:text-on-surface',
                       )}
                     >
-                      <span className="material-symbols-outlined text-base" aria-hidden>
-                        {active ? 'check' : 'add'}
-                      </span>
-                    </span>
-                  </span>
-                  {description ? (
-                    <span className="mt-3 line-clamp-2 text-xs leading-5 text-on-surface-variant">{description}</span>
-                  ) : null}
-                  {pkg.featuresJson.length ? (
-                    <ul className="mt-2 space-y-1">
-                      {pkg.featuresJson.slice(0, 4).map((feature, index) => {
-                        const text = isAr ? feature.ar || feature.en : feature.en || feature.ar;
-                        return text ? (
-                          <li key={index} className="flex items-start gap-1.5 text-xs leading-5 text-on-surface-variant">
-                            <span className="material-symbols-outlined mt-0.5 text-sm text-success" aria-hidden>
-                              check
+                      {t(option.labelKey, { defaultValue: option.defaultLabel })}
+                      {saving > 0 ? (
+                        <span className="mt-0.5 text-[11px] font-medium text-success">
+                          {t('applications.paymentPackage.saveUpTo', { percent: saving })}
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <SectionHeading index={2} title={t('applications.paymentPackage.sections.package')} />
+              <div
+                role="radiogroup"
+                aria-label={t('applications.paymentPackage.sections.package')}
+                className="grid gap-4 sm:grid-cols-2"
+              >
+                {packages.map((pkg) => {
+                  const active = pkg.id === activeId;
+                  const description = packageDescription(pkg, isAr);
+                  const quote = computePackageBillingQuote(pkg, billingPeriod);
+                  const dealLive = Boolean(pkg.deal && isApplicationDealActive(pkg.deal));
+                  const perMonth = quote.billingMonths > 1 ? quote.total / quote.billingMonths : null;
+                  const features = pkg.featuresJson
+                    .map((feature) => (isAr ? feature.ar || feature.en : feature.en || feature.ar))
+                    .filter(Boolean)
+                    .slice(0, 4);
+                  return (
+                    <button
+                      key={pkg.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      disabled={selectionDisabled}
+                      onClick={() => setDraftPackageId(pkg.id)}
+                      className={cn(
+                        'group relative flex flex-col rounded-2xl border bg-surface p-5 text-start transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-70',
+                        active
+                          ? 'border-primary shadow-md ring-1 ring-primary'
+                          : 'border-outline-variant hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md',
+                      )}
+                    >
+                      <span className="flex items-start justify-between gap-3">
+                        <span className="min-w-0">
+                          <span className="block truncate text-base font-semibold text-on-surface">{packageName(pkg, isAr)}</span>
+                          {pkg.dailyHours ? (
+                            <span className="mt-1 inline-flex items-center gap-1 text-xs text-on-surface-variant">
+                              <MaterialSymbol name="schedule" size="text-sm" />
+                              {t('applications.paymentPackage.dailyHours', { hours: pkg.dailyHours, defaultValue: '{{hours}} hours/day' })}
                             </span>
-                            <span className="line-clamp-1">{text}</span>
-                          </li>
-                        ) : null;
-                      })}
-                    </ul>
-                  ) : null}
-                  <span className="mt-auto flex flex-wrap items-baseline gap-2 pt-4">
-                    {quote.discountAmount > 0 ? (
-                      <span className="text-xs text-on-surface-variant line-through">
-                        {t('invoice.egpAmount', { amount: quote.subtotal.toFixed(2) })}
+                          ) : null}
+                        </span>
+                        <span
+                          aria-hidden
+                          className={cn(
+                            'flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition',
+                            active ? 'border-primary bg-primary text-primary-foreground' : 'border-outline-variant text-transparent',
+                          )}
+                        >
+                          <MaterialSymbol name="check" size="text-sm" />
+                        </span>
                       </span>
-                    ) : null}
-                    <span className={cn('text-lg font-semibold', quote.discountAmount > 0 ? 'text-error' : 'text-on-surface')}>
-                      {t('invoice.egpAmount', { amount: quote.total.toFixed(2) })}
-                    </span>
-                  </span>
-                  <span className="mt-1 text-xs text-on-surface-variant">
-                    {t('applications.paymentPackage.monthlyPrice', {
-                      amount: pkg.price.toFixed(2),
-                      defaultValue: 'EGP {{amount}} monthly',
-                    })}
-                  </span>
-                  <span
-                    className={cn(
-                      'mt-3 inline-flex h-9 w-full items-center justify-center gap-1 rounded-md border text-xs font-semibold transition',
-                      active
-                        ? 'border-primary bg-primary text-primary-foreground'
-                        : 'border-primary/30 bg-surface text-primary group-hover:bg-primary group-hover:text-primary-foreground',
-                    )}
-                  >
-                    <span className="material-symbols-outlined text-base" aria-hidden>{active ? 'check' : 'add'}</span>
-                    {active
-                      ? t('applications.paymentPackage.selectedButton', { defaultValue: 'Selected' })
-                      : t('applications.paymentPackage.selectButton', { defaultValue: 'Select package' })}
-                  </span>
-                </button>
-              );
-            })}
+
+                      {dealLive ? (
+                        <span className="mt-3 flex flex-wrap items-center gap-1.5">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs font-semibold text-success">
+                            <MaterialSymbol name="sell" size="text-sm" />
+                            {dealLabel(pkg)}
+                          </span>
+                          <DiscountCountdown endsAt={pkg.deal?.endsAt ?? null} />
+                        </span>
+                      ) : null}
+
+                      <span className="mt-4 block">
+                        <span className="flex flex-wrap items-baseline gap-x-2">
+                          <span className="text-3xl font-bold tracking-tight tabular-nums text-on-surface">{money(quote.total)}</span>
+                          <span className="text-sm text-on-surface-variant">
+                            {quote.billingMonths === 1
+                              ? t('applications.paymentPackage.perMonth')
+                              : t('applications.paymentPackage.forMonths', { count: quote.billingMonths })}
+                          </span>
+                        </span>
+                        {quote.discountAmount > 0 || perMonth ? (
+                          <span className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-on-surface-variant">
+                            {quote.discountAmount > 0 ? <span className="tabular-nums line-through">{money(quote.subtotal)}</span> : null}
+                            {perMonth ? (
+                              <span className="tabular-nums">{t('applications.paymentPackage.perMonthEquivalent', { amount: money(perMonth) })}</span>
+                            ) : null}
+                          </span>
+                        ) : null}
+                      </span>
+
+                      {description ? (
+                        <span className="mt-3 line-clamp-2 text-sm leading-5 text-on-surface-variant">{description}</span>
+                      ) : null}
+
+                      {features.length > 0 ? (
+                        <span className="mt-4 block space-y-2 border-t border-outline-variant pt-4">
+                          {features.map((feature) => (
+                            <span key={feature} className="flex items-start gap-2 text-sm text-on-surface">
+                              <MaterialSymbol name="check_circle" size="text-base" className="mt-px text-success" />
+                              <span className="min-w-0">{feature}</span>
+                            </span>
+                          ))}
+                        </span>
+                      ) : null}
+
+                      <span className="mt-auto block pt-5">
+                        <span
+                          className={cn(
+                            'inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-lg text-sm font-semibold transition',
+                            active
+                              ? 'bg-primary text-primary-foreground'
+                              : 'border border-outline-variant text-on-surface group-hover:border-primary group-hover:text-primary',
+                          )}
+                        >
+                          {active ? <MaterialSymbol name="check" size="text-base" /> : null}
+                          {active
+                            ? t('applications.paymentPackage.selectedButton', { defaultValue: 'Selected' })
+                            : t('applications.paymentPackage.selectButton', { defaultValue: 'Select package' })}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
-          <aside className="border-t border-outline-variant bg-surface-container-lowest p-4 sm:p-5 lg:border-l lg:border-t-0">
-            {hasPendingChange && activePackage ? (
-              <div className="space-y-4 text-sm">
-                <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
-                  <p className="text-xs font-semibold uppercase text-on-surface-variant">
-                    {t('applications.paymentPackage.yourChoice', { defaultValue: 'Your choice' })}
-                  </p>
-                  <p className="mt-1 font-semibold text-on-surface">{packageName(activePackage, isAr)}</p>
-                  <p className="mt-1 text-xs text-on-surface-variant">
-                    {t(billingOption.labelKey, { defaultValue: billingOption.defaultLabel })}
-                  </p>
-                  {pendingQuote?.dealApplied ? (
-                    <div className="mt-2">
-                      <DiscountCountdown endsAt={activePackage.deal?.endsAt ?? null} />
+          {extraHoursSection ? (
+            <div className="space-y-3 border-t border-outline-variant p-5">
+              <SectionHeading
+                index={3}
+                title={t('applications.extraHoursPackage.title', { defaultValue: 'Extra hours' })}
+                hint={t('applications.extraHoursPackage.sectionHint')}
+                action={
+                  <span className="rounded-full bg-surface-container px-2 py-0.5 text-[11px] font-medium text-on-surface-variant">
+                    {t('applications.extraHoursPackage.optional', { defaultValue: 'Optional' })}
+                  </span>
+                }
+              />
+              {extraHoursSection}
+            </div>
+          ) : null}
+
+          <div className="space-y-4 border-t border-outline-variant bg-surface-container-lowest p-5">
+            <SectionHeading index={summaryIndex} title={t('applications.paymentPackage.sections.summary')} />
+
+            {hasPendingChange && activePackage && pendingQuote ? (
+              <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(220px,280px)]">
+                <div className="rounded-xl border border-outline-variant bg-surface p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-on-surface-variant">
+                        {t('applications.paymentPackage.yourChoice', { defaultValue: 'Your choice' })}
+                      </p>
+                      <p className="mt-1 font-semibold text-on-surface">{packageName(activePackage, isAr)}</p>
+                      <p className="text-xs text-on-surface-variant">
+                        {periodLabel(billingPeriod)} · {t('applications.paymentPackage.monthsCount', { count: pendingQuote.billingMonths })}
+                      </p>
                     </div>
+                    {pendingQuote.dealApplied ? <DiscountCountdown endsAt={activePackage.deal?.endsAt ?? null} /> : null}
+                  </div>
+                  <dl className="mt-4 space-y-2 text-sm">
+                    <SummaryLine label={t('applications.paymentPackage.tuitionLine')} value={money(pendingQuote.subtotal)} />
+                    {pendingQuote.discountAmount > 0 ? (
+                      <SummaryLine
+                        label={t('applications.paymentPackage.discount', { defaultValue: 'Discount' })}
+                        value={`−${money(pendingQuote.discountAmount)}`}
+                        tone="success"
+                      />
+                    ) : null}
+                    {extraHoursLines(extraHoursChoice)}
+                    <SummaryLine label={t('invoice.details.total')} value={money(pendingQuote.total + extraHoursNet)} tone="total" />
+                  </dl>
+                </div>
+                <div className="flex flex-col gap-3">
+                  {/* Terms are normally accepted on the review step; ask here only if they were not. */}
+                  {!termsAccepted ? (
+                    <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-outline-variant bg-surface p-3 text-xs leading-5 text-on-surface">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5"
+                        checked={termsAccepted}
+                        disabled={selectionDisabled}
+                        onChange={(event) => onTermsChange(event.target.checked)}
+                      />
+                      <span>{t('applications.termsAccept')}</span>
+                    </label>
+                  ) : null}
+                  <Button
+                    type="button"
+                    className="h-12 w-full gap-2 rounded-xl text-base"
+                    disabled={selectionDisabled || !termsAccepted}
+                    onClick={() => void onSelect(activePackage.id, billingPeriod)}
+                  >
+                    <MaterialSymbol name={isSelecting ? 'hourglass_top' : 'receipt_long'} size="text-lg" />
+                    {isSelecting
+                      ? t('common.saving')
+                      : invoice
+                        ? t('applications.paymentPackage.updateInvoice', { defaultValue: 'Update package' })
+                        : t('applications.paymentPackage.createInvoice', { defaultValue: 'Confirm & create invoice' })}
+                  </Button>
+                  <p className="text-xs leading-5 text-on-surface-variant">{t('applications.paymentPackage.confirmHint')}</p>
+                  {invoice ? (
+                    <button
+                      type="button"
+                      className="self-start text-xs font-semibold text-primary hover:underline"
+                      onClick={resetDraft}
+                      disabled={isSelecting}
+                    >
+                      {t('applications.paymentPackage.keepCurrent', { defaultValue: 'Keep current package' })}
+                    </button>
                   ) : null}
                 </div>
-                <dl className="grid gap-2">
-                  <div className="flex justify-between gap-3">
-                    <dt className="text-on-surface-variant">
-                      {t('applications.paymentPackage.months', { defaultValue: 'Months' })}
-                    </dt>
-                    <dd className="font-medium text-on-surface">{pendingQuote?.billingMonths ?? billingOption.months}</dd>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <dt className="text-on-surface-variant">{t('invoice.details.subtotal', { defaultValue: 'Subtotal' })}</dt>
-                    <dd className="font-medium text-on-surface">
-                      {t('invoice.egpAmount', { amount: (pendingQuote?.subtotal ?? 0).toFixed(2) })}
-                    </dd>
-                  </div>
-                  {pendingQuote && pendingQuote.discountAmount > 0 ? (
-                    <div className="flex justify-between gap-3">
-                      <dt className="text-error">{t('applications.paymentPackage.discount', { defaultValue: 'Discount' })}</dt>
-                      <dd className="font-medium text-error">
-                        -{t('invoice.egpAmount', { amount: pendingQuote.discountAmount.toFixed(2) })}
-                      </dd>
-                    </div>
-                  ) : null}
-                  <div className="flex justify-between gap-3 border-t border-outline-variant pt-2">
-                    <dt className="font-semibold text-on-surface">{t('invoice.details.total')}</dt>
-                    <dd className="font-semibold text-on-surface">{t('invoice.egpAmount', { amount: pendingTotal.toFixed(2) })}</dd>
-                  </div>
-                </dl>
-                <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-outline-variant bg-surface p-3 text-xs leading-5 text-on-surface">
-                  <input
-                    type="checkbox"
-                    className="mt-0.5"
-                    checked={termsAccepted}
-                    disabled={selectionDisabled}
-                    onChange={(event) => onTermsChange(event.target.checked)}
-                  />
-                  <span>{t('applications.termsAccept')}</span>
-                </label>
-                <Button
-                  type="button"
-                  className="h-11 w-full gap-2 rounded-md"
-                  disabled={selectionDisabled || !termsAccepted}
-                  onClick={() => void onSelect(activePackage.id, billingPeriod)}
-                >
-                  <span className="material-symbols-outlined text-base" aria-hidden>
-                    {isSelecting ? 'hourglass_top' : 'receipt_long'}
-                  </span>
-                  {isSelecting
-                    ? t('common.saving')
-                    : invoice
-                      ? t('applications.paymentPackage.updateInvoice', { defaultValue: 'Update package' })
-                      : t('applications.paymentPackage.createInvoice', { defaultValue: 'Confirm & create invoice' })}
-                </Button>
-                <p className="text-xs leading-5 text-on-surface-variant">
-                  {t('applications.paymentPackage.confirmHint', {
-                    defaultValue: 'You can pay all or part of this amount after the invoice is created. The application is sent for review as soon as a payment is submitted.',
-                  })}
-                </p>
-                {invoice ? (
-                  <button
-                    type="button"
-                    className="text-xs font-semibold text-on-surface-variant underline"
-                    onClick={resetDraft}
-                    disabled={isSelecting}
-                  >
-                    {t('applications.paymentPackage.keepCurrent', { defaultValue: 'Keep current package' })}
-                  </button>
-                ) : null}
               </div>
             ) : invoice ? (
-              <div className="space-y-4 text-sm">
-                <div>
-                  <p className="text-xs font-semibold uppercase text-on-surface-variant">
-                    {t('invoice.table.invoiceNo')}
-                  </p>
-                  <Link className="mt-1 inline-flex font-semibold text-primary underline" to={`/parent/invoices/${invoice.id}`}>
-                    {invoice.invoiceNumber}
-                  </Link>
-                </div>
-                <div className="rounded-lg border border-outline-variant bg-surface p-3">
-                  <p className="text-xs font-semibold uppercase text-on-surface-variant">
-                    {t('applications.paymentPackage.selected', { defaultValue: 'Selected' })}
-                  </p>
-                  <p className="mt-1 font-semibold text-on-surface">
-                    {selectedPackage ? packageName(selectedPackage, isAr) : invoice.packageName || '-'}
-                  </p>
-                  <p className="mt-1 text-xs text-on-surface-variant">
-                    {t(
-                      billingPeriodOptions.find((option) => option.value === invoice.billingPeriod)?.labelKey ??
-                        'applications.paymentPackage.period.monthly',
-                      {
-                        defaultValue:
-                          billingPeriodOptions.find((option) => option.value === invoice.billingPeriod)?.defaultLabel ?? 'Monthly',
-                      },
-                    )}
-                  </p>
+              <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(220px,280px)]">
+                <div className="rounded-xl border border-outline-variant bg-surface p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-on-surface">
+                        {selectedPackage ? packageName(selectedPackage, isAr) : invoice.packageName || '-'}
+                      </p>
+                      <p className="text-xs text-on-surface-variant">
+                        {periodLabel(invoice.billingPeriod)} · {t('applications.paymentPackage.monthsCount', { count: invoice.billingMonths })}
+                      </p>
+                    </div>
+                    <Link
+                      className="inline-flex items-center gap-1 rounded-full bg-surface-container px-2.5 py-1 text-xs font-semibold text-primary hover:underline"
+                      to={`/parent/invoices/${invoice.id}`}
+                    >
+                      <MaterialSymbol name="receipt_long" size="text-sm" />
+                      {invoice.invoiceNumber}
+                    </Link>
+                  </div>
                   {invoice.discountAmount > 0 && selectedPackage?.deal?.endsAt ? (
                     <div className="mt-2">
                       <DiscountCountdown endsAt={selectedPackage.deal.endsAt} />
                     </div>
                   ) : null}
-                </div>
-                <dl className="grid gap-2">
-                  <div className="flex justify-between gap-3">
-                    <dt className="text-on-surface-variant">
-                      {t('applications.paymentPackage.monthlyBase', { defaultValue: 'Monthly package price' })}
-                    </dt>
-                    <dd className="font-medium text-on-surface">
-                      {t('invoice.egpAmount', { amount: invoice.monthlyPrice.toFixed(2) })}
-                    </dd>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <dt className="text-on-surface-variant">{t('invoice.details.subtotal', { defaultValue: 'Subtotal' })}</dt>
-                    <dd className="font-medium text-on-surface">
-                      {t('invoice.egpAmount', { amount: invoice.subtotal.toFixed(2) })}
-                    </dd>
-                  </div>
-                  {invoice.discountAmount > 0 ? (
-                    <div className="flex justify-between gap-3">
-                      <dt className="text-error">{t('applications.paymentPackage.discount', { defaultValue: 'Discount' })}</dt>
-                      <dd className="font-medium text-error">
-                        -{t('invoice.egpAmount', { amount: invoice.discountAmount.toFixed(2) })}
-                      </dd>
-                    </div>
-                  ) : null}
-                  <div className="flex justify-between gap-3">
-                    <dt className="text-on-surface-variant">{t('invoice.details.total')}</dt>
-                    <dd className="font-medium text-on-surface">{t('invoice.egpAmount', { amount: invoice.amount.toFixed(2) })}</dd>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <dt className="text-on-surface-variant">{t('financial.paymentHistory.paidLabel', { defaultValue: 'Paid' })}</dt>
-                    <dd className="font-medium text-success">{t('invoice.egpAmount', { amount: invoice.paidAmount.toFixed(2) })}</dd>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <dt className="text-on-surface-variant">{t('invoice.inReview')}</dt>
-                    <dd className="font-medium text-warning">{t('invoice.egpAmount', { amount: invoice.pendingAmount.toFixed(2) })}</dd>
-                  </div>
-                  <div className="flex justify-between gap-3 border-t border-outline-variant pt-2">
-                    <dt className="font-semibold text-on-surface">{t('financial.paymentHistory.balanceLabel', { defaultValue: 'Balance' })}</dt>
-                    <dd className="font-semibold text-on-surface">{t('invoice.egpAmount', { amount: invoice.balanceDue.toFixed(2) })}</dd>
-                  </div>
-                </dl>
-                {invoice.balanceDue > 0 && payableNow <= 0 ? (
-                  <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs leading-5 text-warning">
-                    <span className="material-symbols-outlined text-base" aria-hidden>hourglass_top</span>
-                    <span>
-                      {t('applications.paymentPackage.pendingCoversBalance', {
-                        amount: invoice.pendingAmount.toFixed(2),
-                        defaultValue: 'EGP {{amount}} is awaiting nursery confirmation. No further payment is needed right now.',
-                      })}
-                    </span>
-                  </div>
-                ) : null}
-                {payableNow > 0 ? (
-                  <div className="space-y-2">
-                    <Button asChild className="h-11 w-full gap-2 rounded-md">
-                      <Link to={payLink ?? `/parent/invoices/${invoice.id}/pay`}>
-                        <span className="material-symbols-outlined text-base" aria-hidden>credit_card</span>
-                        {t('payment.payNowAmount', { amount: payableNow.toFixed(2) })}
-                      </Link>
-                    </Button>
-                    {!paymentStarted ? (
-                      <p className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs leading-5 text-warning">
-                        {t('applications.paymentPackage.payHint', {
-                          defaultValue: 'Pay all or part of the package price now. The application is sent for review as soon as your payment is submitted.',
-                        })}
-                      </p>
+                  <dl className="mt-4 space-y-2 text-sm">
+                    <SummaryLine label={t('applications.paymentPackage.tuitionLine')} value={money(invoice.subtotal)} />
+                    {invoice.discountAmount > 0 ? (
+                      <SummaryLine
+                        label={t('applications.paymentPackage.discount', { defaultValue: 'Discount' })}
+                        value={`−${money(invoice.discountAmount)}`}
+                        tone="success"
+                      />
                     ) : null}
-                  </div>
-                ) : null}
+                    {extraHoursLines(
+                      invoice.extraHours
+                        ? {
+                            name: (isAr ? invoice.extraHours.nameAr || invoice.extraHours.nameEn : invoice.extraHours.nameEn || invoice.extraHours.nameAr),
+                            subtotal: invoice.extraHours.subtotal,
+                            discountAmount: invoice.extraHours.discountAmount,
+                          }
+                        : null,
+                    )}
+                    <SummaryLine label={t('invoice.details.total')} value={money(invoice.amount)} />
+                    {invoice.paidAmount > 0 ? (
+                      <SummaryLine label={t('applications.paymentTab.paid')} value={money(invoice.paidAmount)} tone="success" />
+                    ) : null}
+                    {invoice.pendingAmount > 0 ? (
+                      <SummaryLine label={t('invoice.inReview')} value={money(invoice.pendingAmount)} tone="warning" />
+                    ) : null}
+                    <SummaryLine label={t('applications.paymentTab.dueNow')} value={money(payableNow)} tone="total" />
+                  </dl>
+                </div>
+                <div className="flex flex-col gap-3">
+                  {payableNow > 0 ? (
+                    <>
+                      <Button type="button" className="h-12 w-full gap-2 rounded-xl text-base" onClick={onPayNow}>
+                        <MaterialSymbol name="credit_card" size="text-lg" />
+                        {t('applications.paymentPackage.continueToPayment')}
+                      </Button>
+                      <p className="text-xs leading-5 text-on-surface-variant">{t('applications.paymentPackage.payHint')}</p>
+                    </>
+                  ) : invoice.balanceDue > 0 ? (
+                    <div className="flex items-start gap-2 rounded-xl border border-warning/30 bg-warning/10 p-3 text-xs leading-5 text-warning">
+                      <MaterialSymbol name="hourglass_top" size="text-base" />
+                      <span>
+                        {t('applications.paymentPackage.pendingCoversBalance', { amount: formatMoneyAmount(invoice.pendingAmount) })}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-start gap-2 rounded-xl border border-success/30 bg-success/10 p-3 text-xs leading-5 text-success">
+                      <MaterialSymbol name="verified" size="text-base" />
+                      <span>{t('applications.paymentTab.paidTitle')}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
-              <div className="rounded-lg border border-dashed border-outline-variant bg-surface p-4 text-sm leading-6 text-on-surface-variant">
-                {t('applications.paymentPackage.chooseToCreateInvoice', {
-                  defaultValue: 'Pick a billing period and press "Select package" on a card. The total appears here before the invoice is created.',
-                })}
+              <div className="flex items-center gap-4 rounded-xl border border-dashed border-outline-variant bg-surface p-5">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-surface-container text-on-surface-variant">
+                  <MaterialSymbol name="shopping_bag" size="text-2xl" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-on-surface">{t('applications.paymentPackage.emptySummaryTitle')}</p>
+                  <p className="mt-0.5 text-xs leading-5 text-on-surface-variant">{t('applications.paymentPackage.chooseToCreateInvoice')}</p>
+                </div>
               </div>
             )}
-          </aside>
-        </div>
+          </div>
+        </>
       )}
     </section>
   );

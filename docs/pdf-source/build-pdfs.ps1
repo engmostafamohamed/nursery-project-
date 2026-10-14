@@ -1,5 +1,6 @@
 # Renders the HTML sources in this folder to PDF with headless Chrome.
-# Usage:  powershell -ExecutionPolicy Bypass -File docs\pdf-source\build-pdfs.ps1 [business|technical]
+# Usage:  powershell -ExecutionPolicy Bypass -File docs\pdf-source\build-pdfs.ps1 [business|technical|status]
+# feature-status.html is generated: run `node docs\pdf-source\build-feature-status.cjs` first.
 param([string]$Only = '')
 
 $ErrorActionPreference = 'Stop'
@@ -10,7 +11,8 @@ $profileDir = Join-Path $env:TEMP 'xo-pdf-chrome-profile'
 
 $targets = @(
   @{ Key = 'business';  Src = 'business.html';  Out = 'XO-Platform-Business-and-Delivery-Blueprint.pdf' },
-  @{ Key = 'technical'; Src = 'technical.html'; Out = 'XO-Platform-Technical-Documentation.pdf' }
+  @{ Key = 'technical'; Src = 'technical.html'; Out = 'XO-Platform-Technical-Documentation.pdf' },
+  @{ Key = 'status';    Src = 'feature-status.html'; Out = 'XO-Platform-Feature-Status-and-Delivery-Plan.pdf' }
 )
 
 foreach ($t in $targets) {

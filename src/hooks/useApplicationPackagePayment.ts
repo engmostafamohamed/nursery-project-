@@ -100,6 +100,17 @@ export type ApplicationPackageInvoice = {
   monthlyPrice: number;
   subtotal: number;
   discountAmount: number;
+  /** The extra-hours package billed on the same invoice, if the parent chose one. */
+  extraHours: ApplicationInvoiceExtraHours | null;
+};
+
+export type ApplicationInvoiceExtraHours = {
+  packageId: string;
+  nameAr: string;
+  nameEn: string;
+  subtotal: number;
+  discountAmount: number;
+  total: number;
 };
 
 type Params = {
@@ -154,6 +165,28 @@ function lineSubtotal(raw: unknown, amount: number): number {
 function lineDiscountAmount(raw: unknown): number {
   const value = Number((raw as { discount_amount?: unknown } | null)?.discount_amount ?? 0);
   return Number.isFinite(value) ? value : 0;
+}
+
+/** The extra-hours lines the database (or signup) wrote on an application invoice. */
+export function lineExtraHours(raw: unknown): ApplicationInvoiceExtraHours | null {
+  const obj = raw as {
+    extra_hours_package_id?: unknown;
+    extra_hours_package_name_ar?: unknown;
+    extra_hours_package_name_en?: unknown;
+    extra_hours_subtotal?: unknown;
+    extra_hours_discount_amount?: unknown;
+  } | null;
+  if (typeof obj?.extra_hours_package_id !== 'string' || !obj.extra_hours_package_id) return null;
+  const subtotal = money(obj.extra_hours_subtotal as string | number | null | undefined);
+  const discountAmount = money(obj.extra_hours_discount_amount as string | number | null | undefined);
+  return {
+    packageId: obj.extra_hours_package_id,
+    nameAr: typeof obj.extra_hours_package_name_ar === 'string' ? obj.extra_hours_package_name_ar : '',
+    nameEn: typeof obj.extra_hours_package_name_en === 'string' ? obj.extra_hours_package_name_en : '',
+    subtotal,
+    discountAmount,
+    total: Math.max(0, subtotal - discountAmount),
+  };
 }
 
 export function useApplicationPackagePayment({ applicationId, parentId, nurseryId }: Params) {
@@ -315,6 +348,7 @@ export function useApplicationPackagePayment({ applicationId, parentId, nurseryI
         monthlyPrice: lineMonthlyPrice(invoice.line_items_json, amount, lineBillingMonths(invoice.line_items_json)),
         subtotal: lineSubtotal(invoice.line_items_json, amount),
         discountAmount: lineDiscountAmount(invoice.line_items_json),
+        extraHours: lineExtraHours(invoice.line_items_json),
       };
     },
     enabled: Boolean(applicationId && parentId && nurseryId),

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { cn } from '@/lib/utils';
+
 function remainingParts(endsAt: string): { days: number; hours: number; minutes: number; seconds: number } | null {
   const diffMs = new Date(endsAt).getTime() - Date.now();
   if (!Number.isFinite(diffMs) || diffMs <= 0) return null;
@@ -15,7 +17,10 @@ function remainingParts(endsAt: string): { days: number; hours: number; minutes:
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
-/** Live "time left" chip for a deal's end date — ticks every second while the offer is still open. */
+/**
+ * "Offer ends in …" chip for a deal's end date. Days away it reads "15d 19h"; on the last day
+ * it counts down to the second.
+ */
 export function DiscountCountdown({ endsAt, className = '' }: { endsAt: string | null; className?: string }) {
   const { t } = useTranslation();
   const [, forceTick] = useState(0);
@@ -30,13 +35,19 @@ export function DiscountCountdown({ endsAt, className = '' }: { endsAt: string |
   const parts = remainingParts(endsAt);
   if (!parts) return null;
 
-  const label =
-    parts.days > 0
-      ? `${parts.days}d ${pad(parts.hours)}:${pad(parts.minutes)}:${pad(parts.seconds)}`
-      : `${pad(parts.hours)}:${pad(parts.minutes)}:${pad(parts.seconds)}`;
+  const lastDay = parts.days === 0;
+  const label = lastDay
+    ? `${pad(parts.hours)}:${pad(parts.minutes)}:${pad(parts.seconds)}`
+    : t('applications.paymentPackage.countdownDays', { days: parts.days, hours: parts.hours });
 
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full bg-error/10 px-2 py-0.5 text-xs font-semibold text-error ${className}`}>
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium tabular-nums',
+        lastDay ? 'bg-error/10 text-error' : 'bg-warning/10 text-warning',
+        className,
+      )}
+    >
       <span className="material-symbols-outlined text-sm" aria-hidden>schedule</span>
       {t('applications.paymentPackage.dealEndsIn', { defaultValue: 'Ends in {{time}}', time: label })}
     </span>
