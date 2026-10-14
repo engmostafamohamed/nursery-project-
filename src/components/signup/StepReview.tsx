@@ -109,10 +109,7 @@ export function StepReview({ values, files, onJumpTo }: Props) {
 
   return (
     <div className="space-y-5">
-      <div className="space-y-2">
-        <h3 className="text-lg font-semibold text-on-surface">{t('signup.review.title')}</h3>
-        <p className="text-sm text-on-surface-variant">{t('signup.review.description')}</p>
-      </div>
+      <p className="text-sm text-on-surface-variant">{t('signup.review.description')}</p>
 
       <Section
         title={t('signup.steps.child')}

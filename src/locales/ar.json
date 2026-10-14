@@ -6584,7 +6584,36 @@
     "agreePoliciesShort": "سياسات الحضانة",
     "agreeInfoAccuracyShort": "دقة المعلومات",
     "nav": {
-      "ariaLabel": "خطوات التسجيل"
+      "ariaLabel": "خطوات التسجيل",
+      "progressLabel": "مدى تقدّمك"
+    },
+    "examples": {
+      "childFirstName": "مثال: يوسف",
+      "childMiddleName": "مثال: أحمد",
+      "childLastName": "مثال: حسن",
+      "childNickname": "مثال: جو",
+      "fatherFullName": "مثال: أحمد محمد حسن",
+      "motherFullName": "مثال: منى علي محمود",
+      "fatherJob": "مثال: مهندس",
+      "motherJob": "مثال: معلمة",
+      "mobile": "مثال: 01012345678",
+      "email": "مثال: name@example.com",
+      "nationalId": "مثال: 29001011234567",
+      "address": "مثال: ١٢ شارع النصر، المعادي، القاهرة",
+      "maritalStatus": "مثال: متزوجان",
+      "emergencyContact": "مثال: سارة أحمد (خالة) - 01012345678",
+      "personName": "مثال: سارة أحمد",
+      "relationship": "مثال: خالة",
+      "pickupRelation": "مثال: الجد",
+      "department": "مثال: إنجليزي",
+      "schoolAdmissionsPlan": "مثال: التقديم في مدارس بريطانية لمرحلة KG1 عام ٢٠٢٨",
+      "academicYear": "مثال: 2026-2027",
+      "allergyDetails": "مثال: الفول السوداني، الفراولة",
+      "medicalCondition": "مثال: ربو، ويستخدم البخاخ عند الحاجة",
+      "specialNeeds": "مثال: يحتاج دعمًا إضافيًا في النطق",
+      "dailyDiaperCount": "مثال: 5",
+      "rashCreamUsage": "مثال: بيبانثين بعد كل تغيير",
+      "diaperChangeFrequency": "مثال: كل ٣ ساعات"
     },
     "autosave": {
       "idle": "يتم الحفظ أثناء كتابتك",

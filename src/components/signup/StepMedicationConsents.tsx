@@ -41,10 +41,7 @@ export function StepMedicationConsents({ form, t: textOverride }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <h3 className="text-lg font-semibold text-on-surface">{text('signup.medicationConsents.title')}</h3>
-        <p className="text-sm text-on-surface-variant">{text('signup.medicationConsents.description')}</p>
-      </div>
+      <p className="text-sm text-on-surface-variant">{text('signup.medicationConsents.description')}</p>
 
       <div className="flex items-center justify-between rounded-xl bg-primary/5 px-4 py-2 text-xs">
         <span className="text-on-surface-variant">

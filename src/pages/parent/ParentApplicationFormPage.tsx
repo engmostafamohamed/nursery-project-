@@ -1499,19 +1499,19 @@ export function ParentApplicationFormPage() {
                   <div className="grid gap-4">
                     <div className={cn(nestedCardClassName, 'grid gap-4 md:grid-cols-2')}>
                       <h3 className="md:col-span-2 text-sm font-semibold text-on-surface">{t('signup.fatherInfo', { defaultValue: 'Father information' })}</h3>
-                      <FormField name="father_full_name" label={t('signup.fatherFullName')}><Input value={parentForm.father_full_name} onChange={(e) => setParentField('father_full_name', e.target.value)} /></FormField>
-                      <FormField label={t('signup.fatherJob')}><Input value={parentForm.father_job} onChange={(e) => setParentField('father_job', e.target.value)} /></FormField>
-                      <FormField name="father_mobile" label={t('signup.fatherMobile')}><Input {...phoneInputProps} value={parentForm.father_mobile} onChange={(e) => setParentField('father_mobile', digitsOnly(e.target.value))} /></FormField>
-                      <FormField name="father_email" label={t('signup.fatherEmail')}><Input type="email" value={parentForm.father_email} onChange={(e) => setParentField('father_email', e.target.value)} /></FormField>
-                      <FormField name="father_national_id" label={t('applications.nationalId', { defaultValue: 'National ID' })} className="md:col-span-2"><Input {...nationalIdInputProps} value={parentForm.father_national_id} onChange={(e) => setParentField('father_national_id', digitsOnly(e.target.value))} /></FormField>
+                      <FormField name="father_full_name" label={t('signup.fatherFullName')}><Input placeholder={t('signup.examples.fatherFullName')} value={parentForm.father_full_name} onChange={(e) => setParentField('father_full_name', e.target.value)} /></FormField>
+                      <FormField label={t('signup.fatherJob')}><Input placeholder={t('signup.examples.fatherJob')} value={parentForm.father_job} onChange={(e) => setParentField('father_job', e.target.value)} /></FormField>
+                      <FormField name="father_mobile" label={t('signup.fatherMobile')}><Input {...phoneInputProps} placeholder={t('signup.examples.mobile')} value={parentForm.father_mobile} onChange={(e) => setParentField('father_mobile', digitsOnly(e.target.value))} /></FormField>
+                      <FormField name="father_email" label={t('signup.fatherEmail')}><Input type="email" placeholder={t('signup.examples.email')} value={parentForm.father_email} onChange={(e) => setParentField('father_email', e.target.value)} /></FormField>
+                      <FormField name="father_national_id" label={t('applications.nationalId', { defaultValue: 'National ID' })} className="md:col-span-2"><Input {...nationalIdInputProps} placeholder={t('signup.examples.nationalId')} value={parentForm.father_national_id} onChange={(e) => setParentField('father_national_id', digitsOnly(e.target.value))} /></FormField>
                     </div>
                     <div className={cn(nestedCardClassName, 'grid gap-4 md:grid-cols-2')}>
                       <h3 className="md:col-span-2 text-sm font-semibold text-on-surface">{t('signup.motherInfo', { defaultValue: 'Mother information' })}</h3>
-                      <FormField name="mother_full_name" label={t('signup.motherFullName')}><Input value={parentForm.mother_full_name} onChange={(e) => setParentField('mother_full_name', e.target.value)} /></FormField>
-                      <FormField label={t('signup.motherJob')}><Input value={parentForm.mother_job} onChange={(e) => setParentField('mother_job', e.target.value)} /></FormField>
-                      <FormField name="mother_mobile" label={t('signup.motherMobile')}><Input {...phoneInputProps} value={parentForm.mother_mobile} onChange={(e) => setParentField('mother_mobile', digitsOnly(e.target.value))} /></FormField>
-                      <FormField name="mother_email" label={t('signup.motherEmail')}><Input type="email" value={parentForm.mother_email} onChange={(e) => setParentField('mother_email', e.target.value)} /></FormField>
-                      <FormField name="mother_national_id" label={t('applications.nationalId', { defaultValue: 'National ID' })} className="md:col-span-2"><Input {...nationalIdInputProps} value={parentForm.mother_national_id} onChange={(e) => setParentField('mother_national_id', digitsOnly(e.target.value))} /></FormField>
+                      <FormField name="mother_full_name" label={t('signup.motherFullName')}><Input placeholder={t('signup.examples.motherFullName')} value={parentForm.mother_full_name} onChange={(e) => setParentField('mother_full_name', e.target.value)} /></FormField>
+                      <FormField label={t('signup.motherJob')}><Input placeholder={t('signup.examples.motherJob')} value={parentForm.mother_job} onChange={(e) => setParentField('mother_job', e.target.value)} /></FormField>
+                      <FormField name="mother_mobile" label={t('signup.motherMobile')}><Input {...phoneInputProps} placeholder={t('signup.examples.mobile')} value={parentForm.mother_mobile} onChange={(e) => setParentField('mother_mobile', digitsOnly(e.target.value))} /></FormField>
+                      <FormField name="mother_email" label={t('signup.motherEmail')}><Input type="email" placeholder={t('signup.examples.email')} value={parentForm.mother_email} onChange={(e) => setParentField('mother_email', e.target.value)} /></FormField>
+                      <FormField name="mother_national_id" label={t('applications.nationalId', { defaultValue: 'National ID' })} className="md:col-span-2"><Input {...nationalIdInputProps} placeholder={t('signup.examples.nationalId')} value={parentForm.mother_national_id} onChange={(e) => setParentField('mother_national_id', digitsOnly(e.target.value))} /></FormField>
                     </div>
                   </div>
                 </fieldset>
@@ -1521,15 +1521,15 @@ export function ParentApplicationFormPage() {
                 <fieldset disabled={!canEditApplication} className={stepCardClassName(2)}>
                   <PanelHeader icon="home" title={applicationStepLabels[1]} />
                   <div className="grid gap-4 md:grid-cols-2">
-                    <FormField label={t('signup.maritalStatus')}><Input value={parentForm.marital_status} onChange={(e) => setParentField('marital_status', e.target.value)} /></FormField>
-                    <FormField name="address" label={t('applications.address')}><Input value={parentForm.address} onChange={(e) => setParentField('address', e.target.value)} /></FormField>
-                    <FormField name="emergency_contact" label={t('applications.emergencyContact')} className="md:col-span-2"><Input value={parentForm.emergency_contact} onChange={(e) => setParentField('emergency_contact', e.target.value)} /></FormField>
+                    <FormField label={t('signup.maritalStatus')}><Input placeholder={t('signup.examples.maritalStatus')} value={parentForm.marital_status} onChange={(e) => setParentField('marital_status', e.target.value)} /></FormField>
+                    <FormField name="address" label={t('applications.address')}><Input placeholder={t('signup.examples.address')} value={parentForm.address} onChange={(e) => setParentField('address', e.target.value)} /></FormField>
+                    <FormField name="emergency_contact" label={t('applications.emergencyContact')} className="md:col-span-2"><Input placeholder={t('signup.examples.emergencyContact')} value={parentForm.emergency_contact} onChange={(e) => setParentField('emergency_contact', e.target.value)} /></FormField>
                     <div className="flex items-center gap-2 md:col-span-2">
                       <input type="checkbox" checked={childForm.has_siblings} onChange={(e) => setChildField('has_siblings', e.target.checked)} />
                       <Label>{t('signup.hasSiblings', { defaultValue: 'Has siblings' })}</Label>
                     </div>
                     {childForm.has_siblings ? (
-                      <FormField name="sibling_ages" label={t('signup.siblingAges')} className="md:col-span-2"><Input value={childForm.sibling_ages} onChange={(e) => setChildField('sibling_ages', e.target.value)} /></FormField>
+                      <FormField name="sibling_ages" label={t('signup.siblingAges')} className="md:col-span-2"><Input placeholder={t('signup.siblingAgesHint')} value={childForm.sibling_ages} onChange={(e) => setChildField('sibling_ages', e.target.value)} /></FormField>
                     ) : null}
                   </div>
                 </fieldset>
@@ -1539,10 +1539,10 @@ export function ParentApplicationFormPage() {
                 <fieldset disabled={!canEditApplication} className={stepCardClassName(3)}>
                   <PanelHeader icon="child_care" title={applicationStepLabels[2]} body={t('applications.newChildInfoHint', { defaultValue: 'Parent and family data is already copied. Add the new child details here.' })} />
                   <div className="grid gap-4 md:grid-cols-2">
-                    <FormField name="first_name" label={t('signup.childFirstName')}><Input value={childForm.first_name} onChange={(e) => setChildField('first_name', e.target.value)} /></FormField>
-                    <FormField name="middle_name" label={t('signup.childMiddleName')}><Input value={childForm.middle_name} onChange={(e) => setChildField('middle_name', e.target.value)} /></FormField>
-                    <FormField name="last_name" label={t('signup.childLastName')}><Input value={childForm.last_name} onChange={(e) => setChildField('last_name', e.target.value)} /></FormField>
-                    <FormField name="nickname" label={t('signup.childNickname')}><Input value={childForm.nickname} onChange={(e) => setChildField('nickname', e.target.value)} /></FormField>
+                    <FormField name="first_name" label={t('signup.childFirstName')}><Input placeholder={t('signup.examples.childFirstName')} value={childForm.first_name} onChange={(e) => setChildField('first_name', e.target.value)} /></FormField>
+                    <FormField name="middle_name" label={t('signup.childMiddleName')}><Input placeholder={t('signup.examples.childMiddleName')} value={childForm.middle_name} onChange={(e) => setChildField('middle_name', e.target.value)} /></FormField>
+                    <FormField name="last_name" label={t('signup.childLastName')}><Input placeholder={t('signup.examples.childLastName')} value={childForm.last_name} onChange={(e) => setChildField('last_name', e.target.value)} /></FormField>
+                    <FormField name="nickname" label={t('signup.childNickname')}><Input placeholder={t('signup.examples.childNickname')} value={childForm.nickname} onChange={(e) => setChildField('nickname', e.target.value)} /></FormField>
                     <FormField name="dob" label={t('applications.childDob')} hint={t('signup.childAgeRange')}><Input type="date" min={childDobBounds.min} max={childDobBounds.max} value={childForm.dob} onChange={(e) => setChildField('dob', e.target.value)} /></FormField>
                     <FormField label={t('applications.gender')}>
                       <StyledSelect
@@ -1572,7 +1572,7 @@ export function ParentApplicationFormPage() {
                 <fieldset disabled={!canEditApplication} className={stepCardClassName(4)}>
                   <PanelHeader icon="school" title={applicationStepLabels[3]} />
                   <div className="grid gap-5 md:grid-cols-2">
-                    <FormField label={t('signup.department')}><Input value={childForm.department} onChange={(e) => setChildField('department', e.target.value)} /></FormField>
+                    <FormField label={t('signup.department')}><Input placeholder={t('signup.examples.department')} value={childForm.department} onChange={(e) => setChildField('department', e.target.value)} /></FormField>
                     <FormField label={t('signup.schoolPreference')}>
                       <StyledSelect
                         value={childForm.school_preference}
@@ -1589,8 +1589,8 @@ export function ParentApplicationFormPage() {
                         ]}
                       />
                     </FormField>
-                    <FormField label={t('signup.schoolAdmissionsPlan')}><Input value={childForm.school_admissions_plan} onChange={(e) => setChildField('school_admissions_plan', e.target.value)} /></FormField>
-                    <FormField label={t('signup.academicYear')}><Input value={childForm.academic_year} onChange={(e) => setChildField('academic_year', e.target.value)} /></FormField>
+                    <FormField label={t('signup.schoolAdmissionsPlan')}><Input placeholder={t('signup.examples.schoolAdmissionsPlan')} value={childForm.school_admissions_plan} onChange={(e) => setChildField('school_admissions_plan', e.target.value)} /></FormField>
+                    <FormField label={t('signup.academicYear')}><Input placeholder={t('signup.examples.academicYear')} value={childForm.academic_year} onChange={(e) => setChildField('academic_year', e.target.value)} /></FormField>
                     <FormField label={t('signup.referralSource')}>
                       <StyledSelect
                         value={parentForm.referral_source}
@@ -1656,9 +1656,9 @@ export function ParentApplicationFormPage() {
                           </div>
                           <FieldErrorText error={fieldValidation.errorFor('allergy_types')} />
                           {childForm.allergy_types.includes(OTHER_ALLERGY_VALUE) ? (
-                            <FormField name="allergy_details" label={t('signup.allergyDetails')}><Input value={childForm.allergy_details} onChange={(e) => setChildField('allergy_details', e.target.value)} /></FormField>
+                            <FormField name="allergy_details" label={t('signup.allergyDetails')}><Input placeholder={t('signup.examples.allergyDetails')} value={childForm.allergy_details} onChange={(e) => setChildField('allergy_details', e.target.value)} /></FormField>
                           ) : null}
-                          <FormField label={t('applications.allergies')}><textarea className={textareaClassName} value={childForm.allergies} onChange={(e) => setChildField('allergies', e.target.value)} /></FormField>
+                          <FormField label={t('applications.allergies')}><textarea className={textareaClassName} placeholder={t('signup.examples.allergyDetails')} value={childForm.allergies} onChange={(e) => setChildField('allergies', e.target.value)} /></FormField>
                         </>
                       ) : null}
                     </div>
@@ -1675,10 +1675,10 @@ export function ParentApplicationFormPage() {
                         {t('signup.hasMedicalCondition')}
                       </label>
                       {childForm.has_medical_condition ? (
-                        <FormField name="medical_conditions" label={t('applications.medicalConditions')}><textarea className={textareaClassName} value={childForm.medical_conditions} onChange={(e) => setChildField('medical_conditions', e.target.value)} /></FormField>
+                        <FormField name="medical_conditions" label={t('applications.medicalConditions')}><textarea className={textareaClassName} placeholder={t('signup.examples.medicalCondition')} value={childForm.medical_conditions} onChange={(e) => setChildField('medical_conditions', e.target.value)} /></FormField>
                       ) : null}
                     </div>
-                    <FormField label={t('applications.specialNeeds')} className="lg:col-span-2"><textarea className={textareaClassName} value={childForm.special_needs} onChange={(e) => setChildField('special_needs', e.target.value)} /></FormField>
+                    <FormField label={t('applications.specialNeeds')} className="lg:col-span-2"><textarea className={textareaClassName} placeholder={t('signup.examples.specialNeeds')} value={childForm.special_needs} onChange={(e) => setChildField('special_needs', e.target.value)} /></FormField>
                     <label className="flex items-center gap-2 text-sm lg:col-span-2"><input type="checkbox" checked={childForm.photo_privacy} onChange={(e) => setChildField('photo_privacy', e.target.checked)} />{t('applications.photoPrivacyConsent')}</label>
                   </div>
                 </fieldset>
@@ -1689,14 +1689,14 @@ export function ParentApplicationFormPage() {
                   <PanelHeader icon="emergency" title={applicationStepLabels[5]} />
                   <div className="grid gap-4">
                     <div className={cn(nestedCardClassName, 'grid gap-4 md:grid-cols-2')}>
-                      <FormField name="emergency_1_name" label={`${t('signup.contactName')} 1`}><Input value={childForm.emergency_1_name} onChange={(e) => setChildField('emergency_1_name', e.target.value)} /></FormField>
-                      <FormField name="emergency_1_phone" label={t('signup.contactPhone')}><Input {...phoneInputProps} value={childForm.emergency_1_phone} onChange={(e) => setChildField('emergency_1_phone', digitsOnly(e.target.value))} /></FormField>
-                      <FormField name="emergency_1_relationship" label={t('signup.contactRelationship')} className="md:col-span-2"><Input value={childForm.emergency_1_relationship} onChange={(e) => setChildField('emergency_1_relationship', e.target.value)} /></FormField>
+                      <FormField name="emergency_1_name" label={`${t('signup.contactName')} 1`}><Input placeholder={t('signup.examples.personName')} value={childForm.emergency_1_name} onChange={(e) => setChildField('emergency_1_name', e.target.value)} /></FormField>
+                      <FormField name="emergency_1_phone" label={t('signup.contactPhone')}><Input {...phoneInputProps} placeholder={t('signup.examples.mobile')} value={childForm.emergency_1_phone} onChange={(e) => setChildField('emergency_1_phone', digitsOnly(e.target.value))} /></FormField>
+                      <FormField name="emergency_1_relationship" label={t('signup.contactRelationship')} className="md:col-span-2"><Input placeholder={t('signup.examples.relationship')} value={childForm.emergency_1_relationship} onChange={(e) => setChildField('emergency_1_relationship', e.target.value)} /></FormField>
                     </div>
                     <div className={cn(nestedCardClassName, 'grid gap-4 md:grid-cols-2')}>
-                      <FormField name="emergency_2_name" label={`${t('signup.contactName')} 2`}><Input value={childForm.emergency_2_name} onChange={(e) => setChildField('emergency_2_name', e.target.value)} /></FormField>
-                      <FormField name="emergency_2_phone" label={t('signup.contactPhone')}><Input {...phoneInputProps} value={childForm.emergency_2_phone} onChange={(e) => setChildField('emergency_2_phone', digitsOnly(e.target.value))} /></FormField>
-                      <FormField name="emergency_2_relationship" label={t('signup.contactRelationship')} className="md:col-span-2"><Input value={childForm.emergency_2_relationship} onChange={(e) => setChildField('emergency_2_relationship', e.target.value)} /></FormField>
+                      <FormField name="emergency_2_name" label={`${t('signup.contactName')} 2`}><Input placeholder={t('signup.examples.personName')} value={childForm.emergency_2_name} onChange={(e) => setChildField('emergency_2_name', e.target.value)} /></FormField>
+                      <FormField name="emergency_2_phone" label={t('signup.contactPhone')}><Input {...phoneInputProps} placeholder={t('signup.examples.mobile')} value={childForm.emergency_2_phone} onChange={(e) => setChildField('emergency_2_phone', digitsOnly(e.target.value))} /></FormField>
+                      <FormField name="emergency_2_relationship" label={t('signup.contactRelationship')} className="md:col-span-2"><Input placeholder={t('signup.examples.relationship')} value={childForm.emergency_2_relationship} onChange={(e) => setChildField('emergency_2_relationship', e.target.value)} /></FormField>
                     </div>
                   </div>
                 </fieldset>
@@ -1728,7 +1728,7 @@ export function ParentApplicationFormPage() {
                       </FormField>
                     ))}
                     {childForm.sends_vitamins === 'Yes' ? (
-                      <FormField label={t('signup.vitaminDetails')}><Input value={childForm.vitamin_details} onChange={(e) => setChildField('vitamin_details', e.target.value)} /></FormField>
+                      <FormField label={t('signup.vitaminDetails')}><Input placeholder={t('signup.vitaminDetailsHint')} value={childForm.vitamin_details} onChange={(e) => setChildField('vitamin_details', e.target.value)} /></FormField>
                     ) : null}
                     <FormField label={t('signup.diaperSupplyMethod')}>
                       <StyledSelect
@@ -1741,9 +1741,9 @@ export function ParentApplicationFormPage() {
                         ]}
                       />
                     </FormField>
-                    <FormField label={t('signup.dailyDiaperCount')}><Input type="number" value={childForm.daily_diaper_count} onChange={(e) => setChildField('daily_diaper_count', e.target.value)} /></FormField>
-                    <FormField label={t('signup.rashCreamUsage')}><Input value={childForm.rash_cream_usage} onChange={(e) => setChildField('rash_cream_usage', e.target.value)} /></FormField>
-                    <FormField label={t('signup.diaperChangeFrequency')}><Input value={childForm.diaper_change_frequency} onChange={(e) => setChildField('diaper_change_frequency', e.target.value)} /></FormField>
+                    <FormField label={t('signup.dailyDiaperCount')}><Input type="number" placeholder={t('signup.examples.dailyDiaperCount')} value={childForm.daily_diaper_count} onChange={(e) => setChildField('daily_diaper_count', e.target.value)} /></FormField>
+                    <FormField label={t('signup.rashCreamUsage')}><Input placeholder={t('signup.examples.rashCreamUsage')} value={childForm.rash_cream_usage} onChange={(e) => setChildField('rash_cream_usage', e.target.value)} /></FormField>
+                    <FormField label={t('signup.diaperChangeFrequency')}><Input placeholder={t('signup.examples.diaperChangeFrequency')} value={childForm.diaper_change_frequency} onChange={(e) => setChildField('diaper_change_frequency', e.target.value)} /></FormField>
                     <FormField label={t('signup.toiletTrainingStatus')}>
                       <StyledSelect
                         value={childForm.toilet_training_status}
@@ -1796,9 +1796,9 @@ export function ParentApplicationFormPage() {
                   <PanelHeader icon="directions_car" title={applicationStepLabels[7]} />
                   <div className="grid gap-4 xl:grid-cols-2">
                     <div className={cn(nestedCardClassName, 'grid gap-4 md:grid-cols-2')}>
-                      <FormField name="pickup_1_name" label={`${t('signup.pickupName')} 1`}><Input value={parentForm.pickup_1_name} onChange={(e) => setParentField('pickup_1_name', e.target.value)} /></FormField>
-                      <FormField name="pickup_1_phone" label={t('signup.pickupPhone')}><Input {...phoneInputProps} value={parentForm.pickup_1_phone} onChange={(e) => setParentField('pickup_1_phone', digitsOnly(e.target.value))} /></FormField>
-                      <FormField label={t('signup.pickupRelation')}><Input value={parentForm.pickup_1_relation} onChange={(e) => setParentField('pickup_1_relation', e.target.value)} /></FormField>
+                      <FormField name="pickup_1_name" label={`${t('signup.pickupName')} 1`}><Input placeholder={t('signup.examples.personName')} value={parentForm.pickup_1_name} onChange={(e) => setParentField('pickup_1_name', e.target.value)} /></FormField>
+                      <FormField name="pickup_1_phone" label={t('signup.pickupPhone')}><Input {...phoneInputProps} placeholder={t('signup.examples.mobile')} value={parentForm.pickup_1_phone} onChange={(e) => setParentField('pickup_1_phone', digitsOnly(e.target.value))} /></FormField>
+                      <FormField label={t('signup.pickupRelation')}><Input placeholder={t('signup.examples.pickupRelation')} value={parentForm.pickup_1_relation} onChange={(e) => setParentField('pickup_1_relation', e.target.value)} /></FormField>
                       <FormField label={t('signup.pickupAuthorization')}>
                         <StyledSelect
                           value={parentForm.pickup_1_authorization}
@@ -1812,9 +1812,9 @@ export function ParentApplicationFormPage() {
                       </FormField>
                     </div>
                     <div className={cn(nestedCardClassName, 'grid gap-4 md:grid-cols-2')}>
-                      <FormField name="pickup_2_name" label={`${t('signup.pickupName')} 2`}><Input value={parentForm.pickup_2_name} onChange={(e) => setParentField('pickup_2_name', e.target.value)} /></FormField>
-                      <FormField name="pickup_2_phone" label={t('signup.pickupPhone')}><Input {...phoneInputProps} value={parentForm.pickup_2_phone} onChange={(e) => setParentField('pickup_2_phone', digitsOnly(e.target.value))} /></FormField>
-                      <FormField label={t('signup.pickupRelation')}><Input value={parentForm.pickup_2_relation} onChange={(e) => setParentField('pickup_2_relation', e.target.value)} /></FormField>
+                      <FormField name="pickup_2_name" label={`${t('signup.pickupName')} 2`}><Input placeholder={t('signup.examples.personName')} value={parentForm.pickup_2_name} onChange={(e) => setParentField('pickup_2_name', e.target.value)} /></FormField>
+                      <FormField name="pickup_2_phone" label={t('signup.pickupPhone')}><Input {...phoneInputProps} placeholder={t('signup.examples.mobile')} value={parentForm.pickup_2_phone} onChange={(e) => setParentField('pickup_2_phone', digitsOnly(e.target.value))} /></FormField>
+                      <FormField label={t('signup.pickupRelation')}><Input placeholder={t('signup.examples.pickupRelation')} value={parentForm.pickup_2_relation} onChange={(e) => setParentField('pickup_2_relation', e.target.value)} /></FormField>
                       <FormField label={t('signup.pickupAuthorization')}>
                         <StyledSelect
                           value={parentForm.pickup_2_authorization}

@@ -436,7 +436,6 @@ function StepChild({ form, t, files, setFiles, nurseries, nurseriesLoading, nurs
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-on-surface">{t('signup.steps.child')}</h3>
       <Field label={templateFieldLabel(template, 'nurseryId', t('signup.nursery'))} error={e.nurseryId?.message} required>
         <TemplateHelp text={templateFieldHelp(template, 'nurseryId')} />
         <Select {...form.register('nurseryId')} disabled={nurseriesLoading || Boolean(nurseriesError) || nurseries.length === 0}>
@@ -462,25 +461,25 @@ function StepChild({ form, t, files, setFiles, nurseries, nurseriesLoading, nurs
         {isTemplateFieldActive(template, 'childFirstName') ? (
           <Field label={templateFieldLabel(template, 'childFirstName', t('signup.childFirstName'))} error={e.childFirstName?.message} required={isTemplateFieldRequired(template, 'childFirstName', true)}>
             <TemplateHelp text={templateFieldHelp(template, 'childFirstName')} />
-            <Input {...form.register('childFirstName')} />
+            <Input {...form.register('childFirstName')} placeholder={t('signup.examples.childFirstName')} />
           </Field>
         ) : null}
         {isTemplateFieldActive(template, 'childMiddleName') ? (
           <Field label={templateFieldLabel(template, 'childMiddleName', t('signup.childMiddleName'))} error={e.childMiddleName?.message} required={isTemplateFieldRequired(template, 'childMiddleName', true)}>
             <TemplateHelp text={templateFieldHelp(template, 'childMiddleName')} />
-            <Input {...form.register('childMiddleName')} />
+            <Input {...form.register('childMiddleName')} placeholder={t('signup.examples.childMiddleName')} />
           </Field>
         ) : null}
         {isTemplateFieldActive(template, 'childLastName') ? (
           <Field label={templateFieldLabel(template, 'childLastName', t('signup.childLastName'))} error={e.childLastName?.message} required={isTemplateFieldRequired(template, 'childLastName', true)}>
             <TemplateHelp text={templateFieldHelp(template, 'childLastName')} />
-            <Input {...form.register('childLastName')} />
+            <Input {...form.register('childLastName')} placeholder={t('signup.examples.childLastName')} />
           </Field>
         ) : null}
         {isTemplateFieldActive(template, 'childNickname') ? (
           <Field label={templateFieldLabel(template, 'childNickname', t('signup.childNickname'))} error={e.childNickname?.message} required={isTemplateFieldRequired(template, 'childNickname', true)}>
             <TemplateHelp text={templateFieldHelp(template, 'childNickname')} />
-            <Input {...form.register('childNickname')} />
+            <Input {...form.register('childNickname')} placeholder={t('signup.examples.childNickname')} />
           </Field>
         ) : null}
         {isTemplateFieldActive(template, 'childDob') ? (
@@ -537,7 +536,6 @@ function StepParents({ form, t, activeRegistrationTemplate }: StepProps) {
   const [showPassword, setShowPassword] = useState(false);
   return (
     <div className="space-y-6">
-      <h3 className="text-lg font-semibold text-on-surface">{t('signup.steps.parents')}</h3>
 
       {/* One login for the whole family — the emails below are contact details only. */}
       <div className="space-y-4 rounded-2xl border border-primary bg-primary/5 p-4">
@@ -583,25 +581,25 @@ function StepParents({ form, t, activeRegistrationTemplate }: StepProps) {
           {isTemplateFieldActive(template, 'fatherFullName') ? (
             <Field label={templateFieldLabel(template, 'fatherFullName', t('signup.fatherFullName'))} required={isTemplateFieldRequired(template, 'fatherFullName')}>
               <TemplateHelp text={templateFieldHelp(template, 'fatherFullName')} />
-              <Input {...form.register('fatherFullName')} />
+              <Input {...form.register('fatherFullName')} placeholder={t('signup.examples.fatherFullName')} />
             </Field>
           ) : null}
           {isTemplateFieldActive(template, 'fatherJob') ? (
             <Field label={templateFieldLabel(template, 'fatherJob', t('signup.fatherJob'))} required={isTemplateFieldRequired(template, 'fatherJob')}>
               <TemplateHelp text={templateFieldHelp(template, 'fatherJob')} />
-              <Input {...form.register('fatherJob')} />
+              <Input {...form.register('fatherJob')} placeholder={t('signup.examples.fatherJob')} />
             </Field>
           ) : null}
           {isTemplateFieldActive(template, 'fatherMobile') ? (
             <Field label={templateFieldLabel(template, 'fatherMobile', t('signup.fatherMobile'))} error={e.fatherMobile?.message} required={isTemplateFieldRequired(template, 'fatherMobile')}>
               <TemplateHelp text={templateFieldHelp(template, 'fatherMobile')} />
-              <Input {...phoneInputProps} {...form.register('fatherMobile')} />
+              <Input {...phoneInputProps} {...form.register('fatherMobile')} placeholder={t('signup.examples.mobile')} />
             </Field>
           ) : null}
           {isTemplateFieldActive(template, 'fatherEmail') ? (
             <Field label={templateFieldLabel(template, 'fatherEmail', t('signup.fatherEmail'))} error={e.fatherEmail?.message} required={isTemplateFieldRequired(template, 'fatherEmail')}>
               <TemplateHelp text={templateFieldHelp(template, 'fatherEmail')} />
-              <Input type="email" {...form.register('fatherEmail')} />
+              <Input type="email" {...form.register('fatherEmail')} placeholder={t('signup.examples.email')} />
             </Field>
           ) : null}
         </div>
@@ -613,25 +611,25 @@ function StepParents({ form, t, activeRegistrationTemplate }: StepProps) {
           {isTemplateFieldActive(template, 'motherFullName') ? (
             <Field label={templateFieldLabel(template, 'motherFullName', t('signup.motherFullName'))} required={isTemplateFieldRequired(template, 'motherFullName')}>
               <TemplateHelp text={templateFieldHelp(template, 'motherFullName')} />
-              <Input {...form.register('motherFullName')} />
+              <Input {...form.register('motherFullName')} placeholder={t('signup.examples.motherFullName')} />
             </Field>
           ) : null}
           {isTemplateFieldActive(template, 'motherJob') ? (
             <Field label={templateFieldLabel(template, 'motherJob', t('signup.motherJob'))} required={isTemplateFieldRequired(template, 'motherJob')}>
               <TemplateHelp text={templateFieldHelp(template, 'motherJob')} />
-              <Input {...form.register('motherJob')} />
+              <Input {...form.register('motherJob')} placeholder={t('signup.examples.motherJob')} />
             </Field>
           ) : null}
           {isTemplateFieldActive(template, 'motherMobile') ? (
             <Field label={templateFieldLabel(template, 'motherMobile', t('signup.motherMobile'))} error={e.motherMobile?.message} required={isTemplateFieldRequired(template, 'motherMobile')}>
               <TemplateHelp text={templateFieldHelp(template, 'motherMobile')} />
-              <Input {...phoneInputProps} {...form.register('motherMobile')} />
+              <Input {...phoneInputProps} {...form.register('motherMobile')} placeholder={t('signup.examples.mobile')} />
             </Field>
           ) : null}
           {isTemplateFieldActive(template, 'motherEmail') ? (
             <Field label={templateFieldLabel(template, 'motherEmail', t('signup.motherEmail'))} error={e.motherEmail?.message} required={isTemplateFieldRequired(template, 'motherEmail')}>
               <TemplateHelp text={templateFieldHelp(template, 'motherEmail')} />
-              <Input type="email" {...form.register('motherEmail')} />
+              <Input type="email" {...form.register('motherEmail')} placeholder={t('signup.examples.email')} />
             </Field>
           ) : null}
         </div>
@@ -646,7 +644,6 @@ function StepFamily({ form, t, activeRegistrationTemplate }: StepProps) {
   const hasSiblings = form.watch('hasSiblings');
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-on-surface">{t('signup.steps.family')}</h3>
       <div className="grid gap-4 sm:grid-cols-2">
         {isTemplateFieldActive(template, 'maritalStatus') ? (
           <Field label={templateFieldLabel(template, 'maritalStatus', t('signup.maritalStatus'))} required={isTemplateFieldRequired(template, 'maritalStatus')}>
@@ -676,7 +673,7 @@ function StepFamily({ form, t, activeRegistrationTemplate }: StepProps) {
         {isTemplateFieldActive(template, 'address') ? (
           <Field label={templateFieldLabel(template, 'address', t('signup.address'))} required={isTemplateFieldRequired(template, 'address')}>
             <TemplateHelp text={templateFieldHelp(template, 'address')} />
-            <Input {...form.register('address')} placeholder={t('signup.addressHint')} />
+            <Input {...form.register('address')} placeholder={t('signup.examples.address')} />
           </Field>
         ) : null}
       </div>
@@ -721,7 +718,6 @@ function StepEnrollment({ form, t, selectedNursery, activeRegistrationTemplate }
   const referralOptions = templateFieldOptions(template, 'referralSource', leadSources);
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-on-surface">{t('signup.steps.enrollment')}</h3>
       <div className="grid gap-4 sm:grid-cols-2">
         {/* Departments come from the nursery picked in step 1. */}
         {isTemplateFieldActive(template, 'department') ? (
@@ -767,7 +763,7 @@ function StepEnrollment({ form, t, selectedNursery, activeRegistrationTemplate }
         {isTemplateFieldActive(template, 'schoolAdmissionsPlan') ? (
           <Field label={templateFieldLabel(template, 'schoolAdmissionsPlan', t('signup.schoolAdmissionsPlan'))} required={isTemplateFieldRequired(template, 'schoolAdmissionsPlan')}>
             <TemplateHelp text={templateFieldHelp(template, 'schoolAdmissionsPlan')} />
-            <Input {...form.register('schoolAdmissionsPlan')} />
+            <Input {...form.register('schoolAdmissionsPlan')} placeholder={t('signup.examples.schoolAdmissionsPlan')} />
           </Field>
         ) : null}
         {isTemplateFieldActive(template, 'academicYear') ? (
@@ -817,7 +813,6 @@ function StepHealth({ form, t, activeRegistrationTemplate }: StepProps) {
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-on-surface">{t('signup.steps.health')}</h3>
       {isTemplateFieldActive(template, 'hasAllergy') ? (
         <div className="space-y-3 rounded-2xl border border-outline-variant p-4">
           <div className="flex items-center gap-2">
@@ -864,7 +859,7 @@ function StepHealth({ form, t, activeRegistrationTemplate }: StepProps) {
             {allergyTypes.includes(OTHER_ALLERGY_VALUE) && isTemplateFieldActive(template, 'allergyDetails') && (
               <Field label={templateFieldLabel(template, 'allergyDetails', t('signup.allergyDetails'))} required={isTemplateFieldRequired(template, 'allergyDetails', true)}>
                 <TemplateHelp text={templateFieldHelp(template, 'allergyDetails')} />
-                <Input {...form.register('allergyDetails')} placeholder={t('signup.pleaseSpecify')} />
+                <Input {...form.register('allergyDetails')} placeholder={t('signup.examples.allergyDetails')} />
               </Field>
             )}
           </>
@@ -887,7 +882,7 @@ function StepHealth({ form, t, activeRegistrationTemplate }: StepProps) {
         {hasMedicalCondition && isTemplateFieldActive(template, 'medicalConditionDetails') ? (
           <Field label={templateFieldLabel(template, 'medicalConditionDetails', t('signup.medicalConditionDetails'))} required={isTemplateFieldRequired(template, 'medicalConditionDetails', true)}>
             <TemplateHelp text={templateFieldHelp(template, 'medicalConditionDetails')} />
-            <Input {...form.register('medicalConditionDetails')} placeholder={t('signup.pleaseSpecify')} />
+            <Input {...form.register('medicalConditionDetails')} placeholder={t('signup.examples.medicalCondition')} />
           </Field>
         ) : null}
         {isTemplateFieldActive(template, 'childBehaviorHealthNotes') ? (
@@ -911,10 +906,7 @@ function StepDocuments({ t, files, setFiles, activeRegistrationTemplate }: StepP
 
   return (
     <div className="space-y-4">
-      <div>
-        <h3 className="text-lg font-semibold text-on-surface">{t('signup.steps.documents')}</h3>
-        <p className="mt-1 text-sm text-on-surface-variant">{t('signup.documentsHint')}</p>
-      </div>
+      <p className="text-sm text-on-surface-variant">{t('signup.documentsHint')}</p>
       <div className="grid gap-4 sm:grid-cols-2">
         {isTemplateFieldActive(template, 'birthCertificate') ? (
           <FileDropzoneWithPreview
@@ -985,17 +977,10 @@ function StepEmergency({ form, t, activeRegistrationTemplate }: StepProps) {
   const contactsActive = isTemplateFieldActive(template, 'emergencyContacts');
   const contactsRequired = isTemplateFieldRequired(template, 'emergencyContacts', true);
 
-  if (!contactsActive) {
-    return (
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-on-surface">{t('signup.steps.emergency')}</h3>
-      </div>
-    );
-  }
+  if (!contactsActive) return null;
 
   return (
     <div className="space-y-6">
-      <h3 className="text-lg font-semibold text-on-surface">{t('signup.steps.emergency')}</h3>
       <p className="text-xs text-on-surface-variant">{t('signup.emergencyHint')}</p>
       <TemplateHelp text={templateFieldHelp(template, 'emergencyContacts')} />
 
@@ -1015,17 +1000,17 @@ function StepEmergency({ form, t, activeRegistrationTemplate }: StepProps) {
           </div>
           <div className="grid gap-4 sm:grid-cols-3">
             <Field label={t('signup.contactName')} error={errors?.[index]?.name?.message} required={contactsRequired && index < 2}>
-              <Input {...form.register(`emergencyContacts.${index}.name`)} />
+              <Input {...form.register(`emergencyContacts.${index}.name`)} placeholder={t('signup.examples.personName')} />
             </Field>
             <Field label={t('signup.contactPhone')} error={errors?.[index]?.phone?.message} required={contactsRequired && index < 2}>
-              <Input {...phoneInputProps} {...form.register(`emergencyContacts.${index}.phone`)} />
+              <Input {...phoneInputProps} {...form.register(`emergencyContacts.${index}.phone`)} placeholder={t('signup.examples.mobile')} />
             </Field>
             <Field
               label={t('signup.contactRelationship')}
               error={errors?.[index]?.relationship?.message}
               required={contactsRequired && index < 2}
             >
-              <Input {...form.register(`emergencyContacts.${index}.relationship`)} />
+              <Input {...form.register(`emergencyContacts.${index}.relationship`)} placeholder={t('signup.examples.relationship')} />
             </Field>
           </div>
         </div>
@@ -1078,7 +1063,6 @@ function StepDailyCare({ form, t, activeRegistrationTemplate }: StepProps) {
 
   return (
     <div className="space-y-6">
-      <h3 className="text-lg font-semibold text-on-surface">{t('signup.steps.dailyCare')}</h3>
 
       <div>
         <h4 className="mb-3 text-sm font-semibold uppercase tracking-wide text-on-surface-variant">{t('signup.mealsSection')}</h4>
@@ -1121,19 +1105,19 @@ function StepDailyCare({ form, t, activeRegistrationTemplate }: StepProps) {
           {isTemplateFieldActive(template, 'dailyDiaperCount') ? (
             <Field label={templateFieldLabel(template, 'dailyDiaperCount', t('signup.dailyDiaperCount'))} required={isTemplateFieldRequired(template, 'dailyDiaperCount')}>
               <TemplateHelp text={templateFieldHelp(template, 'dailyDiaperCount')} />
-              <Input type="number" {...form.register('dailyDiaperCount')} />
+              <Input type="number" {...form.register('dailyDiaperCount')} placeholder={t('signup.examples.dailyDiaperCount')} />
             </Field>
           ) : null}
           {isTemplateFieldActive(template, 'rashCreamUsage') ? (
             <Field label={templateFieldLabel(template, 'rashCreamUsage', t('signup.rashCreamUsage'))} required={isTemplateFieldRequired(template, 'rashCreamUsage')}>
               <TemplateHelp text={templateFieldHelp(template, 'rashCreamUsage')} />
-              <Input {...form.register('rashCreamUsage')} />
+              <Input {...form.register('rashCreamUsage')} placeholder={t('signup.examples.rashCreamUsage')} />
             </Field>
           ) : null}
           {isTemplateFieldActive(template, 'diaperChangeFrequency') ? (
             <Field label={templateFieldLabel(template, 'diaperChangeFrequency', t('signup.diaperChangeFrequency'))} required={isTemplateFieldRequired(template, 'diaperChangeFrequency')}>
               <TemplateHelp text={templateFieldHelp(template, 'diaperChangeFrequency')} />
-              <Input {...form.register('diaperChangeFrequency')} />
+              <Input {...form.register('diaperChangeFrequency')} placeholder={t('signup.examples.diaperChangeFrequency')} />
             </Field>
           ) : null}
           {isTemplateFieldActive(template, 'toiletTrainingStatus') ? (
@@ -1235,7 +1219,6 @@ function StepPickups({ form, t, files, setFiles, activeRegistrationTemplate }: S
   ].some((fieldKey) => isTemplateFieldActive(template, fieldKey));
   return (
     <div className="space-y-6">
-      <h3 className="text-lg font-semibold text-on-surface">{t('signup.steps.pickups')}</h3>
       {pickup1Visible ? (
         <div className="space-y-4 rounded-2xl border border-outline-variant p-4">
           <p className="text-sm font-medium text-on-surface">{t('signup.pickupPerson')} 1</p>
@@ -1243,19 +1226,19 @@ function StepPickups({ form, t, files, setFiles, activeRegistrationTemplate }: S
             {isTemplateFieldActive(template, 'pickupPerson1Name') ? (
               <Field label={templateFieldLabel(template, 'pickupPerson1Name', t('signup.pickupName'))} error={e.pickupPerson1Name?.message} required={isTemplateFieldRequired(template, 'pickupPerson1Name', true)}>
                 <TemplateHelp text={templateFieldHelp(template, 'pickupPerson1Name')} />
-                <Input {...form.register('pickupPerson1Name')} />
+                <Input {...form.register('pickupPerson1Name')} placeholder={t('signup.examples.personName')} />
               </Field>
             ) : null}
             {isTemplateFieldActive(template, 'pickupPerson1Phone') ? (
               <Field label={templateFieldLabel(template, 'pickupPerson1Phone', t('signup.pickupPhone'))} error={e.pickupPerson1Phone?.message} required={isTemplateFieldRequired(template, 'pickupPerson1Phone', true)}>
                 <TemplateHelp text={templateFieldHelp(template, 'pickupPerson1Phone')} />
-                <Input {...phoneInputProps} {...form.register('pickupPerson1Phone')} />
+                <Input {...phoneInputProps} {...form.register('pickupPerson1Phone')} placeholder={t('signup.examples.mobile')} />
               </Field>
             ) : null}
             {isTemplateFieldActive(template, 'pickupPerson1Relation') ? (
               <Field label={templateFieldLabel(template, 'pickupPerson1Relation', t('signup.pickupRelation'))} required={isTemplateFieldRequired(template, 'pickupPerson1Relation')}>
                 <TemplateHelp text={templateFieldHelp(template, 'pickupPerson1Relation')} />
-                <Input {...form.register('pickupPerson1Relation')} />
+                <Input {...form.register('pickupPerson1Relation')} placeholder={t('signup.examples.pickupRelation')} />
               </Field>
             ) : null}
             {isTemplateFieldActive(template, 'pickupPerson1Authorization') ? (
@@ -1286,19 +1269,19 @@ function StepPickups({ form, t, files, setFiles, activeRegistrationTemplate }: S
             {isTemplateFieldActive(template, 'pickupPerson2Name') ? (
               <Field label={templateFieldLabel(template, 'pickupPerson2Name', t('signup.pickupName'))} error={e.pickupPerson2Name?.message} required={isTemplateFieldRequired(template, 'pickupPerson2Name', true)}>
                 <TemplateHelp text={templateFieldHelp(template, 'pickupPerson2Name')} />
-                <Input {...form.register('pickupPerson2Name')} />
+                <Input {...form.register('pickupPerson2Name')} placeholder={t('signup.examples.personName')} />
               </Field>
             ) : null}
             {isTemplateFieldActive(template, 'pickupPerson2Phone') ? (
               <Field label={templateFieldLabel(template, 'pickupPerson2Phone', t('signup.pickupPhone'))} error={e.pickupPerson2Phone?.message} required={isTemplateFieldRequired(template, 'pickupPerson2Phone', true)}>
                 <TemplateHelp text={templateFieldHelp(template, 'pickupPerson2Phone')} />
-                <Input {...phoneInputProps} {...form.register('pickupPerson2Phone')} />
+                <Input {...phoneInputProps} {...form.register('pickupPerson2Phone')} placeholder={t('signup.examples.mobile')} />
               </Field>
             ) : null}
             {isTemplateFieldActive(template, 'pickupPerson2Relation') ? (
               <Field label={templateFieldLabel(template, 'pickupPerson2Relation', t('signup.pickupRelation'))} required={isTemplateFieldRequired(template, 'pickupPerson2Relation')}>
                 <TemplateHelp text={templateFieldHelp(template, 'pickupPerson2Relation')} />
-                <Input {...form.register('pickupPerson2Relation')} />
+                <Input {...form.register('pickupPerson2Relation')} placeholder={t('signup.examples.pickupRelation')} />
               </Field>
             ) : null}
             {isTemplateFieldActive(template, 'pickupPerson2Authorization') ? (
@@ -1338,7 +1321,6 @@ function StepConsents({ form, t, activeRegistrationTemplate }: StepProps) {
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-on-surface">{t('signup.steps.consents')}</h3>
       <p className="text-sm text-on-surface-variant">{t('signup.consentsIntro')}</p>
       {e.agreeHealthPolicy?.message && (
         <p className="text-sm text-error">{t('signup.allConsentsRequired')}</p>
@@ -1874,11 +1856,7 @@ export function ParentSignUpPage() {
       case 'medicationConsents':
         return isTemplateFieldActive(activeRegistrationTemplate, 'medicationConsents') ? (
           <StepMedicationConsents form={form} />
-        ) : (
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-on-surface">{t('signup.steps.medicationConsents')}</h3>
-          </div>
-        );
+        ) : null;
       case 'documents':
         return <StepDocuments {...stepProps} />;
       case 'consents':
@@ -1950,9 +1928,9 @@ export function ParentSignUpPage() {
           setAnswers={setTemplateAnswers}
         />
 
-        <div className="flex items-center justify-between border-t border-outline-variant pt-6">
-          <Button type="button" variant="outline" onClick={goBack} disabled={isFirst}>
-            <MaterialSymbol name="arrow_back" size="text-base" />
+        <div className="flex items-center justify-between gap-3 border-t border-outline-variant/70 pt-6">
+          <Button type="button" variant="outline" className="min-h-11 px-5" onClick={goBack} disabled={isFirst}>
+            <MaterialSymbol name="arrow_back" size="text-base" className="rtl:-scale-x-100" />
             {t('signup.back')}
           </Button>
 
@@ -1996,16 +1974,21 @@ export function ParentSignUpPage() {
               </Button>
             </div>
           ) : (
-            <Button type="button" className="btn-gradient text-primary-foreground" onClick={() => void goNext()} disabled={!canContinue}>
+            <Button
+              type="button"
+              className="btn-gradient min-h-11 px-6 text-primary-foreground shadow-[0_10px_24px_-12px_rgb(var(--primary)/0.75)] disabled:shadow-none"
+              onClick={() => void goNext()}
+              disabled={!canContinue}
+            >
               {t('signup.next')}
-              <MaterialSymbol name="arrow_forward" size="text-base" />
+              <MaterialSymbol name="arrow_forward" size="text-base" className="rtl:-scale-x-100" />
             </Button>
           )}
         </div>
 
         <p className="text-center text-sm text-on-surface-variant">
           {t('signup.alreadyHaveAccount')}{' '}
-          <Link to="/login" className="text-secondary hover:underline">
+          <Link to="/login" className="font-semibold text-primary hover:underline">
             {t('auth.signIn')}
           </Link>
         </p>

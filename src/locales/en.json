@@ -6588,7 +6588,36 @@
     "agreePoliciesShort": "Nursery policies",
     "agreeInfoAccuracyShort": "Information accuracy",
     "nav": {
-      "ariaLabel": "Signup progress"
+      "ariaLabel": "Signup progress",
+      "progressLabel": "Your progress"
+    },
+    "examples": {
+      "childFirstName": "e.g. Youssef",
+      "childMiddleName": "e.g. Ahmed",
+      "childLastName": "e.g. Hassan",
+      "childNickname": "e.g. Jo",
+      "fatherFullName": "e.g. Ahmed Mohamed Hassan",
+      "motherFullName": "e.g. Mona Ali Mahmoud",
+      "fatherJob": "e.g. Engineer",
+      "motherJob": "e.g. Teacher",
+      "mobile": "e.g. 01012345678",
+      "email": "e.g. name@example.com",
+      "nationalId": "e.g. 29001011234567",
+      "address": "e.g. 12 El-Nasr St., Maadi, Cairo",
+      "maritalStatus": "e.g. Married",
+      "emergencyContact": "e.g. Sara Ahmed (aunt) - 01012345678",
+      "personName": "e.g. Sara Ahmed",
+      "relationship": "e.g. Aunt",
+      "pickupRelation": "e.g. Grandfather",
+      "department": "e.g. English",
+      "schoolAdmissionsPlan": "e.g. Apply to British schools for KG1 in 2028",
+      "academicYear": "e.g. 2026-2027",
+      "allergyDetails": "e.g. Peanuts, strawberries",
+      "medicalCondition": "e.g. Asthma - uses an inhaler when needed",
+      "specialNeeds": "e.g. Needs extra support with speech",
+      "dailyDiaperCount": "e.g. 5",
+      "rashCreamUsage": "e.g. Bepanthen after each change",
+      "diaperChangeFrequency": "e.g. Every 3 hours"
     },
     "autosave": {
       "idle": "Changes are saved as you go",

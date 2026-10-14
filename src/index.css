@@ -285,6 +285,49 @@
   );
 }
 
+/* Parent signup wizard: soft primary glows over a faint dot grid, built from the
+   theme tokens so light, soft and dark themes each get their own tint. */
+.signup-backdrop {
+  background:
+    radial-gradient(56rem 36rem at 8% -12%, rgb(var(--primary) / 0.14), transparent 62%),
+    radial-gradient(44rem 32rem at 100% 6%, rgb(var(--primary-container) / 0.85), transparent 60%),
+    radial-gradient(48rem 30rem at 60% 115%, rgb(var(--primary) / 0.08), transparent 65%);
+}
+.signup-backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgb(var(--foreground) / 0.07) 1px, transparent 1px);
+  background-size: 22px 22px;
+  -webkit-mask-image: linear-gradient(to bottom, #000, transparent 75%);
+  mask-image: linear-gradient(to bottom, #000, transparent 75%);
+}
+
+.signup-surface {
+  box-shadow:
+    0 1px 2px rgb(var(--foreground) / 0.04),
+    0 28px 56px -28px rgb(var(--primary) / 0.32);
+}
+.signup-surface :is(input, select, textarea):not([type='checkbox'], [type='radio'], [type='file']):hover {
+  border-color: rgb(var(--border-default));
+}
+/* The shared controls ring with --secondary, which is near-white in the light theme. */
+.signup-surface :is(input, select, textarea):focus-visible {
+  border-color: rgb(var(--primary) / 0.7);
+  --tw-ring-color: rgb(var(--primary) / 0.22);
+}
+/* Native selects are appearance-none, so they had no dropdown arrow. */
+.signup-surface select:not([multiple]) {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238e8ea2' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.875rem center;
+  background-size: 1.125rem;
+  padding-inline-end: 2.5rem;
+}
+[dir='rtl'] .signup-surface select:not([multiple]) {
+  background-position: left 0.875rem center;
+}
+
 @media print {
   html,
   body,
