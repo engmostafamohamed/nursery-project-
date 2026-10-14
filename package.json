@@ -8,9 +8,12 @@
     "build": "vite build",
     "typecheck": "tsc -b",
     "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "preview": "vite preview",
     "seed:demo": "tsx scripts/seed-demo-checkpoint1.ts",
     "check:ai-endpoint": "node scripts/check-ai-assistant-endpoint.mjs",
+    "api:openapi": "node scripts/api/export-openapi.mjs",
     "ops:integrity": "node scripts/ops/run-integrity-check.mjs",
     "ops:verify-export": "node scripts/ops/verify-latest-export.mjs",
     "ops:restore-rehearsal": "node scripts/ops/restore-rehearsal-checklist.mjs",
@@ -72,6 +75,7 @@
     "tsx": "^4.21.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.57.0",
-    "vite": "^8.0.1"
+    "vite": "^8.0.1",
+    "vitest": "^4.1.11"
   }
 }

@@ -113,7 +113,6 @@ const XO_ADMIN_ROOTS = [
 /** Staff portal — see StaffLayout. */
 const STAFF_ROOTS = [
   '/staff/payslips',
-  '/staff/payroll',
 ];
 
 export const TAB_ROOT_PATHS = new Set<string>([
