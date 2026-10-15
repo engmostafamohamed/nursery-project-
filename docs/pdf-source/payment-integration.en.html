@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>XO Platform — Payment Integration Guide</title>
+<link rel="stylesheet" href="theme.css" />
+<style>
+  @page {
+    size: A4;
+    margin: 18mm 16mm 18mm 16mm;
+    @bottom-left { content: "XO Platform  ·  Payment Integration Guide"; font-family: Inter, 'Segoe UI', sans-serif; font-size: 7.6pt; color: #8b91a3; }
+    @bottom-right { content: "Page " counter(page); font-family: Inter, 'Segoe UI', sans-serif; font-size: 7.6pt; color: #8b91a3; }
+  }
+  @page :first { margin: 0; @bottom-left { content: none; } @bottom-right { content: none; } }
+  code { white-space: nowrap; }
+  .formula { font-family: 'JetBrains Mono', Consolas, monospace; font-size: 8.2pt; line-height: 1.6;
+    background: var(--brand-soft-2); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; margin: 6px 0 10px; break-inside: avoid; white-space: pre-wrap; }
+  .refs li { margin-bottom: 6px; }
+  .refs a { color: var(--brand); text-decoration: none; word-break: break-all; }
+  table.t td.status-done { color: var(--green); font-weight: 700; }
+  table.t td.status-todo { color: var(--red); font-weight: 700; }
+  table.t td.status-you { color: var(--amber); font-weight: 700; }
+  .flow .arrow { font-size: 12pt; }
+</style>
+</head>
+<body>
+
+<!-- ================= COVER ================= -->
+<section class="cover">
+  <div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="dotgrid"></div>
+  <div class="brandmark"><div class="logo">XO</div>XO Platform</div>
+  <div class="kind">Technical Guide</div>
+  <h1>Payment Integration</h1>
+  <p class="subtitle">The technical and business steps for a real integration with Paymob, mobile wallets, Fawry and InstaPay, and what the platform already has in place today.</p>
+  <div class="chips">
+    <span>Paymob · Cards</span><span>Mobile wallets</span><span>Fawry · FawryPay</span><span>InstaPay</span><span>HMAC · Webhooks</span>
+  </div>
+  <div class="meta">
+    <div>Document<b>Payment Integration Guide</b></div>
+    <div>Version<b>1.0</b></div>
+    <div>Date<b>October 2026</b></div>
+    <div>Audience<b>Engineering team &amp; partners</b></div>
+  </div>
+</section>
+
+<!-- ================= CONTENTS ================= -->
+<section class="toc">
+  <p class="eyebrow">Inside this document</p>
+  <h1>Contents</h1>
+  <ol class="toc-list">
+    <li><div class="n">01</div><div><b>The big picture</b><span>One payment aggregator, or a direct contract with each company.</span></div></li>
+    <li><div class="n">02</div><div><b>An architecture decision first</b><span>A merchant account per nursery, or one account for the platform.</span></div></li>
+    <li><div class="n">03</div><div><b>Paymob: cards, wallets and cash</b><span>Requirements, integration steps, the payment flow, and what is ready.</span></div></li>
+    <li><div class="n">04</div><div><b>Fawry: direct integration through FawryPay</b><span>Issuing the code, the signature, and the payment notification.</span></div></li>
+    <li><div class="n">05</div><div><b>InstaPay</b><span>Request to Pay and QR through an aggregator.</span></div></li>
+    <li><div class="n">06</div><div><b>Security and compliance</b><span>Fixed rules for every provider.</span></div></li>
+    <li><div class="n">07</div><div><b>Suggested implementation plan</b><span>The recommended order, from the business decision to go-live.</span></div></li>
+    <li><div class="n">08</div><div><b>References</b><span>Documentation sources used.</span></div></li>
+  </ol>
+</section>
+
+<!-- ================= 01 ================= -->
+<section class="chapter">
+  <div class="chapter-head">
+    <div class="chapter-num">01</div>
+    <div><p class="eyebrow">The big picture</p><h1>Aggregator or direct integration?</h1></div>
+  </div>
+  <p class="lead">There are two ways to accept electronic payments in Egypt: contract with one payment aggregator that covers most methods, or contract with each company separately.</p>
+
+  <table class="t">
+    <thead><tr><th style="width:22%">Approach</th><th>What it means</th><th style="width:30%">Assessment</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="k">Aggregator<br/>(e.g. Paymob)</td>
+        <td>One contract and one API covering cards, wallets and cash payment at outlets.</td>
+        <td><span class="pill green">Recommended</span><br/>The current code is built on it.</td>
+      </tr>
+      <tr>
+        <td class="k">Direct integration</td>
+        <td>A separate contract with each company (Fawry, Vodafone, banks), each with its own API, signature scheme and reconciliation.</td>
+        <td><span class="pill amber">Only when needed</span><br/>Workable for Fawry. Vodafone and banks need business partnerships and offer no public merchant APIs.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout info">
+    <b>Recommendation</b>
+    <p>One aggregator (Paymob) for cards, wallets and cash; add direct Fawry, or InstaPay through an aggregator that supports it, only if nurseries need them.</p>
+  </div>
+
+  <h2>Payment methods and who covers them</h2>
+  <table class="t">
+    <thead><tr><th style="width:24%">Method</th><th>Through Paymob</th><th>Direct</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Cards (Visa · Mastercard · Meeza)</td><td>One integration; 3-D Secure (OTP) runs on Paymob's page.</td><td>Not practical (needs a card-acquiring licence from a bank).</td></tr>
+      <tr><td class="k">Mobile wallets</td><td>One integration covering Vodafone Cash, Etisalat Cash, Orange Cash, WE Pay and bank wallets.</td><td>A business agreement with each operator; no public API.</td></tr>
+      <tr><td class="k">Cash at outlets</td><td>The Kiosk channel (Aman and Masary networks).</td><td>FawryPay, for Fawry codes specifically.</td></tr>
+      <tr><td class="k">InstaPay</td><td>Confirm with the account manager whether it is available on your account.</td><td>Through a bank or an aggregator that supports the Instant Payment Network (e.g. Kashier).</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================= 02 ================= -->
+<section class="chapter">
+  <div class="chapter-head">
+    <div class="chapter-num">02</div>
+    <div><p class="eyebrow">Before anything else</p><h1>Architecture decision: where does the money go?</h1></div>
+  </div>
+  <p class="lead">The current code reads the Paymob keys from global server secrets (such as <code>PAYMOB_SECRET_KEY</code>), so <strong>every nursery's money currently goes to a single merchant account</strong>. This must be settled before going live.</p>
+
+  <div class="grid-2">
+    <div class="card soft">
+      <span class="tag">Option 1 · Recommended</span>
+      <h3>A Paymob account per nursery</h3>
+      <ul class="dots tight">
+        <li>Each nursery opens a merchant account in its own name and bank account.</li>
+        <li>Each nursery's keys are stored encrypted (e.g. Supabase Vault).</li>
+        <li>The server picks the keys by <code>invoice.nursery_id</code>.</li>
+        <li>Money lands directly in the nursery's account, with no intermediate settlement.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="tag">Option 2</span>
+      <h3>The platform collects on the nurseries' behalf</h3>
+      <ul class="dots tight">
+        <li>Needs a main-merchant / sub-merchant arrangement with Paymob.</li>
+        <li>Needs a legal status as a payment facilitator under Central Bank of Egypt oversight.</li>
+        <li>The platform is responsible for distributing and reconciling the money per nursery.</li>
+        <li>Much more complex, technically and legally.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <b>Code change needed for option 1</b>
+    <p>A per-nursery key table or store, and a lookup that picks the keys by nursery in <code>invoice-checkout</code>, <code>parent-signup-complete</code> and <code>paymob-webhook</code> (an HMAC secret per nursery).</p>
+  </div>
+</section>
+
+<!-- ================= 03 ================= -->
+<section class="chapter">
+  <div class="chapter-head">
+    <div class="chapter-num">03</div>
+    <div><p class="eyebrow">Paymob</p><h1>Cards, wallets and cash</h1></div>
+  </div>
+
+  <h2>Business requirements</h2>
+  <ul class="dots">
+    <li><b>Merchant account:</b> commercial register, tax card, and a bank account for settlements (merchant KYC).</li>
+    <li><b>Website pages:</b> terms and conditions, refund policy, privacy policy and contact details. Gateways review them before activation.</li>
+  </ul>
+
+  <h2>Payment flow</h2>
+  <div class="flow">
+    <div class="node"><b>1 · Parent</b>Chooses "Pay online"</div>
+    <div class="arrow">→</div>
+    <div class="node"><b>2 · Our server</b>Creates a payment attempt and an Intention</div>
+    <div class="arrow">→</div>
+    <div class="node"><b>3 · Paymob</b>Unified checkout: card / wallet / code</div>
+    <div class="arrow">→</div>
+    <div class="node"><b>4 · Webhook</b>HMAC-signed result reaches the server</div>
+    <div class="arrow">→</div>
+    <div class="node"><b>5 · Settlement</b>Confirmed, failed or pending code, then the result page</div>
+  </div>
+
+  <h2>Technical steps</h2>
+  <table class="t">
+    <thead><tr><th style="width:5%">#</th><th>Step</th><th style="width:20%">Status in the project</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Sandbox account: <code>secret</code> key, <code>public</code> key and test integration IDs.</td><td class="status-you">Needed from you</td></tr>
+      <tr><td>2</td><td>Create an <b>Integration</b> per payment method in the Paymob dashboard, each with its own ID. A test ID works only with the test key, and a live ID only with the live key.</td><td class="status-you">Needed from you</td></tr>
+      <tr><td>3</td><td>Register the notification URL (<code>paymob-webhook</code>) on every integration and copy the HMAC secret.</td><td class="status-you">Needed from you · code ready</td></tr>
+      <tr><td>4</td><td>The server creates an <b>Intention</b>: amount in piasters, <code>special_reference</code> set to the payment attempt ID, plus <code>notification_url</code> and <code>redirection_url</code>.</td><td class="status-done">Ready</td></tr>
+      <tr><td>5</td><td>Redirect the parent to the unified checkout; card OTP and wallet PIN happen there only.</td><td class="status-done">Ready</td></tr>
+      <tr><td>6</td><td>Receive the result: verify the signature, match amount and currency, then confirm, fail or keep the payment pending.</td><td class="status-done">Ready</td></tr>
+      <tr><td>7</td><td>Refund and void through the Paymob API, to handle double payments.</td><td class="status-todo">Not built</td></tr>
+      <tr><td>8</td><td>Daily reconciliation between Paymob transactions and the <code>payments</code> table.</td><td class="status-todo">Not built</td></tr>
+      <tr><td>9</td><td>Saved cards: store the token Paymob sends in a <code>TOKEN</code> callback, never the card itself.</td><td class="status-todo">Optional · not built</td></tr>
+    </tbody>
+  </table>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>Wallets through Paymob</h3>
+      <ul class="dots tight">
+        <li>One integration covers Vodafone Cash, Etisalat Cash, Orange Cash, WE Pay and bank wallets.</li>
+        <li>The parent enters their wallet number on Paymob's page and confirms with an OTP or PIN on the wallet side.</li>
+        <li>Our site never sees the PIN.</li>
+        <li>A direct Vodafone Cash integration needs a business agreement and has no public API.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Cash through Paymob</h3>
+      <ul class="dots tight">
+        <li>Paymob's documented cash channel is <b>Kiosk</b>, through the Aman and Masary networks, <b>not Fawry</b>.</li>
+        <li>The code has a variable named <code>PAYMOB_FAWRY_INTEGRATION_ID</code>.</li>
+        <li>Ask Paymob whether Fawry codes are available on your account; if not, that ID is for Kiosk and its name and the UI texts should change.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Server secrets needed to go live</h2>
+  <table class="t compact">
+    <thead><tr><th style="width:44%">Secret</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td><code>PAYMOB_SECRET_KEY</code> · <code>PAYMOB_PUBLIC_KEY</code></td><td>From the Paymob dashboard (test first, then live).</td></tr>
+      <tr><td><code>PAYMOB_CARD_INTEGRATION_ID</code></td><td>The cards integration ID.</td></tr>
+      <tr><td><code>PAYMOB_MOBILE_WALLET_INTEGRATION_ID</code></td><td>The wallets integration ID.</td></tr>
+      <tr><td><code>PAYMOB_INSTAPAY_INTEGRATION_ID</code> · <code>PAYMOB_FAWRY_INTEGRATION_ID</code></td><td>When available on the account (see the Kiosk note).</td></tr>
+      <tr><td><code>PAYMOB_AMOUNT_MULTIPLIER</code></td><td><b>100</b> (the amount is sent in piasters).</td></tr>
+      <tr><td><code>PAYMOB_HMAC_SECRET</code></td><td><b>Required</b>: without it, online payment is not offered at all.</td></tr>
+      <tr><td><code>APP_BASE_URL</code></td><td>The public site URL over HTTPS.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================= 04 ================= -->
+<section class="chapter">
+  <div class="chapter-head">
+    <div class="chapter-num">04</div>
+    <div><p class="eyebrow">Fawry</p><h1>Direct integration through FawryPay</h1></div>
+  </div>
+  <p class="lead">If a "Pay at Fawry" code is specifically required, the route is a direct merchant account with Fawry.</p>
+
+  <ol class="steps">
+    <li><b>Fawry merchant account:</b> you get a <code>merchantCode</code>, a <code>secureKey</code> and a staging environment.</li>
+    <li><b>Issue the code:</b> <code>POST /ECommerceWeb/Fawry/payments/charge</code> with <code>paymentMethod: PayAtFawry</code>. The response carries <code>referenceNumber</code> (the code) and <code>expirationTime</code>.</li>
+    <li><b>Show the code:</b> large type, the expiry date, a copy button and an SMS button (through Fawry or our existing <code>sms-dispatch</code> function). The code screen exists in the platform; it only lacks the expiry date.</li>
+    <li><b>Payment notification:</b> when the parent pays at an outlet, Fawry's server sends a signed notification to a new <code>fawry-webhook</code> function; we verify the signature, then confirm the payment.</li>
+    <li><b>Status inquiry:</b> for daily reconciliation and for expired codes.</li>
+  </ol>
+
+  <h3>Charge request signature (SHA-256)</h3>
+  <div class="formula">signature = SHA256( merchantCode + merchantRefNum + customerProfileId
+                    + paymentMethod + amount(2 decimals) + secureKey )</div>
+  <p class="small muted"><code>merchantRefNum</code> is our payment attempt ID; <code>customerProfileId</code> is left empty when there is none. The signature scheme of the payment notification must be taken from Fawry's official documentation; it was not published in the public sources.</p>
+
+  <div class="callout info">
+    <b>Code change needed</b>
+    <p>Generalise <code>paymob_settle_attempt</code> into <code>gateway_settle_attempt(provider, …)</code>. The <code>provider</code> column already exists on <code>payment_attempts</code>, and <code>payment_events</code> supports more than one provider. Add two functions: <code>fawry-charge</code> and <code>fawry-webhook</code>.</p>
+  </div>
+</section>
+
+<!-- ================= 05 ================= -->
+<section class="chapter">
+  <div class="chapter-head">
+    <div class="chapter-num">05</div>
+    <div><p class="eyebrow">InstaPay</p><h1>Request to Pay and QR through an aggregator</h1></div>
+  </div>
+  <p class="lead">There is no public merchant API. The Instant Payment Network (IPN) is owned by the Central Bank of Egypt; access is through a bank or payment company that supports <b>Request to Pay</b> or <b>QR</b> payments.</p>
+
+  <div class="grid-2">
+    <div class="card soft">
+      <span class="tag">Documented example</span>
+      <h3>Kashier</h3>
+      <ul class="dots tight">
+        <li>An order with <code>INITIATE_R2P</code> and the parent's InstaPay address (<code>payerAddress</code>), or <code>GENERATE_QR</code>.</li>
+        <li>The parent approves in the InstaPay app with their IPN PIN.</li>
+        <li>The result reaches the server through a webhook.</li>
+        <li>No saved cards and no recurring payments.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="tag">Paymob</span>
+      <h3>Ask the account manager</h3>
+      <p>Confirm whether Paymob offers InstaPay this way on your account. If it does, adding <code>PAYMOB_INSTAPAY_INTEGRATION_ID</code> is enough and the current flow works.</p>
+    </div>
+  </div>
+
+  <h2>What we need to build</h2>
+  <ul class="dots">
+    <li>A field for the InstaPay address (such as <code>name@instapay</code>) or the registered mobile number.</li>
+    <li>A waiting screen with a countdown that follows the payment status live (Realtime on <code>payment_attempts</code>) and switches to "Payment successful" as soon as the notification arrives.</li>
+    <li>The current method (manual transfer, then the transaction number) stays as a fallback.</li>
+  </ul>
+</section>
+
+<!-- ================= 06 ================= -->
+<section class="chapter">
+  <div class="chapter-head">
+    <div class="chapter-num">06</div>
+    <div><p class="eyebrow">Fixed rules</p><h1>Security and compliance</h1></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>Card data</h3>
+      <p>Never passes through our server. The hosted checkout keeps PCI-DSS scope at its simplest level (SAQ A). No card number, CVV, PIN or OTP fields on our pages.</p>
+    </div>
+    <div class="card">
+      <h3>Verify every result</h3>
+      <p>The signature (HMAC-SHA512 for Paymob, SHA-256 for Fawry), amount and currency match, and duplicate protection. Every result is stored in <code>payment_events</code>.</p>
+    </div>
+    <div class="card">
+      <h3>Secrets and logs</h3>
+      <p>Secrets live in Supabase Secrets or Vault only; logs never contain card numbers or full national IDs.</p>
+    </div>
+    <div class="card">
+      <h3>Kill switch</h3>
+      <p>A setting that turns off online payment immediately during an incident. Listed in the roadmap document; not built yet.</p>
+    </div>
+  </div>
+
+  <h2>Already built in the platform</h2>
+  <ul class="dots">
+    <li>Paymob results are applied automatically after signature verification: confirmed for the exact amount only, failed with the reason, or a pending code.</li>
+    <li>A payment-failed screen (reason, try again, change method, contact the nursery), a payment code screen, and an "I didn't complete the payment" button.</li>
+    <li>A mismatched amount, or money for a rejected attempt, is never applied automatically; it goes to finance for review.</li>
+    <li>Online payment is not offered at all without <code>PAYMOB_HMAC_SECRET</code>.</li>
+  </ul>
+</section>
+
+<!-- ================= 07 ================= -->
+<section class="chapter">
+  <div class="chapter-head">
+    <div class="chapter-num">07</div>
+    <div><p class="eyebrow">Delivery</p><h1>Suggested implementation plan</h1></div>
+  </div>
+
+  <ol class="steps">
+    <li><b>Business decision:</b> a Paymob account per nursery or one account for the platform, then start merchant KYC.</li>
+    <li><b>Testing:</b> put the sandbox keys on the staging project and try every case: success, decline, OTP failure, leaving without paying, and a pending code.</li>
+    <li><b>Per-nursery keys:</b> implement them in the code if option 1 is chosen.</li>
+    <li><b>Go live</b> with cards and wallets, then make one small real payment and refund it.</li>
+    <li><b>Refunds and daily reconciliation:</b> build refunds through the Paymob API and a daily comparison with the <code>payments</code> table.</li>
+    <li><b>Direct Fawry and InstaPay</b> through an aggregator that supports them, as nurseries need them.</li>
+  </ol>
+
+  <div class="callout good">
+    <b>Go-live checklist</b>
+    <p>Live keys and matching live integration IDs · <code>PAYMOB_AMOUNT_MULTIPLIER = 100</code> · <code>PAYMOB_HMAC_SECRET</code> · notification URL registered on every integration · <code>invoice-checkout</code> and <code>paymob-webhook</code> deployed · methods enabled in nursery settings · one small real payment, then refund it.</p>
+  </div>
+</section>
+
+<!-- ================= 08 ================= -->
+<section class="chapter">
+  <div class="chapter-head">
+    <div class="chapter-num">08</div>
+    <div><p class="eyebrow">References</p><h1>Sources</h1></div>
+  </div>
+  <p class="muted small">Documentation sources used in this guide. Unofficial sources (community guides and libraries) must be checked against the provider's official documentation before relying on them.</p>
+  <ul class="dots refs">
+    <li>Paymob — HMAC Transaction Callback<br/><a href="https://developers.paymob.com/paymob-docs/developers/webhook-callbacks-and-hmac/hmac/hmac-transaction-callback">developers.paymob.com/paymob-docs/developers/webhook-callbacks-and-hmac/hmac/hmac-transaction-callback</a></li>
+    <li>Paymob — Create Intention<br/><a href="https://developers.paymob.com/paymob-docs/developers/intention-apis/create-intention">developers.paymob.com/paymob-docs/developers/intention-apis/create-intention</a></li>
+    <li>Odoo — Paymob payment provider (Egypt payment methods list)<br/><a href="https://www.odoo.com/documentation/master/applications/finance/payment_providers/paymob.html">odoo.com/documentation/master/applications/finance/payment_providers/paymob.html</a></li>
+    <li>Chubb Egypt — payment methods through Paymob<br/><a href="https://life.chubb.com/eg-en/payment-methods.html">life.chubb.com/eg-en/payment-methods.html</a></li>
+    <li>Fawry Payments API (OpenAPI)<br/><a href="https://apis.io/apis/fawry/fawry-payments-api/">apis.io/apis/fawry/fawry-payments-api</a></li>
+    <li>DEV Community — FawryPay API integration guide<br/><a href="https://dev.to/_moehab/a-comprehensive-guide-to-integrate-fawrypay-api-into-your-own-restful-api-server-478d">dev.to/_moehab/a-comprehensive-guide-to-integrate-fawrypay-api-into-your-own-restful-api-server-478d</a></li>
+    <li>fawry_sdk (pub.dev)<br/><a href="https://pub.dev/documentation/fawry_sdk/latest/">pub.dev/documentation/fawry_sdk/latest</a></li>
+    <li>Kashier — InstaPay<br/><a href="https://developers.kashier.io/docs/accept-payments/instapay">developers.kashier.io/docs/accept-payments/instapay</a></li>
+    <li>HSBC Egypt — Instant Payment Network FAQs<br/><a href="https://www.egypt.hsbc.com/ways-to-bank/instant-payment-network/faqs/">egypt.hsbc.com/ways-to-bank/instant-payment-network/faqs</a></li>
+    <li>Wikipedia — Instant Payment Network<br/><a href="https://en.wikipedia.org/wiki/Instant_Payment_Network">en.wikipedia.org/wiki/Instant_Payment_Network</a></li>
+  </ul>
+</section>
+
+</body>
+</html>

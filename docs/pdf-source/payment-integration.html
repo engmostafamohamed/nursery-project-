@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<title>XO Platform — دليل ربط بوابات الدفع</title>
+<link rel="stylesheet" href="theme.css" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap" />
+<style>
+  @page {
+    size: A4;
+    margin: 18mm 16mm 18mm 16mm;
+    @bottom-right { content: "XO Platform  ·  دليل ربط بوابات الدفع"; font-family: 'Noto Sans Arabic', 'Segoe UI', sans-serif; font-size: 7.6pt; color: #8b91a3; }
+    @bottom-left { content: "صفحة " counter(page); font-family: 'Noto Sans Arabic', 'Segoe UI', sans-serif; font-size: 7.6pt; color: #8b91a3; }
+  }
+  @page :first { margin: 0; @bottom-left { content: none; } @bottom-right { content: none; } }
+
+  /* Arabic, right to left */
+  body { font-family: 'Noto Sans Arabic', 'Inter', 'Segoe UI', sans-serif; font-size: 9.8pt; line-height: 1.75; }
+  h1, h2, h3, h4, .eyebrow, .cover .kind, .card .tag, table.t thead th, .layer > .label { letter-spacing: 0; }
+  code, .mono { direction: ltr; unicode-bidi: isolate; white-space: nowrap; }
+  table.t thead th { text-align: right; font-size: 8pt; }
+  ul.dots li { padding-left: 0; padding-right: 15px; }
+  ul.dots li::before { left: auto; right: 2px; }
+  ol.steps li { padding: 0 34px 10px 0; }
+  ol.steps li::before { left: auto; right: 0; }
+  ol.steps li::after { left: auto; right: 10.5px; }
+  .pill { margin: 0 0 4px 4px; }
+  .cover .chips span, .cover .meta { font-family: inherit; }
+  .cover .subtitle { max-width: 150mm; }
+  .formula { direction: ltr; text-align: left; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 8.2pt; line-height: 1.6;
+    background: var(--brand-soft-2); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; margin: 6px 0 10px; break-inside: avoid; white-space: pre-wrap; }
+  .refs li { margin-bottom: 6px; }
+  .refs a { color: var(--brand); text-decoration: none; word-break: break-all; direction: ltr; unicode-bidi: isolate; }
+  table.t td.status-done { color: var(--green); font-weight: 700; }
+  table.t td.status-todo { color: var(--red); font-weight: 700; }
+  table.t td.status-you { color: var(--amber); font-weight: 700; }
+  table.t thead th, .eyebrow, .cover .kind, .card .tag { text-transform: none; }
+  .flow .arrow { font-size: 12pt; }
+</style>
+</head>
+<body>
+
+<!-- ================= COVER ================= -->
+<section class="cover">
+  <div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="dotgrid"></div>
+  <div class="brandmark"><div class="logo">XO</div>XO Platform</div>
+  <div class="kind">دليل تقني</div>
+  <h1>ربط بوابات الدفع</h1>
+  <p class="subtitle">الخطوات التقنية والتجارية المطلوبة لربط حقيقي مع Paymob والمحافظ الإلكترونية وفوري وInstaPay، وما هو جاهز منها في المنصة اليوم.</p>
+  <div class="chips">
+    <span>Paymob · البطاقات</span><span>المحافظ الإلكترونية</span><span>فوري · FawryPay</span><span>InstaPay</span><span>HMAC · Webhooks</span>
+  </div>
+  <div class="meta">
+    <div>الوثيقة<b>دليل ربط بوابات الدفع</b></div>
+    <div>الإصدار<b>1.0</b></div>
+    <div>التاريخ<b>أكتوبر 2026</b></div>
+    <div>الجمهور<b>الفريق التقني والشركاء</b></div>
+  </div>
+</section>
+
+<!-- ================= CONTENTS ================= -->
+<section class="toc">
+  <p class="eyebrow">محتوى الوثيقة</p>
+  <h1>المحتويات</h1>
+  <ol class="toc-list">
+    <li><div class="n">01</div><div><b>الصورة العامة</b><span>بوابة وسيطة واحدة أم ربط مباشر مع كل شركة.</span></div></li>
+    <li><div class="n">02</div><div><b>قرار معماري قبل البدء</b><span>حساب تاجر لكل حضانة أم حساب واحد للمنصة.</span></div></li>
+    <li><div class="n">03</div><div><b>Paymob: البطاقات والمحافظ والكاش</b><span>المتطلبات، خطوات الربط، مسار الدفع، وما هو جاهز.</span></div></li>
+    <li><div class="n">04</div><div><b>فوري: ربط مباشر عبر FawryPay</b><span>إصدار الكود، التوقيع، والإشعار عند السداد.</span></div></li>
+    <li><div class="n">05</div><div><b>InstaPay</b><span>طلب الدفع (Request to Pay) وQR عبر بوابة وسيطة.</span></div></li>
+    <li><div class="n">06</div><div><b>الأمان والامتثال</b><span>قواعد ثابتة لكل المزوّدين.</span></div></li>
+    <li><div class="n">07</div><div><b>خطة التنفيذ المقترحة</b><span>الترتيب الموصى به من القرار التجاري حتى التشغيل.</span></div></li>
+    <li><div class="n">08</div><div><b>المراجع</b><span>مصادر التوثيق المستخدمة.</span></div></li>
+  </ol>
+</section>
+
+<!-- ================= 01 ================= -->
+<section class="chapter">
+  <div class="chapter-head">
+    <div class="chapter-num">01</div>
+    <div><p class="eyebrow">الصورة العامة</p><h1>بوابة وسيطة أم ربط مباشر؟</h1></div>
+  </div>
+  <p class="lead">هناك طريقتان لقبول المدفوعات الإلكترونية في مصر: التعاقد مع بوابة دفع وسيطة واحدة تغطي معظم الوسائل، أو التعاقد مع كل شركة على حدة.</p>
+
+  <table class="t">
+    <thead><tr><th style="width:22%">الطريقة</th><th>ماذا تعني</th><th style="width:30%">التقييم</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="k">بوابة وسيطة<br/>(مثل Paymob)</td>
+        <td>عقد واحد وواجهة برمجية واحدة تغطي البطاقات والمحافظ والدفع النقدي في المنافذ.</td>
+        <td><span class="pill green">موصى بها</span><br/>الكود الحالي مبني عليها.</td>
+      </tr>
+      <tr>
+        <td class="k">ربط مباشر</td>
+        <td>عقد منفصل مع كل شركة (فوري، فودافون، البنوك)، وواجهة برمجية وطريقة توقيع ومطابقة مختلفة لكل واحدة.</td>
+        <td><span class="pill amber">عند الحاجة فقط</span><br/>مناسب لفوري. فودافون والبنوك تحتاج شراكات تجارية، ولا توجد لها واجهات عامة للتجار.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout info">
+    <b>التوصية</b>
+    <p>بوابة وسيطة واحدة (Paymob) للبطاقات والمحافظ والكاش، ثم إضافة فوري المباشر أو InstaPay عبر بوابة تدعمه فقط إذا احتاجته الحضانات.</p>
+  </div>
+
+  <h2>وسائل الدفع ومن يغطيها</h2>
+  <table class="t">
+    <thead><tr><th style="width:24%">الوسيلة</th><th>عبر Paymob</th><th>ربط مباشر</th></tr></thead>
+    <tbody>
+      <tr><td class="k">بطاقات (Visa · Mastercard · Meeza)</td><td>Integration واحدة، والتحقق <bdi dir="ltr">3-D Secure (OTP)</bdi> على صفحة Paymob.</td><td>غير عملي (يتطلب ترخيص استقبال بطاقات من بنك).</td></tr>
+      <tr><td class="k">المحافظ الإلكترونية</td><td>Integration واحدة تغطي فودافون كاش، اتصالات كاش، أورنج كاش، WE Pay ومحافظ البنوك.</td><td>اتفاقية تجارية مع كل مشغّل، بلا واجهة عامة.</td></tr>
+      <tr><td class="k">الدفع النقدي في المنافذ</td><td>قناة Kiosk (شبكتا أمان ومصاري).</td><td>FawryPay لأكواد فوري تحديدًا.</td></tr>
+      <tr><td class="k">InstaPay</td><td>يجب التأكد من مدير الحساب إن كان متاحًا على حسابك.</td><td>عبر بنك أو بوابة تدعم شبكة الدفع اللحظي (مثل Kashier).</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================= 02 ================= -->
+<section class="chapter">
+  <div class="chapter-head">
+    <div class="chapter-num">02</div>
+    <div><p class="eyebrow">قبل أي خطوة</p><h1>قرار معماري: لمن تذهب الأموال؟</h1></div>
+  </div>
+  <p class="lead">الكود الحالي يقرأ مفاتيح Paymob من أسرار السيرفر العامة (مثل <code>PAYMOB_SECRET_KEY</code>)، أي أن <strong>أموال كل الحضانات تذهب حاليًا إلى حساب تاجر واحد</strong>. يجب حسم هذا قبل التشغيل الحقيقي.</p>
+
+  <div class="grid-2">
+    <div class="card soft">
+      <span class="tag">الخيار 1 · موصى به</span>
+      <h3>حساب Paymob لكل حضانة</h3>
+      <ul class="dots tight">
+        <li>كل حضانة تفتح حساب تاجر باسمها وحسابها البنكي.</li>
+        <li>تُخزَّن مفاتيح كل حضانة مشفّرة (مثل <bdi dir="ltr" style="white-space:nowrap">Supabase Vault</bdi>).</li>
+        <li>السيرفر يختار المفاتيح حسب <code>invoice.nursery_id</code>.</li>
+        <li>الأموال تنزل في حساب الحضانة مباشرة، ولا توجد تسويات وسيطة.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="tag">الخيار 2</span>
+      <h3>المنصة تحصّل نيابة عن الحضانات</h3>
+      <ul class="dots tight">
+        <li>يحتاج ترتيب تاجر رئيسي وتجار فرعيين (<bdi dir="ltr">Sub-merchants</bdi>) مع Paymob.</li>
+        <li>يحتاج وضعًا قانونيًا كجهة تسهيل دفع تحت رقابة البنك المركزي.</li>
+        <li>المنصة مسؤولة عن توزيع الأموال على الحضانات ومطابقتها.</li>
+        <li>أعقد بكثير تقنيًا وقانونيًا.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <b>تغيير مطلوب في الكود إذا اخترت الخيار 1</b>
+    <p>جدول أو مخزن مفاتيح لكل حضانة، ودالة تختار المفاتيح حسب الحضانة في <code>invoice-checkout</code> و<code>parent-signup-complete</code> و<code>paymob-webhook</code> (مفتاح HMAC لكل حضانة).</p>
+  </div>
+</section>
+
+<!-- ================= 03 ================= -->
+<section class="chapter">
+  <div class="chapter-head">
+    <div class="chapter-num">03</div>
+    <div><p class="eyebrow">Paymob</p><h1>البطاقات والمحافظ والكاش</h1></div>
+  </div>
+
+  <h2>المتطلبات التجارية</h2>
+  <ul class="dots">
+    <li><b>حساب تاجر:</b> سجل تجاري، بطاقة ضريبية، وحساب بنكي لاستلام التسويات (التحقق من التاجر KYC).</li>
+    <li><b>صفحات الموقع:</b> الشروط والأحكام، سياسة الاسترداد، سياسة الخصوصية، وبيانات التواصل. بوابات الدفع تراجعها قبل التفعيل.</li>
+  </ul>
+
+  <h2>مسار الدفع</h2>
+  <div class="flow">
+    <div class="node"><b>1 · ولي الأمر</b>يختار "الدفع أونلاين"</div>
+    <div class="arrow">←</div>
+    <div class="node"><b>2 · سيرفرنا</b>ينشئ محاولة دفع وطلب Intention</div>
+    <div class="arrow">←</div>
+    <div class="node"><b>3 · Paymob</b>صفحة الدفع الموحّدة: البطاقة / المحفظة / الكود</div>
+    <div class="arrow">←</div>
+    <div class="node"><b>4 · Webhook</b>نتيجة موقّعة بـ HMAC تصل للسيرفر</div>
+    <div class="arrow">←</div>
+    <div class="node"><b>5 · التسوية</b>تأكيد أو فشل أو كود معلّق، ثم صفحة النتيجة</div>
+  </div>
+
+  <h2>الخطوات التقنية</h2>
+  <table class="t">
+    <thead><tr><th style="width:5%">#</th><th>الخطوة</th><th style="width:20%">الحالة في المشروع</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>حساب تجريبي (Sandbox): مفتاح <code>secret</code> ومفتاح <code>public</code> ومعرّفات اختبار.</td><td class="status-you">مطلوب منك</td></tr>
+      <tr><td>2</td><td>إنشاء <b>Integration</b> لكل وسيلة دفع في لوحة Paymob، ولكل واحدة معرّف (ID). المعرّف التجريبي يعمل فقط مع المفتاح التجريبي، والحقيقي مع الحقيقي.</td><td class="status-you">مطلوب منك</td></tr>
+      <tr><td>3</td><td>تسجيل رابط الإشعارات (<code>paymob-webhook</code>) في كل Integration ونسخ مفتاح HMAC.</td><td class="status-you">مطلوب منك · الكود جاهز</td></tr>
+      <tr><td>4</td><td>السيرفر ينشئ <b>Intention</b>: المبلغ بالقروش، و<code>special_reference</code> برقم محاولة الدفع، و<code>notification_url</code> و<code>redirection_url</code>.</td><td class="status-done">جاهز</td></tr>
+      <tr><td>5</td><td>تحويل ولي الأمر إلى صفحة الدفع الموحّدة؛ OTP للبطاقة وPIN للمحفظة يتمان هناك فقط.</td><td class="status-done">جاهز</td></tr>
+      <tr><td>6</td><td>استقبال النتيجة: التحقق من التوقيع، مطابقة المبلغ والعملة، ثم تأكيد الدفعة أو رفضها أو تعليقها.</td><td class="status-done">جاهز</td></tr>
+      <tr><td>7</td><td>الاسترداد (Refund) والإلغاء (Void) عبر واجهة Paymob، لمعالجة الدفع المكرر.</td><td class="status-todo">غير مبني</td></tr>
+      <tr><td>8</td><td>مطابقة يومية بين معاملات Paymob وجدول <code>payments</code>.</td><td class="status-todo">غير مبني</td></tr>
+      <tr><td>9</td><td>حفظ البطاقة: نخزّن الرمز البديل (Token) الذي يرسله Paymob في إشعار <code>TOKEN</code>، ولا نخزّن البطاقة أبدًا.</td><td class="status-todo">اختياري · غير مبني</td></tr>
+    </tbody>
+  </table>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>المحافظ عبر Paymob</h3>
+      <ul class="dots tight">
+        <li>Integration واحدة تغطي فودافون كاش، اتصالات كاش، أورنج كاش، WE Pay ومحافظ البنوك.</li>
+        <li>ولي الأمر يكتب رقم محفظته في صفحة Paymob ويؤكد بـ OTP أو PIN من جهة المحفظة.</li>
+        <li>موقعنا لا يرى رمز PIN أبدًا.</li>
+        <li>الربط المباشر مع فودافون كاش يحتاج اتفاقية تجارية ولا توجد له واجهة عامة.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>الدفع النقدي عبر Paymob</h3>
+      <ul class="dots tight">
+        <li>القناة النقدية الموثقة لدى Paymob اسمها <b>Kiosk</b> وتعمل عبر شبكتي أمان ومصاري، <b>وليست فوري</b>.</li>
+        <li>في الكود يوجد متغير باسم <code>PAYMOB_FAWRY_INTEGRATION_ID</code>.</li>
+        <li>اسأل Paymob إن كانوا يوفّرون أكواد فوري على حسابك؛ وإلا فهذا المعرّف يخص Kiosk ويجب تغيير اسمه ونصوص الواجهة.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>أسرار السيرفر المطلوبة للتشغيل</h2>
+  <table class="t compact">
+    <thead><tr><th style="width:38%">السر</th><th>القيمة</th></tr></thead>
+    <tbody>
+      <tr><td><code>PAYMOB_SECRET_KEY</code> · <code>PAYMOB_PUBLIC_KEY</code></td><td>من لوحة Paymob (تجريبي أولًا ثم حقيقي).</td></tr>
+      <tr><td><code>PAYMOB_CARD_INTEGRATION_ID</code></td><td>معرّف Integration البطاقات.</td></tr>
+      <tr><td><code>PAYMOB_MOBILE_WALLET_INTEGRATION_ID</code></td><td>معرّف Integration المحافظ.</td></tr>
+      <tr><td><code>PAYMOB_INSTAPAY_INTEGRATION_ID</code> · <code>PAYMOB_FAWRY_INTEGRATION_ID</code></td><td>عند توفرهما على الحساب (انظر ملاحظة Kiosk).</td></tr>
+      <tr><td><code>PAYMOB_AMOUNT_MULTIPLIER</code></td><td><b>100</b> (المبلغ يُرسل بالقروش).</td></tr>
+      <tr><td><code>PAYMOB_HMAC_SECRET</code></td><td><b>إلزامي</b>: بدونه لا يظهر الدفع الأونلاين أصلًا.</td></tr>
+      <tr><td><code>APP_BASE_URL</code></td><td>رابط الموقع العام بـ HTTPS.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================= 04 ================= -->
+<section class="chapter">
+  <div class="chapter-head">
+    <div class="chapter-num">04</div>
+    <div><p class="eyebrow">فوري</p><h1>ربط مباشر عبر FawryPay</h1></div>
+  </div>
+  <p class="lead">إذا كان المطلوب كود "ادفع في فوري" تحديدًا، فالطريق هو حساب تاجر مباشر لدى فوري.</p>
+
+  <ol class="steps">
+    <li><b>حساب تاجر لدى فوري:</b> تحصل على <code>merchantCode</code> و<code>secureKey</code> وبيئة تجريبية (staging).</li>
+    <li><b>إنشاء الكود:</b> طلب <code>POST /ECommerceWeb/Fawry/payments/charge</code> مع <code>paymentMethod: PayAtFawry</code>. الرد يحتوي على <code>referenceNumber</code> (الكود) و<code>expirationTime</code> (تاريخ الانتهاء).</li>
+    <li><b>عرض الكود:</b> الكود بخط كبير مع تاريخ الانتهاء وزر نسخ وزر SMS (عبر فوري أو دالة <code>sms-dispatch</code> الموجودة). شاشة الكود جاهزة في المنصة، وينقصها تاريخ الانتهاء.</li>
+    <li><b>إشعار السداد:</b> عندما يدفع ولي الأمر في المنفذ، يرسل سيرفر فوري إشعارًا موقّعًا إلى دالة جديدة <code>fawry-webhook</code>؛ نتحقق من التوقيع ثم نؤكد الدفعة.</li>
+    <li><b>استعلام عن الحالة:</b> للمطابقة اليومية وللأكواد التي انتهت صلاحيتها.</li>
+  </ol>
+
+  <h3>توقيع طلب إنشاء الكود (SHA-256)</h3>
+  <div class="formula">signature = SHA256( merchantCode + merchantRefNum + customerProfileId
+                    + paymentMethod + amount(2 decimals) + secureKey )</div>
+  <p class="small muted"><code>merchantRefNum</code> هو رقم محاولة الدفع عندنا، و<code>customerProfileId</code> يُترك فارغًا إن لم يوجد. صيغة توقيع إشعار السداد يجب أخذها من توثيق فوري الرسمي؛ لم تكن منشورة في المصادر العامة.</p>
+
+  <div class="callout info">
+    <b>التغيير المطلوب في الكود</b>
+    <p>تعميم دالة <code>paymob_settle_attempt</code> إلى <code>gateway_settle_attempt(provider, …)</code>. العمود <code>provider</code> موجود أصلًا في <code>payment_attempts</code>، وجدول <code>payment_events</code> يدعم أكثر من مزوّد. تضاف دالتان: <code>fawry-charge</code> و<code>fawry-webhook</code>.</p>
+  </div>
+</section>
+
+<!-- ================= 05 ================= -->
+<section class="chapter">
+  <div class="chapter-head">
+    <div class="chapter-num">05</div>
+    <div><p class="eyebrow">InstaPay</p><h1>طلب الدفع وQR عبر بوابة وسيطة</h1></div>
+  </div>
+  <p class="lead">لا توجد واجهة برمجية عامة للتجار. شبكة الدفع اللحظي (IPN) مملوكة للبنك المركزي المصري، والوصول إليها يكون عبر بنك أو شركة دفع تدعم ميزة <b>طلب الدفع (Request to Pay)</b> أو الدفع بـ <b>QR</b>.</p>
+
+  <div class="grid-2">
+    <div class="card soft">
+      <span class="tag">مثال موثّق</span>
+      <h3>Kashier</h3>
+      <ul class="dots tight">
+        <li>طلب بـ <code>INITIATE_R2P</code> مع عنوان InstaPay لولي الأمر (<code>payerAddress</code>)، أو <code>GENERATE_QR</code>.</li>
+        <li>ولي الأمر يوافق من تطبيق InstaPay برمز IPN PIN.</li>
+        <li>تصل النتيجة إلى السيرفر عبر Webhook.</li>
+        <li>لا يدعم حفظ البطاقة ولا الدفع المتكرر.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="tag">Paymob</span>
+      <h3>اسأل مدير الحساب</h3>
+      <p>تأكد إن كانت Paymob توفّر InstaPay بنفس الطريقة على حسابك. إن توفّر، يكفي إضافة معرّف <code>PAYMOB_INSTAPAY_INTEGRATION_ID</code> والمسار الحالي يعمل.</p>
+    </div>
+  </div>
+
+  <h2>ما نحتاج بناءه</h2>
+  <ul class="dots">
+    <li>حقل لعنوان InstaPay (مثل <code>name@instapay</code>) أو رقم الموبايل المسجّل.</li>
+    <li>شاشة انتظار بعدّاد تنازلي تتابع حالة الدفعة لحظيًا (Realtime على <code>payment_attempts</code>)، وتتحول تلقائيًا إلى "تم الدفع بنجاح" فور وصول الإشعار.</li>
+    <li>الطريقة الحالية (تحويل يدوي ثم إدخال رقم العملية) تبقى خيارًا احتياطيًا.</li>
+  </ul>
+</section>
+
+<!-- ================= 06 ================= -->
+<section class="chapter">
+  <div class="chapter-head">
+    <div class="chapter-num">06</div>
+    <div><p class="eyebrow">قواعد ثابتة</p><h1>الأمان والامتثال</h1></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>بيانات البطاقة</h3>
+      <p>لا تمر أبدًا على سيرفرنا. صفحة الدفع الخارجية (Hosted Checkout) تُبقي التزامنا بقواعد PCI-DSS في أبسط مستوى (SAQ A). لا حقول رقم بطاقة أو CVV أو PIN أو OTP داخل صفحاتنا.</p>
+    </div>
+    <div class="card">
+      <h3>التحقق من كل نتيجة</h3>
+      <p>التوقيع (HMAC-SHA512 لـ Paymob، SHA-256 لفوري)، مطابقة المبلغ والعملة، ومنع التكرار. كل نتيجة تُحفظ في <code>payment_events</code>.</p>
+    </div>
+    <div class="card">
+      <h3>الأسرار والسجلات</h3>
+      <p>الأسرار في Supabase Secrets أو Vault فقط، والسجلات لا تحتوي أرقام بطاقات ولا أرقامًا قومية كاملة.</p>
+    </div>
+    <div class="card">
+      <h3>مفتاح إيقاف (Kill switch)</h3>
+      <p>إعداد يوقف الدفع الأونلاين فورًا عند حدوث مشكلة. موجود في وثيقة الـ roadmap، ولم يُبنَ بعد.</p>
+    </div>
+  </div>
+
+  <h2>ما هو مبني بالفعل في المنصة</h2>
+  <ul class="dots">
+    <li>نتائج Paymob تُطبَّق تلقائيًا بعد التحقق من التوقيع: تأكيد بالمبلغ المطابق فقط، أو فشل مع السبب، أو كود معلّق.</li>
+    <li>شاشة فشل الدفع (السبب، إعادة المحاولة، تغيير الطريقة، التواصل مع الحضانة)، وشاشة كود الدفع، وزر "لم أُكمل الدفع".</li>
+    <li>أي مبلغ غير مطابق أو دفعة لمحاولة مرفوضة لا يُطبَّق تلقائيًا، ويُرسَل للمالية للمراجعة.</li>
+    <li>الدفع الأونلاين لا يُعرض إطلاقًا بدون <code>PAYMOB_HMAC_SECRET</code>.</li>
+  </ul>
+</section>
+
+<!-- ================= 07 ================= -->
+<section class="chapter">
+  <div class="chapter-head">
+    <div class="chapter-num">07</div>
+    <div><p class="eyebrow">التنفيذ</p><h1>خطة التنفيذ المقترحة</h1></div>
+  </div>
+
+  <ol class="steps">
+    <li><b>القرار التجاري:</b> حساب Paymob لكل حضانة أم حساب واحد للمنصة، ثم بدء التحقق من التاجر (KYC).</li>
+    <li><b>الاختبار:</b> وضع المفاتيح التجريبية على مشروع staging، وتجربة كل حالة: نجاح، رفض، فشل OTP، خروج دون دفع، وكود معلّق.</li>
+    <li><b>مفاتيح لكل حضانة:</b> تطبيقها في الكود إذا اختير الخيار 1.</li>
+    <li><b>التشغيل الحقيقي</b> للبطاقات والمحافظ، ثم دفعة صغيرة حقيقية واستردادها.</li>
+    <li><b>الاسترداد والمطابقة اليومية:</b> بناء استرداد عبر واجهة Paymob ومقارنة يومية مع جدول <code>payments</code>.</li>
+    <li><b>فوري المباشر وInstaPay</b> عبر بوابة تدعمهما، حسب احتياج الحضانات.</li>
+  </ol>
+
+  <div class="callout good">
+    <b>قبل التشغيل الحقيقي: قائمة تحقق</b>
+    <p>مفاتيح حقيقية ومعرّفات حقيقية متطابقة · <code>PAYMOB_AMOUNT_MULTIPLIER = 100</code> · <code>PAYMOB_HMAC_SECRET</code> · رابط الإشعارات مسجّل لكل Integration · نشر <code>invoice-checkout</code> و<code>paymob-webhook</code> · تفعيل الوسائل في إعدادات الحضانة · دفعة حقيقية صغيرة واستردادها.</p>
+  </div>
+</section>
+
+<!-- ================= 08 ================= -->
+<section class="chapter">
+  <div class="chapter-head">
+    <div class="chapter-num">08</div>
+    <div><p class="eyebrow">المراجع</p><h1>المصادر</h1></div>
+  </div>
+  <p class="muted small">مصادر التوثيق المستخدمة في هذه الوثيقة. المصادر غير الرسمية (أدلة المجتمع والمكتبات) يجب مطابقتها مع التوثيق الرسمي للمزوّد قبل الاعتماد عليها.</p>
+  <ul class="dots refs">
+    <li>Paymob — HMAC Transaction Callback<br/><a href="https://developers.paymob.com/paymob-docs/developers/webhook-callbacks-and-hmac/hmac/hmac-transaction-callback">developers.paymob.com/paymob-docs/developers/webhook-callbacks-and-hmac/hmac/hmac-transaction-callback</a></li>
+    <li>Paymob — Create Intention<br/><a href="https://developers.paymob.com/paymob-docs/developers/intention-apis/create-intention">developers.paymob.com/paymob-docs/developers/intention-apis/create-intention</a></li>
+    <li>Odoo — Paymob payment provider (قائمة وسائل الدفع في مصر)<br/><a href="https://www.odoo.com/documentation/master/applications/finance/payment_providers/paymob.html">odoo.com/documentation/master/applications/finance/payment_providers/paymob.html</a></li>
+    <li>Chubb Egypt — وسائل الدفع عبر Paymob<br/><a href="https://life.chubb.com/eg-en/payment-methods.html">life.chubb.com/eg-en/payment-methods.html</a></li>
+    <li>Fawry Payments API (OpenAPI)<br/><a href="https://apis.io/apis/fawry/fawry-payments-api/">apis.io/apis/fawry/fawry-payments-api</a></li>
+    <li>DEV Community — FawryPay API integration guide<br/><a href="https://dev.to/_moehab/a-comprehensive-guide-to-integrate-fawrypay-api-into-your-own-restful-api-server-478d">dev.to/_moehab/a-comprehensive-guide-to-integrate-fawrypay-api-into-your-own-restful-api-server-478d</a></li>
+    <li>fawry_sdk (pub.dev)<br/><a href="https://pub.dev/documentation/fawry_sdk/latest/">pub.dev/documentation/fawry_sdk/latest</a></li>
+    <li>Kashier — InstaPay<br/><a href="https://developers.kashier.io/docs/accept-payments/instapay">developers.kashier.io/docs/accept-payments/instapay</a></li>
+    <li>HSBC Egypt — Instant Payment Network FAQs<br/><a href="https://www.egypt.hsbc.com/ways-to-bank/instant-payment-network/faqs/">egypt.hsbc.com/ways-to-bank/instant-payment-network/faqs</a></li>
+    <li>Wikipedia — Instant Payment Network<br/><a href="https://en.wikipedia.org/wiki/Instant_Payment_Network">en.wikipedia.org/wiki/Instant_Payment_Network</a></li>
+  </ul>
+</section>
+
+</body>
+</html>
