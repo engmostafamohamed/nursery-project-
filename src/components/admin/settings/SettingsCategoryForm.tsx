@@ -17,8 +17,15 @@ interface Props {
 }
 
 // Manual methods are verified by nursery staff; Paymob methods require their provider integrations.
-const PAYMENT_METHODS = ['paymob', 'mobile_wallet', 'instapay', 'fawry', 'fawry_manual', 'vodafone_cash', 'etisalat_cash', 'cash', 'bank_transfer'];
+const PAYMENT_METHODS = ['paymob', 'mobile_wallet', 'instapay', 'fawry', 'fawry_manual', 'vodafone_cash', 'etisalat_cash', 'orange_cash', 'we_pay', 'cash', 'bank_transfer'];
 const LOYALTY_TIERS = ['silver', 'gold', 'platinum'] as const;
+const WALLET_NUMBER_PATTERN = /^01[0125]d{8}$/;
+
+/** A wallet number the parent would send money to: empty, or a valid Egyptian mobile number. */
+function walletNumberInvalid(value: unknown): boolean {
+  const number = String(value ?? '').trim();
+  return number !== '' && !WALLET_NUMBER_PATTERN.test(number);
+}
 
 export function SettingsCategoryForm({
   fields,
@@ -178,6 +185,31 @@ export function SettingsCategoryForm({
       );
     }
 
+    if (field.type === 'wallet_number') {
+      const invalid = walletNumberInvalid(value);
+      return (
+        <div className="space-y-2">
+          <Label htmlFor={`settings-${String(field.key)}`}>{label}</Label>
+          <Input
+            id={`settings-${String(field.key)}`}
+            dir="ltr"
+            inputMode="numeric"
+            autoComplete="off"
+            maxLength={11}
+            placeholder="01XXXXXXXXX"
+            value={String(value ?? '')}
+            aria-invalid={invalid}
+            onChange={(e) => onChange(field.key, e.target.value.replace(/D/g, '').slice(0, 11) || null)}
+          />
+          {invalid ? (
+            <p className="text-xs text-error">{t('payment.wallet.phoneInvalid')}</p>
+          ) : (
+            <p className="text-xs text-on-surface-variant">{helper}</p>
+          )}
+        </div>
+      );
+    }
+
     const inputType =
       field.type === 'time'
         ? 'time'
@@ -206,6 +238,8 @@ export function SettingsCategoryForm({
   const visibleFields = fields.filter(
     (field) => !field.showWhen || field.showWhen.in.includes(String(values[field.showWhen.key])),
   );
+  // A wrong wallet number would send parents' money elsewhere, so it blocks saving.
+  const hasInvalidField = fields.some((field) => field.type === 'wallet_number' && walletNumberInvalid(values[field.key]));
 
   return (
     <div className="space-y-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
@@ -216,7 +250,7 @@ export function SettingsCategoryForm({
         <Button variant="outline" onClick={onReset}>
           {t('settings.actions.reset')}
         </Button>
-        <Button onClick={() => void onSave()} disabled={isSaving}>
+        <Button onClick={() => void onSave()} disabled={isSaving || hasInvalidField}>
           {isSaving ? t('common.loading') : t('settings.actions.save')}
         </Button>
       </div>

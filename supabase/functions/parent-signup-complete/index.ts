@@ -60,6 +60,7 @@ type Body = {
     wallet_phone?: string | null;
     wallet_customer_name?: string | null;
     wallet_receipt?: SignupFilePayload | null;
+    wallet_transaction?: string | null;
     idempotency_key: string;
   } | null;
   primary_auth_id?: string | null;
@@ -310,45 +311,59 @@ function signupPaymentTestMode(): boolean {
   return Deno.env.get('SIGNUP_PAYMENT_TEST_MODE')?.trim().toLowerCase() === 'true';
 }
 
-function signupPaymentMethods(enabled: string[] | null | undefined): string[] {
+const WALLET_PROVIDERS = ['vodafone_cash', 'etisalat_cash', 'orange_cash', 'we_pay'] as const;
+type WalletProvider = (typeof WALLET_PROVIDERS)[number];
+type WalletDestinations = Partial<Record<WalletProvider, string>>;
+
+function isWalletProvider(method: string): method is WalletProvider {
+  return (WALLET_PROVIDERS as readonly string[]).includes(method);
+}
+
+/**
+ * The methods signup offers, in display order: InstaPay, online checkout, the wallet providers
+ * the nursery enabled AND gave a receiving number, bank transfer, then Fawry.
+ */
+function signupPaymentMethods(enabled: string[] | null | undefined, wallets: WalletDestinations): string[] {
   const methods: string[] = [];
+  if (enabled?.includes('instapay')) methods.push('instapay');
   if (signupPaymentTestMode() || paymobCheckoutConfigured(enabled)) methods.push('card');
+  for (const provider of WALLET_PROVIDERS) {
+    if (enabled?.includes(provider) && wallets[provider]) methods.push(provider);
+  }
+  if (enabled?.includes('bank_transfer')) methods.push('bank_transfer');
   if (enabled?.includes('fawry_manual')) methods.push('fawry');
-  if (enabled?.includes('etisalat_cash')) methods.push('etisalat_cash');
   return methods;
 }
 
 function paymentMethodNeedsReference(method: string): boolean {
-  return method === 'instapay' || method === 'vodafone_cash' || method === 'bank_transfer' || method === 'fawry';
+  return method === 'instapay' || method === 'bank_transfer' || method === 'fawry';
 }
 
-function isMissingEtisalatCashAccountColumn(error: { code?: string; message?: string } | null): boolean {
+function isMissingColumn(error: { code?: string; message?: string } | null): boolean {
   const message = error?.message?.toLowerCase() ?? '';
   return Boolean(
     error &&
     ['42703', 'PGRST204'].includes(error.code ?? '') &&
-    message.includes('etisalat_cash_account_number') &&
     (message.includes('does not exist') || message.includes('could not find')),
   );
 }
 
-async function getEtisalatCashAccountNumber(
-  admin: ReturnType<typeof getAdminClient>,
-  nurseryId: string,
-): Promise<{ accountNumber: string | null; migrationRequired: boolean }> {
-  const { data, error } = await admin
-    .from('nursery_settings')
-    .select('etisalat_cash_account_number')
-    .eq('nursery_id', nurseryId)
-    .maybeSingle();
-  if (isMissingEtisalatCashAccountColumn(error)) {
-    return { accountNumber: null, migrationRequired: true };
-  }
+/** The nursery's receiving number per wallet provider; blank numbers are left out. */
+async function getWalletDestinations(admin: ReturnType<typeof getAdminClient>, nurseryId: string): Promise<WalletDestinations> {
+  const read = async (columns: string[]) =>
+    await admin.from('nursery_settings').select(columns.join(', ')).eq('nursery_id', nurseryId).maybeSingle();
+  let { data, error } = await read(WALLET_PROVIDERS.map((provider) => `${provider}_account_number`));
+  // Before 20261016010000 only the Etisalat Cash number exists.
+  if (isMissingColumn(error)) ({ data, error } = await read(['etisalat_cash_account_number']));
+  if (isMissingColumn(error)) return {};
   if (error) throw new Error(error.message);
-  return {
-    accountNumber: data?.etisalat_cash_account_number?.trim() || null,
-    migrationRequired: false,
-  };
+  const row = (data ?? {}) as Record<string, unknown>;
+  const destinations: WalletDestinations = {};
+  for (const provider of WALLET_PROVIDERS) {
+    const value = row[`${provider}_account_number`];
+    if (typeof value === 'string' && value.trim()) destinations[provider] = value.trim();
+  }
+  return destinations;
 }
 
 async function getSignupPaymentOptions(admin: ReturnType<typeof getAdminClient>, nurseryId: string) {
@@ -362,17 +377,24 @@ async function getSignupPaymentOptions(admin: ReturnType<typeof getAdminClient>,
 
   const { data: settings, error: settingsError } = await admin
     .from('nursery_settings')
-    .select('parent_registration_enabled, payment_methods_enabled, payment_instructions')
+    .select('parent_registration_enabled, payment_methods_enabled, payment_instructions, late_pickup_fee_per_hour, late_pickup_grace_minutes, standard_end_time, instapay_account_name, instapay_account_number, instapay_qr_image_url')
     .eq('nursery_id', nurseryId)
     .maybeSingle();
   if (settingsError) throw new Error(settingsError.message);
   if (settings?.parent_registration_enabled === false) {
     throw new SignupHttpError(403, 'registration_closed', 'Registration is currently closed for this nursery.');
   }
-  const etisalatEnabled = settings?.payment_methods_enabled?.includes('etisalat_cash') ?? false;
-  const etisalatSetup = etisalatEnabled
-    ? await getEtisalatCashAccountNumber(admin, nurseryId)
-    : { accountNumber: null, migrationRequired: false };
+  // The nursery's hourly rate always applies to extra time; a package only covers hours ahead of it.
+  const hourlyRate = Number(settings?.late_pickup_fee_per_hour);
+  const extraHoursHourlyPlan = Number.isFinite(hourlyRate) && hourlyRate >= 0 && settings?.late_pickup_fee_per_hour != null
+    ? {
+        rate: hourlyRate,
+        grace_minutes: Number(settings?.late_pickup_grace_minutes ?? 0) || 0,
+        closing_time: settings?.standard_end_time ? String(settings.standard_end_time).slice(0, 5) : null,
+      }
+    : null;
+  const walletDestinations = await getWalletDestinations(admin, nurseryId);
+  const methods = signupPaymentMethods(settings?.payment_methods_enabled, walletDestinations);
 
   const { data, error } = await admin
     .from('tuition_packages')
@@ -504,15 +526,18 @@ async function getSignupPaymentOptions(admin: ReturnType<typeof getAdminClient>,
   return jsonResponse({
     packages,
     extra_hours_packages: extraHoursPackages,
-    methods: signupPaymentMethods(settings?.payment_methods_enabled).filter(
-      (method) => method !== 'etisalat_cash' || Boolean(etisalatSetup.accountNumber),
+    extra_hours_hourly_plan: extraHoursHourlyPlan,
+    methods,
+    // Only the providers offered, so the page never shows a number for a disabled wallet.
+    wallet_destinations: Object.fromEntries(
+      WALLET_PROVIDERS.filter((provider) => methods.includes(provider)).map((provider) => [provider, walletDestinations[provider]]),
     ),
-    etisalat_cash_setup_issue: etisalatEnabled
-      ? etisalatSetup.migrationRequired
-        ? 'migration'
-        : etisalatSetup.accountNumber
-          ? null
-          : 'configuration'
+    instapay: methods.includes('instapay')
+      ? {
+          account_name: settings?.instapay_account_name ?? null,
+          account_number: settings?.instapay_account_number ?? null,
+          qr_image_url: settings?.instapay_qr_image_url ?? null,
+        }
       : null,
     payment_test_mode: signupPaymentTestMode(),
     paymob_checkout_unavailable: !signupPaymentTestMode() && Boolean(
@@ -521,7 +546,8 @@ async function getSignupPaymentOptions(admin: ReturnType<typeof getAdminClient>,
       ) && !paymobCheckoutConfigured(settings?.payment_methods_enabled),
     ),
     payment_instructions: settings?.payment_instructions ?? null,
-    etisalat_cash_account_number: etisalatSetup.accountNumber,
+    // Older pages read only this field.
+    etisalat_cash_account_number: methods.includes('etisalat_cash') ? walletDestinations.etisalat_cash ?? null : null,
   });
 }
 
@@ -632,42 +658,38 @@ Deno.serve(async (req) => {
       if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(payment.idempotency_key)) {
         return jsonResponse({ error: 'Invalid payment idempotency key' }, 400);
       }
-      if (!signupPaymentMethods(signupSettings?.payment_methods_enabled).includes(payment.method)) {
+      const walletDestinations = await getWalletDestinations(admin, body.nursery_id);
+      if (!signupPaymentMethods(signupSettings?.payment_methods_enabled, walletDestinations).includes(payment.method)) {
         return jsonResponse({ error: 'Selected payment method is not enabled' }, 400);
       }
       if (paymentMethodNeedsReference(payment.method) && (payment.reference?.trim().length ?? 0) < 4) {
         return jsonResponse({ error: 'A valid payment reference is required' }, 400);
       }
-      if (payment.method === 'etisalat_cash') {
-        const etisalatSetup = await getEtisalatCashAccountNumber(admin, body.nursery_id);
-        if (etisalatSetup.migrationRequired) {
-          throw new SignupHttpError(
-            503,
-            'payment_configuration_incomplete',
-            'Etisalat Cash is unavailable until the nursery database migration has been applied.',
-          );
+      if (isWalletProvider(payment.method)) {
+        if (!walletDestinations[payment.method]) {
+          return jsonResponse({ error: 'This wallet is not configured for this nursery' }, 400);
         }
         if (!/^01[0125]\d{8}$/.test(payment.wallet_phone?.trim() ?? '')) {
-          return jsonResponse({ error: 'A valid Etisalat Cash phone number is required' }, 400);
+          return jsonResponse({ error: 'A valid wallet phone number is required' }, 400);
         }
         if ((payment.wallet_customer_name?.trim().length ?? 0) < 2 || (payment.wallet_customer_name?.trim().length ?? 0) > 100) {
-          return jsonResponse({ error: 'A valid Etisalat Cash customer name is required' }, 400);
+          return jsonResponse({ error: 'The name registered to the wallet is required' }, 400);
+        }
+        if ((payment.wallet_transaction?.trim().length ?? 0) > 80) {
+          return jsonResponse({ error: 'The wallet transaction number is too long' }, 400);
         }
         if (!payment.wallet_receipt || !['image/jpeg', 'image/png', 'image/webp'].includes(payment.wallet_receipt.type)) {
-          return jsonResponse({ error: 'An Etisalat Cash payment screenshot is required' }, 400);
+          return jsonResponse({ error: 'A wallet payment screenshot is required' }, 400);
         }
         if (
           !payment.wallet_receipt.base64 ||
           payment.wallet_receipt.base64.length > Math.ceil(5 * 1024 * 1024 * 4 / 3) ||
           !/^[A-Za-z0-9+/]+={0,2}$/.test(payment.wallet_receipt.base64)
         ) {
-          return jsonResponse({ error: 'The Etisalat Cash payment screenshot is invalid' }, 400);
+          return jsonResponse({ error: 'The wallet payment screenshot is invalid' }, 400);
         }
         if (atob(payment.wallet_receipt.base64).length > 5 * 1024 * 1024) {
-          return jsonResponse({ error: 'The Etisalat Cash payment screenshot is too large' }, 400);
-        }
-        if (!etisalatSetup.accountNumber) {
-          return jsonResponse({ error: 'Etisalat Cash is not configured for this nursery' }, 400);
+          return jsonResponse({ error: 'The wallet payment screenshot is too large' }, 400);
         }
       }
       const { data: packageRow, error: packageError } = await admin
@@ -1041,7 +1063,7 @@ Deno.serve(async (req) => {
       }
 
       let paymentProofPath: string | null = null;
-      if (payment.method === 'etisalat_cash' && payment.wallet_receipt) {
+      if (isWalletProvider(payment.method) && payment.wallet_receipt) {
         paymentProofPath = await uploadSignupFile(
           admin,
           'payment-proofs',
@@ -1050,8 +1072,9 @@ Deno.serve(async (req) => {
           uploadedObjects,
         );
       }
-      const paymentReference = payment.method === 'etisalat_cash'
-        ? `Etisalat Cash wallet phone: ${payment.wallet_phone?.trim()}; customer name: ${payment.wallet_customer_name?.trim()}`
+      const walletTransaction = payment.wallet_transaction?.trim();
+      const paymentReference = isWalletProvider(payment.method)
+        ? `Wallet phone: ${payment.wallet_phone?.trim()}; customer name: ${payment.wallet_customer_name?.trim()}${walletTransaction ? `; transaction: ${walletTransaction}` : ''}`
         : paymentMethodNeedsReference(payment.method)
           ? payment.reference?.trim() || null
           : null;

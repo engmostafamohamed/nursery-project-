@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useFieldArray, useForm, type UseFormReturn } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
@@ -62,9 +62,17 @@ import {
 import { SIGNUP_STEPS, STEP_FIELDS, type SignUpStep } from '@/features/parent-signup/parentSignUpTypes';
 import { clearDraft, loadDraft, useApplicationDraft } from '@/hooks/useApplicationDraft';
 import {
+  isWalletProvider,
+  methodNeedsReference,
   newIdempotencyKey,
   type ParentPaymentMethodCode,
 } from '@/lib/paymentApi';
+import {
+  EMPTY_PAYMENT_DETAILS,
+  PAYMENT_DETAILS_ISSUE_KEYS,
+  paymentDetailsIssues,
+  type PaymentDetails,
+} from '@/lib/paymentMethods';
 import type { ApplicationPackageBillingPeriod } from '@/hooks/useApplicationPackagePayment';
 
 function Field({ label, error, required, children }: { label: string; error?: string; required?: boolean; children: React.ReactNode }) {
@@ -1511,11 +1519,14 @@ export function ParentSignUpPage() {
   const [extraHoursPackageId, setExtraHoursPackageId] = useState<string | null>(null);
   const [paymentBillingPeriod, setPaymentBillingPeriod] = useState<ApplicationPackageBillingPeriod>('monthly');
   const [paymentMethod, setPaymentMethod] = useState<ParentPaymentMethodCode>('manual');
-  const [paymentReference, setPaymentReference] = useState('');
-  const [testCardValid, setTestCardValid] = useState(false);
-  const [walletPhone, setWalletPhone] = useState('');
-  const [walletCustomerName, setWalletCustomerName] = useState('');
-  const [walletReceipt, setWalletReceipt] = useState<File | null>(null);
+  const [paymentDetails, setPaymentDetails] = useState<PaymentDetails>(EMPTY_PAYMENT_DETAILS);
+  const updatePaymentDetails = useCallback((patch: Partial<PaymentDetails>) => {
+    setPaymentDetails((current) => ({ ...current, ...patch }));
+  }, []);
+  // Stable and change-only: the test card form reports its validity from an effect.
+  const setTestCardValid = useCallback((valid: boolean) => {
+    setPaymentDetails((current) => (current.testCardValid === valid ? current : { ...current, testCardValid: valid }));
+  }, []);
 
   const initialDraft = useMemo(() => loadDraft(), []);
   const initialValues = useMemo(
@@ -1603,19 +1614,25 @@ export function ParentSignUpPage() {
     () => signupPaymentOptions.data?.methods ?? [],
     [signupPaymentOptions.data?.methods],
   );
-  const requiresPaymentReference =
-    paymentMethod === 'instapay' || paymentMethod === 'vodafone_cash' || paymentMethod === 'bank_transfer' || paymentMethod === 'fawry';
+  const requiresPaymentReference = methodNeedsReference(paymentMethod);
+  // Everything still missing for the chosen method (reference, wallet details, test card).
+  const paymentIssues = signupPaymentOptions.data
+    ? paymentDetailsIssues(paymentMethod, paymentDetails, {
+        walletDestinations: signupPaymentOptions.data.walletDestinations,
+        testMode: signupPaymentOptions.data.testMode,
+      })
+    : [];
   useEffect(() => {
     if (availablePaymentMethods.length > 0 && !availablePaymentMethods.includes(paymentMethod)) {
       setPaymentMethod(availablePaymentMethods[0]);
-      setPaymentReference('');
+      setPaymentDetails((current) => ({ ...current, reference: '' }));
     }
   }, [availablePaymentMethods, paymentMethod]);
   useEffect(() => {
     setPaymentPackageId('');
     setExtraHoursPackageId(null);
     setPaymentBillingPeriod('monthly');
-    setPaymentReference('');
+    setPaymentDetails(EMPTY_PAYMENT_DETAILS);
   }, [selectedNursery?.id]);
   const isFirst = safeStepIndex === 0;
   const isLast = safeStepIndex === visibleSteps.length - 1;
@@ -1641,14 +1658,7 @@ export function ParentSignUpPage() {
     signupPaymentOptions.isSuccess &&
     Boolean(paymentPackageId) &&
     availablePaymentMethods.includes(paymentMethod) &&
-    (!signupPaymentOptions.data?.testMode || paymentMethod !== 'card' || testCardValid) &&
-    (paymentMethod !== 'etisalat_cash' || (
-      Boolean(signupPaymentOptions.data?.etisalatCashAccountNumber) &&
-      /^01[0125]\d{8}$/.test(walletPhone) &&
-      walletCustomerName.trim().length >= 2 &&
-      Boolean(walletReceipt)
-    )) &&
-    (!requiresPaymentReference || paymentReference.trim().length >= 4);
+    paymentIssues.length === 0;
   const canSubmit =
     SIGNUP_STEPS.every((step) => isStepComplete(step, liveValues, files, activeRegistrationTemplate)) &&
     templateRequiredQuestionsComplete &&
@@ -1726,7 +1736,7 @@ export function ParentSignUpPage() {
     setExtraHoursPackageId(null);
     setPaymentBillingPeriod('monthly');
     setPaymentMethod('manual');
-    setPaymentReference('');
+    setPaymentDetails(EMPTY_PAYMENT_DETAILS);
     toast.success(t('signup.draftCleared'));
   };
 
@@ -1758,17 +1768,8 @@ export function ParentSignUpPage() {
       }));
       return;
     }
-    if (requiresPaymentReference && paymentReference.trim().length < 4) {
-      toast.error(t('payment.referenceRequired'));
-      return;
-    }
-    if (paymentMethod === 'etisalat_cash' && (
-      !signupPaymentOptions.data?.etisalatCashAccountNumber ||
-      !/^01[0125]\d{8}$/.test(walletPhone) ||
-      walletCustomerName.trim().length < 2 ||
-      !walletReceipt
-    )) {
-      toast.error(t('payment.etisalatWallet.completeRequired'));
+    if (paymentIssues.length > 0) {
+      toast.error(t(PAYMENT_DETAILS_ISSUE_KEYS[paymentIssues[0]]));
       return;
     }
     autosave.flush();
@@ -1779,11 +1780,12 @@ export function ParentSignUpPage() {
         billingPeriod: paymentBillingPeriod,
         extraHoursPackageId,
         method: paymentMethod,
-        reference: requiresPaymentReference ? paymentReference.trim() : null,
+        reference: requiresPaymentReference ? paymentDetails.reference.trim() : null,
         idempotencyKey: newIdempotencyKey(),
-        walletPhone: paymentMethod === 'etisalat_cash' ? walletPhone : null,
-        walletCustomerName: paymentMethod === 'etisalat_cash' ? walletCustomerName : null,
-        walletReceipt: paymentMethod === 'etisalat_cash' ? walletReceipt : null,
+        walletPhone: isWalletProvider(paymentMethod) ? paymentDetails.walletPhone : null,
+        walletCustomerName: isWalletProvider(paymentMethod) ? paymentDetails.walletCustomerName : null,
+        walletReceipt: isWalletProvider(paymentMethod) ? paymentDetails.walletReceipt : null,
+        walletTransaction: isWalletProvider(paymentMethod) ? paymentDetails.walletTransaction : null,
       });
       clearDraft();
       if (result.checkoutUrl) {
@@ -1888,18 +1890,13 @@ export function ParentSignUpPage() {
               method={paymentMethod}
               onMethodChange={(method) => {
                 setPaymentMethod(method);
-                setPaymentReference('');
-                setTestCardValid(false);
+                // Switching wallet provider keeps the wallet details the parent already typed.
+                setPaymentDetails((current) => ({ ...current, reference: '', testCardValid: false }));
               }}
-              reference={paymentReference}
-              onReferenceChange={setPaymentReference}
+              details={paymentDetails}
+              issues={paymentIssues}
+              onDetailsChange={updatePaymentDetails}
               onTestCardValidityChange={setTestCardValid}
-              walletPhone={walletPhone}
-              onWalletPhoneChange={setWalletPhone}
-              walletCustomerName={walletCustomerName}
-              onWalletCustomerNameChange={setWalletCustomerName}
-              walletReceipt={walletReceipt}
-              onWalletReceiptChange={setWalletReceipt}
             />
           </div>
         );
@@ -1942,10 +1939,8 @@ export function ParentSignUpPage() {
                     ? t('signup.pickupPhotoRequired')
                     : firstMissingStep === 'documents'
                       ? t('signup.documentsRequired')
-                      : !paymentSelectionComplete && requiresPaymentReference && paymentReference.trim().length < 4
-                        ? t('payment.referenceRequired')
-                        : !paymentSelectionComplete && paymentMethod === 'etisalat_cash'
-                          ? t('payment.etisalatWallet.completeRequired')
+                      : !paymentSelectionComplete && paymentIssues.length > 0
+                        ? t(PAYMENT_DETAILS_ISSUE_KEYS[paymentIssues[0]])
                         : !paymentSelectionComplete
                     ? t('signup.payment.completeSelection', {
                         defaultValue: 'Choose a tuition package, billing period, and payment method before submitting.',

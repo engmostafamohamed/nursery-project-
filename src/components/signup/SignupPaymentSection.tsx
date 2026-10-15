@@ -1,24 +1,21 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
 
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
-import { HostedOnlineCheckoutNotice } from '@/components/payment/HostedOnlineCheckoutNotice';
-import { TestBankCardForm } from '@/components/payment/TestBankCardForm';
+import { ApplicationExtraHoursPackageCard } from '@/components/parent/ApplicationExtraHoursPackageCard';
+import { PaymentMethodDetails } from '@/components/payment/PaymentMethodDetails';
+import { PaymentMethodPicker } from '@/components/payment/PaymentMethodPicker';
 import {
   computePackageBillingQuote,
   type ApplicationPackageBillingPeriod,
   type ApplicationPaymentPackage,
 } from '@/hooks/useApplicationPackagePayment';
-import {
-  computeExtraHoursDisplayPrice,
-  type ApplicationExtraHoursPackage,
-} from '@/hooks/useApplicationExtraHoursPackage';
-import type { ParentPaymentMethodCode } from '@/lib/paymentApi';
+import { computeExtraHoursDisplayPrice } from '@/hooks/useApplicationExtraHoursPackage';
+import { isWalletProvider, type ParentPaymentMethodCode } from '@/lib/paymentApi';
+import type { PaymentDetails, PaymentDetailsIssue } from '@/lib/paymentMethods';
 import type { SignupPaymentOptions } from '@/features/parent-signup/signupPayment';
 
 const billingPeriods: Array<{ value: ApplicationPackageBillingPeriod; label: string }> = [
@@ -27,17 +24,6 @@ const billingPeriods: Array<{ value: ApplicationPackageBillingPeriod; label: str
   { value: 'half_annual', label: 'Half annual' },
   { value: 'annual', label: 'Annual' },
 ];
-
-const methodIcons: Record<ParentPaymentMethodCode, string> = {
-  card: 'payments',
-  instapay: 'account_balance',
-  vodafone_cash: 'phone_iphone',
-  etisalat_cash: 'phone_iphone',
-  fawry: 'confirmation_number',
-  bank_transfer: 'account_balance',
-  cash: 'payments',
-  manual: 'receipt_long',
-};
 
 function displayPackageName(pkg: ApplicationPaymentPackage, isArabic: boolean) {
   return isArabic ? pkg.nameAr || pkg.nameEn : pkg.nameEn || pkg.nameAr;
@@ -58,15 +44,13 @@ type Props = {
   onBillingPeriodChange: (value: ApplicationPackageBillingPeriod) => void;
   method: ParentPaymentMethodCode;
   onMethodChange: (value: ParentPaymentMethodCode) => void;
-  reference: string;
-  onReferenceChange: (value: string) => void;
+  /** What the parent entered for the chosen method (reference, wallet details, test card). */
+  details: PaymentDetails;
+  /** What is still missing for the chosen method. */
+  issues: PaymentDetailsIssue[];
+  onDetailsChange: (patch: Partial<PaymentDetails>) => void;
+  /** Must be stable: the test card form reports from an effect. */
   onTestCardValidityChange: (isValid: boolean) => void;
-  walletPhone: string;
-  onWalletPhoneChange: (value: string) => void;
-  walletCustomerName: string;
-  onWalletCustomerNameChange: (value: string) => void;
-  walletReceipt: File | null;
-  onWalletReceiptChange: (file: File | null) => void;
 };
 
 export function SignupPaymentSection({
@@ -84,15 +68,10 @@ export function SignupPaymentSection({
   onBillingPeriodChange,
   method,
   onMethodChange,
-  reference,
-  onReferenceChange,
+  details,
+  issues,
+  onDetailsChange,
   onTestCardValidityChange,
-  walletPhone,
-  onWalletPhoneChange,
-  walletCustomerName,
-  onWalletCustomerNameChange,
-  walletReceipt,
-  onWalletReceiptChange,
 }: Props) {
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language.startsWith('ar');
@@ -108,15 +87,6 @@ export function SignupPaymentSection({
     : null;
   const totalDue = (quote?.total ?? 0) + (extraHoursQuote?.displayPrice ?? 0);
   const totalSavings = (quote?.discountAmount ?? 0) + (extraHoursQuote?.discountAmount ?? 0);
-  const needsReference = method === 'instapay' || method === 'vodafone_cash' || method === 'bank_transfer' || method === 'fawry';
-  const isEtisalatWallet = method === 'etisalat_cash';
-  const walletPhoneValid = /^01[0125]\d{8}$/.test(walletPhone);
-  const walletDetailsValid = !isEtisalatWallet || (
-    Boolean(options?.etisalatCashAccountNumber) &&
-    walletPhoneValid &&
-    walletCustomerName.trim().length >= 2 &&
-    Boolean(walletReceipt)
-  );
   const periodLabel = t(
     `applications.paymentPackage.period.${billingPeriod === 'half_annual' ? 'halfAnnual' : billingPeriod}`,
     { defaultValue: billingPeriods.find((period) => period.value === billingPeriod)?.label },
@@ -188,20 +158,6 @@ export function SignupPaymentSection({
           </div>
         ) : (
           <div className="space-y-6">
-            {options.etisalatCashSetupIssue ? (
-              <p role="status" className="rounded-xl border border-warning/30 bg-warning/5 p-3 text-sm text-on-surface">
-                {t(
-                  options.etisalatCashSetupIssue === 'migration'
-                    ? 'signup.payment.etisalatMigrationRequired'
-                    : 'signup.payment.etisalatConfigurationRequired',
-                  {
-                    defaultValue: options.etisalatCashSetupIssue === 'migration'
-                      ? 'Etisalat Cash is temporarily unavailable because the nursery database update has not been applied. Other available payment methods can still be selected.'
-                      : 'Etisalat Cash is unavailable because the nursery has not configured its receiving number. Other available payment methods can still be selected.',
-                  },
-                )}
-              </p>
-            ) : null}
             <div className="space-y-6">
               <fieldset className="space-y-3">
                 <legend className="mb-3 flex items-center gap-3">
@@ -322,87 +278,27 @@ export function SignupPaymentSection({
                 </div>
               ) : null}
 
-              {options.extraHoursPackages.length > 0 ? (
+              {options.extraHoursPackages.length > 0 || options.extraHoursHourlyPlan ? (
                 <fieldset className="space-y-3">
                   <legend className="mb-3 flex items-center gap-3">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary/10 text-sm font-bold text-secondary">2</span>
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">2</span>
                     <span>
-                      <span className="flex items-center gap-2 font-semibold text-on-surface">
+                      <span className="block font-semibold text-on-surface">
                         {t('applications.extraHoursPackage.title', { defaultValue: 'Extra hours' })}
-                        <span className="rounded-full bg-surface-container px-2 py-0.5 text-[11px] font-medium text-on-surface-variant">
-                          {t('applications.extraHoursPackage.optional', { defaultValue: 'Optional' })}
-                        </span>
                       </span>
                       <span className="mt-0.5 block text-xs text-on-surface-variant">
-                        {t('signup.payment.extraHoursHint', { defaultValue: 'Add prepaid hours for flexible pickups.' })}
+                        {t('signup.payment.extraHoursHint')}
                       </span>
                     </span>
                   </legend>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <button
-                      type="button"
-                      aria-pressed={!extraHoursPackageId}
-                      onClick={() => onExtraHoursPackageChange(null)}
-                      className={`flex min-h-24 flex-col rounded-xl border p-4 text-start transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
-                        !extraHoursPackageId
-                          ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                          : 'border-outline-variant bg-surface hover:border-primary/50 hover:shadow-sm'
-                      }`}
-                    >
-                      <span className="flex w-full items-center justify-between gap-3 font-semibold text-on-surface">
-                        {t('applications.extraHoursPackage.none', { defaultValue: "Don't add extra hours" })}
-                        <span className={`flex h-5 w-5 items-center justify-center rounded-full border ${!extraHoursPackageId ? 'border-primary bg-primary text-primary-foreground' : 'border-outline-variant text-transparent'}`}>
-                          <MaterialSymbol name="check" size="text-xs" />
-                        </span>
-                      </span>
-                      <span className="mt-2 text-xs leading-5 text-on-surface-variant">
-                        {t('applications.extraHoursPackage.noneHint', { defaultValue: 'Late-pickup fees apply as usual.' })}
-                      </span>
-                    </button>
-                    {options.extraHoursPackages.map((pkg: ApplicationExtraHoursPackage) => {
-                      const active = pkg.id === extraHoursPackageId;
-                      const packagePrice = computeExtraHoursDisplayPrice(pkg);
-                      return (
-                        <button
-                          key={pkg.id}
-                          type="button"
-                          aria-pressed={active}
-                          onClick={() => onExtraHoursPackageChange(pkg.id)}
-                          className={`flex min-h-24 flex-col rounded-xl border p-4 text-start transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
-                            active
-                              ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                              : 'border-outline-variant bg-surface hover:border-primary/50 hover:shadow-sm'
-                          }`}
-                        >
-                          <span className="flex w-full items-start justify-between gap-3 font-semibold text-on-surface">
-                            {isArabic ? pkg.nameAr || pkg.nameEn : pkg.nameEn || pkg.nameAr}
-                            <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${active ? 'border-primary bg-primary text-primary-foreground' : 'border-outline-variant text-transparent'}`}>
-                              <MaterialSymbol name="check" size="text-xs" />
-                            </span>
-                          </span>
-                          <span className="mt-1 text-xs text-on-surface-variant">
-                            {pkg.coverageType === 'hours_quota'
-                              ? t('packages.typeQuota', { hours: pkg.includedHours ?? 0 })
-                              : t('packages.typeUnlimited')}
-                          </span>
-                          <span className="mt-auto flex flex-wrap items-baseline gap-2 pt-3">
-                            {packagePrice.discountAmount > 0 ? (
-                              <span className="text-xs text-on-surface-variant line-through">{price(pkg.price)}</span>
-                            ) : null}
-                            <span className="font-bold text-on-surface">{price(packagePrice.displayPrice)}</span>
-                          </span>
-                          {packagePrice.discountAmount > 0 ? (
-                            <span className="mt-1 text-xs font-medium text-success">
-                              {t('signup.payment.discountSaved', {
-                                amount: price(packagePrice.discountAmount),
-                                defaultValue: 'Discount: {{amount}} saved',
-                              })}
-                            </span>
-                          ) : null}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <ApplicationExtraHoursPackageCard
+                    embedded
+                    packages={options.extraHoursPackages}
+                    selectedPackageId={extraHoursPackageId}
+                    hourlyPlan={options.extraHoursHourlyPlan}
+                    canChoose
+                    onSelect={onExtraHoursPackageChange}
+                  />
                 </fieldset>
               ) : null}
             </div>
@@ -410,7 +306,7 @@ export function SignupPaymentSection({
             <aside className="space-y-5 border-t border-outline-variant pt-5">
               <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4 sm:p-5">
                 <div className="mb-4 flex items-center gap-3">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary/10 text-secondary">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <MaterialSymbol name="account_balance_wallet" />
                   </span>
                   <div>
@@ -456,8 +352,25 @@ export function SignupPaymentSection({
                             <dd>-{price(extraHoursQuote.discountAmount)}</dd>
                           </div>
                         ) : null}
+                        <p className="text-xs leading-5 text-on-surface-variant">
+                          {options.extraHoursHourlyPlan
+                            ? t('applications.extraHoursPackage.beyondPackage', { rate: price(options.extraHoursHourlyPlan.rate) })
+                            : t('applications.extraHoursPackage.beyondPackageNoRate')}
+                        </p>
                       </>
-                    ) : null}
+                    ) : (
+                      // No package: extra time is billed later at the hourly rate, not paid now.
+                      <div className="flex items-start justify-between gap-3">
+                        <dt className="min-w-0 text-on-surface-variant">
+                          {t('applications.extraHoursPackage.title', { defaultValue: 'Extra hours' })}
+                        </dt>
+                        <dd className="shrink-0 text-end text-xs font-medium text-on-surface-variant">
+                          {options.extraHoursHourlyPlan
+                            ? t('applications.extraHoursPackage.hourlyBilledLater', { rate: price(options.extraHoursHourlyPlan.rate) })
+                            : t('applications.extraHoursPackage.payPerHourBilledLater')}
+                        </dd>
+                      </div>
+                    )}
                     <div className="border-t border-outline-variant pt-4">
                       <div className="flex items-end justify-between gap-3">
                         <dt className="font-semibold text-on-surface">
@@ -482,180 +395,19 @@ export function SignupPaymentSection({
                 )}
               </div>
 
-                <fieldset className="space-y-3">
-                  <legend className="font-semibold text-on-surface">
-                    {t(options.testMode && method === 'card' ? 'signup.payment.testPaymentTitle' : 'payment.methodsTitle', {
-                      defaultValue: options.testMode ? 'Test payment' : 'Payment method',
-                    })}
-                  </legend>
-                  <p className="mb-3 text-xs text-on-surface-variant">
-                    {options.testMode && method === 'card'
-                      ? t('signup.payment.testModeDescription', {
-                          defaultValue: 'Use the local-only card form to test registration. No payment provider is contacted and no money is charged.',
-                        })
-                      : method === 'etisalat_cash'
-                        ? t('payment.etisalatWallet.description')
-                        : method === 'fawry'
-                          ? t('payment.fawry.description')
-                          : t('signup.payment.cardCheckout.methodHint', {
-                          defaultValue: 'Continue to Paymob’s secure checkout and choose an available payment method there.',
-                        })}
-                  </p>
-                  {options.methods.length > 0 ? (
-                  <div className="grid gap-2 sm:grid-cols-2">
-                  {options.methods.map((paymentMethod) => {
-                    const active = method === paymentMethod;
-                    return (
-                      <label
-                        key={paymentMethod}
-                        className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
-                          active
-                            ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                            : 'border-outline-variant bg-surface hover:border-primary/50'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="signup-payment-method"
-                          className="sr-only"
-                          value={paymentMethod}
-                          checked={active}
-                          onChange={() => onMethodChange(paymentMethod)}
-                        />
-                        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${active ? 'bg-primary text-primary-foreground' : 'bg-surface-container text-on-surface-variant'}`}>
-                          <MaterialSymbol name={methodIcons[paymentMethod]} />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block font-semibold text-on-surface">
-                            {paymentMethod === 'card'
-                              ? t(options.testMode ? 'signup.payment.testModeOption' : 'signup.payment.onlineCheckoutOption', {
-                                  defaultValue: options.testMode ? 'Simulated bank card' : 'Secure bank card checkout',
-                                })
-                              : t(`payment.manualMethods.${paymentMethod}.label`)}
-                          </span>
-                          <span className="mt-0.5 block text-xs leading-5 text-on-surface-variant">
-                            {paymentMethod === 'etisalat_cash'
-                              ? t('payment.manualMethods.etisalat_cash.help')
-                              : paymentMethod === 'fawry'
-                                ? t('payment.manualMethods.fawry.help')
-                                : options.testMode
-                              ? t('signup.payment.testModeOptionHint', {
-                                  defaultValue: 'Enter fake card details to validate the card form. Never use a real card.',
-                                })
-                              : t('signup.payment.cardCheckout.methodHint', {
-                                  defaultValue: 'Choose card, InstaPay, a supported mobile wallet, or Fawry in Paymob checkout.',
-                                })}
-                          </span>
-                        </span>
-                        <span className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${active ? 'border-primary bg-primary text-primary-foreground' : 'border-outline-variant text-transparent'}`}>
-                          <MaterialSymbol name="check" size="text-xs" />
-                        </span>
-                      </label>
-                    );
-                  })}
-                  </div>
-                  ) : (
-                    <p role="alert" className="rounded-xl border border-warning/30 bg-warning/5 p-3 text-sm text-on-surface">
-                      {t('signup.payment.onlineCheckoutUnavailable', {
-                        defaultValue: 'Secure online payment is not configured for this nursery yet.',
-                      })}
-                    </p>
-                  )}
-                </fieldset>
-
-              {options.testMode && method === 'card' ? (
-                <div role="status" className="flex items-start gap-3 rounded-xl border border-warning/30 bg-warning/5 p-4 text-sm">
-                  <MaterialSymbol name="science" className="mt-0.5 text-warning" />
-                  <p className="leading-5 text-on-surface">
-                    {t('signup.payment.testModeNotice', {
-                      defaultValue: 'Test mode is active. Card details are checked only in this page, never sent or saved. Submitting creates a test payment request; no money is charged.',
-                    })}
-                  </p>
-                </div>
-              ) : null}
-
-              {options.testMode && method === 'card' ? (
-                <TestBankCardForm onValidityChange={onTestCardValidityChange} />
-              ) : null}
-
-              {method === 'fawry' ? (
-                <div className="space-y-2 rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
-                  <h4 className="font-semibold text-on-surface">{t('payment.fawry.title')}</h4>
-                  <p className="text-sm leading-5 text-on-surface-variant">{t('payment.fawry.referenceNotice')}</p>
-                </div>
-              ) : null}
-
-              {isEtisalatWallet ? (
-                <fieldset className="space-y-3 rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
-                  <legend className="px-1 font-semibold text-on-surface">{t('payment.etisalatWallet.title')}</legend>
-                  <p className="text-sm leading-5 text-on-surface-variant">{t('payment.etisalatWallet.description')}</p>
-                  {options.etisalatCashAccountNumber ? (
-                    <div className="rounded-lg bg-surface-container p-3">
-                      <p className="text-xs text-on-surface-variant">{t('payment.etisalatWallet.destination')}</p>
-                      <p dir="ltr" className="mt-1 break-all font-mono text-lg font-bold text-primary">{options.etisalatCashAccountNumber}</p>
-                    </div>
-                  ) : (
-                    <p role="alert" className="rounded-lg border border-warning/30 bg-warning/5 p-3 text-sm text-on-surface">
-                      {t('payment.etisalatWallet.destinationNotConfigured')}
-                    </p>
-                  )}
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-etisalat-phone">{t('payment.etisalatWallet.phone')}</Label>
-                    <Input
-                      id="signup-etisalat-phone"
-                      inputMode="numeric"
-                      autoComplete="tel"
-                      maxLength={11}
-                      value={walletPhone}
-                      onChange={(event) => onWalletPhoneChange(event.target.value.replace(/\D/g, '').slice(0, 11))}
-                      placeholder="01XXXXXXXXX"
-                      aria-invalid={Boolean(walletPhone && !walletPhoneValid)}
-                    />
-                    {walletPhone && !walletPhoneValid ? <p className="text-xs text-error">{t('payment.etisalatWallet.phoneInvalid')}</p> : null}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-etisalat-name">{t('payment.etisalatWallet.customerName')}</Label>
-                    <Input
-                      id="signup-etisalat-name"
-                      autoComplete="name"
-                      maxLength={100}
-                      value={walletCustomerName}
-                      onChange={(event) => onWalletCustomerNameChange(event.target.value)}
-                      placeholder={t('payment.etisalatWallet.namePlaceholder')}
-                      aria-invalid={Boolean(walletCustomerName && walletCustomerName.trim().length < 2)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-etisalat-receipt">{t('payment.etisalatWallet.screenshot')}</Label>
-                    <Input
-                      id="signup-etisalat-receipt"
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      onChange={(event) => {
-                        const file = event.target.files?.[0] ?? null;
-                        if (file && !['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
-                          toast.error(t('payment.etisalatWallet.invalidFileType'));
-                          onWalletReceiptChange(null);
-                          event.target.value = '';
-                          return;
-                        }
-                        if (file && file.size > 5 * 1024 * 1024) {
-                          toast.error(t('payment.etisalatWallet.fileTooLarge'));
-                          onWalletReceiptChange(null);
-                          event.target.value = '';
-                          return;
-                        }
-                        onWalletReceiptChange(file);
-                      }}
-                    />
-                    <p className="text-xs text-on-surface-variant">{t('payment.etisalatWallet.screenshotHelp')}</p>
-                    {walletReceipt ? <p className="text-xs text-on-surface-variant">{walletReceipt.name}</p> : null}
-                    {!walletDetailsValid && (!options.etisalatCashAccountNumber || !walletPhoneValid || walletCustomerName.trim().length < 2 || !walletReceipt) ? (
-                      <p className="text-xs text-warning">{t('payment.etisalatWallet.completeRequired')}</p>
-                    ) : null}
-                  </div>
-                </fieldset>
-              ) : null}
+              {options.methods.length > 0 ? (
+                <PaymentMethodPicker
+                  name="signup-payment-method"
+                  methods={options.methods}
+                  value={method}
+                  onChange={onMethodChange}
+                  testMode={options.testMode}
+                />
+              ) : (
+                <p role="alert" className="rounded-xl border border-warning/30 bg-warning/5 p-3 text-sm text-on-surface">
+                  {t('payment.noEnabledMethods')}
+                </p>
+              )}
 
               {!options.testMode && method === 'card' && options.paymobCheckoutUnavailable ? (
                 <p role="status" className="rounded-xl border border-warning/30 bg-warning/5 p-3 text-sm text-on-surface">
@@ -665,38 +417,26 @@ export function SignupPaymentSection({
                 </p>
               ) : null}
 
-              {method === 'card' && !options.testMode ? <HostedOnlineCheckoutNotice amount={price(totalDue)} /> : null}
-
-              {options.instructions && method !== 'cash' && method !== 'card' ? (
-                <div className="rounded-xl border border-outline-variant bg-surface p-4">
-                  <div className="flex items-start gap-2.5">
-                    <MaterialSymbol name="info" className="text-primary" />
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-on-surface-variant">{t('payment.instructionsTitle')}</p>
-                      <p className="mt-1 whitespace-pre-line break-words text-sm leading-6 text-on-surface">{options.instructions}</p>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-
-              {needsReference ? (
-                <div className="space-y-2">
-                  <Label htmlFor="signup-payment-reference" className="font-semibold">
-                    {t(method === 'fawry' ? 'payment.fawry.reference' : 'payment.reference')}
-                  </Label>
-                  <Input
-                    id="signup-payment-reference"
-                    value={reference}
-                    maxLength={80}
-                    autoComplete="off"
-                    placeholder={t('payment.referencePlaceholder')}
-                    onChange={(event) => onReferenceChange(event.target.value)}
-                    required
-                  />
-                  <p className="text-xs text-on-surface-variant">
-                    {t('payment.referenceHelp', { defaultValue: 'Finance uses this to match your transfer.' })}
-                  </p>
-                </div>
+              {options.methods.includes(method) ? (
+                <PaymentMethodDetails
+                  method={method}
+                  details={details}
+                  onChange={onDetailsChange}
+                  onTestCardValidityChange={onTestCardValidityChange}
+                  issues={issues}
+                  settings={{
+                    instapayAccountName: options.instapay.accountName,
+                    instapayAccountNumber: options.instapay.accountNumber,
+                    instapayQrImageUrl: options.instapay.qrImageUrl,
+                    walletDestinations: options.walletDestinations,
+                    instructions: options.instructions,
+                  }}
+                  amountLabel={price(totalDue)}
+                  testMode={options.testMode}
+                  idPrefix="signup-payment"
+                  walletProviders={options.methods.filter(isWalletProvider)}
+                  onMethodChange={onMethodChange}
+                />
               ) : null}
 
               <div className="flex items-start gap-3 rounded-xl border border-warning/20 bg-warning/5 p-4 text-sm text-on-surface-variant">

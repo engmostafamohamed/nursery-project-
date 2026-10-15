@@ -8,7 +8,7 @@ import {
   type RegistrationTemplatePayload,
 } from './registrationTemplates';
 import type { ApplicationPackageBillingPeriod } from '@/hooks/useApplicationPackagePayment';
-import type { ParentPaymentMethodCode } from '@/lib/paymentApi';
+import { isWalletProvider, type ParentPaymentMethodCode } from '@/lib/paymentApi';
 
 const MAX_TOTAL_FILE_PAYLOAD_BYTES = 4.5 * 1024 * 1024;
 
@@ -24,6 +24,8 @@ export type SignupPaymentSelection = {
   walletPhone?: string | null;
   walletCustomerName?: string | null;
   walletReceipt?: File | null;
+  /** Optional wallet transaction number. */
+  walletTransaction?: string | null;
 };
 
 // children.school_preference is CHECK-constrained to these values. The field used to be a
@@ -181,7 +183,7 @@ export async function submitParentSignUp(
   const visibleFiles = filesForTemplate(files, registrationTemplate);
 
   const filePayload = await filesToPayload(visibleFiles);
-  const walletReceiptPayload = payment?.method === 'etisalat_cash'
+  const walletReceiptPayload = payment && isWalletProvider(payment.method)
     ? await fileToPayload(payment.walletReceipt ?? null)
     : null;
   if (walletReceiptPayload && estimatePayloadSize([...Object.values(filePayload), walletReceiptPayload]) > MAX_TOTAL_FILE_PAYLOAD_BYTES) {
@@ -351,8 +353,9 @@ export async function submitParentSignUp(
             extra_hours_package_id: payment.extraHoursPackageId,
             method: payment.method,
             reference: payment.reference,
-            wallet_phone: payment.method === 'etisalat_cash' ? payment.walletPhone?.trim() ?? null : null,
-            wallet_customer_name: payment.method === 'etisalat_cash' ? payment.walletCustomerName?.trim() ?? null : null,
+            wallet_phone: isWalletProvider(payment.method) ? payment.walletPhone?.trim() ?? null : null,
+            wallet_customer_name: isWalletProvider(payment.method) ? payment.walletCustomerName?.trim() ?? null : null,
+            wallet_transaction: isWalletProvider(payment.method) ? payment.walletTransaction?.trim() || null : null,
             wallet_receipt: walletReceiptPayload,
             idempotency_key: payment.idempotencyKey,
           }

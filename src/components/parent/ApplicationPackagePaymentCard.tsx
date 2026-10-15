@@ -426,11 +426,6 @@ export function ApplicationPackagePaymentCard({
                 index={3}
                 title={t('applications.extraHoursPackage.title', { defaultValue: 'Extra hours' })}
                 hint={t('applications.extraHoursPackage.sectionHint')}
-                action={
-                  <span className="rounded-full bg-surface-container px-2 py-0.5 text-[11px] font-medium text-on-surface-variant">
-                    {t('applications.extraHoursPackage.optional', { defaultValue: 'Optional' })}
-                  </span>
-                }
               />
               {extraHoursSection}
             </div>

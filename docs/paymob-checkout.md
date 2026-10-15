@@ -97,13 +97,16 @@ payments. Staff-recorded payments are not affected.
 
 ### Extra hours on the same payment
 
-In the application's Packages step the parent also chooses how extra time is paid. The
-default is **pay per hour**: late pickup is billed afterwards at the nursery's
-`late_pickup_fee_per_hour`, after the grace period (Admin → Packages → hours tab, or
-Settings). A prepaid extra-hours package instead goes onto the application invoice (price
-minus any live deal) and is paid in the same single payment as the tuition package
-(migration `20261015000000_application_invoice_extra_hours.sql`). The choice is locked once a
-payment is made or submitted.
+The basic extra-hours plan is **pay per hour** at the nursery's rate
+(`late_pickup_fee_per_hour`, after the grace period; Admin → Packages → hours tab, or
+Settings). Signup and the application's Packages step show it as the first option, selected
+by default. Picking a prepaid package moves the selection to that package; removing the
+package (or picking the basic plan again) selects pay per hour again. Billing follows the
+same rule: `package_apply_extra_hours` covers late time from the package first, and whatever
+it does not cover (hours used up, package expired, or removed) is billed per hour. A chosen package goes onto the application invoice
+(price minus any live deal) and is paid in the same single payment as the tuition package
+(migration `20261015000000_application_invoice_extra_hours.sql`); removing it returns the
+parent to the hourly rate only. The choice is locked once a payment is made or submitted.
 
 ## Test-only signup simulation
 

@@ -8,7 +8,7 @@ import { useAuthSession } from '@/hooks/useAuthSession';
 import { useOnlineCheckoutOptions } from '@/hooks/useOnlineCheckoutOptions';
 import { useSingleFlight } from '@/hooks/useSingleFlight';
 import { invalidatePaymentQueries, useSubmitInvoicePayment } from '@/hooks/useSubmitInvoicePayment';
-import { newIdempotencyKey, paymentError, type ParentPaymentMethodCode } from '@/lib/paymentApi';
+import { newIdempotencyKey, paymentError, walletDestinationsFrom, type ParentPaymentMethodCode } from '@/lib/paymentApi';
 import {
   availableParentPaymentMethods,
   EMPTY_PAYMENT_DETAILS,
@@ -63,6 +63,7 @@ function paymentSignature(invoiceId: string, method: string, amount: number, det
     details.reference.trim(),
     details.walletPhone,
     details.walletCustomerName.trim(),
+    details.walletTransaction.trim(),
     receipt ? [receipt.name, receipt.size, receipt.lastModified] : null,
   ]);
 }
@@ -85,12 +86,14 @@ export function useInvoiceCheckout({ invoice, amountPolicy, returnPath, beforePa
   const flight = useSingleFlight();
   const paymentKeyRef = useRef<{ signature: string; key: string } | null>(null);
 
+  const walletDestinations = useMemo(() => walletDestinationsFrom(settings), [settings]);
   const methods = useMemo(
     () => availableParentPaymentMethods({
       enabled: settings.payment_methods_enabled,
       onlineCheckoutAvailable: online.options.available,
+      walletDestinations,
     }),
-    [online.options.available, settings.payment_methods_enabled],
+    [online.options.available, settings.payment_methods_enabled, walletDestinations],
   );
   const [selectedMethod, setSelectedMethod] = useState<ParentPaymentMethodCode | null>(initialMethod);
   const method = selectedMethod && methods.includes(selectedMethod) ? selectedMethod : methods[0] ?? null;
@@ -110,9 +113,8 @@ export function useInvoiceCheckout({ invoice, amountPolicy, returnPath, beforePa
   const amount = amountPolicy === 'flexible' ? Number(amountText) : payable;
   const amountValid = Number.isFinite(amount) && amount > 0 && amount <= payable + AMOUNT_TOLERANCE;
 
-  const walletDestination = settings.etisalat_cash_account_number?.trim() || null;
   const testMode = online.options.testMode;
-  const issues = method ? paymentDetailsIssues(method, details, { walletDestination, testMode }) : [];
+  const issues = method ? paymentDetailsIssues(method, details, { walletDestinations, testMode }) : [];
   const canPay = Boolean(invoice) && method !== null && amountValid && issues.length === 0 && !flight.running;
 
   const keyFor = (signature: string) => {
@@ -226,7 +228,7 @@ export function useInvoiceCheckout({ invoice, amountPolicy, returnPath, beforePa
       instapayAccountName: settings.instapay_account_name,
       instapayAccountNumber: settings.instapay_account_number,
       instapayQrImageUrl: settings.instapay_qr_image_url,
-      walletDestination,
+      walletDestinations,
       instructions: settings.payment_instructions?.trim() || null,
     },
     canPay,

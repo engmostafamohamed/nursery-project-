@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { lineExtraHours } from '@/hooks/useApplicationPackagePayment';
 
 import { formatMoneyAmount } from './money';
-import { paymentError } from './paymentApi';
+import { paymentError, walletDestinationsFrom } from './paymentApi';
 import {
   availableParentPaymentMethods,
   EMPTY_PAYMENT_DETAILS,
@@ -34,13 +34,16 @@ const invoke = vi.fn();
 vi.mock('@/lib/supabase', () => ({ supabase: { functions: { invoke: (...args: unknown[]) => invoke(...args) } } }));
 
 const CHECKOUT_URL = 'https://accept.paymob.com/unifiedcheckout/?publicKey=pk&clientSecret=cs';
-const noWallet = { walletDestination: null, testMode: false };
+const noWallet = { walletDestinations: {}, testMode: false };
+const wallets = { vodafone_cash: '01000000001', etisalat_cash: '01100000001', orange_cash: '01200000001', we_pay: '01500000001' };
 
 describe('payment methods a parent can choose', () => {
   it('knows how each method is paid', () => {
     expect(paymentFlowOf('card')).toBe('online_checkout');
-    expect(paymentFlowOf('etisalat_cash')).toBe('wallet_receipt');
-    for (const method of ['instapay', 'vodafone_cash', 'bank_transfer', 'fawry'] as const) {
+    for (const method of ['vodafone_cash', 'etisalat_cash', 'orange_cash', 'we_pay'] as const) {
+      expect(paymentFlowOf(method), method).toBe('wallet_receipt');
+    }
+    for (const method of ['instapay', 'bank_transfer', 'fawry'] as const) {
       expect(paymentFlowOf(method), method).toBe('transfer');
     }
     expect(paymentFlowOf('manual')).toBe('review');
@@ -50,9 +53,20 @@ describe('payment methods a parent can choose', () => {
     expect(availableParentPaymentMethods({ enabled: ['instapay', 'fawry_manual'], onlineCheckoutAvailable: true }))
       .toEqual(['instapay', 'card', 'fawry']);
     expect(availableParentPaymentMethods({
-      enabled: ['fawry_manual', 'bank_transfer', 'etisalat_cash', 'vodafone_cash', 'instapay'],
+      enabled: ['fawry_manual', 'bank_transfer', 'we_pay', 'orange_cash', 'etisalat_cash', 'vodafone_cash', 'instapay'],
       onlineCheckoutAvailable: true,
-    })).toEqual(['instapay', 'card', 'vodafone_cash', 'etisalat_cash', 'bank_transfer', 'fawry']);
+      walletDestinations: wallets,
+    })).toEqual(['instapay', 'card', 'vodafone_cash', 'etisalat_cash', 'orange_cash', 'we_pay', 'bank_transfer', 'fawry']);
+  });
+
+  it('offers a wallet provider only when it is enabled and its receiving number is set', () => {
+    expect(availableParentPaymentMethods({
+      enabled: ['vodafone_cash', 'etisalat_cash', 'orange_cash'],
+      onlineCheckoutAvailable: false,
+      walletDestinations: { vodafone_cash: '01000000001', orange_cash: '  ', we_pay: '01500000001' },
+    })).toEqual(['vodafone_cash']);
+    expect(walletDestinationsFrom({ vodafone_cash_account_number: ' 010 ', etisalat_cash_account_number: null, we_pay_account_number: '' }))
+      .toEqual({ vodafone_cash: '010' });
     expect(availableParentPaymentMethods({ enabled: ['instapay', 'fawry_manual'], onlineCheckoutAvailable: false }))
       .toEqual(['instapay', 'fawry']);
     expect(availableParentPaymentMethods({ enabled: null, onlineCheckoutAvailable: false })).toEqual(['manual']);
@@ -66,7 +80,7 @@ describe('what each method needs before it can be paid', () => {
     expect(paymentDetailsIssues('instapay', { ...details, reference: ' 1234 ' }, noWallet)).toEqual([]);
   });
 
-  it('asks Etisalat Cash for the nursery number, a valid wallet phone, the name and the receipt', () => {
+  it('asks every wallet for its nursery number, a valid wallet phone, the name and the receipt', () => {
     expect(paymentDetailsIssues('etisalat_cash', EMPTY_PAYMENT_DETAILS, noWallet)).toEqual([
       'wallet_destination_missing',
       'wallet_phone_invalid',
@@ -79,15 +93,20 @@ describe('what each method needs before it can be paid', () => {
       walletCustomerName: 'Mona Ali',
       walletReceipt: new File(['x'], 'receipt.png', { type: 'image/png' }),
     };
-    expect(paymentDetailsIssues('etisalat_cash', complete, { walletDestination: '01012345678', testMode: false })).toEqual([]);
-    expect(paymentDetailsIssues('etisalat_cash', { ...complete, walletPhone: '01312345678' }, { walletDestination: '010', testMode: false }))
+    for (const provider of ['vodafone_cash', 'etisalat_cash', 'orange_cash', 'we_pay'] as const) {
+      expect(paymentDetailsIssues(provider, complete, { walletDestinations: wallets, testMode: false }), provider).toEqual([]);
+    }
+    // The chosen provider's own number is what counts.
+    expect(paymentDetailsIssues('we_pay', complete, { walletDestinations: { vodafone_cash: '010' }, testMode: false }))
+      .toEqual(['wallet_destination_missing']);
+    expect(paymentDetailsIssues('etisalat_cash', { ...complete, walletPhone: '01312345678' }, { walletDestinations: wallets, testMode: false }))
       .toEqual(['wallet_phone_invalid']);
   });
 
   it('needs nothing for online checkout, except the filled test card in test mode', () => {
     expect(paymentDetailsIssues('card', EMPTY_PAYMENT_DETAILS, noWallet)).toEqual([]);
-    expect(paymentDetailsIssues('card', EMPTY_PAYMENT_DETAILS, { walletDestination: null, testMode: true })).toEqual(['test_card_invalid']);
-    expect(paymentDetailsIssues('card', { ...EMPTY_PAYMENT_DETAILS, testCardValid: true }, { walletDestination: null, testMode: true }))
+    expect(paymentDetailsIssues('card', EMPTY_PAYMENT_DETAILS, { walletDestinations: {}, testMode: true })).toEqual(['test_card_invalid']);
+    expect(paymentDetailsIssues('card', { ...EMPTY_PAYMENT_DETAILS, testCardValid: true }, { walletDestinations: {}, testMode: true }))
       .toEqual([]);
   });
 
@@ -96,6 +115,8 @@ describe('what each method needs before it can be paid', () => {
     expect(paymentReferenceFor('bank_transfer', EMPTY_PAYMENT_DETAILS)).toBeNull();
     expect(paymentReferenceFor('etisalat_cash', { ...EMPTY_PAYMENT_DETAILS, walletPhone: '01112345678', walletCustomerName: ' Mona ' }))
       .toBe('Wallet phone: 01112345678; customer name: Mona');
+    expect(paymentReferenceFor('we_pay', { ...EMPTY_PAYMENT_DETAILS, walletPhone: '01512345678', walletCustomerName: 'Mona', walletTransaction: ' TX77 ' }))
+      .toBe('Wallet phone: 01512345678; customer name: Mona; transaction: TX77');
     expect(paymentReferenceFor('card', { ...EMPTY_PAYMENT_DETAILS, reference: 'ignored' })).toBeNull();
   });
 

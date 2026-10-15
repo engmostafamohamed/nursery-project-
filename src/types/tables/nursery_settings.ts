@@ -46,6 +46,9 @@ export interface NurserySettingsRow {
   instapay_account_number: string | null;
   instapay_qr_image_url: string | null;
   etisalat_cash_account_number: string | null;
+  vodafone_cash_account_number: string | null;
+  orange_cash_account_number: string | null;
+  we_pay_account_number: string | null;
   summer_pause_enabled: boolean | null;
   summer_pause_min_weeks: number | null;
   summer_pause_max_weeks: number | null;

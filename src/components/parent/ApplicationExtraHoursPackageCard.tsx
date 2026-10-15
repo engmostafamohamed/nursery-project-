@@ -1,13 +1,13 @@
 import { useTranslation } from 'react-i18next';
 
-import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { DiscountCountdown } from '@/components/parent/DiscountCountdown';
 import { computeExtraHoursDisplayPrice, type ApplicationExtraHoursPackage } from '@/hooks/useApplicationExtraHoursPackage';
 import { formatMoneyAmount } from '@/lib/money';
 import { cn } from '@/lib/utils';
 
-/** The nursery's pay-per-hour terms: what applies when no extra-hours package is chosen. */
+/** The basic extra-hours plan: pay per hour at the nursery's rate. */
 export type ExtraHoursHourlyPlan = {
   /** Late-pickup fee per hour (nursery_settings.late_pickup_fee_per_hour). */
   rate: number;
@@ -19,12 +19,14 @@ export type ExtraHoursHourlyPlan = {
 type Props = {
   packages: ApplicationExtraHoursPackage[];
   selectedPackageId: string | null;
+  /** Null when the rate is not known (the nursery has not set one, or it could not be loaded). */
   hourlyPlan: ExtraHoursHourlyPlan | null;
   isLoading?: boolean;
   isSelecting?: boolean;
   canChoose: boolean;
-  onSelect: (packageId: string | null) => Promise<unknown>;
-  /** Only the options, for use inside another card that supplies the heading. */
+  /** Pick a package, or null to remove it and keep the hourly rate only. */
+  onSelect: (packageId: string | null) => Promise<unknown> | void;
+  /** Only the content, for use inside another card that supplies the heading. */
   embedded?: boolean;
 };
 
@@ -55,7 +57,7 @@ function OptionCheck({ active }: { active: boolean }) {
   );
 }
 
-const optionClassName = (active: boolean) =>
+const packageClassName = (active: boolean) =>
   cn(
     'group flex min-h-[132px] flex-col rounded-2xl border bg-surface p-4 text-start transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-70',
     active
@@ -64,8 +66,10 @@ const optionClassName = (active: boolean) =>
   );
 
 /**
- * How extra time at the nursery is paid: per hour by default, or with a prepaid package the
- * nursery offers. A package is added to the application invoice as soon as it is picked.
+ * How extra time at the nursery is paid. The basic plan, pay per hour at the nursery's rate, is
+ * selected by default; picking a package moves the selection to it, and removing the package
+ * selects the basic plan again. Late time a package does not cover (hours used up, expired) is
+ * still billed per hour.
  */
 export function ApplicationExtraHoursPackageCard({
   packages,
@@ -81,7 +85,7 @@ export function ApplicationExtraHoursPackageCard({
   const isAr = i18n.language.startsWith('ar');
   const disabled = !canChoose || isSelecting;
   const money = (amount: number) => t('invoice.egpAmount', { amount: formatMoneyAmount(amount) });
-  const payPerHour = selectedPackageId === null;
+  const selectedPackage = packages.find((pkg) => pkg.id === selectedPackageId) ?? null;
 
   if (isLoading) {
     return (
@@ -92,108 +96,132 @@ export function ApplicationExtraHoursPackageCard({
     );
   }
 
-  const options = (
-    <div
-      role="radiogroup"
-      aria-label={t('applications.extraHoursPackage.title', { defaultValue: 'Extra hours' })}
-      className={cn('grid gap-4 sm:grid-cols-2 2xl:grid-cols-3', !embedded && 'p-5')}
-    >
-      <button
-        type="button"
-        role="radio"
-        aria-checked={payPerHour}
-        disabled={disabled}
-        onClick={() => void onSelect(null)}
-        className={optionClassName(payPerHour)}
-      >
-        <span className="flex items-start justify-between gap-3">
-          <span className="min-w-0">
-            <span className="flex flex-wrap items-center gap-2">
-              <span className="font-semibold text-on-surface">{t('applications.extraHoursPackage.payPerHour')}</span>
-              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
-                {t('applications.extraHoursPackage.defaultBadge')}
-              </span>
-            </span>
-            <span className="mt-1 inline-flex items-center gap-1 text-xs text-on-surface-variant">
-              <MaterialSymbol name="timer" size="text-sm" />
-              {t('applications.extraHoursPackage.payPerHourType')}
-            </span>
-          </span>
-          <OptionCheck active={payPerHour} />
-        </span>
-        <span className="mt-auto block pt-4">
-          {hourlyPlan ? (
-            <span className="flex flex-wrap items-baseline gap-x-1.5">
-              <span className="text-xl font-bold tracking-tight tabular-nums text-on-surface">{money(hourlyPlan.rate)}</span>
-              <span className="text-sm text-on-surface-variant">{t('applications.extraHoursPackage.perHour')}</span>
-            </span>
-          ) : null}
-          <span className="mt-0.5 block text-xs leading-5 text-on-surface-variant">
-            {hourlyPlan
-              ? t(hourlyPlan.closingTime ? 'applications.extraHoursPackage.payPerHourHint' : 'applications.extraHoursPackage.payPerHourHintNoTime', {
-                  time: hourlyPlan.closingTime,
-                  grace: hourlyPlan.graceMinutes,
-                })
-              : t('applications.extraHoursPackage.noneHint', { defaultValue: 'Late-pickup fees apply as usual.' })}
-          </span>
-        </span>
-      </button>
+  const payPerHour = selectedPackageId === null;
 
-      {packages.map((pkg) => {
-        const active = pkg.id === selectedPackageId;
-        const { discountAmount, displayPrice, dealApplied } = computeExtraHoursDisplayPrice(pkg);
-        return (
-          <button
-            key={pkg.id}
-            type="button"
-            role="radio"
-            aria-checked={active}
-            disabled={disabled}
-            onClick={() => void onSelect(pkg.id)}
-            className={optionClassName(active)}
-          >
-            <span className="flex items-start justify-between gap-3">
-              <span className="min-w-0">
-                <span className="block truncate font-semibold text-on-surface">{packageName(pkg, isAr)}</span>
-                <span className="mt-1 inline-flex items-center gap-1 text-xs text-on-surface-variant">
-                  <MaterialSymbol name="schedule" size="text-sm" />
-                  {pkg.coverageType === 'hours_quota'
-                    ? t('packages.typeQuota', { hours: pkg.includedHours ?? 0 })
-                    : t('packages.typeUnlimited')}
+  const content = (
+    <div className={cn('space-y-3', !embedded && 'p-5')}>
+      {selectedPackage ? (
+        <div className="flex justify-end">
+          <Button type="button" variant="outline" size="sm" className="gap-1.5" disabled={disabled} onClick={() => void onSelect(null)}>
+            <MaterialSymbol name="close" size="text-base" />
+            {t('applications.extraHoursPackage.removePackage')}
+          </Button>
+        </div>
+      ) : null}
+
+      <div
+        role="radiogroup"
+        aria-label={t('applications.extraHoursPackage.title', { defaultValue: 'Extra hours' })}
+        className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3"
+      >
+        {/* The basic plan: pay per hour. Selected until the parent picks a package, and again once it is removed. */}
+        <button
+          type="button"
+          role="radio"
+          aria-checked={payPerHour}
+          disabled={disabled}
+          onClick={() => void onSelect(null)}
+          className={packageClassName(payPerHour)}
+        >
+          <span className="flex items-start justify-between gap-3">
+            <span className="min-w-0">
+              <span className="flex flex-wrap items-center gap-2">
+                <span className="font-semibold text-on-surface">{t('applications.extraHoursPackage.payPerHour')}</span>
+                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+                  {t('applications.extraHoursPackage.defaultBadge')}
                 </span>
               </span>
-              <OptionCheck active={active} />
+              <span className="mt-1 inline-flex items-center gap-1 text-xs text-on-surface-variant">
+                <MaterialSymbol name="timer" size="text-sm" />
+                {t('applications.extraHoursPackage.payPerHourType')}
+              </span>
             </span>
-            {dealApplied ? (
-              <span className="mt-3 flex flex-wrap items-center gap-1.5">
-                <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs font-semibold text-success">
-                  <MaterialSymbol name="sell" size="text-sm" />
-                  {pkg.deal?.discountType === 'percentage'
-                    ? t('applications.extraHoursPackage.dealPercentOff', { value: pkg.deal.discountValue, defaultValue: '{{value}}% OFF' })
-                    : t('applications.extraHoursPackage.dealAmountOff', {
-                        value: formatMoneyAmount(pkg.deal?.discountValue ?? 0),
-                        defaultValue: 'EGP {{value}} OFF',
-                      })}
-                </span>
-                <DiscountCountdown endsAt={pkg.deal?.endsAt ?? null} />
+            <OptionCheck active={payPerHour} />
+          </span>
+          <span className="mt-auto block pt-4">
+            {hourlyPlan ? (
+              <span className="flex flex-wrap items-baseline gap-x-1.5">
+                <span className="text-xl font-bold tracking-tight tabular-nums text-on-surface">{money(hourlyPlan.rate)}</span>
+                <span className="text-sm text-on-surface-variant">{t('applications.extraHoursPackage.perHour')}</span>
               </span>
             ) : null}
-            <span className="mt-auto block pt-4">
-              <span className="flex flex-wrap items-baseline gap-x-2">
-                <span className="text-xl font-bold tracking-tight tabular-nums text-on-surface">{money(displayPrice)}</span>
-                {discountAmount > 0 ? (
-                  <span className="text-xs tabular-nums text-on-surface-variant line-through">{money(pkg.price)}</span>
-                ) : null}
-              </span>
-              <span className="mt-0.5 block text-xs text-on-surface-variant">{validityLabel(pkg, t)}</span>
+            <span className="mt-0.5 block text-xs leading-5 text-on-surface-variant">
+              {hourlyPlan
+                ? t(hourlyPlan.closingTime ? 'applications.extraHoursPackage.payPerHourHint' : 'applications.extraHoursPackage.payPerHourHintNoTime', {
+                    time: hourlyPlan.closingTime,
+                    grace: hourlyPlan.graceMinutes,
+                  })
+                : t('applications.extraHoursPackage.noRateHint')}
             </span>
-          </button>
-        );
-      })}
+          </span>
+        </button>
+
+        {packages.map((pkg) => {
+          const active = pkg.id === selectedPackageId;
+          const { discountAmount, displayPrice, dealApplied } = computeExtraHoursDisplayPrice(pkg);
+          return (
+            <button
+              key={pkg.id}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              disabled={disabled}
+              // Choosing the selected package again removes it: the basic plan (pay per hour) is selected again.
+              onClick={() => void onSelect(active ? null : pkg.id)}
+              className={packageClassName(active)}
+            >
+              <span className="flex items-start justify-between gap-3">
+                <span className="min-w-0">
+                  <span className="block truncate font-semibold text-on-surface">{packageName(pkg, isAr)}</span>
+                  <span className="mt-1 inline-flex items-center gap-1 text-xs text-on-surface-variant">
+                    <MaterialSymbol name="schedule" size="text-sm" />
+                    {pkg.coverageType === 'hours_quota'
+                      ? t('packages.typeQuota', { hours: pkg.includedHours ?? 0 })
+                      : t('packages.typeUnlimited')}
+                  </span>
+                </span>
+                <OptionCheck active={active} />
+              </span>
+              {dealApplied ? (
+                <span className="mt-3 flex flex-wrap items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs font-semibold text-success">
+                    <MaterialSymbol name="sell" size="text-sm" />
+                    {pkg.deal?.discountType === 'percentage'
+                      ? t('applications.extraHoursPackage.dealPercentOff', { value: pkg.deal.discountValue, defaultValue: '{{value}}% OFF' })
+                      : t('applications.extraHoursPackage.dealAmountOff', {
+                          value: formatMoneyAmount(pkg.deal?.discountValue ?? 0),
+                          defaultValue: 'EGP {{value}} OFF',
+                        })}
+                  </span>
+                  <DiscountCountdown endsAt={pkg.deal?.endsAt ?? null} />
+                </span>
+              ) : null}
+              <span className="mt-auto block pt-4">
+                <span className="flex flex-wrap items-baseline gap-x-2">
+                  <span className="text-xl font-bold tracking-tight tabular-nums text-on-surface">{money(displayPrice)}</span>
+                  {discountAmount > 0 ? (
+                    <span className="text-xs tabular-nums text-on-surface-variant line-through">{money(pkg.price)}</span>
+                  ) : null}
+                </span>
+                <span className="mt-0.5 block text-xs text-on-surface-variant">{validityLabel(pkg, t)}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {selectedPackage ? (
+        <p className="flex items-start gap-1.5 text-xs leading-5 text-on-surface-variant">
+          <MaterialSymbol name="info" size="text-sm" className="mt-0.5 text-primary" />
+          {hourlyPlan
+            ? t('applications.extraHoursPackage.beyondPackage', { rate: money(hourlyPlan.rate) })
+            : t('applications.extraHoursPackage.beyondPackageNoRate')}
+        </p>
+      ) : null}
     </div>
   );
 
-  if (embedded) return options;
+  if (embedded) return content;
 
   return (
     <section className="overflow-hidden rounded-2xl border border-outline-variant bg-surface shadow-sm">
@@ -211,9 +239,8 @@ export function ApplicationExtraHoursPackageCard({
             </p>
           </div>
         </div>
-        <Badge variant="secondary">{t('applications.extraHoursPackage.optional', { defaultValue: 'Optional' })}</Badge>
       </header>
-      {options}
+      {content}
     </section>
   );
 }

@@ -11,7 +11,7 @@ import {
   type CheckoutAmountPolicy,
   type CheckoutInvoice,
 } from '@/hooks/useInvoiceCheckout';
-import type { ParentPaymentMethodCode } from '@/lib/paymentApi';
+import { isWalletProvider, type ParentPaymentMethodCode } from '@/lib/paymentApi';
 import { PAYMENT_DETAILS_ISSUE_KEYS, paymentFlowOf } from '@/lib/paymentMethods';
 import { cn } from '@/lib/utils';
 
@@ -140,6 +140,8 @@ export function InvoiceCheckoutPanel({
           amountLabel={amountLabel}
           testMode={checkout.testMode}
           idPrefix={idPrefix}
+          walletProviders={checkout.methods.filter(isWalletProvider)}
+          onMethodChange={checkout.selectMethod}
         />
       ) : null}
 

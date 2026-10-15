@@ -13,7 +13,7 @@ import type { ApplicationOnlineAttempt, ApplicationPackageInvoice } from '@/hook
 import { useNurseryContact } from '@/hooks/useNurseryContact';
 import { invalidatePaymentQueries } from '@/hooks/useSubmitInvoicePayment';
 import { formatMoneyAmount } from '@/lib/money';
-import { cancelUnfinishedOnlinePayment, paymentError, type ParentPaymentMethodCode } from '@/lib/paymentApi';
+import { cancelUnfinishedOnlinePayment, paymentError, walletDestinationsFrom, type ParentPaymentMethodCode } from '@/lib/paymentApi';
 import { availableParentPaymentMethods, payableNow } from '@/lib/paymentMethods';
 import { hasPaymobReturnParams, paymobReturnParams, verifyCheckoutReturn } from '@/lib/paymob/checkout';
 import { useSettings } from '@/lib/useSettings';
@@ -203,7 +203,11 @@ export function ApplicationPaymentStep({
   const { nurseryId, settings } = useSettings();
   // "Change payment method" opens on the first method that is not online checkout.
   const firstOtherMethod =
-    availableParentPaymentMethods({ enabled: settings.payment_methods_enabled, onlineCheckoutAvailable: false })[0] ?? null;
+    availableParentPaymentMethods({
+      enabled: settings.payment_methods_enabled,
+      onlineCheckoutAvailable: false,
+      walletDestinations: walletDestinationsFrom(settings),
+    })[0] ?? null;
   const contact = useNurseryContact(nurseryId).data;
   const [searchParams, setSearchParams] = useSearchParams();
   const [returnCheck, setReturnCheck] = useState<ReturnCheck>('idle');

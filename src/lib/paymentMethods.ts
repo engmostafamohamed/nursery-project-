@@ -1,7 +1,9 @@
 import {
   enabledManualMethods,
+  isWalletProvider,
   methodNeedsReference,
   type ParentPaymentMethodCode,
+  type WalletDestinations,
 } from '@/lib/paymentApi';
 
 /**
@@ -16,7 +18,7 @@ export type PaymentFlow =
   | 'online_checkout'
   /** The parent sends the money, then gives the transaction number so finance can match it. */
   | 'transfer'
-  /** The parent sends from an Etisalat Cash wallet and uploads the receipt. */
+  /** The parent sends from a mobile wallet (Vodafone, Etisalat, Orange or WE) and uploads the receipt. */
   | 'wallet_receipt'
   /** Nothing to enter: finance confirms the payment by other means. */
   | 'review';
@@ -26,6 +28,8 @@ export const PAYMENT_METHOD_ICONS: Record<ParentPaymentMethodCode, string> = {
   instapay: 'account_balance',
   vodafone_cash: 'phone_iphone',
   etisalat_cash: 'phone_iphone',
+  orange_cash: 'phone_iphone',
+  we_pay: 'phone_iphone',
   fawry: 'confirmation_number',
   bank_transfer: 'account_balance',
   cash: 'payments',
@@ -34,7 +38,7 @@ export const PAYMENT_METHOD_ICONS: Record<ParentPaymentMethodCode, string> = {
 
 export function paymentFlowOf(method: ParentPaymentMethodCode): PaymentFlow {
   if (method === 'card') return 'online_checkout';
-  if (method === 'etisalat_cash') return 'wallet_receipt';
+  if (isWalletProvider(method)) return 'wallet_receipt';
   if (methodNeedsReference(method)) return 'transfer';
   return 'review';
 }
@@ -48,6 +52,8 @@ const PARENT_METHOD_ORDER: readonly ParentPaymentMethodCode[] = [
   'card',
   'vodafone_cash',
   'etisalat_cash',
+  'orange_cash',
+  'we_pay',
   'bank_transfer',
   'fawry',
   'manual',
@@ -61,8 +67,10 @@ const PARENT_METHOD_ORDER: readonly ParentPaymentMethodCode[] = [
 export function availableParentPaymentMethods(input: {
   enabled: string[] | null | undefined;
   onlineCheckoutAvailable: boolean;
+  /** A wallet provider is offered only when the nursery set its receiving number. */
+  walletDestinations?: WalletDestinations;
 }): ParentPaymentMethodCode[] {
-  const manual = enabledManualMethods(input.enabled);
+  const manual = enabledManualMethods(input.enabled, input.walletDestinations);
   const methods: ParentPaymentMethodCode[] = input.onlineCheckoutAvailable ? [...manual, 'card'] : manual;
   return [...methods].sort((a, b) => PARENT_METHOD_ORDER.indexOf(a) - PARENT_METHOD_ORDER.indexOf(b));
 }
@@ -73,6 +81,8 @@ export type PaymentDetails = {
   walletPhone: string;
   walletCustomerName: string;
   walletReceipt: File | null;
+  /** Optional: the wallet transaction number, when the parent has it. */
+  walletTransaction: string;
   /** Test mode only: the local test card form passes its checks. */
   testCardValid: boolean;
 };
@@ -82,6 +92,7 @@ export const EMPTY_PAYMENT_DETAILS: PaymentDetails = {
   walletPhone: '',
   walletCustomerName: '',
   walletReceipt: null,
+  walletTransaction: '',
   testCardValid: false,
 };
 
@@ -96,16 +107,16 @@ export type PaymentDetailsIssue =
 /** Translation key for each issue, shown under the field or on the pay button. */
 export const PAYMENT_DETAILS_ISSUE_KEYS: Record<PaymentDetailsIssue, string> = {
   reference_required: 'payment.referenceRequired',
-  wallet_destination_missing: 'payment.etisalatWallet.destinationNotConfigured',
-  wallet_phone_invalid: 'payment.etisalatWallet.phoneInvalid',
-  wallet_name_required: 'payment.etisalatWallet.nameRequired',
-  wallet_receipt_required: 'payment.etisalatWallet.completeRequired',
+  wallet_destination_missing: 'payment.wallet.destinationNotConfigured',
+  wallet_phone_invalid: 'payment.wallet.phoneInvalid',
+  wallet_name_required: 'payment.wallet.nameRequired',
+  wallet_receipt_required: 'payment.wallet.receiptRequired',
   test_card_invalid: 'payment.checkout.testCardIncomplete',
 };
 
 export type PaymentMethodContext = {
-  /** The nursery's Etisalat Cash receiving number, when configured. */
-  walletDestination: string | null;
+  /** The nursery's receiving number per wallet provider. */
+  walletDestinations: WalletDestinations;
   /** Online checkout is simulated: the parent fills the local test card form instead. */
   testMode: boolean;
 };
@@ -126,7 +137,7 @@ export function paymentDetailsIssues(
   }
   if (flow === 'wallet_receipt') {
     const issues: PaymentDetailsIssue[] = [];
-    if (!context.walletDestination?.trim()) issues.push('wallet_destination_missing');
+    if (!isWalletProvider(method) || !context.walletDestinations[method]?.trim()) issues.push('wallet_destination_missing');
     if (!WALLET_PHONE_PATTERN.test(details.walletPhone)) issues.push('wallet_phone_invalid');
     if (details.walletCustomerName.trim().length < MIN_WALLET_NAME_LENGTH) issues.push('wallet_name_required');
     if (!details.walletReceipt) issues.push('wallet_receipt_required');
@@ -142,7 +153,8 @@ export function paymentDetailsIssues(
 export function paymentReferenceFor(method: ParentPaymentMethodCode, details: PaymentDetails): string | null {
   const flow = paymentFlowOf(method);
   if (flow === 'wallet_receipt') {
-    return `Wallet phone: ${details.walletPhone}; customer name: ${details.walletCustomerName.trim()}`;
+    const transaction = details.walletTransaction.trim();
+    return `Wallet phone: ${details.walletPhone}; customer name: ${details.walletCustomerName.trim()}${transaction ? `; transaction: ${transaction}` : ''}`;
   }
   if (flow === 'transfer') return details.reference.trim() || null;
   return null;

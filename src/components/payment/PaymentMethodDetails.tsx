@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
-import type { ParentPaymentMethodCode } from '@/lib/paymentApi';
+import { isWalletProvider, type ParentPaymentMethodCode, type WalletDestinations, type WalletProvider } from '@/lib/paymentApi';
+import { cn } from '@/lib/utils';
 import {
   PAYMENT_DETAILS_ISSUE_KEYS,
   paymentFlowOf,
@@ -22,7 +23,8 @@ export type PaymentSettingsView = {
   instapayAccountName: string | null;
   instapayAccountNumber: string | null;
   instapayQrImageUrl: string | null;
-  walletDestination: string | null;
+  /** The nursery's receiving number per wallet provider. */
+  walletDestinations: WalletDestinations;
   /** The nursery's free-text "where to send the money". */
   instructions: string | null;
 };
@@ -40,6 +42,10 @@ type Props = {
   testMode: boolean;
   /** Prefix for input ids; unique per page. */
   idPrefix: string;
+  /** Wallet providers the parent can choose between (the picker folds them into one card). */
+  walletProviders?: WalletProvider[];
+  /** Switch to another wallet provider. */
+  onMethodChange?: (method: ParentPaymentMethodCode) => void;
 };
 
 /** What the parent sees and fills in for the chosen method: where to pay, and what proof to give. */
@@ -53,15 +59,18 @@ export function PaymentMethodDetails({
   amountLabel,
   testMode,
   idPrefix,
+  walletProviders = [],
+  onMethodChange,
 }: Props) {
   const { t } = useTranslation();
   const flow = paymentFlowOf(method);
   const issueText = (issue: PaymentDetailsIssue) => (issues.includes(issue) ? t(PAYMENT_DETAILS_ISSUE_KEYS[issue]) : null);
 
+  const walletDestination = isWalletProvider(method) ? settings.walletDestinations[method]?.trim() || null : null;
   const copyWalletDestination = async () => {
-    if (!settings.walletDestination) return;
+    if (!walletDestination) return;
     try {
-      await navigator.clipboard.writeText(settings.walletDestination);
+      await navigator.clipboard.writeText(walletDestination);
       toast.success(t('payment.etisalatWallet.destinationCopied'));
     } catch (error) {
       toast.error(t('payment.etisalatWallet.destinationCopyFailed'), {
@@ -114,14 +123,44 @@ export function PaymentMethodDetails({
       ) : null}
 
       {flow === 'wallet_receipt' ? (
-        <fieldset className="space-y-3 rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
-          <legend className="px-1 font-semibold text-on-surface">{t('payment.etisalatWallet.title')}</legend>
-          <p className="text-sm leading-5 text-on-surface-variant">{t('payment.etisalatWallet.description')}</p>
-          {settings.walletDestination ? (
+        <fieldset className="space-y-4 rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
+          <legend className="px-1 font-semibold text-on-surface">{t('payment.wallet.title')}</legend>
+          <p className="text-sm leading-5 text-on-surface-variant">{t('payment.wallet.description')}</p>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-on-surface">{t('payment.wallet.chooseProvider')}</p>
+            <div role="radiogroup" aria-label={t('payment.wallet.chooseProvider')} className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {walletProviders.map((provider) => {
+                const active = provider === method;
+                return (
+                  <button
+                    key={provider}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => onMethodChange?.(provider)}
+                    className={cn(
+                      'flex min-h-11 items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                      active
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : 'border-outline-variant bg-surface text-on-surface hover:border-primary/50',
+                    )}
+                  >
+                    {active ? <MaterialSymbol name="check" size="text-base" /> : null}
+                    {t(`payment.manualMethods.${provider}.label`)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {walletDestination ? (
             <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-container p-3">
               <div className="min-w-0">
-                <p className="text-xs text-on-surface-variant">{t('payment.etisalatWallet.destination')}</p>
-                <p dir="ltr" className="mt-1 break-all font-mono font-bold text-primary">{settings.walletDestination}</p>
+                <p className="text-xs text-on-surface-variant">
+                  {t('payment.wallet.destination', { provider: t(`payment.manualMethods.${method}.label`) })}
+                </p>
+                <p dir="ltr" className="mt-1 break-all font-mono text-lg font-bold text-primary">{walletDestination}</p>
               </div>
               <Button type="button" variant="outline" size="sm" onClick={() => void copyWalletDestination()}>
                 <MaterialSymbol name="content_copy" size="text-base" />
@@ -130,38 +169,52 @@ export function PaymentMethodDetails({
             </div>
           ) : (
             <p role="alert" className="rounded-lg border border-warning/30 bg-warning/5 p-3 text-sm text-on-surface">
-              {t('payment.etisalatWallet.destinationNotConfigured')}
+              {t('payment.wallet.destinationNotConfigured')}
             </p>
           )}
-          <div className="space-y-2">
-            <Label htmlFor={`${idPrefix}-wallet-phone`}>{t('payment.etisalatWallet.phone')}</Label>
-            <Input
-              id={`${idPrefix}-wallet-phone`}
-              inputMode="numeric"
-              autoComplete="tel"
-              maxLength={11}
-              placeholder="01XXXXXXXXX"
-              value={details.walletPhone}
-              aria-invalid={Boolean(phoneError)}
-              onChange={(event) => onChange({ walletPhone: event.target.value.replace(/\D/g, '').slice(0, 11) })}
-            />
-            {phoneError ? <p className="text-xs text-error">{phoneError}</p> : null}
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor={`${idPrefix}-wallet-phone`}>{t('payment.wallet.phone')}</Label>
+              <Input
+                id={`${idPrefix}-wallet-phone`}
+                inputMode="numeric"
+                autoComplete="tel"
+                maxLength={11}
+                placeholder="01XXXXXXXXX"
+                value={details.walletPhone}
+                aria-invalid={Boolean(phoneError)}
+                onChange={(event) => onChange({ walletPhone: event.target.value.replace(/\D/g, '').slice(0, 11) })}
+              />
+              {phoneError ? <p className="text-xs text-error">{phoneError}</p> : null}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`${idPrefix}-wallet-name`}>{t('payment.wallet.customerName')}</Label>
+              <Input
+                id={`${idPrefix}-wallet-name`}
+                autoComplete="name"
+                maxLength={100}
+                placeholder={t('payment.etisalatWallet.namePlaceholder')}
+                value={details.walletCustomerName}
+                aria-invalid={Boolean(nameError)}
+                onChange={(event) => onChange({ walletCustomerName: event.target.value })}
+              />
+              {nameError ? <p className="text-xs text-error">{nameError}</p> : null}
+            </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor={`${idPrefix}-wallet-name`}>{t('payment.etisalatWallet.customerName')}</Label>
+            <Label htmlFor={`${idPrefix}-wallet-transaction`}>{t('payment.wallet.transaction')}</Label>
             <Input
-              id={`${idPrefix}-wallet-name`}
-              autoComplete="name"
-              maxLength={100}
-              placeholder={t('payment.etisalatWallet.namePlaceholder')}
-              value={details.walletCustomerName}
-              aria-invalid={Boolean(nameError)}
-              onChange={(event) => onChange({ walletCustomerName: event.target.value })}
+              id={`${idPrefix}-wallet-transaction`}
+              maxLength={80}
+              autoComplete="off"
+              placeholder={t('payment.referencePlaceholder')}
+              value={details.walletTransaction}
+              onChange={(event) => onChange({ walletTransaction: event.target.value })}
             />
-            {nameError ? <p className="text-xs text-error">{nameError}</p> : null}
           </div>
           <div className="space-y-2">
-            <Label htmlFor={`${idPrefix}-wallet-receipt`}>{t('payment.etisalatWallet.screenshot')}</Label>
+            <Label htmlFor={`${idPrefix}-wallet-receipt`}>{t('payment.wallet.screenshot')}</Label>
             <Input
               id={`${idPrefix}-wallet-receipt`}
               type="file"

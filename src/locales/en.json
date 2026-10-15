@@ -2293,11 +2293,19 @@
       },
       "vodafone_cash": {
         "label": "Vodafone Cash",
-        "help": "Send from your wallet to the nursery's number, then enter the transaction number."
+        "help": "Send from your Vodafone Cash wallet to the nursery's number, then upload the receipt."
       },
       "etisalat_cash": {
         "label": "Etisalat Cash",
-        "help": "Send from your Etisalat Cash wallet and submit your phone number, name, and payment screenshot for review."
+        "help": "Send from your Etisalat Cash wallet to the nursery's number, then upload the receipt."
+      },
+      "orange_cash": {
+        "label": "Orange Cash",
+        "help": "Send from your Orange Cash wallet to the nursery's number, then upload the receipt."
+      },
+      "we_pay": {
+        "label": "WE Pay",
+        "help": "Send from your WE Pay wallet to the nursery's number, then upload the receipt."
       },
       "bank_transfer": {
         "label": "Bank transfer",
@@ -2423,6 +2431,22 @@
       "confirmBody": "Do this only if you did not pay on Paymob's page. If you did pay, wait: your payment is confirmed automatically.",
       "confirmAction": "Yes, I didn't pay",
       "done": "The attempt was cancelled. You can pay now."
+    },
+    "wallet": {
+      "label": "Mobile wallet",
+      "help": "{{providers}}. Send to the nursery's number, then upload the receipt.",
+      "title": "Mobile wallet payment",
+      "description": "Choose your wallet, send the amount to the nursery's number for that wallet, then fill in your wallet details and upload the receipt. The nursery confirms the payment after checking it.",
+      "chooseProvider": "Your wallet",
+      "destination": "Nursery's {{provider}} number",
+      "destinationNotConfigured": "The nursery has not set a receiving number for this wallet. Choose another wallet or payment method.",
+      "phone": "Your wallet phone number",
+      "customerName": "Name registered to the wallet",
+      "transaction": "Transaction number (optional)",
+      "screenshot": "Payment receipt screenshot",
+      "phoneInvalid": "Enter the 11-digit wallet number, starting with 010, 011, 012 or 015.",
+      "nameRequired": "Enter the name registered to the wallet.",
+      "receiptRequired": "Upload the payment receipt screenshot."
     },
     "methodsTitle": "Payment Method",
     "noEnabledMethods": "The nursery has not enabled a payment method yet. Please contact the nursery.",
@@ -4222,17 +4246,24 @@
       "nextStepsHint": "Next, choose a package and pay to send the application for review."
     },
     "extraHoursPackage": {
-      "payPerHour": "Pay per hour",
+      "payPerHour": "Basic plan: pay per hour",
       "defaultBadge": "Default",
       "payPerHourType": "Only for extra time actually used",
       "perHour": "/ hour",
       "payPerHourHint": "Charged only for time after {{time}}, after a {{grace}}-minute grace period. Nothing to pay now.",
       "payPerHourHintNoTime": "Charged only for extra time, after a {{grace}}-minute grace period. Nothing to pay now.",
       "payPerHourBilledLater": "Pay per hour (billed later)",
-      "sectionHint": "Pay per hour by default, or prepay a package to save.",
+      "sectionHint": "Pay per hour is selected by default. Choose a prepaid package to replace it; removing the package goes back to pay per hour.",
       "lockedAfterPayment": "The extra-hours choice can't change after a payment has been made or submitted.",
+      "noRateHint": "Charged only for extra time actually used, at the nursery's hourly rate. Nothing to pay now.",
+      "packagesTitle": "Prepaid packages",
+      "packagesHint": "Covers extra hours in advance. Time beyond the package is billed at the hourly rate, and removing the package returns you to the hourly rate only.",
+      "removePackage": "Remove package",
+      "beyondPackage": "Time beyond the package is billed at {{rate}} per hour.",
+      "beyondPackageNoRate": "Time beyond the package is billed at the nursery's hourly rate.",
+      "hourlyBilledLater": "{{rate}} / hour (billed later)",
       "title": "Extra hours",
-      "subtitle": "Optional — cover late-pickup fees ahead of time. You can skip this and add it later.",
+      "subtitle": "Pay per hour is selected by default. Choose a prepaid package to replace it; removing the package goes back to pay per hour.",
       "optional": "Optional",
       "none": "Don't add extra hours",
       "noneHint": "Late-pickup fees apply as usual.",
@@ -5837,6 +5868,18 @@
         "tooLarge": "The QR image must be 5 MB or smaller.",
         "previewAlt": "Uploaded InstaPay QR preview"
       },
+      "vodafone_cash_account_number": {
+        "label": "Vodafone Cash receiving number",
+        "helper": "The nursery's Vodafone Cash wallet number parents send payments to."
+      },
+      "orange_cash_account_number": {
+        "label": "Orange Cash receiving number",
+        "helper": "The nursery's Orange Cash wallet number parents send payments to."
+      },
+      "we_pay_account_number": {
+        "label": "WE Pay receiving number",
+        "helper": "The nursery's WE Pay wallet number parents send payments to."
+      },
       "etisalat_cash_account_number": {
         "label": "Etisalat Cash receiving number",
         "helper": "The nursery's wallet number parents should send the invoice payment to."
@@ -6127,7 +6170,7 @@
         "instapay": "InstaPay",
         "instapayHint": "Hosted InstaPay option through the configured Paymob integration",
         "vodafone_cash": "Vodafone Cash",
-        "vodafone_cashHint": "Manual wallet transfer, confirmed by nursery staff",
+        "vodafone_cashHint": "Manual wallet transfer, confirmed by nursery staff. Set the receiving number below.",
         "paymob": "Bank card (Paymob)",
         "paymobHint": "Enable bank card checkout when the Paymob card integration is configured.",
         "mobile_wallet": "Mobile wallets (Paymob)",
@@ -6137,7 +6180,11 @@
         "fawry_manual": "Fawry (manual verification)",
         "fawry_manualHint": "Manual Fawry payment using a nursery-supplied reference; confirmed by nursery staff",
         "etisalat_cash": "Etisalat Cash",
-        "etisalat_cashHint": "Manual Etisalat Cash wallet payment; parent submits wallet details and screenshot for review",
+        "etisalat_cashHint": "Manual wallet transfer, confirmed by nursery staff. Set the receiving number below.",
+        "orange_cash": "Orange Cash",
+        "orange_cashHint": "Manual wallet transfer, confirmed by nursery staff. Set the receiving number below.",
+        "we_pay": "WE Pay",
+        "we_payHint": "Manual wallet transfer, confirmed by nursery staff. Set the receiving number below.",
         "cash": "Cash on delivery (admin only)",
         "cashHint": "Admin-only option for cash collected on delivery; not available to parents during signup or online payment.",
         "bank_transfer": "Bank Transfer",
@@ -6558,7 +6605,7 @@
       "chooseTuitionHint": "Select the plan that best fits your family.",
       "discountBadge": "Deal",
       "billingPeriodHint": "Your selected billing period is included in the total below.",
-      "extraHoursHint": "Add prepaid hours for flexible pickups.",
+      "extraHoursHint": "Pay per hour is selected by default. Choose a prepaid package to replace it; removing the package goes back to pay per hour.",
       "orderSummary": "Order summary",
       "pricesIncludeDiscounts": "Current package prices and discounts",
       "discount": "Discount",

@@ -25,6 +25,8 @@ export type FieldType =
   | 'payment_methods'
   | 'image_upload'
   | 'loyalty_thresholds'
+  /** An Egyptian mobile-wallet number (11 digits, 010/011/012/015). */
+  | 'wallet_number'
   | 'text';
 
 export interface SettingsField {
@@ -87,7 +89,10 @@ export const DEFAULT_SETTINGS: Record<SettingsKey, unknown> = {
   instapay_account_name: null,
   instapay_account_number: null,
   instapay_qr_image_url: null,
+  vodafone_cash_account_number: null,
   etisalat_cash_account_number: null,
+  orange_cash_account_number: null,
+  we_pay_account_number: null,
   summer_pause_enabled: true,
   summer_pause_min_weeks: 2,
   summer_pause_max_weeks: 16,
@@ -191,7 +196,10 @@ export const SETTINGS_TABS: SettingsTabConfig[] = [
       { key: 'instapay_account_name', type: 'text' },
       { key: 'instapay_account_number', type: 'text' },
       { key: 'instapay_qr_image_url', type: 'image_upload' },
-      { key: 'etisalat_cash_account_number', type: 'text' },
+      { key: 'vodafone_cash_account_number', type: 'wallet_number' },
+      { key: 'etisalat_cash_account_number', type: 'wallet_number' },
+      { key: 'orange_cash_account_number', type: 'wallet_number' },
+      { key: 'we_pay_account_number', type: 'wallet_number' },
     ],
   },
   {

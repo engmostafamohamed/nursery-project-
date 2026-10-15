@@ -6,8 +6,12 @@ import { supabase } from '@/lib/supabase';
  * first result instead of recording the payment twice.
  */
 
+/** Mobile-wallet providers a parent can send a manual payment from. */
+export const WALLET_PROVIDERS = ['vodafone_cash', 'etisalat_cash', 'orange_cash', 'we_pay'] as const;
+export type WalletProvider = (typeof WALLET_PROVIDERS)[number];
+
 /** Methods a parent can declare for a payment the nursery verifies by hand. */
-export const MANUAL_PAYMENT_METHODS = ['instapay', 'vodafone_cash', 'etisalat_cash', 'bank_transfer', 'fawry', 'cash'] as const;
+export const MANUAL_PAYMENT_METHODS = ['instapay', ...WALLET_PROVIDERS, 'bank_transfer', 'fawry', 'cash'] as const;
 export type ManualPaymentMethod = (typeof MANUAL_PAYMENT_METHODS)[number];
 export type ParentPaymentMethodCode = ManualPaymentMethod | 'manual' | 'card';
 
@@ -15,19 +19,45 @@ export function isParentPaymentMethodCode(value: unknown): value is ParentPaymen
   return value === 'manual' || value === 'card' || MANUAL_PAYMENT_METHODS.some((method) => method === value);
 }
 
-/** Transfers are matched by their reference number, so the parent must give one. */
-export function methodNeedsReference(method: ParentPaymentMethodCode): boolean {
-  return method === 'instapay' || method === 'vodafone_cash' || method === 'bank_transfer' || method === 'fawry';
+export function isWalletProvider(value: unknown): value is WalletProvider {
+  return WALLET_PROVIDERS.some((provider) => provider === value);
 }
 
-/** Manual methods this nursery accepts (nursery_settings.payment_methods_enabled). */
-export function enabledManualMethods(enabled: string[] | null | undefined): ParentPaymentMethodCode[] {
+/** The nursery's receiving number per wallet provider (nursery_settings.<provider>_account_number). */
+export type WalletDestinations = Partial<Record<WalletProvider, string | null>>;
+
+/** Reads the four receiving numbers from a nursery_settings row. */
+export function walletDestinationsFrom(settings: Partial<Record<`${WalletProvider}_account_number`, unknown>>): WalletDestinations {
+  const destinations: WalletDestinations = {};
+  for (const provider of WALLET_PROVIDERS) {
+    const value = settings[`${provider}_account_number`];
+    const number = typeof value === 'string' ? value.trim() : '';
+    if (number) destinations[provider] = number;
+  }
+  return destinations;
+}
+
+/** Transfers are matched by their reference number, so the parent must give one. */
+export function methodNeedsReference(method: ParentPaymentMethodCode): boolean {
+  return method === 'instapay' || method === 'bank_transfer' || method === 'fawry';
+}
+
+/**
+ * Manual methods this nursery accepts (nursery_settings.payment_methods_enabled). A wallet
+ * provider also needs its receiving number, otherwise the parent would have nowhere to send to.
+ */
+export function enabledManualMethods(
+  enabled: string[] | null | undefined,
+  walletDestinations: WalletDestinations = {},
+): ParentPaymentMethodCode[] {
   if (enabled == null) return ['manual'];
   const list = enabled;
-  const methods = MANUAL_PAYMENT_METHODS.filter(
-    (method) => method !== 'cash' && (method === 'fawry' ? list.includes('fawry_manual') : list.includes(method)),
-  );
-  return methods;
+  return MANUAL_PAYMENT_METHODS.filter((method) => {
+    if (method === 'cash') return false;
+    if (method === 'fawry') return list.includes('fawry_manual');
+    if (isWalletProvider(method)) return list.includes(method) && Boolean(walletDestinations[method]?.trim());
+    return list.includes(method);
+  });
 }
 
 /** One key per payment intent: create it when the parent starts paying, reuse it on retries. */
