@@ -11,6 +11,7 @@ import {
   type CheckoutAmountPolicy,
   type CheckoutInvoice,
 } from '@/hooks/useInvoiceCheckout';
+import type { ParentPaymentMethodCode } from '@/lib/paymentApi';
 import { PAYMENT_DETAILS_ISSUE_KEYS, paymentFlowOf } from '@/lib/paymentMethods';
 import { cn } from '@/lib/utils';
 
@@ -27,6 +28,8 @@ type Props = {
   compact?: boolean;
   /** Namespace for input ids and the radio group; unique per page. */
   idPrefix?: string;
+  /** Method selected at first, when offered. Remount (change `key`) to apply a new one. */
+  initialMethod?: ParentPaymentMethodCode | null;
   className?: string;
 };
 
@@ -48,10 +51,11 @@ export function InvoiceCheckoutPanel({
   onSubmitted,
   compact = false,
   idPrefix = 'invoice-checkout',
+  initialMethod = null,
   className,
 }: Props) {
   const { t } = useTranslation();
-  const checkout = useInvoiceCheckout({ invoice, amountPolicy, returnPath, beforePay, onSubmitted });
+  const checkout = useInvoiceCheckout({ invoice, amountPolicy, returnPath, beforePay, onSubmitted, initialMethod });
   const amountLabel = t('invoice.egpAmount', { amount: (checkout.amountValid ? checkout.amount : 0).toFixed(2) });
   const redirectsToProvider = checkout.method !== null && paymentFlowOf(checkout.method) === 'online_checkout' && !checkout.testMode;
   const pendingHints = [

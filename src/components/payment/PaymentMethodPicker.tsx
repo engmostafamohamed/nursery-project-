@@ -18,6 +18,9 @@ type Props = {
   name: string;
 };
 
+/** Card networks Paymob's checkout accepts; brand names, shown as-is in every language. */
+const CARD_BRANDS = ['VISA', 'Mastercard', 'Meeza'] as const;
+
 /** The payment methods as selectable cards, each saying how it is paid. */
 export function PaymentMethodPicker({ methods, value, onChange, testMode, disabled = false, compact = false, name }: Props) {
   const { t } = useTranslation();
@@ -63,6 +66,18 @@ export function PaymentMethodPicker({ methods, value, onChange, testMode, disabl
                 <span className="mt-0.5 block text-xs leading-5 text-on-surface-variant">
                   {online && testMode ? t('payment.checkout.testCardHelp') : t(`payment.manualMethods.${method}.help`)}
                 </span>
+                {online ? (
+                  <span className="mt-2 flex flex-wrap gap-1" dir="ltr" aria-label={CARD_BRANDS.join(', ')}>
+                    {CARD_BRANDS.map((brand) => (
+                      <span
+                        key={brand}
+                        className="rounded border border-outline-variant bg-surface px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-on-surface"
+                      >
+                        {brand}
+                      </span>
+                    ))}
+                  </span>
+                ) : null}
                 <span
                   className={cn(
                     'mt-2 inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium',

@@ -47,9 +47,9 @@ Evidence was taken from the live database on 2026-10-08. Some rows may be demo d
 | F5 | Invoice lines live in `line_items_json` (JSONB) with no constraints | Nothing stops the same attendance day / subscription month being billed twice except app logic | Double billing | [ ] |
 | F6 | "Overdue" has two sources | Stored `status='overdue'` on 6 rows; computed in the client elsewhere | Different screens show different states | [ ] |
 | F7 | Payroll is marked paid by a direct browser update (`usePayroll.markPaid`) | No lock, no idempotency, no approval, no unique (staff, period) rule, no trigger | Salary paid twice or changed after payment | [ ] |
-| F8 | Online payment gateway not integrated | `src/lib/paymob/initiatePayment.ts` is a stub | Every payment needs manual confirmation | [ ] |
+| F8 | Online payment gateway not integrated | Paymob hosted checkout exists; since 2026-10-16 HMAC-verified results (webhook + browser return) settle online attempts (`paymob_settle_attempt`, `payment_events`). Not live: no Paymob secrets on production yet, and no daily settlement reconciliation | Every payment needs manual confirmation | [~] |
 | F9 | No reconciliation | Nothing compares invoices, payments, attempts and gateway settlements | Mismatches are found by customers | [ ] |
-| F10 | Pending payments can wait forever | No expiry or reminder on `payment_attempts` in `pending_confirmation` | Parents think they paid; finance never sees it | [ ] |
+| F10 | Pending payments can wait forever | No expiry or reminder on `payment_attempts` in `pending_confirmation`. Online attempts now fail on a declined result and the parent can release one they abandoned (`cancel_unfinished_online_payment`); manual attempts still have no expiry | Parents think they paid; finance never sees it | [~] |
 
 Already fixed (migration `20261007000000_notification_templates_payments_hardening.sql`):
 
@@ -329,3 +329,4 @@ npm i -D vitest @vitest/coverage-v8 jsdom @testing-library/react @testing-librar
 | 2026-10-07 | No translated text in SQL or stored rows: notifications store `template_key` + `template_params`, invoice lines store `kind` + names; words live in `src/locales`. |
 | 2026-10-07 | Every payment action is one locked, idempotent server function; the UI adds confirmation dialogs and single-flight buttons. |
 | 2026-10-08 | Target architecture: modular monolith with feature folders on React + Supabase (no microservices); money moves to an append-only ledger. |
+| 2026-10-16 | Online payments settle only from HMAC-verified Paymob results, for the exact amount; online checkout is not offered without `PAYMOB_HMAC_SECRET`. Anything that does not fit (wrong amount, money for a rejected or released attempt) goes to finance for review, never auto-applied. |

@@ -21,9 +21,13 @@ import {
 import {
   CheckoutError,
   fetchOnlineCheckoutOptions,
+  hasPaymobReturnParams,
+  parseCheckoutReturnResponse,
   parseStartCheckoutResponse,
   paymobCheckoutUrl,
+  paymobReturnParams,
   startInvoiceCheckout,
+  verifyCheckoutReturn,
 } from './paymob/checkout';
 
 const invoke = vi.fn();
@@ -42,9 +46,13 @@ describe('payment methods a parent can choose', () => {
     expect(paymentFlowOf('manual')).toBe('review');
   });
 
-  it('offers online checkout first, only when the server says it is ready', () => {
+  it('orders InstaPay, online checkout, wallets, bank transfer, then Fawry; online only when ready', () => {
     expect(availableParentPaymentMethods({ enabled: ['instapay', 'fawry_manual'], onlineCheckoutAvailable: true }))
-      .toEqual(['card', 'instapay', 'fawry']);
+      .toEqual(['instapay', 'card', 'fawry']);
+    expect(availableParentPaymentMethods({
+      enabled: ['fawry_manual', 'bank_transfer', 'etisalat_cash', 'vodafone_cash', 'instapay'],
+      onlineCheckoutAvailable: true,
+    })).toEqual(['instapay', 'card', 'vodafone_cash', 'etisalat_cash', 'bank_transfer', 'fawry']);
     expect(availableParentPaymentMethods({ enabled: ['instapay', 'fawry_manual'], onlineCheckoutAvailable: false }))
       .toEqual(['instapay', 'fawry']);
     expect(availableParentPaymentMethods({ enabled: null, onlineCheckoutAvailable: false })).toEqual(['manual']);
@@ -218,5 +226,56 @@ describe('Paymob online checkout', () => {
     await expect(fetchOnlineCheckoutOptions('n1')).resolves.toEqual({ available: true, testMode: false });
     invoke.mockResolvedValue({ data: { available: 'yes' }, error: null });
     await expect(fetchOnlineCheckoutOptions('n1')).resolves.toEqual({ available: false, testMode: false });
+  });
+});
+
+describe('coming back from Paymob', () => {
+  beforeEach(() => {
+    invoke.mockReset();
+  });
+
+  const returnUrl = new URLSearchParams(
+    'step=payment&payment=processing&id=192036465&success=false&pending=false&amount_cents=100000'
+      + '&merchant_order_id=7f1c2d3e-4b5a-4c6d-8e9f-0a1b2c3d4e5f&data.message=Insufficient+Funds&hmac=abc',
+  );
+
+  it('recognises a signed Paymob result and sends only its own parameters', () => {
+    expect(hasPaymobReturnParams(returnUrl)).toBe(true);
+    expect(hasPaymobReturnParams(new URLSearchParams('step=payment&payment=processing'))).toBe(false);
+    const params = paymobReturnParams(returnUrl);
+    expect(params.step).toBeUndefined();
+    expect(params.payment).toBeUndefined();
+    expect(params['data.message']).toBe('Insufficient Funds');
+    expect(params.hmac).toBe('abc');
+  });
+
+  it('asks the server to verify the result and reads what it applied', async () => {
+    invoke.mockResolvedValue({
+      data: { status: 'settled', outcome: 'failed', attempt_status: 'failed', failure_reason: 'insufficient_funds', provider_reference: null },
+      error: null,
+    });
+    const result = await verifyCheckoutReturn(paymobReturnParams(returnUrl));
+    expect(result).toEqual({
+      kind: 'settled',
+      outcome: 'failed',
+      attemptStatus: 'failed',
+      failureReason: 'insufficient_funds',
+      providerReference: null,
+    });
+    expect(invoke).toHaveBeenCalledWith('invoice-checkout', {
+      body: { action: 'return', params: paymobReturnParams(returnUrl) },
+    });
+  });
+
+  it('never treats an unsigned or unknown answer as a result', () => {
+    expect(parseCheckoutReturnResponse({ status: 'unverified' })).toEqual({ kind: 'unverified' });
+    expect(parseCheckoutReturnResponse(null)).toEqual({ kind: 'unverified' });
+  });
+
+  it("passes on a forged result's refusal", async () => {
+    const context = new Response(JSON.stringify({ error: 'payment_return_invalid' }), { status: 400 });
+    invoke.mockResolvedValue({ data: null, error: { message: 'Edge Function returned a non-2xx status code', context } });
+    const failure = await verifyCheckoutReturn({ hmac: 'forged' }).catch((error: unknown) => error);
+    expect(paymentError(failure).key).toBe('payment.errors.payment_return_invalid');
   });
 });

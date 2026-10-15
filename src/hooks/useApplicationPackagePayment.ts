@@ -102,7 +102,51 @@ export type ApplicationPackageInvoice = {
   discountAmount: number;
   /** The extra-hours package billed on the same invoice, if the parent chose one. */
   extraHours: ApplicationInvoiceExtraHours | null;
+  /** The latest online (Paymob) payment attempt on this invoice, if any. */
+  onlineAttempt: ApplicationOnlineAttempt | null;
 };
+
+export type ApplicationOnlineAttempt = {
+  id: string;
+  status: 'pending_confirmation' | 'confirmed' | 'failed' | 'cancelled';
+  createdAt: string;
+  /** Code translated under payment.failure.reasons (failed attempts). */
+  failureReason: string | null;
+  /** Reference Paymob issued while the money is not in yet, e.g. a Fawry bill reference. */
+  providerReference: string | null;
+  /** Paymob already reported a transaction for it, so the parent cannot release it. */
+  hasTransaction: boolean;
+};
+
+type AttemptRow = {
+  id: string;
+  amount: string | number;
+  status: string;
+  payment_method: string;
+  created_at: string;
+  failure_reason: string | null;
+  provider_reference: string | null;
+  paymob_transaction_id: string | null;
+};
+
+/** The newest online attempt; manual methods are reviewed by finance and never released here. */
+export function latestOnlineAttempt(rows: AttemptRow[] | null | undefined): ApplicationOnlineAttempt | null {
+  const latest = (rows ?? [])
+    .filter((row) => row.payment_method === 'card')
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+  if (!latest) return null;
+  const status = ['pending_confirmation', 'confirmed', 'failed', 'cancelled'].includes(latest.status)
+    ? (latest.status as ApplicationOnlineAttempt['status'])
+    : 'failed';
+  return {
+    id: latest.id,
+    status,
+    createdAt: latest.created_at,
+    failureReason: latest.failure_reason,
+    providerReference: latest.provider_reference,
+    hasTransaction: Boolean(latest.paymob_transaction_id || latest.provider_reference),
+  };
+}
 
 export type ApplicationInvoiceExtraHours = {
   packageId: string;
@@ -289,7 +333,7 @@ export function useApplicationPackagePayment({ applicationId, parentId, nurseryI
           due_date,
           line_items_json,
           payments (amount, status),
-          payment_attempts (amount, status)
+          payment_attempts (id, amount, status, payment_method, created_at, failure_reason, provider_reference, paymob_transaction_id)
         `,
         )
         .eq('parent_id', parentId)
@@ -305,7 +349,7 @@ export function useApplicationPackagePayment({ applicationId, parentId, nurseryI
         due_date: string;
         line_items_json: unknown;
         payments: Array<{ amount: string | number; status: string }> | null;
-        payment_attempts: Array<{ amount: string | number; status: string }> | null;
+        payment_attempts: AttemptRow[] | null;
       }>).find((row) => lineApplicationId(row.line_items_json) === applicationId);
 
       if (!invoice) return null;
@@ -349,6 +393,7 @@ export function useApplicationPackagePayment({ applicationId, parentId, nurseryI
         subtotal: lineSubtotal(invoice.line_items_json, amount),
         discountAmount: lineDiscountAmount(invoice.line_items_json),
         extraHours: lineExtraHours(invoice.line_items_json),
+        onlineAttempt: latestOnlineAttempt(invoice.payment_attempts),
       };
     },
     enabled: Boolean(applicationId && parentId && nurseryId),

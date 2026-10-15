@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
 import { getAdminClient } from '../_shared/admin.ts';
 import { corsHeaders, jsonResponse } from '../_shared/http.ts';
 import { createPaymobCheckout, getPaymobConfig, onlinePaymentTestMode } from '../_shared/paymob.ts';
+import { parseResponseParams, responseCallbackHmacMessage, verifyHmac } from '../_shared/paymobCallback.ts';
 
 /**
  * Paymob online checkout for an invoice that already exists (application packages, tuition,
@@ -20,9 +21,16 @@ import { createPaymobCheckout, getPaymobConfig, onlinePaymentTestMode } from '..
  *     | { status: 'test_submitted', attempt_id }   test mode: nothing is charged
  *     | { status: 'duplicate', attempt_id }        this key was already used; nothing new is created
  *
+ *   { action: 'return', params }
+ *     The query parameters Paymob added when it sent the parent back. When their HMAC matches
+ *     PAYMOB_HMAC_SECRET the result is applied at once (paymob_settle_attempt), so a declined
+ *     payment frees the invoice for another try right away. paymob-webhook applies the same
+ *     result from Paymob's server; whichever arrives second is a no-op.
+ *     → { status: 'settled', outcome, attempt_status, failure_reason, provider_reference }
+ *     | { status: 'unverified' }   no HMAC secret configured, or no signed result in the params
+ *
  * Errors are { error: <code>, details? } where <code> is a payment_* code the app translates.
- * The browser return from Paymob is not proof of payment: the attempt stays pending until
- * finance verifies the Paymob intention and confirms it (docs/paymob-checkout.md).
+ * Unsigned browser parameters are never trusted (docs/paymob-checkout.md).
  */
 
 type Body = {
@@ -32,6 +40,7 @@ type Body = {
   idempotency_key?: string;
   return_path?: string;
   amount?: number;
+  params?: Record<string, unknown>;
 };
 
 type InvoiceRow = {
@@ -149,6 +158,52 @@ Deno.serve(async (req) => {
       return jsonResponse({ available: onlineCheckoutAvailable(enabled), test_mode: onlinePaymentTestMode() });
     }
 
+    if (body.action === 'return') {
+      const params: Record<string, string> = {};
+      for (const [key, value] of Object.entries(body.params ?? {})) {
+        if (typeof value === 'string' && key.length <= 64 && value.length <= 512) params[key] = value;
+      }
+      const secret = Deno.env.get('PAYMOB_HMAC_SECRET')?.trim();
+      if (!secret || !params.hmac) return jsonResponse({ status: 'unverified' });
+      if (!(await verifyHmac(secret, responseCallbackHmacMessage(params), params.hmac))) {
+        return errorResponse('payment_return_invalid', 400);
+      }
+
+      const transaction = parseResponseParams(params);
+      if (!transaction.attemptId) return errorResponse('payment_attempt_not_found', 404);
+      const { data: ownerRow, error: ownerError } = await admin
+        .from('payment_attempts')
+        .select('parent_id')
+        .eq('id', transaction.attemptId)
+        .maybeSingle();
+      if (ownerError) throw new Error(ownerError.message);
+      if (!ownerRow) return errorResponse('payment_attempt_not_found', 404);
+      if ((ownerRow as { parent_id: string }).parent_id !== user.id) return errorResponse('payment_forbidden', 403);
+
+      const { data: settled, error: settleError } = await admin.rpc('paymob_settle_attempt', {
+        p_attempt_id: transaction.attemptId,
+        p_source: 'redirect',
+        p_transaction_id: transaction.transactionId,
+        p_success: transaction.success,
+        p_pending: transaction.pending,
+        p_amount_cents: transaction.amountCents,
+        p_currency: transaction.currency,
+        p_reason_code: transaction.reasonCode,
+        p_provider_message: transaction.message,
+        p_provider_reference: transaction.providerReference,
+        p_payload: params,
+      });
+      if (settleError) throw new Error(settleError.message);
+      const outcome = (settled ?? {}) as Record<string, unknown>;
+      return jsonResponse({
+        status: 'settled',
+        outcome: outcome.outcome ?? null,
+        attempt_status: outcome.attempt_status ?? null,
+        failure_reason: outcome.failure_reason ?? null,
+        provider_reference: outcome.provider_reference ?? null,
+      });
+    }
+
     if (body.action !== 'checkout') return jsonResponse({ error: 'Unknown action' }, 400);
     if (!body.invoice_id || !UUID_PATTERN.test(body.invoice_id)) return errorResponse('payment_invoice_not_found', 404);
     if (!body.idempotency_key || !UUID_PATTERN.test(body.idempotency_key)) {
@@ -224,7 +279,7 @@ Deno.serve(async (req) => {
       // The parent never reached Paymob: release the pending amount so they can pay again.
       const { error: failError } = await admin
         .from('payment_attempts')
-        .update({ status: 'failed', notes: 'Paymob checkout could not be initialized.' })
+        .update({ status: 'failed', failure_reason: 'provider_error', notes: 'Paymob checkout could not be initialized.' })
         .eq('id', attemptId)
         .eq('status', 'pending_confirmation');
       if (failError) console.error('Could not mark the failed Paymob attempt:', failError.message);

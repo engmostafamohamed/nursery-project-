@@ -2280,8 +2280,8 @@
   "payment": {
     "manualMethods": {
       "card": {
-        "label": "Bank card",
-        "help": "Pay online on Paymob's secure page with the options the nursery enabled (card, wallet, InstaPay or Fawry)."
+        "label": "Pay online",
+        "help": "Card (Visa, Mastercard or Meeza) on Paymob's secure page, plus wallets, InstaPay or Fawry when the nursery enabled them."
       },
       "instapay": {
         "label": "InstaPay",
@@ -2378,8 +2378,8 @@
       "fullAmountLabel": "Amount due — one payment",
       "fullAmountHint": "The full amount is paid in one payment. Partial payments are not available for this invoice.",
       "continueToCheckout": "Continue to secure checkout · {{amount}}",
-      "redirectNote": "You will be taken to Paymob's secure page to pay. The nursery confirms the payment after verifying it.",
-      "onlineReviewNote": "The payment is confirmed after the nursery verifies the Paymob transaction.",
+      "redirectNote": "You will be taken to Paymob's secure page to pay. The payment is confirmed automatically once Paymob reports it.",
+      "onlineReviewNote": "The payment is confirmed automatically once Paymob reports it.",
       "testModeNotice": "Test mode is active. Card details are checked only on this page, never sent or saved. Submitting creates a test payment request; no money is charged.",
       "testCardLabel": "Simulated bank card (test)",
       "testCardHelp": "Enter fake card details to check the card form. Never use a real card.",
@@ -2387,10 +2387,43 @@
       "badgeOnline": "Online · Paymob",
       "badgeManual": "Confirmed by the nursery",
       "onceNote": "Your payment is recorded once, even if you press the button again.",
-      "returnedFromProvider": "Welcome back. Paymob is processing your payment. The nursery confirms it after verifying the transaction, and this page updates once it is confirmed."
+      "verifying": "Checking your payment result with Paymob…",
+      "returnedFromProvider": "Welcome back. Paymob is processing your payment; this page updates as soon as Paymob reports the result."
     },
     "comingSoon": "Coming soon",
     "comingSoonMessage": "Paymob integration coming in Feature 4. For now, use Cash or Bank Transfer.",
+    "failure": {
+      "title": "Your payment didn't go through",
+      "reasonLabel": "Reason:",
+      "body": "This attempt was not recorded as paid. Try again, or choose another payment method.",
+      "tryAgain": "Try again",
+      "changeMethod": "Change payment method",
+      "contactNursery": "Contact the nursery",
+      "reasons": {
+        "insufficient_funds": "Insufficient balance on the card.",
+        "authentication_failed": "The bank verification (OTP) was not completed.",
+        "card_expired": "The card has expired.",
+        "timeout": "The payment timed out.",
+        "cancelled": "The payment was cancelled.",
+        "provider_error": "A temporary problem at the bank or payment network.",
+        "declined": "The bank declined the payment."
+      }
+    },
+    "fawryCode": {
+      "title": "Your Fawry payment code",
+      "instructions": "Go to any Fawry outlet, ask to pay with this reference number, and pay {{amount}}. The payment is confirmed automatically once you pay.",
+      "expiryNote": "The code is valid for a limited time. Pay soon so it does not expire.",
+      "copy": "Copy code",
+      "copied": "Code copied"
+    },
+    "unfinished": {
+      "hint": "Left Paymob's page without paying? Cancel this attempt to pay again or choose another method.",
+      "action": "I didn't complete the payment",
+      "confirmTitle": "Cancel the unfinished payment?",
+      "confirmBody": "Do this only if you did not pay on Paymob's page. If you did pay, wait: your payment is confirmed automatically.",
+      "confirmAction": "Yes, I didn't pay",
+      "done": "The attempt was cancelled. You can pay now."
+    },
     "methodsTitle": "Payment Method",
     "noEnabledMethods": "The nursery has not enabled a payment method yet. Please contact the nursery.",
     "methods": {
@@ -2476,6 +2509,9 @@
       "loyalty_min_points": "Redeem at least 100 points.",
       "loyalty_insufficient_points": "You don't have enough points.",
       "loyalty_exceeds_cap": "Points can cover at most half of this invoice.",
+      "payment_return_invalid": "The payment result could not be verified. Refresh the page; if the problem continues, contact the nursery.",
+      "payment_in_progress": "Paymob already reported this payment, so it cannot be cancelled. It is confirmed automatically.",
+      "payment_not_online": "Only an online payment can be cancelled here.",
       "actionFailed": "Could not complete this action."
     }
   },
@@ -4928,6 +4964,14 @@
       "segments": {
         "reason": " Reason: {{reason}}"
       }
+    },
+    "payment_online_failed": {
+      "title": "Online payment not completed",
+      "body": "Your payment of {{amount}} for invoice {{invoice_number}} did not go through. You can try again or choose another payment method."
+    },
+    "payment_gateway_needs_review": {
+      "title": "Online payment needs review",
+      "body": "Paymob reported {{amount}} for invoice {{invoice_number}} (transaction {{transaction}}) that could not be applied automatically. Check it in the Paymob dashboard."
     },
     "invoice_paid": {
       "title": "Payment confirmed",

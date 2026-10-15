@@ -87,6 +87,52 @@ export async function fetchOnlineCheckoutOptions(nurseryId: string): Promise<Onl
   return { available: data?.available === true, testMode: data?.test_mode === true };
 }
 
+/** What Paymob reported for the payment the parent just came back from. */
+export type CheckoutReturnResult =
+  /** The signed result was applied to the payment attempt. */
+  | {
+      kind: 'settled';
+      /** confirmed | failed | pending | duplicate | amount_mismatch | needs_review | ... */
+      outcome: string;
+      attemptStatus: string | null;
+      failureReason: string | null;
+      providerReference: string | null;
+    }
+  /** Nothing signed to check (no HMAC secret on the server, or the parent opened the link by hand). */
+  | { kind: 'unverified' };
+
+/** Paymob adds these to the return URL; `hmac` signs them. */
+export function hasPaymobReturnParams(search: URLSearchParams): boolean {
+  return search.has('hmac') && search.has('id') && search.has('success');
+}
+
+/** The Paymob result keys in the return URL, without the app's own (step, payment). */
+export function paymobReturnParams(search: URLSearchParams): Record<string, string> {
+  const params: Record<string, string> = {};
+  search.forEach((value, key) => {
+    if (key !== 'step' && key !== 'tab' && key !== 'payment') params[key] = value;
+  });
+  return params;
+}
+
+export function parseCheckoutReturnResponse(payload: unknown): CheckoutReturnResult {
+  const data = (payload ?? {}) as Record<string, unknown>;
+  if (data.status !== 'settled') return { kind: 'unverified' };
+  const str = (value: unknown) => (typeof value === 'string' && value ? value : null);
+  return {
+    kind: 'settled',
+    outcome: str(data.outcome) ?? 'ignored',
+    attemptStatus: str(data.attempt_status),
+    failureReason: str(data.failure_reason),
+    providerReference: str(data.provider_reference),
+  };
+}
+
+/** Has the server check the Paymob result signature and apply it. */
+export async function verifyCheckoutReturn(params: Record<string, string>): Promise<CheckoutReturnResult> {
+  return parseCheckoutReturnResponse(await invokeCheckout({ action: 'return', params }));
+}
+
 export async function startInvoiceCheckout(input: {
   invoiceId: string;
   /** The amount the parent confirmed; the server never charges a different one. */

@@ -47,6 +47,8 @@ type Options = {
   beforePay?: () => Promise<boolean>;
   /** Called once a payment request is recorded. Online checkout leaves the page instead. */
   onSubmitted?: (result: { duplicate: boolean }) => void;
+  /** Method selected at first, when offered (e.g. "try again" after a failed online payment). */
+  initialMethod?: ParentPaymentMethodCode | null;
 };
 
 const AMOUNT_TOLERANCE = 0.005;
@@ -73,7 +75,7 @@ function paymentSignature(invoiceId: string, method: string, amount: number, det
  * reuses one idempotency key, so the server returns the first result instead of recording it
  * twice. A different method, amount or details is a new payment with a new key.
  */
-export function useInvoiceCheckout({ invoice, amountPolicy, returnPath, beforePay, onSubmitted }: Options) {
+export function useInvoiceCheckout({ invoice, amountPolicy, returnPath, beforePay, onSubmitted, initialMethod = null }: Options) {
   const { t } = useTranslation();
   const { user } = useAuthSession();
   const queryClient = useQueryClient();
@@ -90,7 +92,7 @@ export function useInvoiceCheckout({ invoice, amountPolicy, returnPath, beforePa
     }),
     [online.options.available, settings.payment_methods_enabled],
   );
-  const [selectedMethod, setSelectedMethod] = useState<ParentPaymentMethodCode | null>(null);
+  const [selectedMethod, setSelectedMethod] = useState<ParentPaymentMethodCode | null>(initialMethod);
   const method = selectedMethod && methods.includes(selectedMethod) ? selectedMethod : methods[0] ?? null;
 
   const [details, setDetails] = useState<PaymentDetails>(EMPTY_PAYMENT_DETAILS);

@@ -88,6 +88,18 @@ export async function rejectPaymentAttempt(attemptId: string, reason: string | n
   return data as { status: string; changed: boolean };
 }
 
+/**
+ * The parent left Paymob's page without paying: release the online attempt so the invoice can be
+ * paid again. The server refuses once Paymob reported a transaction or issued a reference for it.
+ */
+export async function cancelUnfinishedOnlinePayment(attemptId: string): Promise<{ status: string; changed: boolean }> {
+  const { data, error } = await supabase.rpc('cancel_unfinished_online_payment' as never, {
+    p_attempt_id: attemptId,
+  } as never);
+  if (error) throw error;
+  return data as { status: string; changed: boolean };
+}
+
 export type RecordPaymentResult = {
   status: 'recorded' | 'duplicate' | 'already_paid';
   payment_id: string | null;
@@ -133,6 +145,9 @@ const PAYMENT_ERROR_CODES = [
   'payment_checkout_unavailable',
   'payment_checkout_invalid_url',
   'payment_checkout_failed',
+  'payment_return_invalid',
+  'payment_in_progress',
+  'payment_not_online',
   'payment_duplicate',
   'payment_invoice_closed',
   'payment_invoice_not_yours',

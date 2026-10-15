@@ -40,15 +40,31 @@ export function paymentFlowOf(method: ParentPaymentMethodCode): PaymentFlow {
 }
 
 /**
- * The methods a parent can choose, in display order: online checkout first when the server
- * reports it ready, then the manual methods the nursery turned on.
+ * Display order: InstaPay first (instant and trusted), then online card checkout, then mobile
+ * wallets, bank transfer, and Fawry (cash at an outlet) last.
+ */
+const PARENT_METHOD_ORDER: readonly ParentPaymentMethodCode[] = [
+  'instapay',
+  'card',
+  'vodafone_cash',
+  'etisalat_cash',
+  'bank_transfer',
+  'fawry',
+  'manual',
+  'cash',
+];
+
+/**
+ * The methods a parent can choose, in display order: the manual methods the nursery turned on,
+ * plus online checkout when the server reports it ready.
  */
 export function availableParentPaymentMethods(input: {
   enabled: string[] | null | undefined;
   onlineCheckoutAvailable: boolean;
 }): ParentPaymentMethodCode[] {
   const manual = enabledManualMethods(input.enabled);
-  return input.onlineCheckoutAvailable ? ['card', ...manual] : manual;
+  const methods: ParentPaymentMethodCode[] = input.onlineCheckoutAvailable ? [...manual, 'card'] : manual;
+  return [...methods].sort((a, b) => PARENT_METHOD_ORDER.indexOf(a) - PARENT_METHOD_ORDER.indexOf(b));
 }
 
 /** What the parent typed or attached for the chosen method. */

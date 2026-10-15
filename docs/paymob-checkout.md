@@ -16,15 +16,56 @@ payment options in the nursery settings:
 - `PAYMOB_INSTAPAY_INTEGRATION_ID` when enabling `instapay`
 - `PAYMOB_MOBILE_WALLET_INTEGRATION_ID` when enabling `mobile_wallet`
 - `PAYMOB_FAWRY_INTEGRATION_ID` when enabling `fawry`
-- `PAYMOB_AMOUNT_MULTIPLIER` (`1` when the merchant account expects EGP amounts,
-  or `100` when it expects piasters; confirm this with the account's current API
-  documentation before enabling checkout)
+- `PAYMOB_AMOUNT_MULTIPLIER`: `100`. The Intention API takes the amount in piasters
+  ("expressed in cents"), and payment results are only applied when Paymob's
+  `amount_cents` equals the attempt amount × 100, so any other value means no payment
+  ever settles automatically.
+- `PAYMOB_HMAC_SECRET` (Paymob dashboard → Settings/Profile → HMAC). **Required**: without
+  it online checkout is not offered at all, because no payment result could be verified.
 - `APP_BASE_URL` (the public HTTPS site origin)
 
 Only integrations both enabled in nursery settings and configured with an integration
 ID are offered to Paymob. Confirm each integration ID and supported payment type with
 the nursery's Paymob account. Never put Paymob secrets in client code, commit them,
 or collect payment credentials in this app.
+
+## Payment results (webhook and return page)
+
+Migration `20261016000000_paymob_gateway_results.sql` and the `paymob-webhook` Edge Function
+settle online payments automatically. A result is applied only when its HMAC (SHA-512 over
+Paymob's 20 documented transaction fields) matches `PAYMOB_HMAC_SECRET`:
+
+- **Success for the exact amount** → the attempt is confirmed the same way finance confirms
+  one (payment row, invoice status, parent notification, loyalty points).
+- **Failure** → the attempt becomes `failed` with a `failure_reason` code; the parent sees
+  the reason with "Try again", "Change payment method" and the nursery's phone, and can pay
+  again at once.
+- **Pending** (e.g. a Fawry reference) → the attempt stays pending and the reference is
+  shown to the parent in large type with a copy button.
+- **Wrong amount, or money for an attempt finance already rejected or that no longer fits
+  the invoice** → nothing is applied automatically; finance gets a
+  `payment_gateway_needs_review` notification.
+
+Every verified result is stored in `payment_events` (finance staff can read their nursery's
+rows). Results arrive twice for card and wallet payments — the server webhook and the
+parent's browser return (verified by `invoice-checkout` `action: 'return'`) — and the second
+one is recorded as a duplicate without changing anything.
+
+If the parent leaves Paymob's page without paying, no result ever arrives. The payment step
+then offers "I didn't complete the payment", which calls
+`cancel_unfinished_online_payment`; it is refused once Paymob reported a transaction or issued
+a reference for that attempt. A success that arrives later for a released attempt is still
+recorded when the invoice has room for it, otherwise finance is asked to review it.
+
+Setup:
+
+1. Deploy `paymob-webhook` (JWT verification off; `supabase/config.toml` already says so):
+   `supabase functions deploy paymob-webhook --no-verify-jwt`.
+2. Every Intention names `<SUPABASE_URL>/functions/v1/paymob-webhook` as its
+   `notification_url`. Paymob honours that for card integrations only, so also set the same
+   URL as the **transaction processed callback** of the wallet, InstaPay and Fawry
+   integrations in the Paymob dashboard.
+3. Set `PAYMOB_HMAC_SECRET`, then redeploy `invoice-checkout`.
 
 ## Paying an existing invoice (parent dashboard)
 
@@ -96,9 +137,7 @@ These manual options work without Paymob integration secrets.
 Cash on delivery is an admin-only method; it is not offered to parents in signup or
 the parent payment page.
 
-The browser return from Paymob is not treated as proof of payment. Payment attempts
-remain pending until nursery finance staff verify the intention in the Paymob
-dashboard and confirm or reject it in the admin payment screen. The pending attempt
-shows its Paymob intention reference for reconciliation. Automatic payment
-finalization requires a verified merchant callback/status-lookup contract and is
-not implemented here.
+Unsigned browser parameters are never treated as proof of payment. Online attempts are
+settled only from HMAC-verified Paymob results (see "Payment results" above); anything
+that cannot be applied automatically is left for finance, who still see the Paymob
+intention reference on the pending attempt for reconciliation.

@@ -38,7 +38,10 @@ export function getPaymobConfig(enabledMethods: string[] | null | undefined): Pa
   const publicKey = Deno.env.get('PAYMOB_PUBLIC_KEY')?.trim();
   const amountMultiplierValue = Deno.env.get('PAYMOB_AMOUNT_MULTIPLIER')?.trim();
   const appBaseUrl = Deno.env.get('APP_BASE_URL')?.trim();
-  if (!secretKey || !publicKey || !amountMultiplierValue || !appBaseUrl) return null;
+  // Without the HMAC secret no Paymob result can be verified, so payments would never settle:
+  // online checkout is not offered at all.
+  const hmacSecret = Deno.env.get('PAYMOB_HMAC_SECRET')?.trim();
+  if (!secretKey || !publicKey || !amountMultiplierValue || !appBaseUrl || !hmacSecret) return null;
 
   const amountMultiplier = Number(amountMultiplierValue);
   if (amountMultiplier !== 1 && amountMultiplier !== 100) {
@@ -107,6 +110,9 @@ export async function createPaymobCheckout(input: PaymobIntentionInput): Promise
   const returnPath = input.returnPath ?? DEFAULT_RETURN_PATH;
   if (!returnPath.startsWith('/') || returnPath.startsWith('//')) throw new Error('Invalid Paymob return path');
   const item = input.item ?? DEFAULT_ITEM;
+  // Paymob posts the transaction result here (paymob-webhook verifies its HMAC).
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')?.trim();
+  const notificationUrl = supabaseUrl ? `${supabaseUrl.replace(/\/+$/, '')}/functions/v1/paymob-webhook` : null;
 
   const response = await fetch(PAYMOB_API_URL, {
     method: 'POST',
@@ -142,8 +148,11 @@ export async function createPaymobCheckout(input: PaymobIntentionInput): Promise
         email: input.customerEmail,
         phone_number: paymobPhoneNumber(input.customerPhone),
       },
+      // Returned as merchant_order_id in every callback; extras is a second copy in payment_key_claims.
       special_reference: input.attemptId,
+      extras: { attempt_id: input.attemptId },
       redirection_url: `${config.appBaseUrl}${returnPath}`,
+      ...(notificationUrl ? { notification_url: notificationUrl } : {}),
     }),
   });
 
