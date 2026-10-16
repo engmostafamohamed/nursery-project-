@@ -4257,7 +4257,7 @@
       "invalid_email": "Invalid email format",
       "invalid_phone": "Invalid phone format",
       "invalid_dob": "Invalid date of birth",
-      "age_out_of_range": "Child age must be between 6 months and 5 years",
+      "age_out_of_range": "Child age must be between 3 months and 6 years",
       "duplicate_email": "Duplicate parent email"
     }
   },
