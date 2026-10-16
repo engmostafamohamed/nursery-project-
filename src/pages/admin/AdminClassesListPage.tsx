@@ -144,24 +144,25 @@ export function AdminClassesListPage() {
                 <thead className="border-b border-border-subtle bg-surface-low text-start text-xs uppercase tracking-wide text-foreground-secondary">
                   <tr>
                     <th className="px-4 py-2 text-start">
-                      <button type="button" onClick={() => toggleSort('name')} className="font-semibold">
+                      <button type="button" onClick={() => toggleSort('name')} className="font-semibold uppercase">
                         {t('admin.classes.list.colName')} {sortIcon('name')}
                       </button>
                     </th>
                     <th className="px-4 py-2 text-start">
-                      <button type="button" onClick={() => toggleSort('grade')} className="font-semibold">
+                      <button type="button" onClick={() => toggleSort('grade')} className="font-semibold uppercase">
                         {t('admin.classes.list.colGrade')} {sortIcon('grade')}
                       </button>
                     </th>
                     <th className="px-4 py-2 text-start">{t('admin.classes.list.colRoom')}</th>
                     <th className="px-4 py-2 text-start">
-                      <button type="button" onClick={() => toggleSort('lead')} className="font-semibold">
+                      <button type="button" onClick={() => toggleSort('lead')} className="font-semibold uppercase">
                         {t('admin.classes.list.colLead')} {sortIcon('lead')}
                       </button>
                     </th>
+                    <th className="px-4 py-2 text-start">{t('admin.classes.list.colBackup')}</th>
                     <th className="px-4 py-2 text-start">{t('admin.classes.list.colAssistants')}</th>
                     <th className="px-4 py-2 text-start">
-                      <button type="button" onClick={() => toggleSort('roster')} className="font-semibold">
+                      <button type="button" onClick={() => toggleSort('roster')} className="font-semibold uppercase">
                         {t('admin.classes.list.colRoster')} {sortIcon('roster')}
                       </button>
                     </th>
@@ -185,6 +186,9 @@ export function AdminClassesListPage() {
                         </td>
                         <td className="px-4 py-3">
                           {staffName(c.lead, languagePref, t('admin.classes.list.noLead'))}
+                        </td>
+                        <td className="px-4 py-3 text-foreground-secondary">
+                          {staffName(c.substitute, languagePref, t('admin.classes.list.noBackup'))}
                         </td>
                         <td className="px-4 py-3 text-foreground-secondary">{c.assistants.length}</td>
                         <td className="px-4 py-3">

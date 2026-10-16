@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
+import type { EnrollAfterPayment } from '@/components/admin/ConfirmPaymentDialog';
 import { DocumentVerificationModal } from '@/components/admin/DocumentVerificationModal';
 import { PendingPaymentAttempts } from '@/components/admin/PendingPaymentAttempts';
 import { ApplicationReviewTabs } from '@/components/admin/applications/ApplicationReviewTabs';
@@ -19,6 +20,9 @@ import { usePaymentHistory } from '@/hooks/usePaymentHistory';
 import { useUserProfile } from '@/hooks/useUserProfile';
 
 const requiredDocs = ['birth_certificate', 'vaccination_card', 'parent_id', 'proof_of_address'] as const;
+
+/** Roles approve_application_enrollment accepts. */
+const APPROVER_ROLES = ['branch_admin', 'chain_super_admin', 'manager', 'xo_super_admin'];
 
 function readText(source: Record<string, unknown>, key: string): string {
   const value = source[key];
@@ -67,6 +71,7 @@ function statusIcon(status: string) {
 
 export function AdminApplicationDetailPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { id } = useParams();
   const { user } = useAuthSession();
   const { data: reviewerProfile } = useUserProfile(user?.id);
@@ -140,18 +145,40 @@ export function AdminApplicationDetailPage() {
 
   const statusLabel = t(`applications.statuses.${status}`, { defaultValue: status });
 
-  const handleApprove = async () => {
-    if (!canApprove) return;
-    await apps.updateApplicationStatus({
+  const approve = (classId: string | null) =>
+    apps.updateApplicationStatus({
       id,
       status: 'approved',
       reviewedBy: user?.id,
       parentEmail: String(parentEmail),
       nurseryId: String(app.nursery_id || activeNurseryId || ''),
       parentId,
+      classId,
     });
-    toast.success(t('applications.approvedToast'));
+
+  const handleApprove = async () => {
+    if (!canApprove) return;
+    await approve(null);
+    // The child now waits for a class: offer the next step.
+    toast.success(t('applications.approvedToast'), {
+      action: { label: t('applications.enroll.createClass'), onClick: () => navigate('/admin/classes/new') },
+    });
   };
+
+  // Confirming the admission payment can approve the application in the same step.
+  const enrollAfterPayment: EnrollAfterPayment | null =
+    APPROVER_ROLES.includes(String(reviewerProfile?.role ?? '')) && status !== 'approved' && status !== 'rejected'
+      ? {
+          childName: applicantChildName(child),
+          nurseryId: String(app.nursery_id || activeNurseryId || ''),
+          blockedReason: canReviewApprove
+            ? null
+            : status === 'draft'
+              ? t('applications.approveDraftHint')
+              : t('applications.approvePendingOnlyHint'),
+          approve,
+        }
+      : null;
 
   const handleRequestDocuments = async () => {
     const parentMessage = reviewMessage.trim() || t('applications.defaultDocumentsPendingMessage');
@@ -233,6 +260,8 @@ export function AdminApplicationDetailPage() {
 
       <PendingPaymentAttempts
         attempts={paymentAttempts.data ?? []}
+        invoiceLabel={paymentHistory.data[0]?.invoiceNumber}
+        enroll={enrollAfterPayment}
         onUpdated={async () => {
           await Promise.all([paymentAttempts.refetch(), paymentHistory.refetch()]);
         }}

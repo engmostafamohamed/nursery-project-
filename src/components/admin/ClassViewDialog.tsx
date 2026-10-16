@@ -179,10 +179,15 @@ export function ClassViewDialog({ classId, open, onOpenChange }: ClassViewDialog
 
             <div className="space-y-6 p-6">
               {/* Stats */}
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Stat icon="groups" label={t('admin.classes.list.colRoster')} value={rosterValue} accent={overCapacity} />
-                <Stat icon="person" label={t('admin.classes.fields.leadTeacher')} value={personLabel(c.lead, languagePref)} />
                 <Stat icon="badge" label={t('admin.classes.staff.assistantsTitle')} value={String(c.assistants.length)} />
+                <Stat icon="person" label={t('admin.classes.fields.leadTeacher')} value={personLabel(c.lead, languagePref)} />
+                <Stat
+                  icon="person_add"
+                  label={t('admin.classes.fields.backupTeacher')}
+                  value={personLabel(c.substitute, languagePref)}
+                />
               </div>
 
               {/* Details */}
@@ -202,6 +207,11 @@ export function ClassViewDialog({ classId, open, onOpenChange }: ClassViewDialog
                     icon="person"
                     label={t('admin.classes.fields.leadTeacher')}
                     value={personLabel(c.lead, languagePref)}
+                  />
+                  <DetailRow
+                    icon="person_add"
+                    label={t('admin.classes.fields.backupTeacher')}
+                    value={personLabel(c.substitute, languagePref)}
                   />
                 </div>
               </section>

@@ -9,10 +9,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useNurseryLanguagePref, type NurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { classStaffBadgeVariant, classStaffRoleKey } from '@/lib/classStaff';
 import { getNurseryCalendarDateString } from '@/lib/nurseryDay';
 import { supabase } from '@/lib/supabase';
+import type { ClassStaffRole } from '@/types/tables';
 
-type ClassRow = { id: string; name_ar: string | null; name_en: string | null };
+type ClassRow = { id: string; name_ar: string | null; name_en: string | null; role: ClassStaffRole };
 type ChildRow = {
   id: string;
   class_id: string | null;
@@ -57,14 +59,22 @@ export function TeacherHomePage() {
       if (!user?.id) return [];
       const memberships = await supabase
         .from('class_staff')
-        .select('class_id')
+        .select('class_id, role')
         .eq('user_id', user.id);
       if (memberships.error) throw memberships.error;
-      const ids = ((memberships.data ?? []) as { class_id: string }[]).map((m) => m.class_id);
-      if (!ids.length) return [];
-      const classes = await supabase.from('classes').select('id, name_ar, name_en').in('id', ids);
+      const memberRows = (memberships.data ?? []) as { class_id: string; role: ClassStaffRole }[];
+      if (!memberRows.length) return [];
+      const roleByClass = new Map(memberRows.map((m) => [m.class_id, m.role]));
+      const classes = await supabase
+        .from('classes')
+        .select('id, name_ar, name_en')
+        .in('id', [...roleByClass.keys()])
+        .is('deleted_at', null);
       if (classes.error) throw classes.error;
-      return (classes.data ?? []) as ClassRow[];
+      return ((classes.data ?? []) as Omit<ClassRow, 'role'>[]).map((c) => ({
+        ...c,
+        role: roleByClass.get(c.id) ?? 'assistant',
+      }));
     },
     enabled: Boolean(user?.id),
   });
@@ -203,12 +213,17 @@ export function TeacherHomePage() {
             return (
               <Link
                 key={c.id}
-                to={`/teacher/classes/${c.id}`}
+                to="/teacher/classes"
                 className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 transition-colors hover:bg-surface-container-low"
               >
-                <p className="text-sm font-semibold text-on-surface">
-                  {localized(c.name_ar, c.name_en, languagePref)}
-                </p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-on-surface">
+                    {localized(c.name_ar, c.name_en, languagePref)}
+                  </p>
+                  <Badge variant={classStaffBadgeVariant(c.role)} className="shrink-0 text-[10px]">
+                    {t(classStaffRoleKey(c.role))}
+                  </Badge>
+                </div>
                 <p className="mt-1 text-xs text-on-surface-variant">
                   {t('teacher.home.studentsCount', { count })}
                 </p>

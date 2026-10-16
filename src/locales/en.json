@@ -962,9 +962,11 @@
         "colGrade": "Age group",
         "colRoom": "Room",
         "colLead": "Lead teacher",
+        "colBackup": "Backup teacher",
         "colAssistants": "Assistants",
         "colRoster": "Children assigned",
-        "noLead": "Unassigned"
+        "noLead": "Unassigned",
+        "noBackup": "None"
       },
       "detail": {
         "subtitle": "Edit class details, assign staff, and manage the roster.",
@@ -995,12 +997,17 @@
         "roomNumber": "Room",
         "capacity": "Capacity",
         "leadTeacher": "Lead teacher",
-        "noLead": "— No lead teacher —"
+        "noLead": "— No lead teacher —",
+        "backupTeacher": "Backup teacher",
+        "noBackup": "— No backup teacher —",
+        "backupHelp": "Covers the class when the lead teacher is away. They see the class and its children."
       },
       "staff": {
         "leadTitle": "Lead teacher",
+        "teachersTitle": "Class teachers",
         "currentLead": "Current lead",
-        "leadHelp": "Change the lead teacher in the Details tab and save.",
+        "currentBackup": "Current backup",
+        "leadHelp": "Change the lead or backup teacher under Details above, then save.",
         "assistantsTitle": "Assistants",
         "addAssistant": "Add assistant",
         "noAssistants": "No assistants assigned yet."
@@ -1022,7 +1029,8 @@
       },
       "validation": {
         "nameRequired": "Please enter the class name in at least one language.",
-        "noActiveNursery": "Pick a nursery in the sidebar before creating a class."
+        "noActiveNursery": "Pick a nursery in the sidebar before creating a class.",
+        "backupIsLead": "The lead teacher cannot also be the backup. Choose another teacher."
       },
       "toasts": {
         "createdOk": "Class created.",
@@ -1035,8 +1043,11 @@
         "childAdded": "Child added to class.",
         "childRemoved": "Child removed from class.",
         "childMoved": "Child moved to the selected class.",
+        "createdWithChildren_one": "Class created with {{count}} child assigned.",
         "createdWithChildren": "Class created with {{count}} children assigned.",
-        "someChildrenAssignFailed": "Could not assign {{count}} of the selected children."
+        "someChildrenAssignFailed": "Could not assign {{count}} of the selected children.",
+        "leadAssignFailed": "The class was created, but the lead teacher could not be assigned.",
+        "backupAssignFailed": "The class was created, but the backup teacher could not be assigned."
       }
     },
     "notifications": {
@@ -2435,6 +2446,23 @@
     },
     "admin": {
       "confirmTitle": "Confirm this payment?",
+      "confirmDialog": {
+        "subtitle": "Check that these details match the money the nursery received.",
+        "fromParentBy": "From {{parent}} by {{method}}",
+        "invoice": "Invoice",
+        "submittedAt": "Submitted",
+        "copyReference": "Copy reference",
+        "copied": "Reference copied.",
+        "whatHappens": "When you confirm",
+        "happensRecorded": "The payment is recorded and the invoice is updated.",
+        "happensNotified": "The parent is notified that the payment was received.",
+        "verifiedCheck": "I checked that {{amount}} reached the nursery's account.",
+        "confirming": "Confirming…",
+        "doneTitle": "Payment confirmed",
+        "doneAmount": "{{amount}} was recorded and the parent was notified.",
+        "doneAmountPartial": "{{amount}} was recorded. The invoice still has a balance due.",
+        "done": "Done"
+      },
       "confirmDescription": "Confirm {{amount}} from {{parent}} by {{method}}? The payment is recorded and the parent is notified.",
       "rejectTitle": "Reject this payment?",
       "rejectDescription": "{{amount}} from {{parent}} will be marked as not received.",
@@ -2442,6 +2470,9 @@
       "rejectReasonPlaceholder": "e.g. No transfer found with this reference",
       "rejectReasonHelp": "Optional, but it helps the parent fix the payment.",
       "pendingTitle": "Pending Payment Confirmation",
+      "pendingCount_one": "{{count}} payment waiting for confirmation",
+      "pendingCount_other": "{{count}} payments waiting for confirmation",
+      "reviewAndConfirm": "Review & confirm",
       "testPaymentNotice": "TEST PAYMENT — no money was charged. This request cannot be confirmed as a real payment.",
       "paymobIntentionId": "Paymob reference",
       "paymobVerifyBeforeConfirm": "Verify Paymob intention {{id}} in the Paymob dashboard before confirming.",
@@ -3403,7 +3434,12 @@
       "emptyDescription": "Ask your nursery admin to assign you as the class teacher.",
       "announcementsCta": "Announcements",
       "leadBadge": "Lead",
-      "assistantBadge": "Assistant"
+      "backupBadge": "Backup",
+      "assistantBadge": "Assistant",
+      "leadLabel": "Lead teacher",
+      "backupLabel": "Backup teacher",
+      "backupNote": "You cover this class when {{lead}} is away.",
+      "backupNoteNoLead": "You cover this class when its lead teacher is away."
     },
     "profile": {
       "tabs": {
@@ -4057,6 +4093,28 @@
     "defaultDocumentsPendingMessage": "Please upload the additional documents requested by the nursery.",
     "defaultRejectedMessage": "Your application was not approved. Please contact the nursery team for details.",
     "approvedToast": "Application approved.",
+    "enroll": {
+      "sectionTitle": "Enroll the child",
+      "approveNow": "Also approve the application and add {{child}} to the nursery",
+      "approveNowHelp": "The child's profile is created now. Leave this off to approve later under Review decision.",
+      "classLabel": "Class",
+      "noClass": "No class yet — assign later",
+      "classOption_one": "{{name}} · {{count}} child",
+      "classOption_other": "{{name}} · {{count}} children",
+      "createClassHint": "Need a new class? You can create one right after confirming.",
+      "addedInClass": "{{child}} was added to the nursery, in {{className}}.",
+      "addedNoClass": "{{child}} was added to the nursery and is waiting for a class.",
+      "nextStepTitle": "Next: give {{child}} a class",
+      "nextStepBody": "Teachers only see children in their classes. Create a class with a lead and a backup teacher, or add {{child}} to an existing class.",
+      "createClass": "Create a new class",
+      "openClasses": "Open classes",
+      "openChild": "Open child profile",
+      "notApprovedYet": "The application is not approved yet. Approve it under Review decision to add {{child}} to the nursery.",
+      "failed": "The payment is confirmed, but the child could not be added: {{message}}",
+      "errors": {
+        "classNotFound": "That class no longer exists. Choose another class, or none."
+      }
+    },
     "rejectedToast": "Application rejected.",
     "activateEnrollment": "Activate Enrollment",
     "enrollmentActivated": "Enrollment activated for {{name}}.",

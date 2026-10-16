@@ -375,6 +375,7 @@ export function AdminInvoiceDetailsPage() {
           {details ? (
             <PendingPaymentAttempts
               attempts={attemptsQuery.data ?? []}
+              invoiceLabel={details.invoiceNumber}
               onUpdated={async () => {
                 await attemptsQuery.refetch();
                 await detailsQuery.refetch();
