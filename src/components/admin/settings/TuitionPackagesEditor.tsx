@@ -84,6 +84,9 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
   const { settings: nurserySettings, isLoading: nurserySettingsLoading } = useNurserySettings(nurseryId);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  // A new package already created by a save whose billing periods then failed: saving again
+  // updates it instead of creating a second package.
+  const [createdId, setCreatedId] = useState<string | null>(null);
   const [form, setForm] = useState<TuitionPackageInput>(EMPTY_FORM);
   const [periodRows, setPeriodRows] = useState<Record<BillingPeriodKind, BillingPeriodRowState> | null>(null);
   const { query: periodsQuery, upsert: upsertPeriod } = useAdminTuitionBillingPeriods(editingId);
@@ -95,6 +98,8 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
 
   const rows = useMemo(() => query.data ?? [], [query.data]);
   const busy = create.isPending || update.isPending || upsertPeriod.isPending;
+  // Parents need at least one billing period to choose from.
+  const noActivePeriod = Boolean(periodRows) && !Object.values(periodRows ?? {}).some((row) => row.active);
 
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -138,6 +143,7 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
 
   const openCreate = () => {
     setEditingId(null);
+    setCreatedId(null);
     // Pre-fill from the nursery's own Financial rate instead of starting at 0 — still fully
     // editable, since different packages can legitimately have different prices.
     const defaultPrice = Number(nurserySettings?.monthly_rate ?? 0) || 0;
@@ -150,6 +156,7 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
 
   const openEdit = (pkg: TuitionPackageRow) => {
     setEditingId(pkg.id);
+    setCreatedId(null);
     setForm({
       name_ar: pkg.name_ar,
       name_en: pkg.name_en,
@@ -187,14 +194,19 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
       toast.error('Please enter a package name.');
       return;
     }
-    if (!nurseryId) return;
+    if (!nurseryId || noActivePeriod) return;
     const payload: TuitionPackageInput = withCurrentDailyHours({
       ...form,
       features_json: form.features_json.filter((feature) => feature.ar.trim() || feature.en.trim()),
     });
     try {
-      const packageId = editingId ?? (await create.mutateAsync(payload)).id;
-      if (editingId) await update.mutateAsync({ id: editingId, input: payload });
+      let packageId = editingId ?? createdId;
+      if (packageId) {
+        await update.mutateAsync({ id: packageId, input: payload });
+      } else {
+        packageId = (await create.mutateAsync(payload)).id;
+        setCreatedId(packageId);
+      }
 
       // Save the package and its billing periods together in one Save click — periods were
       // only ever local state until now, whether this package is brand new or pre-existing.
@@ -204,7 +216,6 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
             upsertPeriod.mutateAsync({
               tuitionPackageId: packageId,
               nurseryId,
-              id: row.id,
               input: {
                 billing_period: row.billing_period,
                 duration_months: row.duration_months,
@@ -499,7 +510,15 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
 
             <FormSection title="Billing periods" icon="event_repeat">
               {periodRows ? (
-                <TuitionPackageBillingPeriodsEditor rows={periodRows} onChange={setPeriodRows} basePrice={form.price} />
+                <>
+                  <TuitionPackageBillingPeriodsEditor rows={periodRows} onChange={setPeriodRows} basePrice={form.price} />
+                  {noActivePeriod ? (
+                    <p className="flex items-center gap-1.5 text-xs text-error">
+                      <MaterialSymbol name="error" size="text-sm" />
+                      Switch on at least one billing period. Parents choose one of these when they register.
+                    </p>
+                  ) : null}
+                </>
               ) : (
                 <Skeleton className="h-40 w-full rounded-lg" />
               )}
@@ -573,7 +592,7 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
             <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} disabled={busy}>
               Cancel
             </Button>
-            <Button type="button" onClick={() => void submit()} disabled={busy}>
+            <Button type="button" onClick={() => void submit()} disabled={busy || noActivePeriod}>
               {busy ? 'Saving…' : 'Save'}
             </Button>
           </DialogFooter>

@@ -140,21 +140,23 @@ export function useAdminTuitionPackages(nurseryId: string | null | undefined) {
     },
   });
 
+  // Depends on the nursery id, not `key`: that array is rebuilt every render, which would
+  // close and reopen the realtime channel on each keystroke in the forms using this hook.
   useEffect(() => {
     if (!nurseryId) return;
     const channel = supabase
       .channel(`admin-tuition-packages-${nurseryId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tuition_packages' }, () =>
-        void queryClient.invalidateQueries({ queryKey: key }),
+        void queryClient.invalidateQueries({ queryKey: tuitionPackagesKey(nurseryId) }),
       )
       .on('postgres_changes', { event: '*', schema: 'public', table: 'child_tuition_subscriptions' }, () =>
-        void queryClient.invalidateQueries({ queryKey: key }),
+        void queryClient.invalidateQueries({ queryKey: tuitionPackagesKey(nurseryId) }),
       )
       .subscribe();
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [nurseryId, queryClient, key]);
+  }, [nurseryId, queryClient]);
 
   return { query, create, update };
 }

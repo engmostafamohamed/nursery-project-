@@ -4280,6 +4280,7 @@
       },
       "periodHint": "Longer periods can cost less per month.",
       "saveUpTo": "Save up to {{percent}}%",
+      "periodNotOffered": "No {{period}} option for this package",
       "perMonth": "/ month",
       "forMonths_one": "for {{count}} month",
       "forMonths_other": "for {{count}} months",

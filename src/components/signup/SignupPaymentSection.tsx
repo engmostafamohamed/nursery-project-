@@ -10,6 +10,7 @@ import { PaymentMethodDetails } from '@/components/payment/PaymentMethodDetails'
 import { PaymentMethodPicker } from '@/components/payment/PaymentMethodPicker';
 import {
   computePackageBillingQuote,
+  offeredBillingPeriods,
   type ApplicationPackageBillingPeriod,
   type ApplicationPaymentPackage,
 } from '@/hooks/useApplicationPackagePayment';
@@ -87,10 +88,11 @@ export function SignupPaymentSection({
     : null;
   const totalDue = (quote?.total ?? 0) + (extraHoursQuote?.displayPrice ?? 0);
   const totalSavings = (quote?.discountAmount ?? 0) + (extraHoursQuote?.discountAmount ?? 0);
-  const periodLabel = t(
-    `applications.paymentPackage.period.${billingPeriod === 'half_annual' ? 'halfAnnual' : billingPeriod}`,
-    { defaultValue: billingPeriods.find((period) => period.value === billingPeriod)?.label },
-  );
+  const periodName = (value: ApplicationPackageBillingPeriod) =>
+    t(`applications.paymentPackage.period.${value === 'half_annual' ? 'halfAnnual' : value}`, {
+      defaultValue: billingPeriods.find((period) => period.value === value)?.label,
+    });
+  const periodLabel = periodName(billingPeriod);
 
   const price = (amount: number) => t('invoice.egpAmount', { amount: amount.toFixed(2) });
 
@@ -173,14 +175,20 @@ export function SignupPaymentSection({
                 </legend>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {options.packages.map((pkg) => {
-                    const activeQuote = computePackageBillingQuote(pkg, billingPeriod);
+                    // A package without the chosen period shows (and switches to) its shortest offered one.
+                    const cardPeriods = offeredBillingPeriods(pkg);
+                    const cardPeriod = cardPeriods.includes(billingPeriod) ? billingPeriod : cardPeriods[0];
+                    const activeQuote = computePackageBillingQuote(pkg, cardPeriod);
                     const active = packageId === pkg.id;
                     return (
                       <button
                         key={pkg.id}
                         type="button"
                         aria-pressed={active}
-                        onClick={() => onPackageChange(pkg.id)}
+                        onClick={() => {
+                          onPackageChange(pkg.id);
+                          if (cardPeriod !== billingPeriod) onBillingPeriodChange(cardPeriod);
+                        }}
                         className={`group relative flex min-h-28 flex-col rounded-xl border p-4 text-start transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
                           active
                             ? 'border-primary bg-primary/5 ring-1 ring-primary'
@@ -214,6 +222,9 @@ export function SignupPaymentSection({
                             </span>
                           ) : null}
                           <span className="text-lg font-bold tracking-tight text-on-surface">{price(activeQuote.total)}</span>
+                          {cardPeriod !== billingPeriod ? (
+                            <span className="text-xs text-on-surface-variant">{periodName(cardPeriod)}</span>
+                          ) : null}
                         </span>
                         {activeQuote.discountAmount > 0 ? (
                           <span className="mt-1 block text-xs font-medium text-success">
@@ -248,22 +259,16 @@ export function SignupPaymentSection({
                         if (selectedPeriod) onBillingPeriodChange(selectedPeriod.value);
                       }}
                     >
-                      {billingPeriods.map((period) => {
-                        const periodQuote = computePackageBillingQuote(selectedPackage, period.value);
-                        const label = t(
-                          `applications.paymentPackage.period.${period.value === 'half_annual' ? 'halfAnnual' : period.value}`,
-                          { defaultValue: period.label },
-                        );
-                        return (
-                          <option
-                            key={period.value}
-                            value={period.value}
-                            className="bg-surface text-foreground"
-                          >
-                            {`${label} — ${price(periodQuote.total)}`}
-                          </option>
-                        );
-                      })}
+                      {billingPeriods
+                        .filter((period) => offeredBillingPeriods(selectedPackage).includes(period.value))
+                        .map((period) => {
+                          const periodQuote = computePackageBillingQuote(selectedPackage, period.value);
+                          return (
+                            <option key={period.value} value={period.value} className="bg-surface text-foreground">
+                              {`${periodName(period.value)} — ${price(periodQuote.total)}`}
+                            </option>
+                          );
+                        })}
                     </Select>
                     <MaterialSymbol
                       name="expand_more"

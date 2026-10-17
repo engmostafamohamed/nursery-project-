@@ -42,6 +42,18 @@ const DEFAULT_BILLING_MONTHS: Record<ApplicationPackageBillingPeriod, number> = 
   annual: 12,
 };
 
+const ALL_BILLING_PERIODS: ApplicationPackageBillingPeriod[] = ['monthly', 'quarterly', 'half_annual', 'annual'];
+
+/**
+ * The billing periods a parent may choose for a package: the ones the nursery switched on, shortest
+ * first. A package with no periods configured at all offers every period at its monthly price ×
+ * months — the same fallback `select_application_payment_package` uses.
+ */
+export function offeredBillingPeriods(pkg: Pick<ApplicationPaymentPackage, 'billingPeriods'>): ApplicationPackageBillingPeriod[] {
+  if (pkg.billingPeriods.length === 0) return ALL_BILLING_PERIODS;
+  return ALL_BILLING_PERIODS.filter((period) => pkg.billingPeriods.some((option) => option.billingPeriod === period));
+}
+
 /** Whether a deal is currently claimable: active and inside its optional start/end window. */
 export function isApplicationDealActive(deal: Pick<ApplicationPackageDeal, 'active' | 'startsAt' | 'endsAt'>): boolean {
   if (!deal.active) return false;

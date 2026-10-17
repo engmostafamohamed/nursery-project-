@@ -34,12 +34,16 @@ export function PackageDealPicker({
 
   const deals = query.data ?? [];
   const selectedDeal = deals.find((d) => d.id === dealId) ?? null;
+  // Checked live: over 100% would make the package free, since the discount is capped at the price.
+  const valueError =
+    !customForm.discount_value || customForm.discount_value <= 0
+      ? 'Enter a discount value greater than zero.'
+      : customForm.discount_type === 'percentage' && customForm.discount_value > 100
+        ? 'A percentage discount cannot exceed 100%.'
+        : null;
 
   const submitCustom = async () => {
-    if (!customForm.discount_value || customForm.discount_value <= 0) {
-      toast.error('Enter a discount value greater than zero.');
-      return;
-    }
+    if (valueError) return;
     try {
       const endsAt = customForm.ends_at ? new Date(customForm.ends_at).toISOString() : null;
       const created = await create.mutateAsync({
@@ -141,8 +145,10 @@ export function PackageDealPicker({
             max={customForm.discount_type === 'percentage' ? 100 : undefined}
             step={customForm.discount_type === 'percentage' ? 1 : 0.01}
             value={customForm.discount_value}
+            aria-invalid={Boolean(valueError)}
             onChange={(e) => setCustomForm((f) => ({ ...f, discount_value: Number(e.target.value) || 0 }))}
           />
+          {valueError ? <p className="text-xs text-error">{valueError}</p> : null}
         </div>
       </div>
       <div className="space-y-1.5">
@@ -161,7 +167,7 @@ export function PackageDealPicker({
         <Button type="button" variant="outline" size="sm" onClick={() => setCreatingCustom(false)}>
           Cancel
         </Button>
-        <Button type="button" size="sm" disabled={create.isPending} onClick={() => void submitCustom()}>
+        <Button type="button" size="sm" disabled={create.isPending || Boolean(valueError)} onClick={() => void submitCustom()}>
           {create.isPending ? 'Creating…' : 'Create & assign'}
         </Button>
       </div>

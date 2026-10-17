@@ -73,7 +73,7 @@ import {
   paymentDetailsIssues,
   type PaymentDetails,
 } from '@/lib/paymentMethods';
-import type { ApplicationPackageBillingPeriod } from '@/hooks/useApplicationPackagePayment';
+import { offeredBillingPeriods, type ApplicationPackageBillingPeriod } from '@/hooks/useApplicationPackagePayment';
 
 function Field({ label, error, required, children }: { label: string; error?: string; required?: boolean; children: React.ReactNode }) {
   const { t } = useTranslation();
@@ -1654,9 +1654,11 @@ export function ParentSignUpPage() {
   const currentTemplateStepComplete = customQuestionsForStep
     .every((question) => templateValidationPasses(question, templateAnswers[question.id]));
   const canContinue = isStepComplete(currentStep, liveValues, files, activeRegistrationTemplate) && currentTemplateStepComplete;
+  const selectedPaymentPackage = signupPaymentOptions.data?.packages.find((pkg) => pkg.id === paymentPackageId) ?? null;
+  const paymentPeriodOffered = Boolean(selectedPaymentPackage && offeredBillingPeriods(selectedPaymentPackage).includes(paymentBillingPeriod));
   const paymentSelectionComplete =
     signupPaymentOptions.isSuccess &&
-    Boolean(paymentPackageId) &&
+    paymentPeriodOffered &&
     availablePaymentMethods.includes(paymentMethod) &&
     paymentIssues.length === 0;
   const canSubmit =
@@ -1762,7 +1764,7 @@ export function ParentSignUpPage() {
       goToStepByName('documents');
       return;
     }
-    if (!signupPaymentOptions.isSuccess || !paymentPackageId || !availablePaymentMethods.includes(paymentMethod)) {
+    if (!signupPaymentOptions.isSuccess || !paymentPeriodOffered || !availablePaymentMethods.includes(paymentMethod)) {
       toast.error(t('signup.payment.completeSelection', {
         defaultValue: 'Choose a tuition package, billing period, and payment method before submitting.',
       }));

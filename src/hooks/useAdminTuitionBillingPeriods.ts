@@ -119,24 +119,20 @@ export function useAdminTuitionBillingPeriods(tuitionPackageId: string | null | 
     mutationFn: async ({
       tuitionPackageId: targetPackageId,
       nurseryId: targetNurseryId,
-      id,
       input,
     }: {
       tuitionPackageId: string;
       nurseryId: string;
-      id?: string;
       input: TuitionBillingPeriodInput;
     }) => {
-      if (id) {
-        const { error } = await supabase.from('tuition_package_billing_periods').update(input as never).eq('id', id);
-        if (error) throw error;
-        return;
-      }
-      const { error } = await supabase.from('tuition_package_billing_periods').insert({
-        ...input,
-        tuition_package_id: targetPackageId,
-        nursery_id: targetNurseryId,
-      } as never);
+      // Keyed on (package, period), which is unique: saving again after a partly failed save
+      // updates the rows that did save instead of failing on them.
+      const { error } = await supabase
+        .from('tuition_package_billing_periods')
+        .upsert(
+          { ...input, tuition_package_id: targetPackageId, nursery_id: targetNurseryId } as never,
+          { onConflict: 'tuition_package_id,billing_period' },
+        );
       if (error) throw error;
     },
     onSuccess: (_data, variables) =>

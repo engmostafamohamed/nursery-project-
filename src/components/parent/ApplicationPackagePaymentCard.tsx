@@ -9,6 +9,7 @@ import { DiscountCountdown } from '@/components/parent/DiscountCountdown';
 import {
   computePackageBillingQuote,
   isApplicationDealActive,
+  offeredBillingPeriods,
   type ApplicationPackageBillingPeriod,
   type ApplicationPaymentPackage,
   type ApplicationPackageInvoice,
@@ -129,7 +130,12 @@ export function ApplicationPackagePaymentCard({
   const [draftBillingPeriod, setDraftBillingPeriod] = useState<ApplicationPackageBillingPeriod | null>(null);
   // Clicking a card only stages it; the invoice is created from the confirm button in the summary.
   const [draftPackageId, setDraftPackageId] = useState<string | null>(null);
-  const billingPeriod = draftBillingPeriod ?? invoice?.billingPeriod ?? 'monthly';
+  // Only the periods at least one package offers; a package without the chosen period cannot be picked.
+  const periodOptions = useMemo(() => {
+    const offered = billingPeriodOptions.filter((option) => packages.some((pkg) => offeredBillingPeriods(pkg).includes(option.value)));
+    return offered.length ? offered : billingPeriodOptions;
+  }, [packages]);
+  const billingPeriod = draftBillingPeriod ?? invoice?.billingPeriod ?? periodOptions[0].value;
   const activeId = draftPackageId ?? selectedId;
 
   const selectedPackage = useMemo(
@@ -145,7 +151,12 @@ export function ApplicationPackagePaymentCard({
     () => Object.fromEntries(
       billingPeriodOptions.map((option) => [
         option.value,
-        Math.max(0, ...packages.map((pkg) => periodSavingPercent(pkg, option.value))),
+        Math.max(
+          0,
+          ...packages
+            .filter((pkg) => offeredBillingPeriods(pkg).includes(option.value))
+            .map((pkg) => periodSavingPercent(pkg, option.value)),
+        ),
       ]),
     ) as Record<ApplicationPackageBillingPeriod, number>,
     [packages],
@@ -159,7 +170,8 @@ export function ApplicationPackagePaymentCard({
   const payableNow = invoice ? payableNowFor(invoice) : 0;
   const selectionDisabled = !canChoose || isSelecting || paymentStarted;
   // Something staged that the invoice does not reflect yet (new invoice, or a different package/period).
-  const hasPendingChange = Boolean(activePackage) && (activeId !== selectedId || billingPeriod !== invoice?.billingPeriod);
+  const activeOffersPeriod = Boolean(activePackage && offeredBillingPeriods(activePackage).includes(billingPeriod));
+  const hasPendingChange = activeOffersPeriod && (activeId !== selectedId || billingPeriod !== invoice?.billingPeriod);
   const pendingQuote = activePackage ? computePackageBillingQuote(activePackage, billingPeriod) : null;
   const extraHoursNet = extraHoursChoice ? Math.max(0, extraHoursChoice.subtotal - extraHoursChoice.discountAmount) : 0;
   const summaryIndex = extraHoursSection ? 4 : 3;
@@ -269,9 +281,14 @@ export function ApplicationPackagePaymentCard({
               <div
                 role="radiogroup"
                 aria-label={t('applications.paymentPackage.sections.period')}
-                className="grid grid-cols-2 gap-1 rounded-xl bg-surface-container p-1 sm:grid-cols-4"
+                className={cn(
+                  'grid gap-1 rounded-xl bg-surface-container p-1',
+                  periodOptions.length === 1 ? 'grid-cols-1' : 'grid-cols-2',
+                  periodOptions.length === 3 && 'sm:grid-cols-3',
+                  periodOptions.length >= 4 && 'sm:grid-cols-4',
+                )}
               >
-                {billingPeriodOptions.map((option) => {
+                {periodOptions.map((option) => {
                   const active = option.value === billingPeriod;
                   const saving = bestSavingByPeriod[option.value];
                   return (
@@ -312,6 +329,7 @@ export function ApplicationPackagePaymentCard({
                   const active = pkg.id === activeId;
                   const description = packageDescription(pkg, isAr);
                   const quote = computePackageBillingQuote(pkg, billingPeriod);
+                  const offersPeriod = offeredBillingPeriods(pkg).includes(billingPeriod);
                   const dealLive = Boolean(pkg.deal && isApplicationDealActive(pkg.deal));
                   const perMonth = quote.billingMonths > 1 ? quote.total / quote.billingMonths : null;
                   const features = pkg.featuresJson
@@ -324,7 +342,7 @@ export function ApplicationPackagePaymentCard({
                       type="button"
                       role="radio"
                       aria-checked={active}
-                      disabled={selectionDisabled}
+                      disabled={selectionDisabled || !offersPeriod}
                       onClick={() => setDraftPackageId(pkg.id)}
                       className={cn(
                         'group relative flex flex-col rounded-2xl border bg-surface p-5 text-start transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-70',
@@ -364,24 +382,31 @@ export function ApplicationPackagePaymentCard({
                         </span>
                       ) : null}
 
-                      <span className="mt-4 block">
-                        <span className="flex flex-wrap items-baseline gap-x-2">
-                          <span className="text-3xl font-bold tracking-tight tabular-nums text-on-surface">{money(quote.total)}</span>
-                          <span className="text-sm text-on-surface-variant">
-                            {quote.billingMonths === 1
-                              ? t('applications.paymentPackage.perMonth')
-                              : t('applications.paymentPackage.forMonths', { count: quote.billingMonths })}
+                      {offersPeriod ? (
+                        <span className="mt-4 block">
+                          <span className="flex flex-wrap items-baseline gap-x-2">
+                            <span className="text-3xl font-bold tracking-tight tabular-nums text-on-surface">{money(quote.total)}</span>
+                            <span className="text-sm text-on-surface-variant">
+                              {quote.billingMonths === 1
+                                ? t('applications.paymentPackage.perMonth')
+                                : t('applications.paymentPackage.forMonths', { count: quote.billingMonths })}
+                            </span>
                           </span>
+                          {quote.discountAmount > 0 || perMonth ? (
+                            <span className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-on-surface-variant">
+                              {quote.discountAmount > 0 ? <span className="tabular-nums line-through">{money(quote.subtotal)}</span> : null}
+                              {perMonth ? (
+                                <span className="tabular-nums">{t('applications.paymentPackage.perMonthEquivalent', { amount: money(perMonth) })}</span>
+                              ) : null}
+                            </span>
+                          ) : null}
                         </span>
-                        {quote.discountAmount > 0 || perMonth ? (
-                          <span className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-on-surface-variant">
-                            {quote.discountAmount > 0 ? <span className="tabular-nums line-through">{money(quote.subtotal)}</span> : null}
-                            {perMonth ? (
-                              <span className="tabular-nums">{t('applications.paymentPackage.perMonthEquivalent', { amount: money(perMonth) })}</span>
-                            ) : null}
-                          </span>
-                        ) : null}
-                      </span>
+                      ) : (
+                        <span className="mt-4 flex items-center gap-1.5 rounded-lg bg-surface-container px-3 py-2 text-sm text-on-surface-variant">
+                          <MaterialSymbol name="event_busy" size="text-base" />
+                          {t('applications.paymentPackage.periodNotOffered', { period: periodLabel(billingPeriod) })}
+                        </span>
+                      )}
 
                       {description ? (
                         <span className="mt-3 line-clamp-2 text-sm leading-5 text-on-surface-variant">{description}</span>

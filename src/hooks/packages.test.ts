@@ -8,6 +8,7 @@ import {
   type TuitionBillingPeriodRow,
 } from './useAdminTuitionBillingPeriods';
 import { computeExtraHoursDisplayPrice, type ApplicationExtraHoursPackageDeal } from './useApplicationExtraHoursPackage';
+import { computePackageBillingQuote, offeredBillingPeriods } from './useApplicationPackagePayment';
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -115,5 +116,24 @@ describe('tuition billing periods', () => {
 
   it('rounds period prices to piastres', () => {
     expect(billingPeriodRowsFromExisting([], 1333.333).quarterly.price).toBe(4000);
+  });
+});
+
+describe('billing periods a parent can choose', () => {
+  const period = (billingPeriod: 'monthly' | 'quarterly' | 'half_annual' | 'annual', durationMonths: number, price: number) => ({
+    billingPeriod,
+    durationMonths,
+    price,
+  });
+
+  it('offers only the periods the nursery switched on, shortest first', () => {
+    const pkg = { billingPeriods: [period('annual', 12, 12000), period('quarterly', 3, 3000)] };
+    expect(offeredBillingPeriods(pkg)).toEqual(['quarterly', 'annual']);
+  });
+
+  it('offers every period for a package with none configured, priced from the monthly price', () => {
+    const pkg = { price: 1000, billingPeriods: [], deal: null };
+    expect(offeredBillingPeriods(pkg)).toEqual(['monthly', 'quarterly', 'half_annual', 'annual']);
+    expect(computePackageBillingQuote(pkg, 'half_annual')).toMatchObject({ billingMonths: 6, subtotal: 6000, total: 6000 });
   });
 });

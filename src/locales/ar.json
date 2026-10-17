@@ -4287,6 +4287,7 @@
       },
       "periodHint": "المدد الأطول قد تكون أوفر شهريًا.",
       "saveUpTo": "وفّر حتى {{percent}}%",
+      "periodNotOffered": "لا يوجد خيار {{period}} لهذه الباقة",
       "perMonth": "شهريًا",
       "forMonths_zero": "لمدة {{count}} شهر",
       "forMonths_one": "لمدة شهر واحد",
