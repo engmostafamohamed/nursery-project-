@@ -1,6 +1,6 @@
 export type ChatRole = 'parent' | 'teacher' | 'admin';
 
-export type ChatClassRole = 'lead' | 'assistant';
+export type ChatClassRole = 'lead' | 'substitute' | 'assistant';
 
 /**
  * Roles surfaced in the chat recipient directory. Sourced from the

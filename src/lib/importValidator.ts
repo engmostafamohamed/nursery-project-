@@ -1,3 +1,5 @@
+import { childDateOfBirthBounds } from '@/lib/onboardingDateBounds';
+
 export type ImportRow = {
   parent_name: string;
   parent_email: string;
@@ -17,14 +19,18 @@ export type ImportValidationResult = {
 };
 
 const emailRe = /^\S+@\S+\.\S+$/;
-const egPhone = /^(\+20|0)?1[0-2,5]{1}[0-9]{8}$/;
+/** Egyptian mobile on a 010 / 011 / 012 / 015 network, with +20, 0 or no prefix (process-import normalizes all three). */
+const egPhone = /^(\+20|0)?1[0125][0-9]{8}$/;
 
 function sanitizeText(value: string, max = 500) {
   return value.replace(/<[^>]*>/g, '').trim().slice(0, max);
 }
 
-function ageYears(dob: string) {
-  return (Date.now() - +new Date(dob)) / (365.25 * 24 * 3600 * 1000);
+/** Same age range as sign-up and the enrollment wizard: 3 months to 6 years old. */
+function isEnrollableAge(dob: Date) {
+  const { min, max } = childDateOfBirthBounds();
+  const day = dob.toISOString().slice(0, 10);
+  return day >= min && day <= max;
 }
 
 export function validateImportRows(rows: ImportRow[]): ImportValidationResult {
@@ -45,8 +51,7 @@ export function validateImportRows(rows: ImportRow[]): ImportValidationResult {
     if (row.parent_phone && !egPhone.test(row.parent_phone)) errs.push('invalid_phone');
     const dob = new Date(row.child_dob);
     if (Number.isNaN(+dob)) errs.push('invalid_dob');
-    const age = ageYears(row.child_dob);
-    if (!Number.isNaN(age) && (age < 0.5 || age > 5)) errs.push('age_out_of_range');
+    else if (!isEnrollableAge(dob)) errs.push('age_out_of_range');
     const emailKey = row.parent_email.toLowerCase();
     if (seenEmails.has(emailKey)) errs.push('duplicate_email');
     seenEmails.add(emailKey);

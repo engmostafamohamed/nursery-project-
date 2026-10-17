@@ -468,8 +468,11 @@ export function useApplications(params: { nurseryId?: string; applicationId?: st
       parentId?: string;
       chatMessage?: string;
       openChat?: boolean;
-    }) => {
+      /** On approval: the class to put the new child in (optional). */
+      classId?: string | null;
+    }): Promise<{ childId: string | null; classId: string | null }> => {
       let resolvedParentId = payload.parentId;
+      let enrolled: { childId: string | null; classId: string | null } = { childId: null, classId: null };
 
       if (payload.status === 'approved') {
         if (!payload.nurseryId) throw new Error('Cannot approve application without a nursery id');
@@ -478,8 +481,10 @@ export function useApplications(params: { nurseryId?: string; applicationId?: st
           nurseryId: payload.nurseryId,
           reviewerId: payload.reviewedBy,
           autoGenerateFirstInvoice: true,
+          classId: payload.classId,
         });
         resolvedParentId = result.parentId ?? resolvedParentId;
+        enrolled = { childId: result.childId, classId: result.classId };
       } else {
         const updates: Record<string, unknown> = {
           status: payload.status,
@@ -528,6 +533,8 @@ export function useApplications(params: { nurseryId?: string; applicationId?: st
           },
         });
       }
+
+      return enrolled;
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['application-detail'] });
@@ -538,6 +545,10 @@ export function useApplications(params: { nurseryId?: string; applicationId?: st
       void qc.invalidateQueries({ queryKey: ['parent-in-app-notifications'] });
       void qc.invalidateQueries({ queryKey: ['payment-history'] });
       void qc.invalidateQueries({ queryKey: ['admin-children-list'] });
+      // A newly enrolled child shows up in the class pickers and rosters.
+      void qc.invalidateQueries({ queryKey: ['unassigned-children'] });
+      void qc.invalidateQueries({ queryKey: ['nursery-classes'] });
+      void qc.invalidateQueries({ queryKey: ['class-roster'] });
     },
   });
 

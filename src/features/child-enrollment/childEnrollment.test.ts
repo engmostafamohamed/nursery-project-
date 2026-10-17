@@ -192,12 +192,16 @@ describe('bulk CSV import', () => {
     expect(errorsOf(row({ parent_phone: phone }))).toEqual([]);
   });
 
-  it.each(['01312345678', '0101234567', '0101234567890'])('rejects the phone %s', (phone) => {
+  it.each(['01312345678', '0101234567', '0101234567890', '01,12345678'])('rejects the phone %s', (phone) => {
     expect(errorsOf(row({ parent_phone: phone }))).toEqual(['invalid_phone']);
   });
 
-  // Known bug: the pattern is /1[0-2,5]/, so a comma counts as a network digit.
-  it.todo('rejects a comma in the phone number (importValidator egPhone)');
+  it('accepts the same ages as sign-up and enrollment: 3 months to 6 years', () => {
+    expect(errorsOf(row({ child_dob: '2026-07-14' }))).toEqual([]); // exactly 3 months
+    expect(errorsOf(row({ child_dob: '2020-10-14' }))).toEqual([]); // exactly 6 years
+    expect(errorsOf(row({ child_dob: '2026-07-15' }))).toEqual(['age_out_of_range']);
+    expect(errorsOf(row({ child_dob: '2020-10-13' }))).toEqual(['age_out_of_range']);
+  });
 
   it('rejects the same parent email twice, ignoring case', () => {
     const result = validateImportRows([row(), row({ parent_email: 'SARA@example.com', child_name: 'Lina' })]);
@@ -236,9 +240,13 @@ describe('bulk CSV import', () => {
     expect(parsed.headers).toEqual(expect.arrayContaining(['parent_name', 'parent_email', 'parent_phone', 'child_name', 'child_dob']));
   });
 
-  // Known gap: the template's sample child (born 2021-05-10) is now over 5, so the importer
-  // rejects the sample row; also the importer allows 6 months–5 years while enrollment allows 3 months–6 years.
-  it.todo('the template sample row passes the importer, and both use the same age range');
+  it('the download template’s sample row passes the importer, today and in years to come', async () => {
+    for (const today of ['2026-10-14T09:00:00Z', '2031-03-01T09:00:00Z']) {
+      vi.setSystemTime(new Date(today));
+      const parsed = await parseImportFile(new File([createImportTemplateCsv()], 'template.csv'));
+      expect(validateImportRows(parsed.rows as ImportRow[]).invalidRows, today).toEqual([]);
+    }
+  });
 });
 
 describe('shared form checks', () => {

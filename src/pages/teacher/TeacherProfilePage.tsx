@@ -13,6 +13,7 @@ import { useStaff } from '@/hooks/useStaff';
 import { useStaffSchedules } from '@/hooks/useStaffSchedules';
 import { usePayroll } from '@/hooks/usePayroll';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { classStaffRoleKey } from '@/lib/classStaff';
 import { supabase } from '@/lib/supabase';
 import { staffAvatarUrl } from '@/lib/staffAvatar';
 import { getUserInitials } from '@/lib/utils';
@@ -218,7 +219,7 @@ export function TeacherProfilePage() {
                   <div className="flex items-center gap-2">
                     <p className="font-medium text-on-surface">{isAr ? c.name_ar : c.name_en}</p>
                     <Badge variant={c.role === 'lead' ? 'default' : 'secondary'}>
-                      {c.role === 'lead' ? t('teacher.classesHub.leadBadge') : t('teacher.classesHub.assistantBadge')}
+                      {t(classStaffRoleKey(c.role))}
                     </Badge>
                     <span className="ms-auto text-xs text-on-surface-variant">
                       {t('teacher.home.studentsCount', { count: c.students.length })}

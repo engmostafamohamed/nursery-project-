@@ -194,12 +194,15 @@ export type Database = {
           p_application_id: string;
           p_nursery_id: string;
           p_auto_generate_first_invoice?: boolean;
+          /** The class to put the new child in; omit to leave the child unassigned. */
+          p_class_id?: string | null;
         };
         Returns: {
           childId: string;
           parentId: string | null;
           invoiceId?: string;
           paidAmount?: number;
+          classId?: string | null;
         };
       };
       select_application_payment_package: {
@@ -209,6 +212,20 @@ export type Database = {
       set_class_lead: {
         Args: { p_class_id: string; p_user_id: string | null };
         Returns: void;
+      };
+      set_class_substitute: {
+        Args: { p_class_id: string; p_user_id: string | null };
+        Returns: void;
+      };
+      my_class_staff: {
+        Args: Record<string, never>;
+        Returns: Array<{
+          class_id: string;
+          user_id: string;
+          role: ClassStaffRole;
+          name_ar: string | null;
+          name_en: string | null;
+        }>;
       };
     };
     Enums: {
