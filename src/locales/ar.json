@@ -959,9 +959,11 @@
         "colGrade": "الفئة العمرية",
         "colRoom": "الغرفة",
         "colLead": "المعلم الرئيسي",
+        "colBackup": "المعلم البديل",
         "colAssistants": "المساعدون",
         "colRoster": "الأطفال المسنّدون",
-        "noLead": "غير مُعيَّن"
+        "noLead": "غير مُعيَّن",
+        "noBackup": "لا يوجد"
       },
       "detail": {
         "subtitle": "حرّر بيانات الفصل، عيّن الطاقم، وأدر القائمة.",
@@ -992,12 +994,17 @@
         "roomNumber": "الغرفة",
         "capacity": "السعة",
         "leadTeacher": "المعلم الرئيسي",
-        "noLead": "— لا يوجد معلم رئيسي —"
+        "noLead": "— لا يوجد معلم رئيسي —",
+        "backupTeacher": "المعلم البديل",
+        "noBackup": "— لا يوجد معلم بديل —",
+        "backupHelp": "يغطي الفصل عند غياب المعلم الرئيسي، ويرى الفصل وأطفاله."
       },
       "staff": {
         "leadTitle": "المعلم الرئيسي",
+        "teachersTitle": "معلمو الفصل",
         "currentLead": "الحالي",
-        "leadHelp": "غيّر المعلم الرئيسي من تبويب التفاصيل ثم احفظ.",
+        "currentBackup": "البديل الحالي",
+        "leadHelp": "غيّر المعلم الرئيسي أو البديل من قسم التفاصيل أعلاه ثم احفظ.",
         "assistantsTitle": "المساعدون",
         "addAssistant": "إضافة مساعد",
         "noAssistants": "لم يتم إسناد أي مساعد بعد."
@@ -1019,7 +1026,8 @@
       },
       "validation": {
         "nameRequired": "أدخل اسم الفصل بإحدى اللغتين على الأقل.",
-        "noActiveNursery": "اختر حضانة من الشريط الجانبي قبل إنشاء فصل."
+        "noActiveNursery": "اختر حضانة من الشريط الجانبي قبل إنشاء فصل.",
+        "backupIsLead": "لا يمكن أن يكون المعلم الرئيسي هو البديل أيضًا. اختر معلمًا آخر."
       },
       "toasts": {
         "createdOk": "تم إنشاء الفصل.",
@@ -1032,8 +1040,14 @@
         "childAdded": "تمت إضافة الطفل إلى الفصل.",
         "childRemoved": "تمت إزالة الطفل من الفصل.",
         "childMoved": "تم نقل الطفل إلى الفصل المختار.",
+        "createdWithChildren_one": "تم إنشاء الفصل وإسناد طفل واحد.",
+        "createdWithChildren_two": "تم إنشاء الفصل وإسناد طفلين.",
+        "createdWithChildren_few": "تم إنشاء الفصل وإسناد {{count}} أطفال.",
+        "createdWithChildren_many": "تم إنشاء الفصل وإسناد {{count}} طفلًا.",
         "createdWithChildren": "تم إنشاء الفصل وإسناد {{count}} طفل.",
-        "someChildrenAssignFailed": "تعذر إسناد {{count}} من الأطفال المحددين."
+        "someChildrenAssignFailed": "تعذر إسناد {{count}} من الأطفال المحددين.",
+        "leadAssignFailed": "تم إنشاء الفصل، لكن تعذّر تعيين المعلم الرئيسي.",
+        "backupAssignFailed": "تم إنشاء الفصل، لكن تعذّر تعيين المعلم البديل."
       }
     },
     "notifications": {
@@ -2432,6 +2446,23 @@
     },
     "admin": {
       "confirmTitle": "تأكيد هذه الدفعة؟",
+      "confirmDialog": {
+        "subtitle": "تأكد أن هذه البيانات تطابق المبلغ الذي وصل إلى الحضانة.",
+        "fromParentBy": "من {{parent}} عبر {{method}}",
+        "invoice": "الفاتورة",
+        "submittedAt": "تاريخ الإرسال",
+        "copyReference": "نسخ الرقم المرجعي",
+        "copied": "تم نسخ الرقم المرجعي.",
+        "whatHappens": "عند التأكيد",
+        "happensRecorded": "تُسجَّل الدفعة ويتم تحديث الفاتورة.",
+        "happensNotified": "يصل إلى ولي الأمر إشعار باستلام الدفعة.",
+        "verifiedCheck": "راجعت أن مبلغ {{amount}} وصل إلى حساب الحضانة.",
+        "confirming": "جارٍ التأكيد…",
+        "doneTitle": "تم تأكيد الدفعة",
+        "doneAmount": "تم تسجيل {{amount}} وإشعار ولي الأمر.",
+        "doneAmountPartial": "تم تسجيل {{amount}}، وما زال على الفاتورة مبلغ مستحق.",
+        "done": "تم"
+      },
       "confirmDescription": "تأكيد استلام {{amount}} من {{parent}} عبر {{method}}؟ سيتم تسجيل الدفعة وإشعار ولي الأمر.",
       "rejectTitle": "رفض هذه الدفعة؟",
       "rejectDescription": "سيتم اعتبار {{amount}} من {{parent}} غير مستلمة.",
@@ -2439,6 +2470,13 @@
       "rejectReasonPlaceholder": "مثال: لم يتم العثور على تحويل بهذا الرقم",
       "rejectReasonHelp": "اختياري، لكنه يساعد ولي الأمر على تصحيح الدفع.",
       "pendingTitle": "طلبات تأكيد دفع معلقة",
+      "pendingCount_zero": "لا توجد دفعات بانتظار التأكيد",
+      "pendingCount_one": "دفعة واحدة بانتظار التأكيد",
+      "pendingCount_two": "دفعتان بانتظار التأكيد",
+      "pendingCount_few": "{{count}} دفعات بانتظار التأكيد",
+      "pendingCount_many": "{{count}} دفعة بانتظار التأكيد",
+      "pendingCount_other": "{{count}} دفعة بانتظار التأكيد",
+      "reviewAndConfirm": "مراجعة وتأكيد",
       "testPaymentNotice": "دفعة تجريبية — لم يتم خصم أي مبلغ. لا يمكن تأكيد هذا الطلب كدفعة حقيقية.",
       "paymobIntentionId": "مرجع Paymob",
       "paymobVerifyBeforeConfirm": "تحقق من طلب Paymob رقم {{id}} في لوحة Paymob قبل تأكيد الدفع.",
@@ -3399,7 +3437,12 @@
       "emptyDescription": "اطلب من مسؤول الحضانة إسنادك كمعلم للفصل.",
       "announcementsCta": "الإعلانات",
       "leadBadge": "رئيسي",
-      "assistantBadge": "مساعد"
+      "backupBadge": "بديل",
+      "assistantBadge": "مساعد",
+      "leadLabel": "المعلم الرئيسي",
+      "backupLabel": "المعلم البديل",
+      "backupNote": "أنت تغطي هذا الفصل عند غياب {{lead}}.",
+      "backupNoteNoLead": "أنت تغطي هذا الفصل عند غياب المعلم الرئيسي."
     },
     "profile": {
       "tabs": {
@@ -4053,6 +4096,32 @@
     "defaultDocumentsPendingMessage": "يرجى رفع المستندات الإضافية المطلوبة من الحضانة.",
     "defaultRejectedMessage": "لم تتم الموافقة على طلبك. يرجى التواصل مع فريق الحضانة لمعرفة التفاصيل.",
     "approvedToast": "تم قبول الطلب.",
+    "enroll": {
+      "sectionTitle": "تسجيل الطفل",
+      "approveNow": "اعتماد الطلب أيضًا وإضافة {{child}} إلى الحضانة",
+      "approveNowHelp": "يُنشأ ملف الطفل الآن. اترك هذا الاختيار لاعتماد الطلب لاحقًا من قسم قرار المراجعة.",
+      "classLabel": "الفصل",
+      "noClass": "بدون فصل الآن — يُحدَّد لاحقًا",
+      "classOption_zero": "{{name}} · لا يوجد أطفال",
+      "classOption_one": "{{name}} · طفل واحد",
+      "classOption_two": "{{name}} · طفلان",
+      "classOption_few": "{{name}} · {{count}} أطفال",
+      "classOption_many": "{{name}} · {{count}} طفلًا",
+      "classOption_other": "{{name}} · {{count}} طفل",
+      "createClassHint": "تحتاج فصلًا جديدًا؟ يمكنك إنشاؤه مباشرة بعد التأكيد.",
+      "addedInClass": "تمت إضافة {{child}} إلى الحضانة في فصل {{className}}.",
+      "addedNoClass": "تمت إضافة {{child}} إلى الحضانة، وفي انتظار تحديد فصل.",
+      "nextStepTitle": "الخطوة التالية: حدد فصلًا لـ {{child}}",
+      "nextStepBody": "المعلمون يرون فقط الأطفال في فصولهم. أنشئ فصلًا بمعلم رئيسي ومعلم بديل، أو أضف {{child}} إلى فصل موجود.",
+      "createClass": "إنشاء فصل جديد",
+      "openClasses": "فتح الفصول",
+      "openChild": "فتح ملف الطفل",
+      "notApprovedYet": "الطلب لم يُعتمد بعد. اعتمده من قسم قرار المراجعة لإضافة {{child}} إلى الحضانة.",
+      "failed": "تم تأكيد الدفعة، لكن تعذّرت إضافة الطفل: {{message}}",
+      "errors": {
+        "classNotFound": "هذا الفصل لم يعد موجودًا. اختر فصلًا آخر أو بدون فصل."
+      }
+    },
     "rejectedToast": "تم رفض الطلب.",
     "activateEnrollment": "تفعيل التسجيل",
     "enrollmentActivated": "تم تفعيل التسجيل للطفل {{name}}.",
@@ -4261,7 +4330,7 @@
       "invalid_email": "صيغة بريد غير صحيحة",
       "invalid_phone": "صيغة هاتف غير صحيحة",
       "invalid_dob": "تاريخ ميلاد غير صحيح",
-      "age_out_of_range": "العمر يجب أن يكون بين 6 أشهر و5 سنوات",
+      "age_out_of_range": "العمر يجب أن يكون بين 3 أشهر و6 سنوات",
       "duplicate_email": "بريد ولي أمر مكرر"
     }
   },

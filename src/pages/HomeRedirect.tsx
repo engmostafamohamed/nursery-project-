@@ -24,7 +24,11 @@ export function HomeRedirect() {
         matrix.data.get('staff')?.actions.has('view')),
   );
 
-  if (sessionLoading || (session && isPending) || (profile?.role === 'teacher' && matrix.isPending)) {
+  // A teacher with no role_id uses the default teacher grants (see user_can): there is no matrix
+  // to wait for, and the disabled query would stay pending forever.
+  const waitingForMatrix = profile?.role === 'teacher' && Boolean(profile.role_id) && matrix.isPending;
+
+  if (sessionLoading || (session && isPending) || waitingForMatrix) {
     return <PageSkeleton />;
   }
 

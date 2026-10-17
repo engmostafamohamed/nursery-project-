@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { groupClassStaff } from '@/lib/classStaff';
 import { supabase } from '@/lib/supabase';
 import type { ClassStaffRole } from '@/types/tables';
 
@@ -22,6 +23,8 @@ export type NurseryClassRow = {
   capacity: number | null;
   room_number: string | null;
   lead: StaffPerson | null;
+  /** The backup teacher who covers the class when the lead is away. */
+  substitute: StaffPerson | null;
   assistants: StaffPerson[];
   child_count: number;
 };
@@ -98,20 +101,14 @@ export function useNurseryClasses(nurseryId: string | null | undefined) {
         childCountByClass.set(c.class_id, (childCountByClass.get(c.class_id) ?? 0) + 1);
       }
 
-      return classes.map((c) => {
-        const members = staffRows.filter((s) => s.class_id === c.id);
-        const leadRow = members.find((m) => m.role === 'lead');
-        const assistants = members
-          .filter((m) => m.role === 'assistant')
-          .map((m) => userMap.get(m.user_id))
-          .filter((u): u is StaffPerson => Boolean(u));
-        return {
-          ...c,
-          lead: leadRow ? userMap.get(leadRow.user_id) ?? null : null,
-          assistants,
-          child_count: childCountByClass.get(c.id) ?? 0,
-        };
-      });
+      return classes.map((c) => ({
+        ...c,
+        ...groupClassStaff(
+          staffRows.filter((s) => s.class_id === c.id),
+          userMap,
+        ),
+        child_count: childCountByClass.get(c.id) ?? 0,
+      }));
     },
   });
 }
@@ -155,22 +152,16 @@ export function useClassWithStaff(classId: string | null | undefined) {
       if (childErr) throw childErr;
       const members = (staffRows ?? []) as Array<{ user_id: string; role: ClassStaffRole }>;
       const userMap = await fetchUsersByIds(members.map((m) => m.user_id));
-      const leadRow = members.find((m) => m.role === 'lead');
-      const assistants = members
-        .filter((m) => m.role === 'assistant')
-        .map((m) => userMap.get(m.user_id))
-        .filter((u): u is StaffPerson => Boolean(u));
       return {
         ...c,
-        lead: leadRow ? userMap.get(leadRow.user_id) ?? null : null,
-        assistants,
+        ...groupClassStaff(members, userMap),
         child_count: childCount ?? 0,
       };
     },
   });
 }
 
-/** Teachers belonging to the nursery — used to populate lead/assistant pickers. */
+/** Teachers belonging to the nursery — used to populate the lead, backup and assistant pickers. */
 export function useNurseryTeachers(nurseryId: string | null | undefined) {
   return useQuery({
     queryKey: ['nursery-teachers', nurseryId ?? null],
@@ -308,6 +299,25 @@ export function useSetClassLead() {
   return useMutation({
     mutationFn: async (params: { classId: string; userId: string | null }) => {
       const { error } = await supabase.rpc('set_class_lead', {
+        p_class_id: params.classId,
+        p_user_id: params.userId,
+      } as never);
+      if (error) throw error;
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['class-with-staff', vars.classId] });
+      qc.invalidateQueries({ queryKey: ['nursery-classes'] });
+      qc.invalidateQueries({ queryKey: ['teacher-classes'] });
+    },
+  });
+}
+
+/** Sets the class's backup teacher, or clears it with `userId: null`. */
+export function useSetClassSubstitute() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: { classId: string; userId: string | null }) => {
+      const { error } = await supabase.rpc('set_class_substitute', {
         p_class_id: params.classId,
         p_user_id: params.userId,
       } as never);

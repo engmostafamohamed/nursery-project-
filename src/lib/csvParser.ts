@@ -1,6 +1,8 @@
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 
+import { isoDate } from '@/lib/onboardingDateBounds';
+
 export type ParsedTable = {
   headers: string[];
   rows: Array<Record<string, string>>;
@@ -46,8 +48,11 @@ export async function parseImportFile(file: File): Promise<ParsedTable> {
 }
 
 export function createImportTemplateCsv() {
+  // The sample child is always 3 years old, so the sample row passes the importer's age check.
+  const sampleDob = new Date();
+  sampleDob.setFullYear(sampleDob.getFullYear() - 3);
   return [
     'parent_name,parent_email,parent_phone,child_name,child_dob,child_gender,class_name,medical_conditions,allergies,address',
-    'Sara Ali,sara@example.com,+201012345678,Adam Ali,2021-05-10,male,KG1,None,Peanuts,Nasr City Cairo',
+    `Sara Ali,sara@example.com,+201012345678,Adam Ali,${isoDate(sampleDob)},male,KG1,None,Peanuts,Nasr City Cairo`,
   ].join('\n');
 }

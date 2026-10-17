@@ -24,6 +24,7 @@ import {
   useNurseryTeachers,
   useRemoveClassStaff,
   useSetClassLead,
+  useSetClassSubstitute,
   useUnassignedChildren,
   useUpdateClassDetails,
   type StaffPerson,
@@ -72,6 +73,7 @@ export function AdminClassDetailPage() {
   const createMut = useCreateClass();
   const deleteMut = useDeleteClass();
   const setLeadMut = useSetClassLead();
+  const setBackupMut = useSetClassSubstitute();
   const addAssistMut = useAddClassAssistant();
   const removeStaffMut = useRemoveClassStaff();
   const assignChildMut = useAssignChildToClass();
@@ -83,6 +85,7 @@ export function AdminClassDetailPage() {
   const [roomNumber, setRoomNumber] = useState('');
   const [capacity, setCapacity] = useState('');
   const [leadId, setLeadId] = useState('');
+  const [backupId, setBackupId] = useState('');
 
   // Refill the form whenever a new copy of the class arrives.
   const [filledFrom, setFilledFrom] = useState<typeof classQuery.data>(undefined);
@@ -95,6 +98,7 @@ export function AdminClassDetailPage() {
     setRoomNumber(c.room_number ?? '');
     setCapacity(c.capacity != null ? String(c.capacity) : '');
     setLeadId(c.lead?.id ?? '');
+    setBackupId(c.substitute?.id ?? '');
   }
 
   // Pickers.
@@ -106,14 +110,21 @@ export function AdminClassDetailPage() {
   const [initialChildSearch, setInitialChildSearch] = useState('');
 
   const teacherOptions = teachersQuery.data ?? [];
+  // The lead and the backup must be two different teachers, so each picker hides the other one.
+  const leadOptions = teacherOptions.filter((u) => u.id !== backupId);
+  const backupOptions = teacherOptions.filter((u) => u.id !== leadId);
   const assignedAssistantIds = new Set((classQuery.data?.assistants ?? []).map((a) => a.id));
   const assistantCandidates = teacherOptions.filter(
-    (u) => !assignedAssistantIds.has(u.id) && u.id !== leadId,
+    (u) => !assignedAssistantIds.has(u.id) && u.id !== leadId && u.id !== backupId,
   );
 
   const onSaveDetails = async () => {
     if (!nameAr.trim() && !nameEn.trim()) {
       toast.error(t('admin.classes.validation.nameRequired'));
+      return;
+    }
+    if (leadId && leadId === backupId) {
+      toast.error(t('admin.classes.validation.backupIsLead'));
       return;
     }
     const payload = {
@@ -130,11 +141,19 @@ export function AdminClassDetailPage() {
           return;
         }
         const newId = await createMut.mutateAsync({ nursery_id: nurseryId, ...payload });
+        // The class exists now, so a failed teacher assignment is reported but does not undo it.
         if (leadId) {
           try {
             await setLeadMut.mutateAsync({ classId: newId, userId: leadId });
           } catch {
-            /* surfaced separately */
+            toast.error(t('admin.classes.toasts.leadAssignFailed'));
+          }
+        }
+        if (backupId) {
+          try {
+            await setBackupMut.mutateAsync({ classId: newId, userId: backupId });
+          } catch {
+            toast.error(t('admin.classes.toasts.backupAssignFailed'));
           }
         }
         const childrenToAssign = Array.from(initialChildIds);
@@ -159,10 +178,13 @@ export function AdminClassDetailPage() {
         navigate(`/admin/classes/${newId}`, { replace: true });
       } else if (rawClassId) {
         await updateMut.mutateAsync({ classId: rawClassId, ...payload });
-        // Lead change.
+        // Lead first, then backup, so swapping the two teachers works in one save.
         const currentLead = classQuery.data?.lead?.id ?? '';
         if (leadId !== currentLead) {
           await setLeadMut.mutateAsync({ classId: rawClassId, userId: leadId || null });
+        }
+        if (backupId !== (classQuery.data?.substitute?.id ?? '')) {
+          await setBackupMut.mutateAsync({ classId: rawClassId, userId: backupId || null });
         }
         toast.success(t('admin.classes.toasts.updatedOk'));
         navigate('/admin/classes');
@@ -270,6 +292,7 @@ export function AdminClassDetailPage() {
         roomNumber.trim() !== '' ||
         capacity.trim() !== '' ||
         leadId !== '' ||
+        backupId !== '' ||
         initialChildIds.size > 0
       );
     }
@@ -281,7 +304,8 @@ export function AdminClassDetailPage() {
       gradeLevel !== (c.grade_level ?? '') ||
       roomNumber !== (c.room_number ?? '') ||
       capacity !== (c.capacity != null ? String(c.capacity) : '') ||
-      leadId !== (c.lead?.id ?? '')
+      leadId !== (c.lead?.id ?? '') ||
+      backupId !== (c.substitute?.id ?? '')
     );
   }, [
     isNew,
@@ -291,6 +315,7 @@ export function AdminClassDetailPage() {
     roomNumber,
     capacity,
     leadId,
+    backupId,
     initialChildIds,
     classQuery.data,
   ]);
@@ -397,12 +422,24 @@ export function AdminClassDetailPage() {
                 <Label>{t('admin.classes.fields.leadTeacher')}</Label>
                 <Select value={leadId} onChange={(e) => setLeadId(e.target.value)}>
                   <option value="">{t('admin.classes.fields.noLead')}</option>
-                  {teacherOptions.map((u) => (
+                  {leadOptions.map((u) => (
                     <option key={u.id} value={u.id}>
                       {personLabel(u, languagePref)}
                     </option>
                   ))}
                 </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>{t('admin.classes.fields.backupTeacher')}</Label>
+                <Select value={backupId} onChange={(e) => setBackupId(e.target.value)}>
+                  <option value="">{t('admin.classes.fields.noBackup')}</option>
+                  {backupOptions.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {personLabel(u, languagePref)}
+                    </option>
+                  ))}
+                </Select>
+                <p className="text-xs text-foreground-secondary">{t('admin.classes.fields.backupHelp')}</p>
               </div>
               {isNew ? (
                 <div className="md:col-span-2 space-y-3 rounded-md border border-border-subtle bg-surface-low p-3">
@@ -487,14 +524,22 @@ export function AdminClassDetailPage() {
             <section className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>{t('admin.classes.staff.leadTitle')}</CardTitle>
+                <CardTitle>{t('admin.classes.staff.teachersTitle')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="rounded-md border border-border-subtle bg-surface-low p-3">
-                  <p className="text-xs text-foreground-secondary">{t('admin.classes.staff.currentLead')}</p>
-                  <p className="text-sm font-medium text-foreground">
-                    {personLabel(classData?.lead, languagePref)}
-                  </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-md border border-border-subtle bg-surface-low p-3">
+                    <p className="text-xs text-foreground-secondary">{t('admin.classes.staff.currentLead')}</p>
+                    <p className="text-sm font-medium text-foreground">
+                      {personLabel(classData?.lead, languagePref)}
+                    </p>
+                  </div>
+                  <div className="rounded-md border border-border-subtle bg-surface-low p-3">
+                    <p className="text-xs text-foreground-secondary">{t('admin.classes.staff.currentBackup')}</p>
+                    <p className="text-sm font-medium text-foreground">
+                      {personLabel(classData?.substitute, languagePref)}
+                    </p>
+                  </div>
                 </div>
                 <p className="text-xs text-foreground-secondary">
                   {t('admin.classes.staff.leadHelp')}
@@ -644,6 +689,7 @@ export function AdminClassDetailPage() {
             updateMut.isPending ||
             createMut.isPending ||
             setLeadMut.isPending ||
+            setBackupMut.isPending ||
             assignChildMut.isPending
           }
         >
