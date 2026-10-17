@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import { FinancialDashboardExtraHours } from '@/components/admin/financial/FinancialDashboardExtraHours';
 import { FinancialDashboardFilters } from '@/components/admin/financial/FinancialDashboardFilters';
 import { FinancialDashboardInvoiceStatus } from '@/components/admin/financial/FinancialDashboardInvoiceStatus';
 import { FinancialDashboardMethodPie } from '@/components/admin/financial/FinancialDashboardMethodPie';
@@ -188,6 +189,8 @@ export function AdminFinancialDashboardPage() {
           </div>
 
           <FinancialDashboardInvoiceStatus buckets={dash.statusBuckets} nf={nf} />
+
+          <FinancialDashboardExtraHours extraHours={dash.extraHours} nf={nf} invoicesPath="/admin/invoices" />
 
           <FinancialDashboardTopParents
             rows={dash.topPayingParents}

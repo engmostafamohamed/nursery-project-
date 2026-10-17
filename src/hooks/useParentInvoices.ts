@@ -26,6 +26,8 @@ export type ParentInvoiceItem = {
   description: string;
   overdueDays: number;
   childIds: string[];
+  /** Completed payments on this invoice, newest first. */
+  paymentsMade: Array<{ amount: number; paidAt: string | null; method: string | null }>;
 };
 
 interface UseParentInvoicesParams {
@@ -58,7 +60,7 @@ export function useParentInvoices({ parentId, childId, status, sort }: UseParent
       if (!parentId) return [] as ParentInvoiceItem[];
       const { data, error } = await supabase
         .from('invoices')
-        .select('id, generated_invoice_number, amount, invoice_type, status, due_date, created_at, line_items_json, payments ( amount, status )')
+        .select('id, generated_invoice_number, amount, invoice_type, status, due_date, created_at, line_items_json, payments ( amount, status, paid_at, method )')
         .eq('parent_id', parentId);
       if (error) throw error;
 
@@ -118,7 +120,7 @@ export function useParentInvoices({ parentId, childId, status, sort }: UseParent
         due_date: string;
         created_at: string;
         line_items_json: unknown;
-        payments: Array<{ amount: string | number; status: string }> | null;
+        payments: Array<{ amount: string | number; status: string; paid_at: string | null; method: string | null }> | null;
       }>).map((row) => {
         // Overdue once the due date has passed in the nursery's calendar (not at UTC midnight of it).
         const today = getNurseryCalendarDateString();
@@ -151,6 +153,10 @@ export function useParentInvoices({ parentId, childId, status, sort }: UseParent
           description: firstItem ?? '',
           overdueDays,
           childIds: [...new Set([...(eventInvoiceMap.get(row.id) ?? []), ...lineItemChildIds, applicationChildId].filter(Boolean) as string[])],
+          paymentsMade: (row.payments ?? [])
+            .filter((payment) => payment.status === 'completed')
+            .map((payment) => ({ amount: Number(payment.amount ?? 0), paidAt: payment.paid_at, method: payment.method }))
+            .sort((a, b) => (b.paidAt ?? '').localeCompare(a.paidAt ?? '')),
         } as ParentInvoiceItem;
       });
     },

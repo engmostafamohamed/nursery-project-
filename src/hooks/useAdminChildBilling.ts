@@ -37,7 +37,29 @@ export type ChildBillingInvoice = {
   invoiceType: 'monthly' | 'event' | 'extra_hours' | 'other';
   dueDate: string;
   createdAt: string;
+  /** Completed payments. */
+  paidAmount: number;
+  /** Still owed (0 once paid or cancelled). */
+  balance: number;
+  /** A parent payment is waiting for finance confirmation. */
+  inReview: boolean;
+  payments: Array<{ amount: number; paidAt: string | null; method: string | null }>;
 };
+
+type InvoiceRow = {
+  id: string;
+  generated_invoice_number: string | null;
+  amount: string | number;
+  status: ChildBillingInvoice['status'];
+  invoice_type: ChildBillingInvoice['invoiceType'];
+  due_date: string;
+  created_at: string;
+  payments: Array<{ amount: string | number; status: string; paid_at: string | null; method: string | null }> | null;
+  payment_attempts: Array<{ status: string }> | null;
+};
+
+const INVOICE_COLUMNS =
+  'id, generated_invoice_number, amount, status, invoice_type, due_date, created_at, payments ( amount, status, paid_at, method ), payment_attempts ( status )';
 
 export type TuitionPackageChoice = {
   id: string;
@@ -75,7 +97,13 @@ export function useAdminChildBilling(childId: string | null | undefined, nursery
         };
       }
 
-      const [subRes, pkgRes, invRes] = await Promise.all([
+      // The application invoice carries the application, not the child: find it through the
+      // child's applications so the admission payment is part of the child's history.
+      const { data: appRows, error: appError } = await supabase.from('applications').select('id').eq('child_id', childId);
+      if (appError) throw appError;
+      const applicationIds = ((appRows ?? []) as Array<{ id: string }>).map((row) => row.id);
+
+      const [subRes, pkgRes, invRes, appInvRes] = await Promise.all([
         supabase
           .from('child_tuition_subscriptions')
           .select('id, tuition_package_id, tuition_package_name_ar, tuition_package_name_en, billing_period, duration_months, locked_price, next_invoice_date, started_at')
@@ -90,15 +118,27 @@ export function useAdminChildBilling(childId: string | null | undefined, nursery
           .maybeSingle(),
         supabase
           .from('invoices')
-          .select('id, generated_invoice_number, amount, status, invoice_type, due_date, created_at, line_items_json')
+          .select(INVOICE_COLUMNS)
           .eq('nursery_id', nurseryId ?? '')
           .eq('line_items_json->>child_id', childId)
           .order('created_at', { ascending: false })
-          .limit(10),
+          .limit(200),
+        applicationIds.length
+          ? supabase
+              .from('invoices')
+              .select(INVOICE_COLUMNS)
+              .eq('nursery_id', nurseryId ?? '')
+              .in('line_items_json->>application_id', applicationIds)
+          : Promise.resolve({ data: [], error: null }),
       ]);
       if (subRes.error) throw subRes.error;
       if (pkgRes.error) throw pkgRes.error;
       if (invRes.error) throw invRes.error;
+      if (appInvRes.error) throw appInvRes.error;
+      const invoiceRows = new Map<string, InvoiceRow>();
+      for (const row of [...((invRes.data ?? []) as InvoiceRow[]), ...((appInvRes.data ?? []) as InvoiceRow[])]) {
+        invoiceRows.set(row.id, row);
+      }
 
       const subRow = subRes.data as {
         id: string;
@@ -148,23 +188,29 @@ export function useAdminChildBilling(childId: string | null | undefined, nursery
                 expiresAt: pkgRow.expires_at,
               }
             : null,
-        invoices: ((invRes.data ?? []) as Array<{
-          id: string;
-          generated_invoice_number: string | null;
-          amount: string | number;
-          status: ChildBillingInvoice['status'];
-          invoice_type: ChildBillingInvoice['invoiceType'];
-          due_date: string;
-          created_at: string;
-        }>).map((row) => ({
-          id: row.id,
-          invoiceNumber: row.generated_invoice_number ?? row.id.slice(0, 8),
-          amount: money(row.amount),
-          status: row.status,
-          invoiceType: row.invoice_type,
-          dueDate: row.due_date,
-          createdAt: row.created_at,
-        })),
+        invoices: [...invoiceRows.values()]
+          .sort((a, b) => b.created_at.localeCompare(a.created_at))
+          .map((row) => {
+            const amount = money(row.amount);
+            const completed = (row.payments ?? []).filter((payment) => payment.status === 'completed');
+            const paidAmount = completed.reduce((sum, payment) => sum + money(payment.amount), 0);
+            const open = row.status !== 'paid' && row.status !== 'cancelled';
+            return {
+              id: row.id,
+              invoiceNumber: row.generated_invoice_number ?? row.id.slice(0, 8),
+              amount,
+              status: row.status,
+              invoiceType: row.invoice_type,
+              dueDate: row.due_date,
+              createdAt: row.created_at,
+              paidAmount,
+              balance: open ? Math.max(0, amount - paidAmount) : 0,
+              inReview: open && (row.payment_attempts ?? []).some((attempt) => attempt.status === 'pending_confirmation'),
+              payments: completed
+                .map((payment) => ({ amount: money(payment.amount), paidAt: payment.paid_at, method: payment.method }))
+                .sort((a, b) => (b.paidAt ?? '').localeCompare(a.paidAt ?? '')),
+            };
+          }),
       };
     },
     enabled: Boolean(childId),

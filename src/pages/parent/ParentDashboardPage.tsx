@@ -666,7 +666,8 @@ export function ParentDashboardPage() {
   const totalOutstanding = useMemo(() => {
     return (invoicesQuery.allData ?? [])
       .filter((r) => r.status === 'pending' || r.status === 'overdue')
-      .reduce((sum, r) => sum + r.amount, 0);
+      // What is still owed: a partly paid invoice counts only its remaining balance.
+      .reduce((sum, r) => sum + r.balance, 0);
   }, [invoicesQuery.allData]);
 
   const upcomingEventsCount = useMemo(() => {
@@ -702,7 +703,7 @@ export function ParentDashboardPage() {
           item.kind === 'daily_report' && item.childId === child.id,
       );
       acc[child.id] = {
-        outstanding: dueInvoices.reduce((sum, invoice) => sum + invoice.amount / Math.max(invoice.childIds.length, 1), 0),
+        outstanding: dueInvoices.reduce((sum, invoice) => sum + invoice.balance / Math.max(invoice.childIds.length, 1), 0),
         latestInvoiceNumber: latestInvoice?.invoiceNumber,
         latestInvoiceStatus: latestInvoice?.status,
         absentDays: attendance?.absentDays ?? 0,

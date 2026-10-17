@@ -69,7 +69,11 @@ export function AdminInvoicesPage() {
   const { data: profile } = useUserProfile(user?.id);
 
   const [status, setStatus] = useState<AdminInvoiceStatusFilter>('all');
-  const [type, setType] = useState<AdminInvoiceTypeFilter>('all');
+  // ?type=extra_hours (e.g. from the financial dashboard) opens the list on that type.
+  const [type, setType] = useState<AdminInvoiceTypeFilter>(() => {
+    const fromUrl = searchParams.get('type');
+    return fromUrl === 'monthly' || fromUrl === 'event' || fromUrl === 'extra_hours' || fromUrl === 'other' ? fromUrl : 'all';
+  });
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<AdminInvoiceSort>('created_desc');
   const [dateField, setDateField] = useState<'created_at' | 'due_date'>('created_at');

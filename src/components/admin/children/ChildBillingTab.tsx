@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import { ExtraHoursLedger } from '@/components/financial/ExtraHoursLedger';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,6 +20,10 @@ import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAdminChildBilling } from '@/hooks/useAdminChildBilling';
 import type { BillingPeriodKind } from '@/hooks/useAdminTuitionBillingPeriods';
+import { useExtraHoursLedger } from '@/hooks/useExtraHoursLedger';
+import { formatDate } from '@/lib/datetime';
+import { summarizeInvoices } from '@/lib/familyFinance';
+import { formatMoneyAmount } from '@/lib/money';
 
 const PERIOD_LABELS: Record<BillingPeriodKind, string> = {
   monthly: 'Monthly',
@@ -42,6 +49,21 @@ export function ChildBillingTab({ childId, nurseryId }: { childId: string; nurse
   const [selectedPeriod, setSelectedPeriod] = useState<BillingPeriodKind>('monthly');
   const [effective, setEffective] = useState<'next_period' | 'immediate'>('next_period');
   const [selectedExtraHoursPackageId, setSelectedExtraHoursPackageId] = useState('');
+  const { t } = useTranslation();
+  const ledger = useExtraHoursLedger([childId]);
+  const invoiceRows = useMemo(() => query.data?.invoices ?? [], [query.data?.invoices]);
+  const totals = useMemo(
+    () => summarizeInvoices(invoiceRows.map((invoice) => ({ ...invoice, type: invoice.invoiceType, childIds: [childId] }))),
+    [childId, invoiceRows],
+  );
+  const paymentsMade = useMemo(
+    () =>
+      invoiceRows
+        .flatMap((invoice) => invoice.payments.map((payment) => ({ ...payment, invoice })))
+        .sort((a, b) => (b.paidAt ?? '').localeCompare(a.paidAt ?? '')),
+    [invoiceRows],
+  );
+  const money = (amount: number) => t('invoice.egpAmount', { amount: formatMoneyAmount(amount) });
 
   if (query.isLoading) {
     return (
@@ -52,7 +74,7 @@ export function ChildBillingTab({ childId, nurseryId }: { childId: string; nurse
     );
   }
 
-  const { subscription, extraHours, invoices } = query.data ?? { subscription: null, extraHours: null, invoices: [] };
+  const { subscription, extraHours } = query.data ?? { subscription: null, extraHours: null };
   const tuitionChoices = choicesQuery.data?.tuitionPackages ?? [];
   const extraHoursChoices = choicesQuery.data?.extraHoursPackages ?? [];
   const selectedChoice = tuitionChoices.find((p) => p.id === selectedPackageId);
@@ -185,28 +207,81 @@ export function ChildBillingTab({ childId, nurseryId }: { childId: string; nurse
         </div>
       </div>
 
+      {/* What this child was billed and paid, from the admission invoice onwards. */}
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+        {[
+          { key: 'invoiced', label: t('financial.childHistory.invoiced'), value: money(totals.invoiced), tone: '' },
+          { key: 'paid', label: t('financial.childHistory.paid'), value: money(totals.paid), tone: 'text-success' },
+          { key: 'outstanding', label: t('financial.childHistory.outstanding'), value: money(totals.outstanding), tone: totals.outstanding > 0 ? 'text-error' : '' },
+          { key: 'review', label: t('financial.childHistory.inReview'), value: String(totals.inReviewCount), tone: totals.inReviewCount > 0 ? 'text-warning' : '' },
+        ].map((stat) => (
+          <div key={stat.key} className="rounded-xl border border-outline-variant bg-surface p-3">
+            <p className="text-xs text-on-surface-variant">{stat.label}</p>
+            <p className={`mt-1 text-base font-bold tabular-nums text-on-surface ${stat.tone}`}>{stat.value}</p>
+          </div>
+        ))}
+      </div>
+
       <div className="rounded-xl border border-outline-variant bg-surface p-4">
-        <p className="text-xs font-semibold uppercase text-on-surface-variant">Recent invoices</p>
-        {invoices.length === 0 ? (
-          <p className="mt-2 text-sm text-on-surface-variant">No invoices for this child yet.</p>
+        <p className="text-xs font-semibold uppercase text-on-surface-variant">{t('financial.childHistory.invoices')}</p>
+        {invoiceRows.length === 0 ? (
+          <p className="mt-2 text-sm text-on-surface-variant">{t('financial.childHistory.noInvoices')}</p>
         ) : (
-          <div className="mt-2 space-y-1.5">
-            {invoices.map((invoice) => (
-              <div key={invoice.id} className="flex items-center justify-between gap-2 text-sm">
-                <span className="text-on-surface-variant">
-                  {invoice.invoiceNumber} · {fmtDate(invoice.dueDate)}
+          <ul className="mt-2 divide-y divide-outline-variant">
+            {invoiceRows.map((invoice) => (
+              <li key={invoice.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+                <span className="min-w-0">
+                  <Link className="font-medium text-primary underline" to={`/admin/invoices/${invoice.id}`}>
+                    {invoice.invoiceNumber}
+                  </Link>
+                  <span className="block text-xs text-on-surface-variant">
+                    {t(`invoice.types.${invoice.invoiceType}`)} · {formatDate(invoice.dueDate)}
+                  </span>
                 </span>
                 <span className="flex items-center gap-2">
-                  <span className="font-medium text-on-surface">EGP {invoice.amount.toFixed(2)}</span>
-                  <Badge variant={invoice.status === 'paid' ? 'success' : invoice.status === 'overdue' ? 'warning' : 'outline'}>
-                    {invoice.status}
+                  <span className="text-end">
+                    <span className="block font-medium tabular-nums text-on-surface">{money(invoice.amount)}</span>
+                    {invoice.balance > 0 && invoice.paidAmount > 0 ? (
+                      <span className="block text-[11px] text-on-surface-variant">{t('parent.paymentRecord.remaining', { amount: money(invoice.balance) })}</span>
+                    ) : null}
+                  </span>
+                  <Badge
+                    variant={
+                      invoice.status === 'paid' ? 'success' : invoice.inReview ? 'secondary' : invoice.status === 'cancelled' ? 'outline' : 'error'
+                    }
+                  >
+                    {invoice.inReview && invoice.status !== 'paid' ? t('parent.paymentRecord.pending') : t(`invoice.status.${invoice.status}`)}
                   </Badge>
                 </span>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </div>
+
+      <div className="rounded-xl border border-outline-variant bg-surface p-4">
+        <p className="text-xs font-semibold uppercase text-on-surface-variant">{t('financial.childHistory.payments')}</p>
+        {paymentsMade.length === 0 ? (
+          <p className="mt-2 text-sm text-on-surface-variant">{t('parent.paymentRecord.noPaymentsMade')}</p>
+        ) : (
+          <ul className="mt-2 divide-y divide-outline-variant">
+            {paymentsMade.map((payment, index) => (
+              <li key={`${payment.invoice.id}-${index}`} className="flex items-center justify-between gap-2 py-2 text-sm">
+                <span className="min-w-0">
+                  <span className="block font-medium text-on-surface">{payment.paidAt ? formatDate(payment.paidAt) : '—'}</span>
+                  <span className="block text-xs text-on-surface-variant">
+                    {payment.method ? t(`payment.manualMethods.${payment.method}.label`, { defaultValue: payment.method }) : '—'} ·{' '}
+                    {payment.invoice.invoiceNumber}
+                  </span>
+                </span>
+                <span className="font-semibold tabular-nums text-success">{money(payment.amount)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <ExtraHoursLedger days={ledger.data ?? []} isLoading={ledger.isLoading} invoiceLinkBase="/admin/invoices" />
 
       <Dialog open={tuitionDialogOpen} onOpenChange={(open) => !changeSubscription.isPending && setTuitionDialogOpen(open)}>
         <DialogContent>

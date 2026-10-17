@@ -2098,6 +2098,66 @@
       }
     }
   },
+  "financial": {
+    "paymentHistory": {
+      "parentDashboardTitle": "Recent payment history",
+      "applicationTitle": "Application payment history",
+      "registrationTitle": "Registration payment history",
+      "reportTitle": "Payment history",
+      "emptyTitle": "No payment history yet",
+      "emptyDescription": "Paid and unpaid invoice activity will appear here.",
+      "balanceLabel": "Balance",
+      "paidLabel": "Paid",
+      "paidBalance": "Paid / balance",
+      "pending": "Pending {{amount}}",
+      "balance": "Balance {{amount}}",
+      "reference": "Reference",
+      "gateway": "Gateway",
+      "createdAt": "Created",
+      "paidOrSubmittedAt": "Paid / submitted"
+    },
+    "childHistory": {
+      "invoiced": "Total invoiced",
+      "paid": "Paid",
+      "outstanding": "Outstanding",
+      "inReview": "Payments in review",
+      "invoices": "Invoices",
+      "noInvoices": "No invoices for this child yet.",
+      "payments": "Payments received"
+    },
+    "extraHoursLedger": {
+      "title": "Extra hours history",
+      "subtitle": "Every late-pickup day, what it cost, and whether it is paid.",
+      "empty": "No extra hours recorded yet.",
+      "lateDays": "Late days",
+      "daysHours": "{{days}} days · {{hours}} h",
+      "hoursValue": "{{hours}} h",
+      "coveredByPackage": "Covered by package",
+      "fees": "Extra hours fees",
+      "billed": "Invoiced",
+      "paid": "Paid",
+      "unpaid": "Unpaid",
+      "notInvoiced": "Not invoiced yet",
+      "notInvoicedNote": "Some late fees have no invoice yet. They are not counted as owed until the nursery issues an invoice for them.",
+      "dayHours": "{{hours}} extra h",
+      "dayCovered": "{{hours}} h covered by package",
+      "showAll": "Show all ({{count}})",
+      "showLess": "Show less",
+      "dashboardTitle": "Extra hours",
+      "dashboardHint": "{{count}} extra-hours invoice(s), all time",
+      "viewInvoices": "View invoices",
+      "unpaidInvoices": "{{count}} unpaid invoice(s)",
+      "status": {
+        "covered": "Covered by package",
+        "no_charge": "No charge",
+        "paid": "Paid",
+        "in_review": "Awaiting approval",
+        "unpaid": "Unpaid",
+        "not_invoiced": "Not invoiced",
+        "cancelled": "Cancelled"
+      }
+    }
+  },
   "invoice": {
     "itemKinds": {
       "late_pickup": "Late pickup extra hours · {{date}}",
@@ -2945,6 +3005,15 @@
       "monthsPaid": "{{count}} month(s) fully paid",
       "monthsUnpaid": "{{count}} month(s) with dues",
       "awaitingApproval": "{{count}} payment(s) awaiting finance approval",
+      "totalInvoiced": "Total invoiced",
+      "invoiceCount": "{{count}} invoice(s)",
+      "inReviewHint": "Sent and waiting for the nursery to confirm",
+      "byChild": "By child",
+      "familyCharges": "Family charges",
+      "paymentsMade": "Payments made",
+      "noPaymentsMade": "No payments recorded yet.",
+      "remaining": "{{amount}} remaining",
+      "sharedInvoice": "Shared by {{count}} children · {{amount}} each",
       "byType": "By payment type",
       "byMonth": "By month",
       "statusPaid": "Paid",

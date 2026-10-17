@@ -2098,6 +2098,66 @@
       }
     }
   },
+  "financial": {
+    "paymentHistory": {
+      "parentDashboardTitle": "آخر المدفوعات",
+      "applicationTitle": "سجل مدفوعات الطلب",
+      "registrationTitle": "سجل مدفوعات التسجيل",
+      "reportTitle": "سجل المدفوعات",
+      "emptyTitle": "لا يوجد سجل مدفوعات بعد",
+      "emptyDescription": "ستظهر هنا حركة الفواتير المدفوعة وغير المدفوعة.",
+      "balanceLabel": "المتبقي",
+      "paidLabel": "المدفوع",
+      "paidBalance": "المدفوع / المتبقي",
+      "pending": "قيد المراجعة {{amount}}",
+      "balance": "المتبقي {{amount}}",
+      "reference": "المرجع",
+      "gateway": "بوابة الدفع",
+      "createdAt": "تاريخ الإنشاء",
+      "paidOrSubmittedAt": "تاريخ الدفع / الإرسال"
+    },
+    "childHistory": {
+      "invoiced": "إجمالي الفواتير",
+      "paid": "المدفوع",
+      "outstanding": "المتبقي",
+      "inReview": "دفعات قيد المراجعة",
+      "invoices": "الفواتير",
+      "noInvoices": "لا توجد فواتير لهذا الطفل بعد.",
+      "payments": "المدفوعات المستلمة"
+    },
+    "extraHoursLedger": {
+      "title": "سجل الساعات الإضافية",
+      "subtitle": "كل يوم تأخّر فيه الاستلام، وتكلفته، وهل تم دفعه.",
+      "empty": "لا توجد ساعات إضافية مسجلة بعد.",
+      "lateDays": "أيام التأخير",
+      "daysHours": "{{days}} يوم · {{hours}} ساعة",
+      "hoursValue": "{{hours}} ساعة",
+      "coveredByPackage": "مغطاة بالباقة",
+      "fees": "رسوم الساعات الإضافية",
+      "billed": "المفوتر",
+      "paid": "المدفوع",
+      "unpaid": "غير المدفوع",
+      "notInvoiced": "لم تصدر لها فاتورة",
+      "notInvoicedNote": "بعض رسوم التأخير لم تصدر لها فاتورة بعد، ولا تُحسب ضمن المستحقات حتى تصدر الحضانة فاتورة بها.",
+      "dayHours": "{{hours}} ساعة إضافية",
+      "dayCovered": "{{hours}} ساعة مغطاة بالباقة",
+      "showAll": "عرض الكل ({{count}})",
+      "showLess": "عرض أقل",
+      "dashboardTitle": "الساعات الإضافية",
+      "dashboardHint": "{{count}} فاتورة ساعات إضافية (كل الفترات)",
+      "viewInvoices": "عرض الفواتير",
+      "unpaidInvoices": "{{count}} فاتورة غير مدفوعة",
+      "status": {
+        "covered": "مغطاة بالباقة",
+        "no_charge": "بدون رسوم",
+        "paid": "مدفوعة",
+        "in_review": "بانتظار الموافقة",
+        "unpaid": "غير مدفوعة",
+        "not_invoiced": "بدون فاتورة",
+        "cancelled": "ملغاة"
+      }
+    }
+  },
   "invoice": {
     "itemKinds": {
       "late_pickup": "ساعات إضافية لتأخر الاستلام · {{date}}",
@@ -2949,6 +3009,15 @@
       "monthsPaid": "{{count}} شهر مدفوع بالكامل",
       "monthsUnpaid": "{{count}} شهر عليه مستحقات",
       "awaitingApproval": "{{count}} دفعة بانتظار موافقة الشؤون المالية",
+      "totalInvoiced": "إجمالي الفواتير",
+      "invoiceCount": "{{count}} فاتورة",
+      "inReviewHint": "تم الإرسال وبانتظار تأكيد الحضانة",
+      "byChild": "حسب الطفل",
+      "familyCharges": "رسوم عامة للأسرة",
+      "paymentsMade": "المدفوعات",
+      "noPaymentsMade": "لا توجد مدفوعات مسجلة بعد.",
+      "remaining": "متبقي {{amount}}",
+      "sharedInvoice": "مشتركة بين {{count}} أطفال · {{amount}} لكل طفل",
       "byType": "حسب نوع الدفع",
       "byMonth": "حسب الشهر",
       "statusPaid": "مدفوع",

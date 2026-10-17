@@ -12,6 +12,7 @@ import {
   type FinancialDashboardPreset,
   type IsoRange,
 } from '@/lib/financialDashboardHelpers';
+import { paidPortion } from '@/lib/familyFinance';
 import { fetchAllRows } from '@/lib/fetchAllRows';
 import { getNurseryCalendarDateString } from '@/lib/nurseryDay';
 import { supabase } from '@/lib/supabase';
@@ -25,6 +26,7 @@ type InvoiceRow = {
   parent_id: string;
   amount: string;
   status: 'pending' | 'paid' | 'overdue' | 'cancelled';
+  invoice_type: string | null;
   due_date: string;
   created_at: string;
   paid_at: string | null;
@@ -87,6 +89,7 @@ export function useAdminFinancialDashboard(
             parent_id,
             amount,
             status,
+            invoice_type,
             due_date,
             created_at,
             paid_at,
@@ -152,6 +155,21 @@ export function useAdminFinancialDashboard(
       );
     const outstandingRows = invoices.filter((i) => (i.status === 'pending' || i.status === 'overdue') && remaining(i) > 0);
     const outstandingBalance = outstandingRows.reduce((s, i) => s + remaining(i), 0);
+
+    // Late-pickup (extra hours) charges: billed, paid and still owed.
+    const extraHoursRows = invoices.filter((i) => i.invoice_type === 'extra_hours' && i.status !== 'cancelled');
+    const extraHoursOpen = extraHoursRows.filter((i) => (i.status === 'pending' || i.status === 'overdue') && remaining(i) > 0);
+    const extraHours = {
+      invoiceCount: extraHoursRows.length,
+      billed: extraHoursRows.reduce((s, i) => s + num(i.amount), 0),
+      paid: extraHoursRows.reduce(
+        (s, i) =>
+          s + paidPortion({ amount: num(i.amount), paidAmount: num(i.amount) - remaining(i), status: i.status }),
+        0,
+      ),
+      outstanding: extraHoursOpen.reduce((s, i) => s + remaining(i), 0),
+      unpaidCount: extraHoursOpen.length,
+    };
 
     // On-time share among invoices that are settled or already past due: one not yet due can still be paid on time.
     const today = getNurseryCalendarDateString();
@@ -269,6 +287,7 @@ export function useAdminFinancialDashboard(
     return {
       outstandingBalance,
       outstandingCount: outstandingRows.length,
+      extraHours,
       collectionRate,
       statusBuckets,
       revenueCurrentPeriod,
