@@ -34,6 +34,10 @@ function packageName(pkg: ApplicationExtraHoursPackage, isAr: boolean): string {
   return isAr ? pkg.nameAr || pkg.nameEn : pkg.nameEn || pkg.nameAr;
 }
 
+function packageDescription(pkg: ApplicationExtraHoursPackage, isAr: boolean): string | null {
+  return (isAr ? pkg.descriptionAr || pkg.descriptionEn : pkg.descriptionEn || pkg.descriptionAr)?.trim() || null;
+}
+
 function validityLabel(pkg: ApplicationExtraHoursPackage, t: (key: string, opts?: Record<string, unknown>) => string) {
   if (!pkg.validityValue || !pkg.validityUnit) return t('packages.validityNever', { defaultValue: 'never expires' });
   return t('packages.validityLabel', {
@@ -159,6 +163,7 @@ export function ApplicationExtraHoursPackageCard({
         {packages.map((pkg) => {
           const active = pkg.id === selectedPackageId;
           const { discountAmount, displayPrice, dealApplied } = computeExtraHoursDisplayPrice(pkg);
+          const description = packageDescription(pkg, isAr);
           return (
             <button
               key={pkg.id}
@@ -182,6 +187,9 @@ export function ApplicationExtraHoursPackageCard({
                 </span>
                 <OptionCheck active={active} />
               </span>
+              {description ? (
+                <span className="mt-2 line-clamp-2 text-xs leading-5 text-on-surface-variant">{description}</span>
+              ) : null}
               {dealApplied ? (
                 <span className="mt-3 flex flex-wrap items-center gap-1.5">
                   <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs font-semibold text-success">

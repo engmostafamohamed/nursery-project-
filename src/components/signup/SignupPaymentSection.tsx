@@ -15,6 +15,7 @@ import {
   type ApplicationPaymentPackage,
 } from '@/hooks/useApplicationPackagePayment';
 import { computeExtraHoursDisplayPrice } from '@/hooks/useApplicationExtraHoursPackage';
+import { EMPTY_PARENT_PACKAGE_TEXTS, textFor } from '@/lib/parentPackageTexts';
 import { isWalletProvider, type ParentPaymentMethodCode } from '@/lib/paymentApi';
 import type { PaymentDetails, PaymentDetailsIssue } from '@/lib/paymentMethods';
 import type { SignupPaymentOptions } from '@/features/parent-signup/signupPayment';
@@ -76,6 +77,8 @@ export function SignupPaymentSection({
 }: Props) {
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language.startsWith('ar');
+  // The nursery's own texts, when it wrote them in this language; otherwise the standard ones.
+  const texts = options?.texts ?? EMPTY_PARENT_PACKAGE_TEXTS;
   const selectedPackage = useMemo(
     () => options?.packages.find((item) => item.id === packageId) ?? null,
     [options?.packages, packageId],
@@ -114,10 +117,11 @@ export function SignupPaymentSection({
                 </span>
               ) : null}
             </div>
-            <p className="mt-1 max-w-2xl text-sm leading-5 text-on-surface-variant">
-              {t('signup.payment.description', {
-                defaultValue: 'Choose a package and billing period, then pay securely using the nursery’s online payment options.',
-              })}
+            <p className="mt-1 max-w-2xl whitespace-pre-line text-sm leading-5 text-on-surface-variant">
+              {textFor(texts.paymentIntro, isArabic) ??
+                t('signup.payment.description', {
+                  defaultValue: 'Choose a package and billing period, then pay securely using the nursery’s online payment options.',
+                })}
             </p>
           </div>
         </div>
@@ -168,8 +172,9 @@ export function SignupPaymentSection({
                     <span className="block font-semibold text-on-surface">
                       {t('signup.payment.tuitionPlan', { defaultValue: 'Tuition plan' })}
                     </span>
-                    <span className="mt-0.5 block text-xs text-on-surface-variant">
-                      {t('signup.payment.chooseTuitionHint', { defaultValue: 'Select the plan that best fits your family.' })}
+                    <span className="mt-0.5 block whitespace-pre-line text-xs text-on-surface-variant">
+                      {textFor(texts.tuitionIntro, isArabic) ??
+                        t('signup.payment.chooseTuitionHint', { defaultValue: 'Select the plan that best fits your family.' })}
                     </span>
                   </span>
                 </legend>
@@ -291,8 +296,8 @@ export function SignupPaymentSection({
                       <span className="block font-semibold text-on-surface">
                         {t('applications.extraHoursPackage.title', { defaultValue: 'Extra hours' })}
                       </span>
-                      <span className="mt-0.5 block text-xs text-on-surface-variant">
-                        {t('signup.payment.extraHoursHint')}
+                      <span className="mt-0.5 block whitespace-pre-line text-xs text-on-surface-variant">
+                        {textFor(texts.extraHoursIntro, isArabic) ?? t('signup.payment.extraHoursHint')}
                       </span>
                     </span>
                   </legend>

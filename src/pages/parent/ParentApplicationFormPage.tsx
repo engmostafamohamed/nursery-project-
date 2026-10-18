@@ -21,6 +21,7 @@ import { useAuthSession } from '@/hooks/useAuthSession';
 import { useParentAccountProfile, type ParentAccountProfile } from '@/hooks/useParentAccountProfile';
 import { usePaymentHistory } from '@/hooks/usePaymentHistory';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { parentPackageTextsFromSettings } from '@/lib/parentPackageTexts';
 import { useSettings } from '@/lib/useSettings';
 import { NAP_DURATION_VALUES } from '@/features/parent-signup/parentSignUpValidation';
 import {
@@ -2250,6 +2251,7 @@ export function ParentApplicationFormPage() {
                       onTermsChange={setTerms}
                       onSelect={selectPackage}
                       extraHoursChoice={extraHoursChoice}
+                      texts={parentPackageTextsFromSettings(nurserySettings)}
                       extraHoursSection={
                         <ApplicationExtraHoursPackageCard
                           embedded

@@ -397,6 +397,11 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
                         <tr key={pkg.id} className="bg-surface transition hover:bg-surface-container-lowest">
                           <td className="max-w-[260px] px-4 py-4 align-top">
                             <p className="truncate font-semibold text-on-surface">{localizedName(pkg, isAr)}</p>
+                            {pkg.description_ar || pkg.description_en ? (
+                              <p className="mt-0.5 line-clamp-2 text-xs text-on-surface-variant">
+                                {isAr ? pkg.description_ar || pkg.description_en : pkg.description_en || pkg.description_ar}
+                              </p>
+                            ) : null}
                             {pkg.features_json.length ? (
                               <ul className="mt-1 space-y-0.5">
                                 {pkg.features_json.slice(0, 3).map((feature, index) => (

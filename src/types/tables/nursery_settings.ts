@@ -49,6 +49,13 @@ export interface NurserySettingsRow {
   vodafone_cash_account_number: string | null;
   orange_cash_account_number: string | null;
   we_pay_account_number: string | null;
+  /** The nursery's own texts above the packages parents choose from; empty = the standard text. */
+  parent_payment_intro_ar: string | null;
+  parent_payment_intro_en: string | null;
+  parent_tuition_intro_ar: string | null;
+  parent_tuition_intro_en: string | null;
+  parent_extra_hours_intro_ar: string | null;
+  parent_extra_hours_intro_en: string | null;
   summer_pause_enabled: boolean | null;
   summer_pause_min_weeks: number | null;
   summer_pause_max_weeks: number | null;

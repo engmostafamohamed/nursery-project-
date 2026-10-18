@@ -6,6 +6,7 @@ import {
   type ParentPaymentMethodCode,
   type WalletDestinations,
 } from '@/lib/paymentApi';
+import { parseParentPackageTexts, type ParentPackageTexts } from '@/lib/parentPackageTexts';
 import { supabase } from '@/lib/supabase';
 import type { ExtraHoursHourlyPlan } from '@/components/parent/ApplicationExtraHoursPackageCard';
 import type { ApplicationPaymentPackage } from '@/hooks/useApplicationPackagePayment';
@@ -23,6 +24,8 @@ export type SignupPaymentOptions = {
   /** The nursery's receiving number per wallet provider (only providers offered). */
   walletDestinations: WalletDestinations;
   instapay: { accountName: string | null; accountNumber: string | null; qrImageUrl: string | null };
+  /** The nursery's own texts above the packages; empty ones show the standard text. */
+  texts: ParentPackageTexts;
 };
 
 export class SignupPaymentOptionsError extends Error {
@@ -85,6 +88,7 @@ export function useSignupPaymentOptions(nurseryId: string | undefined, enabled: 
         etisalat_cash_account_number?: string | null;
         wallet_destinations?: Record<string, unknown> | null;
         instapay?: { account_name?: unknown; account_number?: unknown; qr_image_url?: unknown } | null;
+        parent_texts?: unknown;
       } | null;
       if (!response || !Array.isArray(response.packages) || !Array.isArray(response.extra_hours_packages)) {
         throw new Error('Could not load payment options');
@@ -115,6 +119,7 @@ export function useSignupPaymentOptions(nurseryId: string | undefined, enabled: 
           accountNumber: text(response.instapay?.account_number),
           qrImageUrl: text(response.instapay?.qr_image_url),
         },
+        texts: parseParentPackageTexts(response.parent_texts),
       };
     },
   });

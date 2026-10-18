@@ -16,6 +16,7 @@ const SCREENS = [
   'components/admin/settings/TuitionPackageBillingPeriodsEditor.tsx',
   'components/admin/settings/BulkTuitionAssignDialog.tsx',
   'components/admin/settings/PackageDealPicker.tsx',
+  'components/admin/settings/PackageSectionTextsCard.tsx',
   'components/admin/settings/dealLabels.ts',
 ];
 
@@ -39,11 +40,20 @@ describe('admin package and deal screens', () => {
     expect(missing).toEqual([]);
   });
 
-  it('every validation message and billing period has both languages', () => {
+  it('every validation message, billing period and parent text field has both languages', () => {
     const errors = ['nameRequired', 'valueRequired', 'percentOver100', 'endsBeforeStart', 'hoursRequired', 'priceInvalid',
       'validityRequired', 'validityUnitRequired', 'noActivePeriod', 'periodPriceInvalid'];
     const periods = ['monthly', 'quarterly', 'half_annual', 'annual'];
-    const keys = [...errors.map((code) => `packageForms.errors.${code}`), ...periods.map((p) => `tuitionPackages.periods.${p}`)];
+    const texts = ['paymentIntro', 'tuitionIntro', 'extraHoursIntro'];
+    const keys = [
+      ...errors.map((code) => `packageForms.errors.${code}`),
+      ...periods.map((p) => `tuitionPackages.periods.${p}`),
+      ...texts.map((field) => `packageTexts.fields.${field}`),
+      // The standard texts shown in the empty boxes.
+      'signup.payment.description',
+      'signup.payment.chooseTuitionHint',
+      'signup.payment.extraHoursHint',
+    ];
     for (const key of keys) {
       expect(typeof lookup(en, key), `en: ${key}`).toBe('string');
       expect(typeof lookup(ar, key), `ar: ${key}`).toBe('string');

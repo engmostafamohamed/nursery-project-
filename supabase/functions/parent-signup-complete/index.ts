@@ -366,6 +366,28 @@ async function getWalletDestinations(admin: ReturnType<typeof getAdminClient>, n
   return destinations;
 }
 
+/** The nursery's own texts above the packages, by section and language; blank ones are left out. */
+async function getParentPackageTexts(admin: ReturnType<typeof getAdminClient>, nurseryId: string) {
+  const sections = [
+    ['payment_intro', 'parent_payment_intro'],
+    ['tuition_intro', 'parent_tuition_intro'],
+    ['extra_hours_intro', 'parent_extra_hours_intro'],
+  ] as const;
+  const { data, error } = await admin
+    .from('nursery_settings')
+    .select(sections.flatMap(([, column]) => [`${column}_ar`, `${column}_en`]).join(', '))
+    .eq('nursery_id', nurseryId)
+    .maybeSingle();
+  // Before 20261018000000 the columns do not exist: the page shows its standard texts.
+  if (isMissingColumn(error)) return {};
+  if (error) throw new Error(error.message);
+  const row = (data ?? {}) as Record<string, unknown>;
+  const text = (value: unknown) => (typeof value === 'string' && value.trim() ? value.trim() : null);
+  return Object.fromEntries(
+    sections.map(([key, column]) => [key, { ar: text(row[`${column}_ar`]), en: text(row[`${column}_en`]) }]),
+  );
+}
+
 async function getSignupPaymentOptions(admin: ReturnType<typeof getAdminClient>, nurseryId: string) {
   const { data: nursery, error: nurseryError } = await admin
     .from('nurseries')
@@ -394,6 +416,7 @@ async function getSignupPaymentOptions(admin: ReturnType<typeof getAdminClient>,
       }
     : null;
   const walletDestinations = await getWalletDestinations(admin, nurseryId);
+  const parentTexts = await getParentPackageTexts(admin, nurseryId);
   const methods = signupPaymentMethods(settings?.payment_methods_enabled, walletDestinations);
 
   const { data, error } = await admin
@@ -546,6 +569,7 @@ async function getSignupPaymentOptions(admin: ReturnType<typeof getAdminClient>,
       ) && !paymobCheckoutConfigured(settings?.payment_methods_enabled),
     ),
     payment_instructions: settings?.payment_instructions ?? null,
+    parent_texts: parentTexts,
     // Older pages read only this field.
     etisalat_cash_account_number: methods.includes('etisalat_cash') ? walletDestinations.etisalat_cash ?? null : null,
   });

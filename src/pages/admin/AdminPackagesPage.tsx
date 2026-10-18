@@ -22,6 +22,7 @@ import { dealDiscountLabel, localizedName } from '@/components/admin/settings/de
 import { ExtraHoursHourlyRateCard } from '@/components/admin/settings/ExtraHoursHourlyRateCard';
 import { FormSection } from '@/components/admin/settings/FormSection';
 import { PackageDealPicker } from '@/components/admin/settings/PackageDealPicker';
+import { PackageSectionTextsCard } from '@/components/admin/settings/PackageSectionTextsCard';
 import { TuitionPackagesEditor } from '@/components/admin/settings/TuitionPackagesEditor';
 import { FieldError, invalidFieldClass } from '@/components/ui/FieldError';
 import { useAdminDeals, isDealCurrentlyActive, applyDealToPrice, useInlineDealCleanup } from '@/hooks/useAdminDeals';
@@ -330,12 +331,14 @@ export function AdminPackagesPage() {
           <TabsTrigger value="hours">{t('packages.tabHours')}</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="fixed">
+        <TabsContent value="fixed" className="space-y-6">
+          <PackageSectionTextsCard nurseryId={nurseryId} section="tuition" />
           <TuitionPackagesEditor nurseryId={nurseryId} />
         </TabsContent>
 
         <TabsContent value="hours" className="space-y-6">
           <ExtraHoursHourlyRateCard nurseryId={nurseryId} />
+          <PackageSectionTextsCard nurseryId={nurseryId} section="extraHours" />
 
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -440,6 +443,9 @@ export function AdminPackagesPage() {
                         <tr key={p.id} className="bg-surface transition hover:bg-surface-container-lowest">
                           <td className="max-w-[220px] px-4 py-4 align-top">
                             <p className="truncate font-semibold text-on-surface">{name(p)}</p>
+                            {p.description_ar || p.description_en ? (
+                              <p className="mt-0.5 line-clamp-2 text-xs text-on-surface-variant">{isAr ? p.description_ar || p.description_en : p.description_en || p.description_ar}</p>
+                            ) : null}
                           </td>
                           <td className="px-4 py-4 align-top">
                             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">

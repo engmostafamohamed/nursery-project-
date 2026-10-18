@@ -2385,6 +2385,24 @@
     "assigning": "Assigning {{done}} / {{total}}…",
     "assign": "Assign to {{count}} children"
   },
+  "packageTexts": {
+    "title": "What parents read",
+    "subtitle": "Your own words above the packages when parents register or apply. A box left empty shows the standard text, written in grey inside it.",
+    "custom": "Your text",
+    "standard": "Standard text",
+    "edit": "Edit texts",
+    "fields": {
+      "paymentIntro": "Under the payment section title",
+      "tuitionIntro": "Above the tuition plans",
+      "extraHoursIntro": "Above the extra-hours packages"
+    },
+    "arabic": "Arabic",
+    "english": "English",
+    "counter": "{{count}} / {{max}}",
+    "save": "Save texts",
+    "saved": "Texts saved. Parents see them now.",
+    "saveFailed": "Could not save the texts."
+  },
   "invoice": {
     "itemKinds": {
       "late_pickup": "Late pickup extra hours · {{date}}",

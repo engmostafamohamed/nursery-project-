@@ -15,6 +15,7 @@ import {
   type ApplicationPackageInvoice,
 } from '@/hooks/useApplicationPackagePayment';
 import { formatMoneyAmount } from '@/lib/money';
+import { EMPTY_PARENT_PACKAGE_TEXTS, textFor, type ParentPackageTexts } from '@/lib/parentPackageTexts';
 import { payableNow as payableNowFor } from '@/lib/paymentMethods';
 import { cn } from '@/lib/utils';
 
@@ -36,6 +37,8 @@ type Props = {
   extraHoursSection?: ReactNode;
   /** The extra-hours package chosen so far (null = pay per hour), for the summary preview. */
   extraHoursChoice?: { name: string; subtotal: number; discountAmount: number } | null;
+  /** The nursery's own texts above the sections; empty ones show the standard text. */
+  texts?: ParentPackageTexts;
 };
 
 const billingPeriodOptions: Array<{
@@ -82,7 +85,7 @@ function SectionHeading({ index, title, hint, action }: { index: number; title: 
         </span>
         <div className="min-w-0">
           <h3 className="text-sm font-semibold text-on-surface">{title}</h3>
-          {hint ? <p className="mt-0.5 text-xs leading-5 text-on-surface-variant">{hint}</p> : null}
+          {hint ? <p className="mt-0.5 whitespace-pre-line text-xs leading-5 text-on-surface-variant">{hint}</p> : null}
         </div>
       </div>
       {action}
@@ -122,6 +125,7 @@ export function ApplicationPackagePaymentCard({
   onSelect,
   extraHoursSection,
   extraHoursChoice = null,
+  texts = EMPTY_PARENT_PACKAGE_TEXTS,
 }: Props) {
   const { t, i18n } = useTranslation();
   const isAr = i18n.language.startsWith('ar');
@@ -231,8 +235,8 @@ export function ApplicationPackagePaymentCard({
             <h2 className="text-lg font-semibold tracking-tight text-on-surface">
               {t('applications.paymentPackage.title', { defaultValue: 'Payment package' })}
             </h2>
-            <p className="mt-0.5 max-w-2xl text-sm leading-5 text-on-surface-variant">
-              {t('applications.paymentPackage.subtitle')}
+            <p className="mt-0.5 max-w-2xl whitespace-pre-line text-sm leading-5 text-on-surface-variant">
+              {textFor(texts.paymentIntro, isAr) ?? t('applications.paymentPackage.subtitle')}
             </p>
           </div>
         </div>
@@ -319,7 +323,11 @@ export function ApplicationPackagePaymentCard({
             </div>
 
             <div className="space-y-3">
-              <SectionHeading index={2} title={t('applications.paymentPackage.sections.package')} />
+              <SectionHeading
+                index={2}
+                title={t('applications.paymentPackage.sections.package')}
+                hint={textFor(texts.tuitionIntro, isAr) ?? undefined}
+              />
               <div
                 role="radiogroup"
                 aria-label={t('applications.paymentPackage.sections.package')}
@@ -450,7 +458,7 @@ export function ApplicationPackagePaymentCard({
               <SectionHeading
                 index={3}
                 title={t('applications.extraHoursPackage.title', { defaultValue: 'Extra hours' })}
-                hint={t('applications.extraHoursPackage.sectionHint')}
+                hint={textFor(texts.extraHoursIntro, isAr) ?? t('applications.extraHoursPackage.sectionHint')}
               />
               {extraHoursSection}
             </div>
