@@ -111,16 +111,18 @@ export function useAdminCourseDetail(courseId: string | null | undefined) {
     enabled: Boolean(courseId),
   });
 
+  // Depends on the id, not `key`: that array is rebuilt every render, which would
+  // close and reopen the realtime channel on every render.
   useEffect(() => {
     if (!courseId) return;
     const channel = supabase
       .channel(`admin-course-detail-${courseId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'courses', filter: `id=eq.${courseId}` }, () =>
-        void queryClient.invalidateQueries({ queryKey: key }),
+        void queryClient.invalidateQueries({ queryKey: adminCourseDetailQueryKey(courseId) }),
       )
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
-  }, [courseId, queryClient, key]);
+  }, [courseId, queryClient]);
 
   return query;
 }
@@ -184,16 +186,18 @@ export function useAdminCourseEnrollments(courseId: string | null | undefined) {
     enabled: Boolean(courseId),
   });
 
+  // Depends on the id, not `key`: that array is rebuilt every render, which would
+  // close and reopen the realtime channel on every render.
   useEffect(() => {
     if (!courseId) return;
     const channel = supabase
       .channel(`admin-course-enrollments-${courseId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'course_enrollments', filter: `course_id=eq.${courseId}` }, () =>
-        void queryClient.invalidateQueries({ queryKey: key }),
+        void queryClient.invalidateQueries({ queryKey: adminCourseEnrollmentsQueryKey(courseId) }),
       )
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
-  }, [courseId, queryClient, key]);
+  }, [courseId, queryClient]);
 
   return query;
 }
@@ -236,16 +240,18 @@ export function useAdminCourseInvoices(courseId: string | null | undefined) {
     enabled: Boolean(courseId),
   });
 
+  // Depends on the id, not `key`: that array is rebuilt every render, which would
+  // close and reopen the realtime channel on every render.
   useEffect(() => {
     if (!courseId) return;
     const channel = supabase
       .channel(`admin-course-invoices-${courseId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'course_invoices', filter: `course_id=eq.${courseId}` }, () =>
-        void queryClient.invalidateQueries({ queryKey: key }),
+        void queryClient.invalidateQueries({ queryKey: adminCourseInvoicesQueryKey(courseId) }),
       )
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
-  }, [courseId, queryClient, key]);
+  }, [courseId, queryClient]);
 
   return query;
 }

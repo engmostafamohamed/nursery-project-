@@ -278,18 +278,20 @@ export function useAdminQuarterlyReports(nurseryId: string | null | undefined) {
     onSuccess: () => qc.invalidateQueries({ queryKey: key }),
   });
 
+  // Depends on the id, not `key`: that array is rebuilt every render, which would
+  // close and reopen the realtime channel on every render.
   useEffect(() => {
     if (!nurseryId) return;
     const ch = supabase
       .channel(`quarterly-reports-${nurseryId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'quarterly_reports' }, () =>
-        void qc.invalidateQueries({ queryKey: key }),
+        void qc.invalidateQueries({ queryKey: quarterlyReportsKey(nurseryId) }),
       )
       .subscribe();
     return () => {
       void supabase.removeChannel(ch);
     };
-  }, [nurseryId, qc, key]);
+  }, [nurseryId, qc]);
 
   return { query, saveReport, deleteReport };
 }

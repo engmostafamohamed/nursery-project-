@@ -71,6 +71,8 @@ export function useAdminEventsList({
     enabled: Boolean(nurseryId),
   });
 
+  // Depends on the nursery id, not `key`: that array is rebuilt every render, which would
+  // close and reopen the realtime channel on every render.
   useEffect(() => {
     if (!nurseryId) return;
     const channel = supabase
@@ -78,13 +80,13 @@ export function useAdminEventsList({
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'events' },
-        () => void queryClient.invalidateQueries({ queryKey: key }),
+        () => void queryClient.invalidateQueries({ queryKey: adminEventsListQueryKey(nurseryId) }),
       )
       .subscribe();
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [nurseryId, queryClient, key]);
+  }, [nurseryId, queryClient]);
 
   const [nowMs] = useState(Date.now);
   const filtered = useMemo(() => {

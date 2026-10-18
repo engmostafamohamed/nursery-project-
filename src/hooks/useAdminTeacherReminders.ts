@@ -103,6 +103,8 @@ export function useAdminTeacherReminders(nurseryId: string | null | undefined) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: key }),
   });
 
+  // Depends on the nursery id, not `key`: that array is rebuilt every render, which would
+  // close and reopen the realtime channel on every render.
   useEffect(() => {
     if (!nurseryId) return;
     const channel = supabase
@@ -110,13 +112,13 @@ export function useAdminTeacherReminders(nurseryId: string | null | undefined) {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'teacher_monthly_reminder_templates' },
-        () => void queryClient.invalidateQueries({ queryKey: key }),
+        () => void queryClient.invalidateQueries({ queryKey: teacherRemindersKey(nurseryId) }),
       )
       .subscribe();
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [nurseryId, queryClient, key]);
+  }, [nurseryId, queryClient]);
 
   return { query, create, update, remove };
 }

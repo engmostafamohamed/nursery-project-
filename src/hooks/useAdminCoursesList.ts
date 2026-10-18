@@ -80,19 +80,21 @@ export function useAdminCoursesList(nurseryId: string | null | undefined) {
     enabled: Boolean(nurseryId),
   });
 
+  // Depends on the nursery id, not `key`: that array is rebuilt every render, which would
+  // close and reopen the realtime channel on every render.
   useEffect(() => {
     if (!nurseryId) return;
     const channel = supabase
       .channel(`admin-courses-list-${nurseryId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'courses' }, () =>
-        void queryClient.invalidateQueries({ queryKey: key }),
+        void queryClient.invalidateQueries({ queryKey: adminCoursesListQueryKey(nurseryId) }),
       )
       .on('postgres_changes', { event: '*', schema: 'public', table: 'course_enrollments' }, () =>
-        void queryClient.invalidateQueries({ queryKey: key }),
+        void queryClient.invalidateQueries({ queryKey: adminCoursesListQueryKey(nurseryId) }),
       )
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
-  }, [nurseryId, queryClient, key]);
+  }, [nurseryId, queryClient]);
 
   return query;
 }

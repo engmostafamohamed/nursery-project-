@@ -91,6 +91,8 @@ export function usePersonalReminders(
     onSuccess: () => queryClient.invalidateQueries({ queryKey: key }),
   });
 
+  // Depends on the id, not `key`: that array is rebuilt every render, which would
+  // close and reopen the realtime channel on every render.
   useEffect(() => {
     if (!userId) return;
     const channel = supabase
@@ -103,13 +105,13 @@ export function usePersonalReminders(
           table: 'personal_reminders',
           filter: `user_id=eq.${userId}`,
         },
-        () => void queryClient.invalidateQueries({ queryKey: key }),
+        () => void queryClient.invalidateQueries({ queryKey: personalRemindersKey(userId) }),
       )
       .subscribe();
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [userId, queryClient, key]);
+  }, [userId, queryClient]);
 
   return { query, create, update, remove };
 }
