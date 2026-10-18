@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { parentSignUpDefaults } from './parentSignUpDefaults';
 import { emptyParentSignUpFiles } from './parentSignUpFiles';
+import { SIGNUP_STEPS } from './parentSignUpTypes';
 import { parentSignUpBaseSchema, validateCrossFieldRules, type ParentSignUpFormValues } from './parentSignUpValidation';
 import {
   buildRegistrationAnswers,
@@ -144,6 +145,13 @@ describe('registration templates', () => {
     active: true,
   });
   const questions = [question('a', 'parents'), question('b', 'child'), question('c', 'parents'), question('d', 'child')];
+
+  it('ends with review, then choosing packages, then paying', () => {
+    expect(SIGNUP_STEPS.slice(-3)).toEqual(['review', 'packages', 'payment']);
+    // The admin's registration template never moves or hides these.
+    expect(REGISTRATION_TEMPLATE_STEPS).not.toContain('packages');
+    expect(REGISTRATION_TEMPLATE_STEPS).not.toContain('payment');
+  });
 
   it('orders steps by their first question, then adds the missing steps', () => {
     const order = deriveStepOrder(questions);

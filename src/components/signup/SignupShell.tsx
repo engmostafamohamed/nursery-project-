@@ -21,6 +21,7 @@ const STEP_ICONS: Record<SignUpStep, string> = {
   documents: 'folder_open',
   consents: 'verified_user',
   review: 'fact_check',
+  packages: 'workspace_premium',
   payment: 'payments',
 };
 
@@ -129,7 +130,7 @@ export function SignupShell({
 
         {/* Main content panel */}
         <main className="min-w-0">
-          <section className="signup-surface overflow-hidden rounded-3xl border border-outline-variant/70 bg-surface">
+          <section className="signup-surface overflow-clip rounded-3xl border border-outline-variant/70 bg-surface">
             <div className="flex items-center gap-4 border-b border-outline-variant/70 bg-gradient-to-b from-primary/[0.06] to-transparent px-6 py-5 sm:px-10 sm:py-7">
               <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-inset ring-primary/15">
                 <MaterialSymbol name={STEP_ICONS[currentStep] ?? 'edit_note'} size="text-2xl" />

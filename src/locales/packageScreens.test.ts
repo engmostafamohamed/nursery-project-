@@ -1,9 +1,11 @@
-// The admin package and deal screens: every text they show comes from the locale files, in both
+// The package and deal screens (admin, and the parent sign-up packages and payment steps): every text they show comes from the locale files, in both
 // languages, and none is written into the screen in English.
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
+
+import { SIGNUP_STEPS } from '@/features/parent-signup/parentSignUpTypes';
 
 import ar from './ar.json';
 import en from './en.json';
@@ -19,6 +21,11 @@ const SCREENS = [
   'components/admin/settings/PackageSectionTextsCard.tsx',
   'components/admin/settings/AdminPackageCard.tsx',
   'components/admin/settings/dealLabels.ts',
+  'components/signup/SignupPackagesSection.tsx',
+  'components/signup/SignupPaymentSection.tsx',
+  'components/signup/SignupOrderSummary.tsx',
+  'components/signup/SignupOptionsStatus.tsx',
+  'features/parent-signup/signupOrder.ts',
 ];
 
 const source = (file: string) => readFileSync(path.join(root, file), 'utf8');
@@ -46,10 +53,14 @@ describe('admin package and deal screens', () => {
       'validityRequired', 'validityUnitRequired', 'noActivePeriod', 'periodPriceInvalid'];
     const periods = ['monthly', 'quarterly', 'half_annual', 'annual'];
     const texts = ['paymentIntro', 'tuitionIntro', 'extraHoursIntro'];
+    const periodNames = ['monthly', 'quarterly', 'halfAnnual', 'annual'];
     const keys = [
       ...errors.map((code) => `packageForms.errors.${code}`),
       ...periods.map((p) => `tuitionPackages.periods.${p}`),
       ...texts.map((field) => `packageTexts.fields.${field}`),
+      ...periodNames.map((period) => `applications.paymentPackage.period.${period}`),
+      // Every sign-up step has a name in the step list.
+      ...SIGNUP_STEPS.map((step) => `signup.steps.${step}`),
       // The standard texts shown in the empty boxes.
       'signup.payment.description',
       'signup.payment.chooseTuitionHint',

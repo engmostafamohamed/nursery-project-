@@ -13,6 +13,7 @@ export const SIGNUP_STEPS = [
   'documents',
   'consents',
   'review',
+  'packages',
   'payment',
 ] as const;
 
@@ -34,5 +35,6 @@ export const STEP_FIELDS: Record<SignUpStep, string[]> = {
   documents: [],
   consents: ['agreeHealthPolicy', 'agreeFinancialAgreement', 'agreePolicies', 'agreeInfoAccuracy'],
   review: [],
+  packages: [],
   payment: [],
 };

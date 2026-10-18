@@ -16,6 +16,7 @@ import { FileDropzoneWithPreview } from '@/components/signup/FileDropzoneWithPre
 import { SignupShell } from '@/components/signup/SignupShell';
 import { StepMedicationConsents } from '@/components/signup/StepMedicationConsents';
 import { StepReview } from '@/components/signup/StepReview';
+import { SignupPackagesSection } from '@/components/signup/SignupPackagesSection';
 import { SignupPaymentSection } from '@/components/signup/SignupPaymentSection';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { childDateOfBirthBounds, isChildAgeValid } from '@/lib/onboardingDateBounds';
@@ -60,6 +61,7 @@ import {
   useSignupPaymentOptions,
 } from '@/features/parent-signup/signupPayment';
 import { SIGNUP_STEPS, STEP_FIELDS, type SignUpStep } from '@/features/parent-signup/parentSignUpTypes';
+import { computeSignupOrder } from '@/features/parent-signup/signupOrder';
 import { clearDraft, loadDraft, useApplicationDraft } from '@/hooks/useApplicationDraft';
 import {
   isWalletProvider,
@@ -73,7 +75,7 @@ import {
   paymentDetailsIssues,
   type PaymentDetails,
 } from '@/lib/paymentMethods';
-import { offeredBillingPeriods, type ApplicationPackageBillingPeriod } from '@/hooks/useApplicationPackagePayment';
+import type { ApplicationPackageBillingPeriod } from '@/hooks/useApplicationPackagePayment';
 
 function Field({ label, error, required, children }: { label: string; error?: string; required?: boolean; children: React.ReactNode }) {
   const { t } = useTranslation();
@@ -178,8 +180,13 @@ function templateFieldOptions(
 /** A step stays in the wizard only while it still has something to show: at least one
  * active built-in field, or an active custom question the admin added for it. When no
  * template has loaded yet, every built-in field falls back to active, so nothing hides. */
+/** Review, packages and payment close the wizard: always shown, and not part of the form itself. */
+function isClosingStep(step: SignUpStep) {
+  return step === 'review' || step === 'packages' || step === 'payment';
+}
+
 function stepHasActiveContent(step: SignUpStep, template: RegistrationTemplatePayload | null | undefined) {
-  if (step === 'review' || step === 'payment') return true;
+  if (isClosingStep(step)) return true;
   if (template?.stepsMeta?.[step as (typeof REGISTRATION_TEMPLATE_STEPS)[number]]?.hidden) return false;
   const knownKeys = KNOWN_FIELD_KEYS_BY_STEP[step as (typeof REGISTRATION_TEMPLATE_STEPS)[number]] ?? [];
   if (knownKeys.some((key) => isTemplateFieldActive(template, key))) return true;
@@ -391,7 +398,7 @@ function firstIncompleteStep(
   files: ParentSignUpFileBundle,
   template?: RegistrationTemplatePayload | null,
 ): SignUpStep | null {
-  return SIGNUP_STEPS.find((step) => step !== 'review' && step !== 'payment' && !isStepComplete(step, values, files, template)) ?? null;
+  return SIGNUP_STEPS.find((step) => !isClosingStep(step) && !isStepComplete(step, values, files, template)) ?? null;
 }
 
 function signupErrorMessage(error: unknown, t: (k: string, opts?: Record<string, unknown>) => string) {
@@ -1561,10 +1568,10 @@ export function ParentSignUpPage() {
 
   // Step order follows whatever order the admin's template has (derived from the same
   // questions_json the editor reorders), falling back to the canonical order when there's
-  // no template. Review and payment always remain the final two steps.
+  // no template. Review, packages and payment always remain the final three steps.
   const visibleSteps = useMemo(() => {
-    const ordered = [...deriveStepOrder(activeRegistrationTemplate?.questions ?? []), 'review', 'payment'] as SignUpStep[];
-    return ordered.filter((step) => step === 'review' || step === 'payment' || stepHasActiveContent(step, activeRegistrationTemplate));
+    const ordered = [...deriveStepOrder(activeRegistrationTemplate?.questions ?? []), 'review', 'packages', 'payment'] as SignUpStep[];
+    return ordered.filter((step) => isClosingStep(step) || stepHasActiveContent(step, activeRegistrationTemplate));
   }, [activeRegistrationTemplate]);
   // The template resolves asynchronously (after nurseries load), so a step count that
   // was valid a moment ago can shrink — keep the current/furthest indices in range.
@@ -1609,7 +1616,7 @@ export function ParentSignUpPage() {
 
   const safeStepIndex = Math.min(stepIndex, Math.max(visibleSteps.length - 1, 0));
   const currentStep = visibleSteps[safeStepIndex];
-  const signupPaymentOptions = useSignupPaymentOptions(selectedNursery?.id, currentStep === 'payment');
+  const signupPaymentOptions = useSignupPaymentOptions(selectedNursery?.id, currentStep === 'packages' || currentStep === 'payment');
   const availablePaymentMethods = useMemo(
     () => signupPaymentOptions.data?.methods ?? [],
     [signupPaymentOptions.data?.methods],
@@ -1653,12 +1660,22 @@ export function ParentSignUpPage() {
   }, [activeRegistrationTemplate?.questions, templateAnswers]);
   const currentTemplateStepComplete = customQuestionsForStep
     .every((question) => templateValidationPasses(question, templateAnswers[question.id]));
-  const canContinue = isStepComplete(currentStep, liveValues, files, activeRegistrationTemplate) && currentTemplateStepComplete;
-  const selectedPaymentPackage = signupPaymentOptions.data?.packages.find((pkg) => pkg.id === paymentPackageId) ?? null;
-  const paymentPeriodOffered = Boolean(selectedPaymentPackage && offeredBillingPeriods(selectedPaymentPackage).includes(paymentBillingPeriod));
+  // What the parent is about to pay, recalculated on every choice on the packages step.
+  const order = useMemo(
+    () =>
+      computeSignupOrder(signupPaymentOptions.data, {
+        packageId: paymentPackageId,
+        billingPeriod: paymentBillingPeriod,
+        extraHoursPackageId,
+      }),
+    [signupPaymentOptions.data, paymentPackageId, paymentBillingPeriod, extraHoursPackageId],
+  );
+  const packageSelectionComplete = signupPaymentOptions.isSuccess && order.complete;
+  const canContinue = currentStep === 'packages'
+    ? packageSelectionComplete
+    : isStepComplete(currentStep, liveValues, files, activeRegistrationTemplate) && currentTemplateStepComplete;
   const paymentSelectionComplete =
-    signupPaymentOptions.isSuccess &&
-    paymentPeriodOffered &&
+    packageSelectionComplete &&
     availablePaymentMethods.includes(paymentMethod) &&
     paymentIssues.length === 0;
   const canSubmit =
@@ -1677,13 +1694,15 @@ export function ParentSignUpPage() {
       const fields = STEP_FIELDS[step];
       if (fields.some((f) => errs[f as keyof typeof errs])) set.add(step);
     }
-    if (currentStep === 'review' || currentStep === 'payment') {
+    if (isClosingStep(currentStep)) {
       for (const step of SIGNUP_STEPS) {
-        if (step !== 'review' && step !== 'payment' && !isStepComplete(step, liveValues, files, activeRegistrationTemplate)) set.add(step);
+        if (!isClosingStep(step) && !isStepComplete(step, liveValues, files, activeRegistrationTemplate)) set.add(step);
       }
     }
+    // Reached payment without a plan (e.g. the nursery changed): the packages step needs attention.
+    if (currentStep === 'payment' && !packageSelectionComplete) set.add('packages');
     return set;
-  }, [activeRegistrationTemplate, currentStep, files, form.formState.errors, liveValues]);
+  }, [activeRegistrationTemplate, currentStep, files, form.formState.errors, liveValues, packageSelectionComplete]);
 
   const goNext = async () => {
     if (isLast || !canContinue) return;
@@ -1764,7 +1783,12 @@ export function ParentSignUpPage() {
       goToStepByName('documents');
       return;
     }
-    if (!signupPaymentOptions.isSuccess || !paymentPeriodOffered || !availablePaymentMethods.includes(paymentMethod)) {
+    if (!packageSelectionComplete) {
+      toast.error(t('signup.packages.chooseFirst'));
+      goToStepByName('packages');
+      return;
+    }
+    if (!availablePaymentMethods.includes(paymentMethod)) {
       toast.error(t('signup.payment.completeSelection', {
         defaultValue: 'Choose a tuition package, billing period, and payment method before submitting.',
       }));
@@ -1828,6 +1852,16 @@ export function ParentSignUpPage() {
     toast.error(t('signup.completeRequiredBeforeSubmit'));
   });
 
+  /** How the packages and payment options are loading, shared by both of their steps. */
+  const paymentOptionsState = {
+    options: signupPaymentOptions.data,
+    isLoading: signupPaymentOptions.isLoading,
+    isError: signupPaymentOptions.isError,
+    errorMessage: signupPaymentOptions.error instanceof Error ? signupPaymentOptions.error.message : null,
+    outdatedFunction: signupPaymentOptions.error instanceof SignupPaymentOptionsError && signupPaymentOptions.error.outdatedFunction,
+    onRetry: () => void signupPaymentOptions.refetch(),
+  };
+
   const renderCurrentStep = () => {
     const stepProps: StepProps = {
       form,
@@ -1873,22 +1907,27 @@ export function ParentSignUpPage() {
             onJumpTo={(step) => jumpTo(visibleSteps.indexOf(step))}
           />
         );
+      case 'packages':
+        return (
+          <SignupPackagesSection
+            {...paymentOptionsState}
+            packageId={paymentPackageId}
+            onPackageChange={setPaymentPackageId}
+            billingPeriod={paymentBillingPeriod}
+            onBillingPeriodChange={setPaymentBillingPeriod}
+            extraHoursPackageId={extraHoursPackageId}
+            onExtraHoursPackageChange={setExtraHoursPackageId}
+            order={order}
+          />
+        );
       case 'payment':
         return (
           <div className="space-y-5">
             <SignupPaymentSection
-              options={signupPaymentOptions.data}
-              isLoading={signupPaymentOptions.isLoading}
-              isError={signupPaymentOptions.isError}
-              errorMessage={signupPaymentOptions.error instanceof Error ? signupPaymentOptions.error.message : null}
-              outdatedFunction={signupPaymentOptions.error instanceof SignupPaymentOptionsError && signupPaymentOptions.error.outdatedFunction}
-              onRetry={() => void signupPaymentOptions.refetch()}
-              packageId={paymentPackageId}
-              onPackageChange={setPaymentPackageId}
-              extraHoursPackageId={extraHoursPackageId}
-              onExtraHoursPackageChange={setExtraHoursPackageId}
+              {...paymentOptionsState}
+              order={order}
               billingPeriod={paymentBillingPeriod}
-              onBillingPeriodChange={setPaymentBillingPeriod}
+              onChangePackages={() => goToStepByName('packages')}
               method={paymentMethod}
               onMethodChange={(method) => {
                 setPaymentMethod(method);
@@ -1941,6 +1980,8 @@ export function ParentSignUpPage() {
                     ? t('signup.pickupPhotoRequired')
                     : firstMissingStep === 'documents'
                       ? t('signup.documentsRequired')
+                      : !packageSelectionComplete
+                        ? t('signup.packages.chooseFirst')
                       : !paymentSelectionComplete && paymentIssues.length > 0
                         ? t(PAYMENT_DETAILS_ISSUE_KEYS[paymentIssues[0]])
                         : !paymentSelectionComplete
@@ -1971,15 +2012,20 @@ export function ParentSignUpPage() {
               </Button>
             </div>
           ) : (
-            <Button
-              type="button"
-              className="btn-gradient min-h-11 px-6 text-primary-foreground shadow-[0_10px_24px_-12px_rgb(var(--primary)/0.75)] disabled:shadow-none"
-              onClick={() => void goNext()}
-              disabled={!canContinue}
-            >
-              {t('signup.next')}
-              <MaterialSymbol name="arrow_forward" size="text-base" className="rtl:-scale-x-100" />
-            </Button>
+            <div className="flex flex-col items-end gap-2">
+              {currentStep === 'packages' && !canContinue && signupPaymentOptions.isSuccess ? (
+                <p className="max-w-xs text-end text-xs text-warning">{t('signup.packages.chooseToContinue')}</p>
+              ) : null}
+              <Button
+                type="button"
+                className="btn-gradient min-h-11 px-6 text-primary-foreground shadow-[0_10px_24px_-12px_rgb(var(--primary)/0.75)] disabled:shadow-none"
+                onClick={() => void goNext()}
+                disabled={!canContinue}
+              >
+                {currentStep === 'packages' ? t('signup.packages.continueToPayment') : t('signup.next')}
+                <MaterialSymbol name="arrow_forward" size="text-base" className="rtl:-scale-x-100" />
+              </Button>
+            </div>
           )}
         </div>
 

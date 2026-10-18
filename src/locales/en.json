@@ -6889,7 +6889,20 @@
       "documents": "Documents",
       "consents": "Agreements & Consents",
       "review": "Review",
+      "packages": "Packages",
       "payment": "Payment"
+    },
+    "packages": {
+      "summaryTitle": "Your total",
+      "summaryLive": "Updates as you choose",
+      "orderTitle": "Your order",
+      "change": "Change",
+      "periodHint": "Longer periods can cost less per month. Prices include any current offer.",
+      "continueToPayment": "Continue to payment",
+      "chooseToContinue": "Choose a tuition plan to continue.",
+      "chooseFirst": "Choose your packages before paying.",
+      "goToPackages": "Choose packages",
+      "payIntro": "Choose how to pay for your order. The nursery confirms the payment after checking it."
     },
     "payment": {
       "title": "Tuition package and payment",
