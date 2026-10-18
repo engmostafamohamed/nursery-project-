@@ -124,6 +124,8 @@ export function PackageSectionTextsCard({
                         dir={lang === 'ar' ? 'rtl' : 'ltr'}
                         rows={3}
                         maxLength={PARENT_TEXT_MAX_LENGTH}
+                        // The standard text: clearly faded, so it does not read as text already saved.
+                        className="placeholder:italic placeholder:opacity-50"
                         value={value}
                         placeholder={i18n.getFixedT(lang)(standardKey)}
                         onChange={(e) => setText(key, lang, e.target.value)}

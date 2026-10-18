@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -41,6 +40,7 @@ import { formatTime } from '@/lib/datetime';
 import { formatMoneyAmount } from '@/lib/money';
 import { hasIssues, tuitionPackageFormIssues } from '@/lib/packageForms';
 import { cn, formatQueryError } from '@/lib/utils';
+import { AdminPackageCard } from './AdminPackageCard';
 import { BulkTuitionAssignDialog } from './BulkTuitionAssignDialog';
 import { dealDiscountLabel, localizedName } from './dealLabels';
 import { FormSection } from './FormSection';
@@ -374,89 +374,42 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
               {t('packageFilters.noMatch')}
             </p>
           ) : (
-            <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[920px] text-sm">
-                  <thead className="bg-surface-container-lowest text-xs uppercase text-on-surface-variant">
-                    <tr>
-                      <th className="px-4 py-3 text-start font-semibold">{t('tuitionPackages.columns.package')}</th>
-                      <th className="px-4 py-3 text-start font-semibold">{t('tuitionPackages.columns.price')}</th>
-                      <th className="px-4 py-3 text-start font-semibold">{t('tuitionPackages.columns.hours')}</th>
-                      <th className="px-4 py-3 text-start font-semibold">{t('tuitionPackages.columns.children')}</th>
-                      <th className="px-4 py-3 text-start font-semibold">{t('tuitionPackages.columns.status')}</th>
-                      <th className="px-4 py-3 text-end font-semibold">{t('tuitionPackages.columns.actions')}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-outline-variant">
-                    {filteredRows.map((pkg) => {
-                      const deal = (dealsQuery.data ?? []).find((d) => d.id === pkg.deal_id);
-                      const live = deal ? isDealCurrentlyActive(deal) : false;
-                      const discounted = deal ? applyDealToPrice(pkg.price, deal) : pkg.price;
-                      const dealLabel = deal ? `${localizedName(deal, isAr)} · ${dealDiscountLabel(t, deal)}` : '';
-                      return (
-                        <tr key={pkg.id} className="bg-surface transition hover:bg-surface-container-lowest">
-                          <td className="max-w-[260px] px-4 py-4 align-top">
-                            <p className="truncate font-semibold text-on-surface">{localizedName(pkg, isAr)}</p>
-                            {pkg.description_ar || pkg.description_en ? (
-                              <p className="mt-0.5 line-clamp-2 text-xs text-on-surface-variant">
-                                {isAr ? pkg.description_ar || pkg.description_en : pkg.description_en || pkg.description_ar}
-                              </p>
-                            ) : null}
-                            {pkg.features_json.length ? (
-                              <ul className="mt-1 space-y-0.5">
-                                {pkg.features_json.slice(0, 3).map((feature, index) => (
-                                  <li key={index} className="flex items-start gap-1.5 text-xs text-on-surface-variant">
-                                    <MaterialSymbol name="check_small" size="text-sm" className="mt-0.5 shrink-0" />
-                                    <span className="truncate">{isAr ? feature.ar || feature.en : feature.en || feature.ar}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            ) : null}
-                          </td>
-                          <td className="px-4 py-4 align-top">
-                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                              <span className={live ? 'text-sm text-on-surface-variant line-through' : 'text-sm font-medium text-on-surface'}>
-                                {money(pkg.price)}
-                              </span>
-                              {live ? <span className="text-sm font-semibold text-error">{money(discounted)}</span> : null}
-                            </div>
-                            {deal ? (
-                              <Badge variant={live ? 'warning' : 'secondary'} className="mt-1">
-                                <MaterialSymbol name="sell" size="text-xs" className="me-1" />
-                                {live ? dealLabel : t('deals.inactiveSuffix', { label: dealLabel })}
-                              </Badge>
-                            ) : null}
-                          </td>
-                          <td className="px-4 py-4 align-top text-xs text-on-surface-variant">{hoursRangeLabel ?? '—'}</td>
-                          <td className="px-4 py-4 align-top text-on-surface">{t('packages.assignedCount', { count: pkg.subscribed_count })}</td>
-                          <td className="px-4 py-4 align-top">
-                            <Badge variant={pkg.active ? 'success' : 'secondary'}>
-                              {pkg.active ? t('packageFilters.active') : t('packageFilters.inactive')}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-4 align-top">
-                            <div className="flex justify-end gap-2">
-                              <Button type="button" variant="outline" size="sm" onClick={() => openEdit(pkg)}>
-                                {t('common.edit')}
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                disabled={update.isPending}
-                                onClick={() => void toggleActive(pkg)}
-                              >
-                                {pkg.active ? t('packages.deactivate') : t('packages.activate')}
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </section>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {filteredRows.map((pkg) => {
+                const deal = (dealsQuery.data ?? []).find((d) => d.id === pkg.deal_id);
+                const live = deal ? isDealCurrentlyActive(deal) : false;
+                const dealLabel = deal ? `${localizedName(deal, isAr)} · ${dealDiscountLabel(t, deal)}` : '';
+                return (
+                  <AdminPackageCard
+                    key={pkg.id}
+                    name={localizedName(pkg, isAr)}
+                    active={pkg.active}
+                    price={money(pkg.price)}
+                    discountedPrice={deal && live ? money(applyDealToPrice(pkg.price, deal)) : null}
+                    priceSuffix={t('applications.paymentPackage.perMonth')}
+                    deal={deal ? { label: live ? dealLabel : t('deals.inactiveSuffix', { label: dealLabel }), live } : null}
+                    description={isAr ? pkg.description_ar || pkg.description_en : pkg.description_en || pkg.description_ar}
+                    features={pkg.features_json.map((feature) => (isAr ? feature.ar || feature.en : feature.en || feature.ar)).filter(Boolean)}
+                    emptyHint={t('packageCard.noDetails')}
+                    facts={[
+                      ...(hoursRangeLabel ? [{ icon: 'schedule', label: hoursRangeLabel }] : []),
+                      { icon: 'groups', label: t('packages.assignedCount', { count: pkg.subscribed_count }) },
+                    ]}
+                    actions={
+                      <>
+                        <Button type="button" variant="outline" size="sm" onClick={() => openEdit(pkg)}>
+                          <MaterialSymbol name="edit" size="text-base" />
+                          {t('common.edit')}
+                        </Button>
+                        <Button type="button" variant="outline" size="sm" disabled={update.isPending} onClick={() => void toggleActive(pkg)}>
+                          {pkg.active ? t('packages.deactivate') : t('packages.activate')}
+                        </Button>
+                      </>
+                    }
+                  />
+                );
+              })}
+            </div>
           )}
         </div>
       )}

@@ -18,6 +18,7 @@ import { Label } from '@/components/ui/label';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AdminPackageCard } from '@/components/admin/settings/AdminPackageCard';
 import { dealDiscountLabel, localizedName } from '@/components/admin/settings/dealLabels';
 import { ExtraHoursHourlyRateCard } from '@/components/admin/settings/ExtraHoursHourlyRateCard';
 import { FormSection } from '@/components/admin/settings/FormSection';
@@ -420,97 +421,54 @@ export function AdminPackagesPage() {
                 {t('packageFilters.noMatch')}
               </p>
             ) : (
-            <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[920px] text-sm">
-                  <thead className="bg-surface-container-lowest text-xs uppercase text-on-surface-variant">
-                    <tr>
-                      <th className="px-4 py-3 text-start font-semibold">{t('tuitionPackages.columns.package')}</th>
-                      <th className="px-4 py-3 text-start font-semibold">{t('packages.fieldPrice')}</th>
-                      <th className="px-4 py-3 text-start font-semibold">{t('packages.fieldType')}</th>
-                      <th className="px-4 py-3 text-start font-semibold">{t('packages.columns.validity')}</th>
-                      <th className="px-4 py-3 text-start font-semibold">{t('packages.columns.assigned')}</th>
-                      <th className="px-4 py-3 text-start font-semibold">{t('packages.active')}</th>
-                      <th className="px-4 py-3 text-end font-semibold">{t('packages.columns.actions')}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-outline-variant">
-                    {filteredRows.map((p) => {
-                      const deal = (dealsQuery.data ?? []).find((d) => d.id === p.deal_id);
-                      const live = deal ? isDealCurrentlyActive(deal) : false;
-                      const discounted = deal ? applyDealToPrice(p.price, deal) : p.price;
-                      return (
-                        <tr key={p.id} className="bg-surface transition hover:bg-surface-container-lowest">
-                          <td className="max-w-[220px] px-4 py-4 align-top">
-                            <p className="truncate font-semibold text-on-surface">{name(p)}</p>
-                            {p.description_ar || p.description_en ? (
-                              <p className="mt-0.5 line-clamp-2 text-xs text-on-surface-variant">{isAr ? p.description_ar || p.description_en : p.description_en || p.description_ar}</p>
-                            ) : null}
-                          </td>
-                          <td className="px-4 py-4 align-top">
-                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                              <span className={live ? 'text-sm text-on-surface-variant line-through' : 'text-sm font-medium text-on-surface'}>
-                                {money(p.price)}
-                              </span>
-                              {live ? <span className="text-sm font-semibold text-error">{money(discounted)}</span> : null}
-                            </div>
-                            {deal ? (
-                              <span className="mt-1 inline-flex items-center gap-1 rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
-                                {live
-                                  ? `${localizedName(deal, isAr)} · ${dealDiscountLabel(t, deal)}`
-                                  : t('deals.inactiveSuffix', { label: `${localizedName(deal, isAr)} · ${dealDiscountLabel(t, deal)}` })}
-                              </span>
-                            ) : null}
-                          </td>
-                          <td className="px-4 py-4 align-top text-xs text-on-surface-variant">
-                            {p.coverage_type === 'unlimited'
-                              ? t('packages.typeUnlimited')
-                              : t('packages.typeQuota', { hours: p.included_hours ?? 0 })}
-                          </td>
-                          <td className="px-4 py-4 align-top text-xs text-on-surface-variant">
-                            {p.validity_value && p.validity_unit
-                              ? t('packages.validityLabel', { value: p.validity_value, unit: t(`packages.validityUnit.${p.validity_unit}`) })
-                              : t('packages.validityNever')}
-                          </td>
-                          <td className="px-4 py-4 align-top text-on-surface">{t('packages.assignedCount', { count: p.assigned_count })}</td>
-                          <td className="px-4 py-4 align-top">
-                            <span
-                              className={
-                                'rounded-full border px-2 py-0.5 text-xs font-medium ' +
-                                (p.active
-                                  ? 'border-success/30 bg-success/10 text-success'
-                                  : 'border-outline-variant bg-surface-container text-on-surface-variant')
-                              }
-                            >
-                              {p.active ? t('packages.active') : t('packages.inactive')}
-                            </span>
-                          </td>
-                          <td className="px-4 py-4 align-top">
-                            <div className="flex flex-wrap justify-end gap-2">
-                              <Button type="button" variant="outline" size="sm" onClick={() => setManagePkg(p)}>
-                                {t('packages.manageChildren')}
-                              </Button>
-                              <Button type="button" variant="outline" size="sm" onClick={() => openEdit(p)}>
-                                {t('common.edit')}
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                disabled={update.isPending}
-                                onClick={() => void toggleActive(p)}
-                              >
-                                {p.active ? t('packages.deactivate') : t('packages.activate')}
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </section>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {filteredRows.map((p) => {
+                const deal = (dealsQuery.data ?? []).find((d) => d.id === p.deal_id);
+                const live = deal ? isDealCurrentlyActive(deal) : false;
+                const dealLabel = deal ? `${localizedName(deal, isAr)} · ${dealDiscountLabel(t, deal)}` : '';
+                return (
+                  <AdminPackageCard
+                    key={p.id}
+                    name={name(p)}
+                    active={p.active}
+                    price={money(p.price)}
+                    discountedPrice={deal && live ? money(applyDealToPrice(p.price, deal)) : null}
+                    deal={deal ? { label: live ? dealLabel : t('deals.inactiveSuffix', { label: dealLabel }), live } : null}
+                    description={isAr ? p.description_ar || p.description_en : p.description_en || p.description_ar}
+                    emptyHint={t('packageCard.noDescription')}
+                    facts={[
+                      {
+                        icon: 'more_time',
+                        label: p.coverage_type === 'unlimited' ? t('packages.typeUnlimited') : t('packages.typeQuota', { hours: p.included_hours ?? 0 }),
+                      },
+                      {
+                        icon: 'event_available',
+                        label:
+                          p.validity_value && p.validity_unit
+                            ? t('packages.validityLabel', { value: p.validity_value, unit: t(`packages.validityUnit.${p.validity_unit}`) })
+                            : t('packages.validityNever'),
+                      },
+                      { icon: 'groups', label: t('packages.assignedCount', { count: p.assigned_count }) },
+                    ]}
+                    actions={
+                      <>
+                        <Button type="button" variant="outline" size="sm" onClick={() => setManagePkg(p)}>
+                          <MaterialSymbol name="group" size="text-base" />
+                          {t('packages.manageChildren')}
+                        </Button>
+                        <Button type="button" variant="outline" size="sm" onClick={() => openEdit(p)}>
+                          <MaterialSymbol name="edit" size="text-base" />
+                          {t('common.edit')}
+                        </Button>
+                        <Button type="button" variant="outline" size="sm" disabled={update.isPending} onClick={() => void toggleActive(p)}>
+                          {p.active ? t('packages.deactivate') : t('packages.activate')}
+                        </Button>
+                      </>
+                    }
+                  />
+                );
+              })}
+            </div>
             )}
             </div>
           )}

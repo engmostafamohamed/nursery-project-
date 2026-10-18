@@ -2403,6 +2403,14 @@
     "saved": "Texts saved. Parents see them now.",
     "saveFailed": "Could not save the texts."
   },
+  "packageCard": {
+    "included": "What's included",
+    "moreFeatures": "+{{count}} more",
+    "showMore": "Show more",
+    "showLess": "Show less",
+    "noDetails": "No description or features yet. Add them in Edit so parents know what's included.",
+    "noDescription": "No description yet. Add one in Edit so parents know who this package suits."
+  },
   "invoice": {
     "itemKinds": {
       "late_pickup": "Late pickup extra hours · {{date}}",
@@ -5771,6 +5779,8 @@
     "typeUnlimited": "Unlimited extra hours",
     "typeQuota": "{{hours}} prepaid hours",
     "priceLabel": "EGP {{price}}",
+    "assignedCount_one": "{{count}} child",
+    "assignedCount_other": "{{count}} children",
     "assignedCount": "{{count}} children",
     "active": "Active",
     "inactive": "Inactive",

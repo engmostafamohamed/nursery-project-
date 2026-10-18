@@ -2403,6 +2403,14 @@
     "saved": "تم حفظ النصوص، ويراها أولياء الأمور الآن.",
     "saveFailed": "تعذّر حفظ النصوص."
   },
+  "packageCard": {
+    "included": "ما تشمله الباقة",
+    "moreFeatures": "+{{count}} أخرى",
+    "showMore": "عرض المزيد",
+    "showLess": "عرض أقل",
+    "noDetails": "لا يوجد وصف أو مزايا بعد. أضفها من «تعديل» ليعرف ولي الأمر ما تشمله الباقة.",
+    "noDescription": "لا يوجد وصف بعد. أضفه من «تعديل» ليعرف ولي الأمر لمن تناسب هذه الباقة."
+  },
   "invoice": {
     "itemKinds": {
       "late_pickup": "ساعات إضافية لتأخر الاستلام · {{date}}",
@@ -5790,6 +5798,12 @@
     "typeUnlimited": "ساعات إضافية غير محدودة",
     "typeQuota": "{{hours}} ساعة مدفوعة مسبقًا",
     "priceLabel": "{{price}} جنيه",
+    "assignedCount_zero": "لا يوجد أطفال",
+    "assignedCount_one": "طفل واحد",
+    "assignedCount_two": "طفلان",
+    "assignedCount_few": "{{count}} أطفال",
+    "assignedCount_many": "{{count}} طفلًا",
+    "assignedCount_other": "{{count}} طفل",
     "assignedCount": "{{count}} طفل",
     "active": "مُفعّلة",
     "inactive": "غير مُفعّلة",

@@ -17,6 +17,7 @@ const SCREENS = [
   'components/admin/settings/BulkTuitionAssignDialog.tsx',
   'components/admin/settings/PackageDealPicker.tsx',
   'components/admin/settings/PackageSectionTextsCard.tsx',
+  'components/admin/settings/AdminPackageCard.tsx',
   'components/admin/settings/dealLabels.ts',
 ];
 
@@ -54,6 +55,11 @@ describe('admin package and deal screens', () => {
       'signup.payment.chooseTuitionHint',
       'signup.payment.extraHoursHint',
     ];
+    // Children counts read naturally in each language's plural forms.
+    for (const form of ['one', 'other']) keys.push(`packages.assignedCount_${form}`);
+    for (const form of ['zero', 'two', 'few', 'many']) {
+      expect(typeof lookup(ar, `packages.assignedCount_${form}`), `ar plural: ${form}`).toBe('string');
+    }
     for (const key of keys) {
       expect(typeof lookup(en, key), `en: ${key}`).toBe('string');
       expect(typeof lookup(ar, key), `ar: ${key}`).toBe('string');
