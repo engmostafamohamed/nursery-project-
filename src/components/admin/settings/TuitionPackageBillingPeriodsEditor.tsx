@@ -1,6 +1,7 @@
+import { useTranslation } from 'react-i18next';
+
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { BILLING_PERIODS, type BillingPeriodKind, type BillingPeriodRowState } from '@/hooks/useAdminTuitionBillingPeriods';
 
 /** Pure, controlled — the parent owns the rows (and persists them together with the package
@@ -9,11 +10,15 @@ export function TuitionPackageBillingPeriodsEditor({
   rows,
   onChange,
   basePrice,
+  onBlur,
 }: {
   rows: Record<BillingPeriodKind, BillingPeriodRowState>;
   onChange: (next: Record<BillingPeriodKind, BillingPeriodRowState>) => void;
   basePrice: number;
+  /** Called when a period field loses focus, so the editor can show the periods' error. */
+  onBlur?: () => void;
 }) {
+  const { t } = useTranslation();
   const updateRow = (key: BillingPeriodKind, patch: Partial<BillingPeriodRowState>) =>
     onChange({ ...rows, [key]: { ...rows[key], ...patch } });
 
@@ -27,24 +32,21 @@ export function TuitionPackageBillingPeriodsEditor({
 
   return (
     <div className="space-y-2">
-      <Label>Billing periods</Label>
-      <p className="text-xs text-on-surface-variant">
-        Which billing periods parents can choose during registration, and the total price for each.
-      </p>
+      <p className="text-xs text-on-surface-variant">{t('tuitionPackages.periods.hint')}</p>
       <div className="space-y-2">
         {BILLING_PERIODS.map((period) => {
           const row = rows[period.key];
           return (
-            <div
-              key={period.key}
-              className="flex flex-wrap items-center gap-2 rounded-lg border border-outline-variant p-2.5"
-            >
-              <label className="flex w-40 shrink-0 items-center gap-2 text-sm text-on-surface">
+            <div key={period.key} className="flex flex-wrap items-center gap-2 rounded-lg border border-outline-variant p-2.5">
+              <label className="flex w-48 shrink-0 items-center gap-2 text-sm text-on-surface">
                 <Checkbox
                   checked={row.active}
-                  onCheckedChange={(checked) => updateRow(period.key, { active: checked === true })}
+                  onCheckedChange={(checked) => {
+                    updateRow(period.key, { active: checked === true });
+                    onBlur?.();
+                  }}
                 />
-                {period.label}
+                {t(`tuitionPackages.periods.${period.key}`)}
               </label>
               <div className="flex items-center gap-1.5">
                 <Input
@@ -53,12 +55,14 @@ export function TuitionPackageBillingPeriodsEditor({
                   className="w-20"
                   value={row.duration_months}
                   disabled={!row.active}
+                  aria-label={t('tuitionPackages.periods.months')}
+                  onBlur={onBlur}
                   onChange={(e) => updateDuration(period.key, Math.max(1, Number(e.target.value) || 1))}
                 />
-                <span className="text-xs text-on-surface-variant">months</span>
+                <span className="text-xs text-on-surface-variant">{t('tuitionPackages.periods.months')}</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="text-xs text-on-surface-variant">EGP</span>
+                <span className="text-xs text-on-surface-variant">{t('tuitionPackages.periods.currency')}</span>
                 <Input
                   type="number"
                   min={0}
@@ -66,14 +70,13 @@ export function TuitionPackageBillingPeriodsEditor({
                   className="w-28"
                   value={row.price}
                   disabled={!row.active}
+                  aria-label={t(`tuitionPackages.periods.${period.key}`)}
+                  onBlur={onBlur}
                   onChange={(e) => updatePrice(period.key, Number(e.target.value) || 0)}
                 />
                 {!row.touched ? (
-                  <span
-                    className="text-xs text-on-surface-variant"
-                    title="Auto-calculated from the package price — edit to override"
-                  >
-                    auto
+                  <span className="text-xs text-on-surface-variant" title={t('tuitionPackages.periods.autoHint')}>
+                    {t('tuitionPackages.periods.auto')}
                   </span>
                 ) : null}
               </div>

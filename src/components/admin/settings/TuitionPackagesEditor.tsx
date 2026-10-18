@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +14,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { FieldError, invalidFieldClass } from '@/components/ui/FieldError';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { FilterMenu } from '@/components/ui/FilterMenu';
@@ -32,10 +34,15 @@ import {
   type BillingPeriodKind,
   type BillingPeriodRowState,
 } from '@/hooks/useAdminTuitionBillingPeriods';
-import { applyDealToPrice, isDealCurrentlyActive, useAdminDeals } from '@/hooks/useAdminDeals';
+import { applyDealToPrice, isDealCurrentlyActive, useAdminDeals, useInlineDealCleanup } from '@/hooks/useAdminDeals';
 import { useNurserySettings } from '@/hooks/useNurserySettings';
-import { formatQueryError } from '@/lib/utils';
+import { useTouchedFields } from '@/hooks/useTouchedFields';
+import { formatTime } from '@/lib/datetime';
+import { formatMoneyAmount } from '@/lib/money';
+import { hasIssues, tuitionPackageFormIssues } from '@/lib/packageForms';
+import { cn, formatQueryError } from '@/lib/utils';
 import { BulkTuitionAssignDialog } from './BulkTuitionAssignDialog';
+import { dealDiscountLabel, localizedName } from './dealLabels';
 import { FormSection } from './FormSection';
 import { PackageDealPicker } from './PackageDealPicker';
 import { TuitionPackageBillingPeriodsEditor } from './TuitionPackageBillingPeriodsEditor';
@@ -52,19 +59,18 @@ const EMPTY_FORM: TuitionPackageInput = {
   deal_id: null,
 };
 
+type PackageField = 'name' | 'price' | 'periods';
+
 function blankFeature(): TuitionFeature {
   return { ar: '', en: '' };
 }
 
-function formatTime12h(time: string | null | undefined): string | null {
+/** 'HH:MM[:SS]' as a clock time in the current language, e.g. "08:00 AM" / "٠٨:٠٠ ص". */
+function clockLabel(time: string | null | undefined): string | null {
   if (!time) return null;
-  const [hStr, mStr] = time.split(':');
-  const h = Number(hStr);
-  const m = Number(mStr);
+  const [h, m] = time.split(':').map(Number);
   if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
-  const period = h >= 12 ? 'PM' : 'AM';
-  const hour12 = h % 12 === 0 ? 12 : h % 12;
-  return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
+  return formatTime(new Date(2000, 0, 1, h, m));
 }
 
 /** Hours between two 'HH:MM[:SS]' times, rounded to 1 decimal to match the daily_hours column. */
@@ -79,8 +85,12 @@ function computeHoursSpan(start: string | null | undefined, end: string | null |
 }
 
 export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null }) {
+  const { t, i18n } = useTranslation();
+  const isAr = i18n.language.startsWith('ar');
+  const money = (amount: number) => t('invoice.egpAmount', { amount: formatMoneyAmount(amount) });
   const { query, create, update } = useAdminTuitionPackages(nurseryId);
   const { query: dealsQuery } = useAdminDeals(nurseryId);
+  const dealCleanup = useInlineDealCleanup(nurseryId);
   const { settings: nurserySettings, isLoading: nurserySettingsLoading } = useNurserySettings(nurseryId);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -89,6 +99,7 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
   const [createdId, setCreatedId] = useState<string | null>(null);
   const [form, setForm] = useState<TuitionPackageInput>(EMPTY_FORM);
   const [periodRows, setPeriodRows] = useState<Record<BillingPeriodKind, BillingPeriodRowState> | null>(null);
+  const fields = useTouchedFields<PackageField>();
   const { query: periodsQuery, upsert: upsertPeriod } = useAdminTuitionBillingPeriods(editingId);
 
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -98,8 +109,11 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
 
   const rows = useMemo(() => query.data ?? [], [query.data]);
   const busy = create.isPending || update.isPending || upsertPeriod.isPending;
-  // Parents need at least one billing period to choose from.
-  const noActivePeriod = Boolean(periodRows) && !Object.values(periodRows ?? {}).some((row) => row.active);
+  const issues = tuitionPackageFormIssues(form, periodRows ? Object.values(periodRows) : null);
+  const errorFor = (field: PackageField) => {
+    const issue = issues[field];
+    return fields.isShown(field) && issue ? t(`packageForms.errors.${issue}`) : null;
+  };
 
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -136,14 +150,15 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
   // Daily hours is never typed by hand — it always matches the nursery's own opening/closing
   // times from Settings → Operations, for every package, since a package can't cover more
   // hours than the nursery is actually open.
-  const startLabel = formatTime12h(nurserySettings?.standard_start_time);
-  const endLabel = formatTime12h(nurserySettings?.standard_end_time);
+  const startLabel = clockLabel(nurserySettings?.standard_start_time);
+  const endLabel = clockLabel(nurserySettings?.standard_end_time);
   const hoursRangeLabel = startLabel && endLabel ? `${startLabel} – ${endLabel}` : null;
   const computedDailyHours = computeHoursSpan(nurserySettings?.standard_start_time, nurserySettings?.standard_end_time);
 
   const openCreate = () => {
     setEditingId(null);
     setCreatedId(null);
+    fields.reset();
     // Pre-fill from the nursery's own Financial rate instead of starting at 0 — still fully
     // editable, since different packages can legitimately have different prices.
     const defaultPrice = Number(nurserySettings?.monthly_rate ?? 0) || 0;
@@ -157,6 +172,7 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
   const openEdit = (pkg: TuitionPackageRow) => {
     setEditingId(pkg.id);
     setCreatedId(null);
+    fields.reset();
     setForm({
       name_ar: pkg.name_ar,
       name_en: pkg.name_en,
@@ -170,6 +186,12 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
     });
     setPeriodRows(null); // shows a loading state until this package's saved periods arrive
     setDialogOpen(true);
+  };
+
+  /** Closing without saving drops any custom discount made in this editor. */
+  const closeDialog = () => {
+    void dealCleanup.discard(null);
+    setDialogOpen(false);
   };
 
   /** Re-synced to the nursery's current operating hours on every save — see computedDailyHours. */
@@ -190,11 +212,11 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
     setForm((f) => ({ ...f, features_json: f.features_json.filter((_, i) => i !== index) }));
 
   const submit = async () => {
-    if (!form.name_ar.trim() && !form.name_en.trim()) {
-      toast.error('Please enter a package name.');
+    if (!nurseryId) return;
+    if (hasIssues(issues)) {
+      fields.showAll();
       return;
     }
-    if (!nurseryId || noActivePeriod) return;
     const payload: TuitionPackageInput = withCurrentDailyHours({
       ...form,
       features_json: form.features_json.filter((feature) => feature.ar.trim() || feature.en.trim()),
@@ -227,10 +249,11 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
         );
       }
 
-      toast.success('Tuition package saved.');
+      void dealCleanup.discard(payload.deal_id);
+      toast.success(t('tuitionPackages.saved'));
       setDialogOpen(false);
     } catch (error) {
-      toast.error('Could not save the package.', { description: formatQueryError(error) });
+      toast.error(t('tuitionPackages.saveFailed'), { description: formatQueryError(error) });
     }
   };
 
@@ -252,34 +275,35 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
           deal_id: pkg.deal_id,
         }),
       });
-      toast.success(pkg.active ? 'Package deactivated.' : 'Package activated.');
+      toast.success(pkg.active ? t('packages.deactivated') : t('packages.activated'));
     } catch (error) {
-      toast.error('Could not update the package.', { description: formatQueryError(error) });
+      toast.error(t('tuitionPackages.updateFailed'), { description: formatQueryError(error) });
     }
   };
 
   if (!nurseryId) return null;
 
+  const nameError = errorFor('name');
+  const priceError = errorFor('price');
+  const periodsError = errorFor('periods');
+
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold text-on-surface">Tuition packages</h2>
-          <p className="mt-0.5 text-xs text-on-surface-variant">
-            The nursery's own cost plans — daily hours covered, included features, and price. Parents choose one of
-            these during registration.
-          </p>
+          <h2 className="text-base font-semibold text-on-surface">{t('tuitionPackages.title')}</h2>
+          <p className="mt-0.5 text-xs text-on-surface-variant">{t('tuitionPackages.subtitle')}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {rows.some((pkg) => pkg.active) ? (
             <Button type="button" variant="outline" onClick={() => setBulkOpen(true)}>
               <MaterialSymbol name="group_add" size="text-base" />
-              Assign to children
+              {t('tuitionPackages.assignToChildren')}
             </Button>
           ) : null}
           <Button type="button" onClick={openCreate}>
             <MaterialSymbol name="add" size="text-base" />
-            New package
+            {t('tuitionPackages.newPackage')}
           </Button>
         </div>
       </div>
@@ -292,261 +316,275 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
       ) : rows.length === 0 ? (
         <EmptyState
           icon="payments"
-          title="No tuition packages yet"
-          description="Create one to give parents a cost plan to choose from during registration."
+          title={t('tuitionPackages.emptyTitle')}
+          description={t('tuitionPackages.emptyDescription')}
           action={
             <Button type="button" onClick={openCreate}>
               <MaterialSymbol name="add" size="text-base" />
-              New package
+              {t('tuitionPackages.newPackage')}
             </Button>
           }
         />
       ) : (
         <div className="space-y-3">
-        <div className="flex flex-wrap items-end gap-3 rounded-xl border border-outline-variant bg-surface p-3 shadow-sm">
-          <div className="min-w-[180px] flex-1 space-y-1">
-            <Label className="text-xs font-semibold text-on-surface-variant">Search</Label>
-            <Input className="h-11" placeholder="Package name…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <div className="flex flex-wrap items-end gap-3 rounded-xl border border-outline-variant bg-surface p-3 shadow-sm">
+            <div className="min-w-[180px] flex-1 space-y-1">
+              <Label className="text-xs font-semibold text-on-surface-variant">{t('packageFilters.search')}</Label>
+              <Input
+                className="h-11"
+                placeholder={t('packageFilters.searchPlaceholder')}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <FilterMenu<typeof statusFilter>
+              className="w-48"
+              label={t('packageFilters.status')}
+              icon="toggle_on"
+              value={statusFilter}
+              onChange={setStatusFilter}
+              options={[
+                { value: 'all', label: t('packageFilters.allStatuses') },
+                { value: 'active', label: t('packageFilters.active') },
+                { value: 'inactive', label: t('packageFilters.inactive') },
+              ]}
+            />
+            <FilterMenu<typeof dealFilter>
+              className="w-52"
+              label={t('packageFilters.discount')}
+              icon="sell"
+              value={dealFilter}
+              onChange={setDealFilter}
+              options={[
+                { value: 'all', label: t('packageFilters.allPackages') },
+                { value: 'with', label: t('packageFilters.withDiscount') },
+                { value: 'without', label: t('packageFilters.withoutDiscount') },
+              ]}
+            />
+            {hasActiveFilters ? (
+              <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
+                <MaterialSymbol name="close" size="text-base" />
+                {t('packageFilters.clear')}
+              </Button>
+            ) : null}
           </div>
-          <FilterMenu<typeof statusFilter>
-            className="w-48"
-            label="Status"
-            icon="toggle_on"
-            value={statusFilter}
-            onChange={setStatusFilter}
-            options={[
-              { value: 'all', label: 'All statuses' },
-              { value: 'active', label: 'Active' },
-              { value: 'inactive', label: 'Inactive' },
-            ]}
-          />
-          <FilterMenu<typeof dealFilter>
-            className="w-52"
-            label="Discount"
-            icon="sell"
-            value={dealFilter}
-            onChange={setDealFilter}
-            options={[
-              { value: 'all', label: 'All packages' },
-              { value: 'with', label: 'With a discount' },
-              { value: 'without', label: 'Without a discount' },
-            ]}
-          />
-          {hasActiveFilters ? (
-            <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
-              <MaterialSymbol name="close" size="text-base" />
-              Clear filters
-            </Button>
-          ) : null}
-        </div>
 
-        {filteredRows.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-outline-variant p-6 text-center text-sm text-on-surface-variant">
-            No packages match these filters.
-          </p>
-        ) : (
-        <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[920px] text-sm">
-              <thead className="bg-surface-container-lowest text-xs uppercase text-on-surface-variant">
-                <tr>
-                  <th className="px-4 py-3 text-start font-semibold">Package</th>
-                  <th className="px-4 py-3 text-start font-semibold">Price</th>
-                  <th className="px-4 py-3 text-start font-semibold">Hours</th>
-                  <th className="px-4 py-3 text-start font-semibold">Children</th>
-                  <th className="px-4 py-3 text-start font-semibold">Status</th>
-                  <th className="px-4 py-3 text-end font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-outline-variant">
-                {filteredRows.map((pkg) => {
-                  const deal = (dealsQuery.data ?? []).find((d) => d.id === pkg.deal_id);
-                  const live = deal ? isDealCurrentlyActive(deal) : false;
-                  const discounted = deal ? applyDealToPrice(pkg.price, deal) : pkg.price;
-                  return (
-                    <tr key={pkg.id} className="bg-surface transition hover:bg-surface-container-lowest">
-                      <td className="max-w-[260px] px-4 py-4 align-top">
-                        <p className="truncate font-semibold text-on-surface">{pkg.name_en || pkg.name_ar}</p>
-                        {pkg.features_json.length ? (
-                          <ul className="mt-1 space-y-0.5">
-                            {pkg.features_json.slice(0, 3).map((feature, index) => (
-                              <li key={index} className="flex items-start gap-1.5 text-xs text-on-surface-variant">
-                                <MaterialSymbol name="check_small" size="text-sm" className="mt-0.5 shrink-0" />
-                                <span className="truncate">{feature.en || feature.ar}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : null}
-                      </td>
-                      <td className="px-4 py-4 align-top">
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                          <span className={live ? 'text-sm text-on-surface-variant line-through' : 'text-sm font-medium text-on-surface'}>
-                            EGP {pkg.price.toFixed(2)}
-                          </span>
-                          {live ? <span className="text-sm font-semibold text-error">EGP {discounted.toFixed(2)}</span> : null}
-                        </div>
-                        {deal ? (
-                          <Badge variant={live ? 'warning' : 'secondary'} className="mt-1">
-                            <MaterialSymbol name="sell" size="text-xs" className="me-1" />
-                            {deal.name_en || deal.name_ar}
-                            {' · '}
-                            {deal.discount_type === 'percentage' ? `${deal.discount_value}%` : `EGP ${deal.discount_value}`} off
-                            {!live ? ' (inactive)' : ''}
-                          </Badge>
-                        ) : null}
-                      </td>
-                      <td className="px-4 py-4 align-top text-xs text-on-surface-variant">{hoursRangeLabel ?? '—'}</td>
-                      <td className="px-4 py-4 align-top text-on-surface">
-                        {pkg.subscribed_count} {pkg.subscribed_count === 1 ? 'child' : 'children'}
-                      </td>
-                      <td className="px-4 py-4 align-top">
-                        <Badge variant={pkg.active ? 'success' : 'secondary'}>{pkg.active ? 'Active' : 'Inactive'}</Badge>
-                      </td>
-                      <td className="px-4 py-4 align-top">
-                        <div className="flex justify-end gap-2">
-                          <Button type="button" variant="outline" size="sm" onClick={() => openEdit(pkg)}>
-                            Edit
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={update.isPending}
-                            onClick={() => void toggleActive(pkg)}
-                          >
-                            {pkg.active ? 'Deactivate' : 'Activate'}
-                          </Button>
-                        </div>
-                      </td>
+          {filteredRows.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-outline-variant p-6 text-center text-sm text-on-surface-variant">
+              {t('packageFilters.noMatch')}
+            </p>
+          ) : (
+            <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[920px] text-sm">
+                  <thead className="bg-surface-container-lowest text-xs uppercase text-on-surface-variant">
+                    <tr>
+                      <th className="px-4 py-3 text-start font-semibold">{t('tuitionPackages.columns.package')}</th>
+                      <th className="px-4 py-3 text-start font-semibold">{t('tuitionPackages.columns.price')}</th>
+                      <th className="px-4 py-3 text-start font-semibold">{t('tuitionPackages.columns.hours')}</th>
+                      <th className="px-4 py-3 text-start font-semibold">{t('tuitionPackages.columns.children')}</th>
+                      <th className="px-4 py-3 text-start font-semibold">{t('tuitionPackages.columns.status')}</th>
+                      <th className="px-4 py-3 text-end font-semibold">{t('tuitionPackages.columns.actions')}</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </section>
-        )}
+                  </thead>
+                  <tbody className="divide-y divide-outline-variant">
+                    {filteredRows.map((pkg) => {
+                      const deal = (dealsQuery.data ?? []).find((d) => d.id === pkg.deal_id);
+                      const live = deal ? isDealCurrentlyActive(deal) : false;
+                      const discounted = deal ? applyDealToPrice(pkg.price, deal) : pkg.price;
+                      const dealLabel = deal ? `${localizedName(deal, isAr)} · ${dealDiscountLabel(t, deal)}` : '';
+                      return (
+                        <tr key={pkg.id} className="bg-surface transition hover:bg-surface-container-lowest">
+                          <td className="max-w-[260px] px-4 py-4 align-top">
+                            <p className="truncate font-semibold text-on-surface">{localizedName(pkg, isAr)}</p>
+                            {pkg.features_json.length ? (
+                              <ul className="mt-1 space-y-0.5">
+                                {pkg.features_json.slice(0, 3).map((feature, index) => (
+                                  <li key={index} className="flex items-start gap-1.5 text-xs text-on-surface-variant">
+                                    <MaterialSymbol name="check_small" size="text-sm" className="mt-0.5 shrink-0" />
+                                    <span className="truncate">{isAr ? feature.ar || feature.en : feature.en || feature.ar}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : null}
+                          </td>
+                          <td className="px-4 py-4 align-top">
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                              <span className={live ? 'text-sm text-on-surface-variant line-through' : 'text-sm font-medium text-on-surface'}>
+                                {money(pkg.price)}
+                              </span>
+                              {live ? <span className="text-sm font-semibold text-error">{money(discounted)}</span> : null}
+                            </div>
+                            {deal ? (
+                              <Badge variant={live ? 'warning' : 'secondary'} className="mt-1">
+                                <MaterialSymbol name="sell" size="text-xs" className="me-1" />
+                                {live ? dealLabel : t('deals.inactiveSuffix', { label: dealLabel })}
+                              </Badge>
+                            ) : null}
+                          </td>
+                          <td className="px-4 py-4 align-top text-xs text-on-surface-variant">{hoursRangeLabel ?? '—'}</td>
+                          <td className="px-4 py-4 align-top text-on-surface">{t('packages.assignedCount', { count: pkg.subscribed_count })}</td>
+                          <td className="px-4 py-4 align-top">
+                            <Badge variant={pkg.active ? 'success' : 'secondary'}>
+                              {pkg.active ? t('packageFilters.active') : t('packageFilters.inactive')}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-4 align-top">
+                            <div className="flex justify-end gap-2">
+                              <Button type="button" variant="outline" size="sm" onClick={() => openEdit(pkg)}>
+                                {t('common.edit')}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                disabled={update.isPending}
+                                onClick={() => void toggleActive(pkg)}
+                              >
+                                {pkg.active ? t('packages.deactivate') : t('packages.activate')}
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
         </div>
       )}
 
       <BulkTuitionAssignDialog open={bulkOpen} onOpenChange={setBulkOpen} nurseryId={nurseryId} />
 
-      <Dialog open={dialogOpen} onOpenChange={(open) => !busy && setDialogOpen(open)}>
+      <Dialog open={dialogOpen} onOpenChange={(open) => !busy && (open ? setDialogOpen(true) : closeDialog())}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{editingId ? 'Edit tuition package' : 'New tuition package'}</DialogTitle>
-            <DialogDescription>Set the cost, daily hours covered, and what's included.</DialogDescription>
+            <DialogTitle>{editingId ? t('tuitionPackages.dialog.editTitle') : t('tuitionPackages.dialog.newTitle')}</DialogTitle>
+            <DialogDescription>{t('tuitionPackages.dialog.description')}</DialogDescription>
           </DialogHeader>
 
           <div className="mt-4 max-h-[70vh] space-y-4 overflow-y-auto pe-1">
-            <FormSection title="Package name" icon="badge">
+            <FormSection title={t('tuitionPackages.sections.name')} icon="badge">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label>Name (English)</Label>
-                  <Input value={form.name_en} onChange={(e) => setForm((f) => ({ ...f, name_en: e.target.value }))} />
+                  <Label htmlFor="tuition-name-en">{t('tuitionPackages.fields.nameEn')}</Label>
+                  <Input
+                    id="tuition-name-en"
+                    value={form.name_en}
+                    aria-invalid={Boolean(nameError)}
+                    className={cn(nameError && invalidFieldClass)}
+                    onBlur={() => fields.touch('name')}
+                    onChange={(e) => setForm((f) => ({ ...f, name_en: e.target.value }))}
+                  />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Name (Arabic)</Label>
+                  <Label htmlFor="tuition-name-ar">{t('tuitionPackages.fields.nameAr')}</Label>
                   <Input
+                    id="tuition-name-ar"
                     dir="rtl"
                     value={form.name_ar}
+                    aria-invalid={Boolean(nameError)}
+                    className={cn(nameError && invalidFieldClass)}
+                    onBlur={() => fields.touch('name')}
                     onChange={(e) => setForm((f) => ({ ...f, name_ar: e.target.value }))}
                   />
                 </div>
               </div>
+              <FieldError message={nameError} />
             </FormSection>
 
-            <FormSection title="Pricing & hours" icon="payments">
+            <FormSection title={t('tuitionPackages.sections.pricing')} icon="payments">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label>Price (EGP)</Label>
+                  <Label htmlFor="tuition-price">{t('tuitionPackages.fields.price')}</Label>
                   <Input
+                    id="tuition-price"
                     type="number"
                     min={0}
                     step={0.01}
                     value={form.price}
+                    aria-invalid={Boolean(priceError)}
+                    className={cn(priceError && invalidFieldClass)}
+                    onBlur={() => fields.touch('price')}
                     onChange={(e) => setForm((f) => ({ ...f, price: Number(e.target.value) || 0 }))}
                   />
+                  <FieldError message={priceError} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Daily hours covered</Label>
+                  <Label>{t('tuitionPackages.fields.dailyHours')}</Label>
                   {nurserySettingsLoading ? (
                     <Skeleton className="h-12 w-full rounded-lg" />
                   ) : hoursRangeLabel && computedDailyHours ? (
                     <div className="flex h-12 items-center gap-2 rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface-variant">
                       <MaterialSymbol name="schedule" size="text-base" className="shrink-0" />
-                      {hoursRangeLabel} ({computedDailyHours} hrs/day)
+                      {t('tuitionPackages.fields.hoursValue', { range: hoursRangeLabel, hours: computedDailyHours })}
                     </div>
                   ) : (
                     <p className="flex h-12 items-center rounded-lg border border-dashed border-error/40 px-3 text-xs text-error">
-                      Set nursery opening/closing times in Settings → Operations first.
+                      {t('tuitionPackages.fields.hoursMissing')}
                     </p>
                   )}
-                  <p className="text-xs text-on-surface-variant">
-                    Matches the nursery's opening and closing times — set in Settings → Operations.
-                  </p>
+                  <p className="text-xs text-on-surface-variant">{t('tuitionPackages.fields.hoursHint')}</p>
                 </div>
               </div>
               <label className="flex items-center gap-2 border-t border-outline-variant pt-3 text-sm text-on-surface">
-                <Checkbox
-                  checked={form.active}
-                  onCheckedChange={(checked) => setForm((f) => ({ ...f, active: checked === true }))}
-                />
-                Active (visible to parents)
+                <Checkbox checked={form.active} onCheckedChange={(checked) => setForm((f) => ({ ...f, active: checked === true }))} />
+                {t('tuitionPackages.fields.active')}
               </label>
             </FormSection>
 
-            <FormSection
-              title="Deal / discount"
-              description="Optional — assign an existing offer or create a one-off discount just for this package."
-              icon="sell"
-            >
+            <FormSection title={t('tuitionPackages.sections.deal')} description={t('tuitionPackages.sections.dealHint')} icon="sell">
               <PackageDealPicker
                 nurseryId={nurseryId}
                 dealId={form.deal_id}
                 onChange={(deal_id) => setForm((f) => ({ ...f, deal_id }))}
+                onCustomDealCreated={dealCleanup.track}
               />
             </FormSection>
 
-            <FormSection title="Billing periods" icon="event_repeat">
+            <FormSection title={t('tuitionPackages.sections.periods')} icon="event_repeat">
               {periodRows ? (
                 <>
-                  <TuitionPackageBillingPeriodsEditor rows={periodRows} onChange={setPeriodRows} basePrice={form.price} />
-                  {noActivePeriod ? (
-                    <p className="flex items-center gap-1.5 text-xs text-error">
-                      <MaterialSymbol name="error" size="text-sm" />
-                      Switch on at least one billing period. Parents choose one of these when they register.
-                    </p>
-                  ) : null}
+                  <TuitionPackageBillingPeriodsEditor
+                    rows={periodRows}
+                    onChange={setPeriodRows}
+                    basePrice={form.price}
+                    onBlur={() => fields.touch('periods')}
+                  />
+                  <FieldError message={periodsError} />
                 </>
               ) : (
                 <Skeleton className="h-40 w-full rounded-lg" />
               )}
             </FormSection>
 
-            <FormSection title="Features" icon="checklist">
+            <FormSection title={t('tuitionPackages.sections.features')} icon="checklist">
               <div className="flex items-center justify-end">
                 <Button type="button" variant="outline" size="sm" onClick={addFeature}>
                   <MaterialSymbol name="add" size="text-base" />
-                  Add feature
+                  {t('tuitionPackages.fields.addFeature')}
                 </Button>
               </div>
               {form.features_json.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-outline-variant p-3 text-center text-xs text-on-surface-variant">
-                  No features added yet.
+                  {t('tuitionPackages.fields.noFeatures')}
                 </p>
               ) : (
                 <div className="space-y-2">
                   {form.features_json.map((feature, index) => (
                     <div key={index} className="flex items-center gap-2">
                       <Input
-                        placeholder="Feature (English)"
+                        placeholder={t('tuitionPackages.fields.featureEn')}
+                        aria-label={t('tuitionPackages.fields.featureEn')}
                         value={feature.en}
                         onChange={(e) => updateFeature(index, { en: e.target.value })}
                       />
                       <Input
                         dir="rtl"
-                        placeholder="الميزة (عربي)"
+                        placeholder={t('tuitionPackages.fields.featureAr')}
+                        aria-label={t('tuitionPackages.fields.featureAr')}
                         value={feature.ar}
                         onChange={(e) => updateFeature(index, { ar: e.target.value })}
                       />
@@ -555,6 +593,7 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
                         variant="ghost"
                         size="icon"
                         className="shrink-0 text-error"
+                        aria-label={t('tuitionPackages.fields.removeFeature')}
                         onClick={() => removeFeature(index)}
                       >
                         <MaterialSymbol name="delete" size="text-base" />
@@ -565,19 +604,21 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
               )}
             </FormSection>
 
-            <FormSection title="Description" icon="description">
+            <FormSection title={t('tuitionPackages.sections.description')} icon="description">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label>Description (English)</Label>
+                  <Label htmlFor="tuition-desc-en">{t('tuitionPackages.fields.descEn')}</Label>
                   <Textarea
+                    id="tuition-desc-en"
                     className="min-h-16"
                     value={form.description_en ?? ''}
                     onChange={(e) => setForm((f) => ({ ...f, description_en: e.target.value || null }))}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Description (Arabic)</Label>
+                  <Label htmlFor="tuition-desc-ar">{t('tuitionPackages.fields.descAr')}</Label>
                   <Textarea
+                    id="tuition-desc-ar"
                     dir="rtl"
                     className="min-h-16"
                     value={form.description_ar ?? ''}
@@ -589,11 +630,11 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
           </div>
 
           <DialogFooter className="mt-5">
-            <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} disabled={busy}>
-              Cancel
+            <Button type="button" variant="outline" onClick={closeDialog} disabled={busy}>
+              {t('common.cancel')}
             </Button>
-            <Button type="button" onClick={() => void submit()} disabled={busy || noActivePeriod}>
-              {busy ? 'Saving…' : 'Save'}
+            <Button type="button" onClick={() => void submit()} disabled={busy}>
+              {busy ? t('common.saving') : t('common.save')}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -2158,6 +2158,233 @@
       }
     }
   },
+  "packageForms": {
+    "errors": {
+      "nameRequired": "Enter a name in Arabic or English.",
+      "valueRequired": "Enter a discount greater than zero.",
+      "percentOver100": "A percentage discount cannot be more than 100%.",
+      "endsBeforeStart": "The end must be after the start.",
+      "hoursRequired": "Enter the included hours as a whole number above zero.",
+      "priceInvalid": "Enter a price of zero or more.",
+      "validityRequired": "Enter how long the package stays valid.",
+      "validityUnitRequired": "Choose months or years.",
+      "noActivePeriod": "Switch on at least one billing period. Parents choose one of these when they register.",
+      "periodPriceInvalid": "Each billing period that is on needs a price above zero."
+    }
+  },
+  "packageFilters": {
+    "search": "Search",
+    "searchPlaceholder": "Package name…",
+    "status": "Status",
+    "allStatuses": "All statuses",
+    "active": "Active",
+    "inactive": "Inactive",
+    "type": "Type",
+    "allTypes": "All types",
+    "discount": "Discount",
+    "allPackages": "All packages",
+    "withDiscount": "With a discount",
+    "withoutDiscount": "Without a discount",
+    "clear": "Clear filters",
+    "noMatch": "No packages match these filters."
+  },
+  "deals": {
+    "title": "Deals & Discounts",
+    "subtitle": "Create time-limited offers, then assign one to a tuition or extra-hours package from its own editor.",
+    "newDeal": "New deal",
+    "emptyTitle": "No deals yet",
+    "emptyDescription": "Create one to offer parents a limited-time discount on a package.",
+    "filters": {
+      "searchPlaceholder": "Deal name…",
+      "liveOnly": "Live only",
+      "inactiveOrExpired": "Inactive / expired",
+      "type": "Discount type",
+      "endsAfter": "Ends after",
+      "endsBefore": "Ends before",
+      "noMatch": "No deals match these filters."
+    },
+    "columns": {
+      "deal": "Deal",
+      "discount": "Discount",
+      "status": "Status",
+      "window": "Window",
+      "packages": "Packages",
+      "children": "Children",
+      "actions": "Actions"
+    },
+    "types": {
+      "percentage": "Percentage off",
+      "fixed_amount": "Fixed amount off (EGP)"
+    },
+    "percentOff": "{{value}}% off",
+    "amountOff": "{{amount}} off",
+    "inactiveSuffix": "{{label}} (inactive)",
+    "state": {
+      "live": "Live",
+      "inactive": "Inactive",
+      "expired": "Expired",
+      "startsAt": "Starts {{date}}",
+      "endsAt": "Ends {{date}}",
+      "noExpiry": "No expiry"
+    },
+    "windowFrom": "From {{date}}",
+    "windowUntil": "Until {{date}}",
+    "notAssigned": "Not assigned",
+    "openPackages": "Open Packages to edit this one",
+    "childrenUsing": "Children on a package with this discount",
+    "dialog": {
+      "newTitle": "New deal",
+      "editTitle": "Edit deal",
+      "description": "Set the discount and, optionally, when it starts and ends."
+    },
+    "sections": {
+      "name": "Deal name",
+      "discount": "Discount",
+      "window": "Time window",
+      "windowHint": "Optional. Leave both blank for a deal with no start or end.",
+      "description": "Description"
+    },
+    "fields": {
+      "nameEn": "Name (English)",
+      "nameAr": "Name (Arabic)",
+      "type": "Discount type",
+      "valuePercent": "Discount (%)",
+      "valueAmount": "Discount (EGP)",
+      "active": "Active",
+      "starts": "Starts (optional)",
+      "startsHint": "Leave blank to start immediately.",
+      "ends": "Ends (optional)",
+      "endsHint": "Shown to parents as a live countdown. Leave blank for no end.",
+      "descEn": "Description (English)",
+      "descAr": "Description (Arabic)"
+    },
+    "saved": "Deal saved.",
+    "saveFailed": "Could not save the deal.",
+    "activated": "Deal activated.",
+    "deactivated": "Deal deactivated.",
+    "updateFailed": "Could not update the deal.",
+    "picker": {
+      "assignExisting": "Assign an existing deal",
+      "loading": "Loading deals…",
+      "loadFailed": "Could not load deals: {{error}}",
+      "noDiscount": "No discount",
+      "option": "{{name}} — {{discount}}",
+      "noDealsYet": "No deals yet. Create one below, or on the Deals & Discounts page.",
+      "inactiveWarning": "This deal is switched off or outside its time window, so it won't apply until that changes.",
+      "createCustom": "Create a custom discount for this package",
+      "customTitle": "New custom discount",
+      "counterEnds": "Countdown ends at (optional)",
+      "counterHint": "Shown to parents as a live countdown while they apply. Leave blank for no end.",
+      "creating": "Creating…",
+      "createAndAssign": "Create & assign",
+      "customCreated": "Custom discount created and selected. Save the package to apply it.",
+      "createFailed": "Could not create the discount."
+    }
+  },
+  "tuitionPackages": {
+    "title": "Tuition packages",
+    "subtitle": "The nursery's own cost plans: daily hours covered, included features, and price. Parents choose one of these when they register.",
+    "assignToChildren": "Assign to children",
+    "newPackage": "New package",
+    "emptyTitle": "No tuition packages yet",
+    "emptyDescription": "Create one to give parents a cost plan to choose when they register.",
+    "columns": {
+      "package": "Package",
+      "price": "Price",
+      "hours": "Hours",
+      "children": "Children",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "dialog": {
+      "newTitle": "New tuition package",
+      "editTitle": "Edit tuition package",
+      "description": "Set the cost, the daily hours covered, and what's included."
+    },
+    "sections": {
+      "name": "Package name",
+      "pricing": "Pricing & hours",
+      "deal": "Deal / discount",
+      "dealHint": "Optional. Assign an existing offer or create a one-off discount just for this package.",
+      "periods": "Billing periods",
+      "features": "Features",
+      "description": "Description"
+    },
+    "fields": {
+      "nameEn": "Name (English)",
+      "nameAr": "Name (Arabic)",
+      "price": "Price (EGP)",
+      "dailyHours": "Daily hours covered",
+      "hoursValue": "{{range}} ({{hours}} hrs/day)",
+      "hoursMissing": "Set the nursery opening and closing times in Settings → Operations first.",
+      "hoursHint": "Matches the nursery's opening and closing times, set in Settings → Operations.",
+      "active": "Active (visible to parents)",
+      "addFeature": "Add feature",
+      "noFeatures": "No features added yet.",
+      "featureEn": "Feature (English)",
+      "featureAr": "Feature (Arabic)",
+      "removeFeature": "Remove feature",
+      "descEn": "Description (English)",
+      "descAr": "Description (Arabic)"
+    },
+    "periods": {
+      "hint": "The billing periods parents can choose when they register, and the total price for each.",
+      "monthly": "Monthly",
+      "quarterly": "Quarterly (3 months)",
+      "half_annual": "Half-annual (6 months)",
+      "annual": "Annual (12 months)",
+      "months": "months",
+      "currency": "EGP",
+      "auto": "auto",
+      "autoHint": "Calculated from the package price. Edit it to set your own."
+    },
+    "saved": "Tuition package saved.",
+    "saveFailed": "Could not save the package.",
+    "updateFailed": "Could not update the package."
+  },
+  "tuitionBulkAssign": {
+    "title": "Assign a package to children",
+    "description": "Children with a package are billed automatically by the daily billing job. Use this for children enrolled before packages existed, or added by import or the enrollment wizard.",
+    "sections": {
+      "billing": "Package and billing",
+      "children": "Children",
+      "childrenHint": "{{unassigned}} of {{total}} active children have no package yet."
+    },
+    "fields": {
+      "package": "Package",
+      "choosePackage": "Choose a package",
+      "loading": "Loading…",
+      "period": "Billing period",
+      "periodOption": "{{period}} · {{price}}",
+      "noPeriods": "No active billing periods",
+      "choosePackageFirst": "Choose a package first",
+      "firstInvoice": "First invoice",
+      "nextPeriod": "After one billing period",
+      "immediate": "Today (issue it now)",
+      "immediateHint": "An invoice for the first period is created for each child today, then billing repeats every period.",
+      "nextPeriodHint": "No invoice today. The first invoice is created one billing period from today, then every period after.",
+      "billedParentHint": "The invoice goes to the child's first linked parent.",
+      "searchPlaceholder": "Search by child or class…",
+      "includeAssigned": "Include children who already have a package (it will be replaced)"
+    },
+    "noChildren": "No active children.",
+    "noMatch": "No children match.",
+    "selectAllShown": "Select all shown ({{count}})",
+    "selectedCount": "{{count}} selected",
+    "noClass": "No class",
+    "noParent": "No parent linked",
+    "result": {
+      "assigned": "{{count}} assigned",
+      "invoicesIssued": "{{count}} first invoices issued",
+      "failed": "{{count}} failed (still selected, so you can retry)"
+    },
+    "assignedToast": "Package assigned to {{count}} children.",
+    "partialToast": "{{succeeded}} assigned, {{failed}} failed.",
+    "failedToast": "Could not assign the package.",
+    "done": "Done",
+    "assigning": "Assigning {{done}} / {{total}}…",
+    "assign": "Assign to {{count}} children"
+  },
   "invoice": {
     "itemKinds": {
       "late_pickup": "Late pickup extra hours · {{date}}",
@@ -5471,6 +5698,18 @@
     }
   },
   "packages": {
+    "columns": {
+      "validity": "Validity",
+      "assigned": "Assigned",
+      "actions": "Actions"
+    },
+    "sections": {
+      "name": "Package name",
+      "coveragePrice": "Coverage & price",
+      "deal": "Deal / discount",
+      "dealHint": "Optional. Assign an existing offer or create a one-off discount just for this package.",
+      "description": "Description"
+    },
     "hourly": {
       "title": "Pay per hour",
       "defaultBadge": "Default for every child",
@@ -5542,7 +5781,7 @@
     "activate": "Activate",
     "deactivate": "Deactivate",
     "activated": "Package activated.",
-    "deactivated": "Package deactivated."
+    "deactivated": "Package deactivated. Children who already have it keep it until it ends."
   },
   "teacherReminders": {
     "title": "Teacher monthly reminders",

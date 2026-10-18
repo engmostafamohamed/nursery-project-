@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
@@ -17,15 +18,14 @@ import { Input } from '@/components/ui/input';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAdminChildBilling } from '@/hooks/useAdminChildBilling';
-import { BILLING_PERIODS, type BillingPeriodKind } from '@/hooks/useAdminTuitionBillingPeriods';
+import { type BillingPeriodKind } from '@/hooks/useAdminTuitionBillingPeriods';
 import {
   useBulkTuitionAssignment,
   type BulkAssignEffective,
   type BulkAssignResult,
 } from '@/hooks/useBulkTuitionAssignment';
+import { formatMoneyAmount } from '@/lib/money';
 import { FormSection } from './FormSection';
-
-const periodLabel = (key: BillingPeriodKind) => BILLING_PERIODS.find((p) => p.key === key)?.label ?? key;
 
 /**
  * Gives many already-enrolled children a tuition package in one go, so the daily billing job
@@ -40,6 +40,8 @@ export function BulkTuitionAssignDialog({
   onOpenChange: (open: boolean) => void;
   nurseryId: string | null | undefined;
 }) {
+  const { t, i18n } = useTranslation();
+  const isAr = i18n.language.startsWith('ar');
   const { choicesQuery } = useAdminChildBilling(null, nurseryId);
   const { childrenQuery, assign } = useBulkTuitionAssignment(nurseryId);
 
@@ -58,7 +60,11 @@ export function BulkTuitionAssignDialog({
   const chosenPeriod = periods.find((p) => p.billingPeriod === period) ?? null;
 
   const children = useMemo(() => childrenQuery.data ?? [], [childrenQuery.data]);
-  const nameOf = useMemo(() => new Map(children.map((c) => [c.id, c.nameEn || c.nameAr])), [children]);
+  const childName = (c: { nameAr: string; nameEn: string }) => (isAr ? c.nameAr || c.nameEn : c.nameEn || c.nameAr);
+  const nameOf = useMemo(
+    () => new Map(children.map((c) => [c.id, isAr ? c.nameAr || c.nameEn : c.nameEn || c.nameAr])),
+    [children, isAr],
+  );
   const unassignedCount = children.filter((c) => !c.currentPackageEn && !c.currentPackageAr).length;
 
   const visible = useMemo(() => {
@@ -121,10 +127,10 @@ export function BulkTuitionAssignDialog({
       });
       setResult(res);
       setSelected(new Set(res.failed.map((f) => f.childId)));
-      if (res.failed.length === 0) toast.success(`Package assigned to ${res.succeeded.length} children.`);
-      else toast.warning(`${res.succeeded.length} assigned, ${res.failed.length} failed.`);
+      if (res.failed.length === 0) toast.success(t('tuitionBulkAssign.assignedToast', { count: res.succeeded.length }));
+      else toast.warning(t('tuitionBulkAssign.partialToast', { succeeded: res.succeeded.length, failed: res.failed.length }));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not assign the package.');
+      toast.error(error instanceof Error ? error.message : t('tuitionBulkAssign.failedToast'));
     }
   };
 
@@ -132,18 +138,15 @@ export function BulkTuitionAssignDialog({
     <Dialog open={open} onOpenChange={close}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Assign a package to children</DialogTitle>
-          <DialogDescription>
-            Children with a package are billed automatically by the daily billing job. Use this for children enrolled
-            before packages existed, or added by import or the enrollment wizard.
-          </DialogDescription>
+          <DialogTitle>{t('tuitionBulkAssign.title')}</DialogTitle>
+          <DialogDescription>{t('tuitionBulkAssign.description')}</DialogDescription>
         </DialogHeader>
 
         <div className="mt-4 max-h-[70vh] space-y-4 overflow-y-auto pe-1">
-          <FormSection title="Package and billing" icon="payments">
+          <FormSection title={t('tuitionBulkAssign.sections.billing')} icon="payments">
             <div className="grid gap-3 sm:grid-cols-3">
               <FilterMenu<string>
-                label="Package"
+                label={t('tuitionBulkAssign.fields.package')}
                 value={packageId}
                 onChange={(value) => {
                   setPackageId(value);
@@ -151,53 +154,65 @@ export function BulkTuitionAssignDialog({
                   setPeriod(first);
                 }}
                 options={[
-                  { value: '', label: choicesQuery.isLoading ? 'Loading…' : 'Choose a package' },
-                  ...packages.map((p) => ({ value: p.id, label: p.nameEn || p.nameAr })),
+                  {
+                    value: '',
+                    label: choicesQuery.isLoading ? t('tuitionBulkAssign.fields.loading') : t('tuitionBulkAssign.fields.choosePackage'),
+                  },
+                  ...packages.map((p) => ({ value: p.id, label: isAr ? p.nameAr || p.nameEn : p.nameEn || p.nameAr })),
                 ]}
               />
               <FilterMenu<string>
-                label="Billing period"
+                label={t('tuitionBulkAssign.fields.period')}
                 value={period}
                 onChange={(value) => setPeriod(value as BillingPeriodKind | '')}
                 options={
                   periods.length
-                    ? periods.map((p) => ({ value: p.billingPeriod, label: `${periodLabel(p.billingPeriod)} · EGP ${p.price.toFixed(2)}` }))
-                    : [{ value: '', label: pkg ? 'No active billing periods' : 'Choose a package first' }]
+                    ? periods.map((p) => ({
+                        value: p.billingPeriod,
+                        label: t('tuitionBulkAssign.fields.periodOption', {
+                          period: t(`tuitionPackages.periods.${p.billingPeriod}`),
+                          price: t('invoice.egpAmount', { amount: formatMoneyAmount(p.price) }),
+                        }),
+                      }))
+                    : [
+                        {
+                          value: '',
+                          label: pkg ? t('tuitionBulkAssign.fields.noPeriods') : t('tuitionBulkAssign.fields.choosePackageFirst'),
+                        },
+                      ]
                 }
               />
               <FilterMenu<BulkAssignEffective>
-                label="First invoice"
+                label={t('tuitionBulkAssign.fields.firstInvoice')}
                 value={effective}
                 onChange={setEffective}
                 options={[
-                  { value: 'next_period', label: 'After one billing period', icon: 'event_upcoming' },
-                  { value: 'immediate', label: 'Today (issue it now)', icon: 'receipt_long' },
+                  { value: 'next_period', label: t('tuitionBulkAssign.fields.nextPeriod'), icon: 'event_upcoming' },
+                  { value: 'immediate', label: t('tuitionBulkAssign.fields.immediate'), icon: 'receipt_long' },
                 ]}
               />
             </div>
             <p className="text-xs text-on-surface-variant">
-              {effective === 'immediate'
-                ? 'An invoice for the first period is created for each child today, then billing repeats every period.'
-                : 'No invoice today. The first invoice is created one billing period from today, then every period after.'}
-              {' '}The invoice goes to the child's first linked parent.
+              {effective === 'immediate' ? t('tuitionBulkAssign.fields.immediateHint') : t('tuitionBulkAssign.fields.nextPeriodHint')}{' '}
+              {t('tuitionBulkAssign.fields.billedParentHint')}
             </p>
           </FormSection>
 
           <FormSection
-            title="Children"
-            description={`${unassignedCount} of ${children.length} active children have no package yet.`}
+            title={t('tuitionBulkAssign.sections.children')}
+            description={t('tuitionBulkAssign.sections.childrenHint', { unassigned: unassignedCount, total: children.length })}
             icon="groups"
           >
             <div className="flex flex-wrap items-center gap-3">
               <Input
                 className="h-11 min-w-[200px] flex-1"
-                placeholder="Search by child or class…"
+                placeholder={t('tuitionBulkAssign.fields.searchPlaceholder')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
               <label className="flex items-center gap-2 text-sm text-on-surface">
                 <Checkbox checked={includeAssigned} onCheckedChange={(v) => setIncludeAssigned(v === true)} />
-                Include children who already have a package (it will be replaced)
+                {t('tuitionBulkAssign.fields.includeAssigned')}
               </label>
             </div>
 
@@ -205,33 +220,35 @@ export function BulkTuitionAssignDialog({
               <Skeleton className="h-48 w-full rounded-lg" />
             ) : visible.length === 0 ? (
               <p className="rounded-lg border border-dashed border-outline-variant p-4 text-center text-sm text-on-surface-variant">
-                {children.length === 0 ? 'No active children.' : 'No children match.'}
+                {children.length === 0 ? t('tuitionBulkAssign.noChildren') : t('tuitionBulkAssign.noMatch')}
               </p>
             ) : (
               <div className="overflow-hidden rounded-lg border border-outline-variant">
                 <label className="flex items-center gap-3 border-b border-outline-variant bg-surface-container-lowest px-3 py-2 text-xs font-semibold uppercase text-on-surface-variant">
                   <Checkbox checked={allVisibleSelected} onCheckedChange={toggleAllVisible} disabled={running || selectable.length === 0} />
-                  Select all shown ({selectable.length})
-                  <span className="ms-auto normal-case">{selected.size} selected</span>
+                  {t('tuitionBulkAssign.selectAllShown', { count: selectable.length })}
+                  <span className="ms-auto normal-case">{t('tuitionBulkAssign.selectedCount', { count: selected.size })}</span>
                 </label>
                 <ul className="max-h-72 divide-y divide-outline-variant overflow-y-auto">
-                  {visible.map((c) => (
-                    <li key={c.id}>
-                      <label
-                        className={`flex items-center gap-3 px-3 py-2 text-sm ${c.hasParent ? 'cursor-pointer hover:bg-surface-container-lowest' : 'opacity-60'}`}
-                      >
-                        <Checkbox checked={selected.has(c.id)} onCheckedChange={() => toggle(c.id)} disabled={running || !c.hasParent} />
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate font-medium text-on-surface">{c.nameEn || c.nameAr}</span>
-                          <span className="block truncate text-xs text-on-surface-variant">{c.classNameEn || c.classNameAr || 'No class'}</span>
-                        </span>
-                        {c.currentPackageEn || c.currentPackageAr ? (
-                          <Badge variant="secondary">{c.currentPackageEn || c.currentPackageAr}</Badge>
-                        ) : null}
-                        {!c.hasParent ? <Badge variant="warning">No parent linked</Badge> : null}
-                      </label>
-                    </li>
-                  ))}
+                  {visible.map((c) => {
+                    const className = isAr ? c.classNameAr || c.classNameEn : c.classNameEn || c.classNameAr;
+                    const currentPackage = isAr ? c.currentPackageAr || c.currentPackageEn : c.currentPackageEn || c.currentPackageAr;
+                    return (
+                      <li key={c.id}>
+                        <label
+                          className={`flex items-center gap-3 px-3 py-2 text-sm ${c.hasParent ? 'cursor-pointer hover:bg-surface-container-lowest' : 'opacity-60'}`}
+                        >
+                          <Checkbox checked={selected.has(c.id)} onCheckedChange={() => toggle(c.id)} disabled={running || !c.hasParent} />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate font-medium text-on-surface">{childName(c)}</span>
+                            <span className="block truncate text-xs text-on-surface-variant">{className || t('tuitionBulkAssign.noClass')}</span>
+                          </span>
+                          {currentPackage ? <Badge variant="secondary">{currentPackage}</Badge> : null}
+                          {!c.hasParent ? <Badge variant="warning">{t('tuitionBulkAssign.noParent')}</Badge> : null}
+                        </label>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             )}
@@ -243,9 +260,13 @@ export function BulkTuitionAssignDialog({
             >
               <p className="font-semibold text-on-surface">
                 <MaterialSymbol name={result.failed.length ? 'warning' : 'check_circle'} size="text-base" className="me-1" />
-                {result.succeeded.length} assigned
-                {result.invoicesIssued ? ` · ${result.invoicesIssued} first invoices issued` : ''}
-                {result.failed.length ? ` · ${result.failed.length} failed (still selected, so you can retry)` : ''}
+                {[
+                  t('tuitionBulkAssign.result.assigned', { count: result.succeeded.length }),
+                  result.invoicesIssued ? t('tuitionBulkAssign.result.invoicesIssued', { count: result.invoicesIssued }) : null,
+                  result.failed.length ? t('tuitionBulkAssign.result.failed', { count: result.failed.length }) : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
               </p>
               {result.failed.length ? (
                 <ul className="mt-2 space-y-1 text-xs text-on-surface-variant">
@@ -262,12 +283,12 @@ export function BulkTuitionAssignDialog({
 
         <DialogFooter className="mt-5">
           <Button type="button" variant="outline" onClick={() => close(false)} disabled={running}>
-            {result ? 'Done' : 'Cancel'}
+            {result ? t('tuitionBulkAssign.done') : t('common.cancel')}
           </Button>
           <Button type="button" onClick={() => void submit()} disabled={!canSubmit}>
             {running
-              ? `Assigning ${progress} / ${selected.size}…`
-              : `Assign to ${selected.size} ${selected.size === 1 ? 'child' : 'children'}`}
+              ? t('tuitionBulkAssign.assigning', { done: progress, total: selected.size })
+              : t('tuitionBulkAssign.assign', { count: selected.size })}
           </Button>
         </DialogFooter>
       </DialogContent>

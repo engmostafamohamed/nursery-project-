@@ -1,3 +1,4 @@
+import { useCallback, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
@@ -215,4 +216,35 @@ export function useAdminDeals(nurseryId: string | null | undefined) {
   });
 
   return { query, create, update, toggleActive };
+}
+
+/** The custom discounts made in one editor session that the package did not end up using. */
+export function dealsToDiscard(created: readonly string[], keptDealId: string | null): string[] {
+  return created.filter((id) => id !== keptDealId);
+}
+
+/**
+ * A custom discount made inline while editing a package is a real `deals` row from the moment it
+ * is created. This deletes the ones the package did not keep — when the editor is cancelled, or
+ * another deal was saved — so unused "Custom discount" rows do not pile up on the Deals page.
+ */
+export function useInlineDealCleanup(nurseryId: string | null | undefined) {
+  const queryClient = useQueryClient();
+  const [created, setCreated] = useState<string[]>([]);
+
+  const track = useCallback((dealId: string) => setCreated((prev) => [...prev, dealId]), []);
+
+  const discard = useCallback(
+    async (keptDealId: string | null) => {
+      const unused = dealsToDiscard(created, keptDealId);
+      setCreated([]);
+      if (!unused.length) return;
+      const { error } = await supabase.from('deals').delete().in('id', unused);
+      if (error) return; // Harmless: the unused deal just stays listed on the Deals page.
+      queryClient.setQueryData<DealRow[]>(adminDealsKey(nurseryId), (old) => (old ?? []).filter((d) => !unused.includes(d.id)));
+    },
+    [created, nurseryId, queryClient],
+  );
+
+  return { track, discard };
 }

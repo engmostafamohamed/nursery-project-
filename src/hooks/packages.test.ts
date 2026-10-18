@@ -1,7 +1,7 @@
 // Module 6 · Packages, pricing & deals — deal windows, discounted prices and tuition billing periods.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { applyDealToPrice, isDealCurrentlyActive } from './useAdminDeals';
+import { applyDealToPrice, dealsToDiscard, isDealCurrentlyActive } from './useAdminDeals';
 import {
   billingPeriodRowsFromExisting,
   resyncUntouchedBillingPeriods,
@@ -135,5 +135,19 @@ describe('billing periods a parent can choose', () => {
     const pkg = { price: 1000, billingPeriods: [], deal: null };
     expect(offeredBillingPeriods(pkg)).toEqual(['monthly', 'quarterly', 'half_annual', 'annual']);
     expect(computePackageBillingQuote(pkg, 'half_annual')).toMatchObject({ billingMonths: 6, subtotal: 6000, total: 6000 });
+  });
+});
+
+describe('custom discounts made while editing a package', () => {
+  it('keeps the one the package was saved with and discards the rest', () => {
+    expect(dealsToDiscard(['d1', 'd2', 'd3'], 'd2')).toEqual(['d1', 'd3']);
+  });
+
+  it('discards all of them when the editor is cancelled', () => {
+    expect(dealsToDiscard(['d1', 'd2'], null)).toEqual(['d1', 'd2']);
+  });
+
+  it('never touches a deal it did not create', () => {
+    expect(dealsToDiscard([], 'existing-deal')).toEqual([]);
   });
 });

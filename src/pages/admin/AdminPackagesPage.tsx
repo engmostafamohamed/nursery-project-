@@ -18,15 +18,20 @@ import { Label } from '@/components/ui/label';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { dealDiscountLabel, localizedName } from '@/components/admin/settings/dealLabels';
 import { ExtraHoursHourlyRateCard } from '@/components/admin/settings/ExtraHoursHourlyRateCard';
 import { FormSection } from '@/components/admin/settings/FormSection';
 import { PackageDealPicker } from '@/components/admin/settings/PackageDealPicker';
 import { TuitionPackagesEditor } from '@/components/admin/settings/TuitionPackagesEditor';
-import { useAdminDeals, isDealCurrentlyActive, applyDealToPrice } from '@/hooks/useAdminDeals';
+import { FieldError, invalidFieldClass } from '@/components/ui/FieldError';
+import { useAdminDeals, isDealCurrentlyActive, applyDealToPrice, useInlineDealCleanup } from '@/hooks/useAdminDeals';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useNurseryChildrenPicker } from '@/hooks/useNurseryChildrenPicker';
+import { useTouchedFields } from '@/hooks/useTouchedFields';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { formatQueryError } from '@/lib/utils';
+import { formatMoneyAmount } from '@/lib/money';
+import { extraHoursPackageFormIssues, hasIssues } from '@/lib/packageForms';
+import { cn, formatQueryError } from '@/lib/utils';
 import {
   useAdminPackages,
   usePackageAssignments,
@@ -49,6 +54,10 @@ const EMPTY_FORM: PackageInput = {
   validity_unit: null,
   deal_id: null,
 };
+
+type PackageField = 'name' | 'includedHours' | 'price' | 'validityValue' | 'validityUnit';
+
+const inputClass = 'h-10 w-full rounded-xl border border-outline-variant bg-surface px-3 text-sm outline-none focus:ring-1 focus:ring-primary';
 
 function ManageChildrenDialog({
   pkg,
@@ -177,9 +186,17 @@ export function AdminPackagesPage() {
 
   const { query, create, update } = useAdminPackages(nurseryId);
   const { query: dealsQuery } = useAdminDeals(nurseryId);
+  const dealCleanup = useInlineDealCleanup(nurseryId);
+  const money = (amount: number) => t('invoice.egpAmount', { amount: formatMoneyAmount(amount) });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<PackageInput>(EMPTY_FORM);
+  const fields = useTouchedFields<PackageField>();
+  const issues = extraHoursPackageFormIssues(form);
+  const errorFor = (field: PackageField) => {
+    const issue = issues[field];
+    return fields.isShown(field) && issue ? t(`packageForms.errors.${issue}`) : null;
+  };
   const [managePkg, setManagePkg] = useState<PackageRow | null>(null);
 
   const [search, setSearch] = useState('');
@@ -219,11 +236,19 @@ export function AdminPackagesPage() {
   const openCreate = () => {
     setEditingId(null);
     setForm(EMPTY_FORM);
+    fields.reset();
     setDialogOpen(true);
+  };
+
+  /** Closing without saving drops any custom discount made in this editor. */
+  const closeDialog = () => {
+    void dealCleanup.discard(null);
+    setDialogOpen(false);
   };
 
   const openEdit = (p: PackageRow) => {
     setEditingId(p.id);
+    fields.reset();
     setForm({
       name_ar: p.name_ar,
       name_en: p.name_en,
@@ -241,16 +266,8 @@ export function AdminPackagesPage() {
   };
 
   const submit = async () => {
-    if (!form.name_ar.trim() && !form.name_en.trim()) {
-      toast.error(t('packages.errorNoName'));
-      return;
-    }
-    if (form.coverage_type === 'hours_quota' && (!form.included_hours || form.included_hours <= 0)) {
-      toast.error(t('packages.errorNoHours'));
-      return;
-    }
-    if (form.validity_unit && (!form.validity_value || form.validity_value <= 0)) {
-      toast.error(t('packages.errorNoValidityValue'));
+    if (hasIssues(issues)) {
+      fields.showAll();
       return;
     }
     const payload: PackageInput = {
@@ -262,6 +279,7 @@ export function AdminPackagesPage() {
     try {
       if (editingId) await update.mutateAsync({ id: editingId, input: payload });
       else await create.mutateAsync(payload);
+      void dealCleanup.discard(payload.deal_id);
       toast.success(t('packages.saved'));
       setDialogOpen(false);
     } catch (error) {
@@ -293,6 +311,12 @@ export function AdminPackagesPage() {
     }
   };
 
+  const nameError = errorFor('name');
+  const hoursError = form.coverage_type === 'hours_quota' ? errorFor('includedHours') : null;
+  const priceError = errorFor('price');
+  const validityValueError = errorFor('validityValue');
+  const validityUnitError = errorFor('validityUnit');
+
   return (
     <div className="space-y-6 p-4">
       <div>
@@ -319,9 +343,7 @@ export function AdminPackagesPage() {
               <p className="mt-0.5 text-xs text-on-surface-variant">{t('packages.subtitle')}</p>
             </div>
             <Button type="button" onClick={openCreate}>
-              <span className="material-symbols-outlined me-1 text-base" aria-hidden>
-                add
-              </span>
+              <MaterialSymbol name="add" size="text-base" />
               {t('packages.addButton')}
             </Button>
           </div>
@@ -338,17 +360,22 @@ export function AdminPackagesPage() {
             <div className="space-y-3">
             <div className="flex flex-wrap items-end gap-3 rounded-xl border border-outline-variant bg-surface p-3 shadow-sm">
               <div className="min-w-[180px] flex-1 space-y-1">
-                <Label className="text-xs font-semibold text-on-surface-variant">Search</Label>
-                <Input className="h-11" placeholder="Package name…" value={search} onChange={(e) => setSearch(e.target.value)} />
+                <Label className="text-xs font-semibold text-on-surface-variant">{t('packageFilters.search')}</Label>
+                <Input
+                  className="h-11"
+                  placeholder={t('packageFilters.searchPlaceholder')}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
               </div>
               <FilterMenu<typeof statusFilter>
                 className="w-48"
-                label="Status"
+                label={t('packageFilters.status')}
                 icon="toggle_on"
                 value={statusFilter}
                 onChange={setStatusFilter}
                 options={[
-                  { value: 'all', label: 'All statuses' },
+                  { value: 'all', label: t('packageFilters.allStatuses') },
                   { value: 'active', label: t('packages.active') },
                   { value: 'inactive', label: t('packages.inactive') },
                 ]}
@@ -360,34 +387,34 @@ export function AdminPackagesPage() {
                 value={coverageFilter}
                 onChange={setCoverageFilter}
                 options={[
-                  { value: 'all', label: 'All types' },
+                  { value: 'all', label: t('packageFilters.allTypes') },
                   { value: 'unlimited', label: t('packages.optUnlimited') },
                   { value: 'hours_quota', label: t('packages.optQuota') },
                 ]}
               />
               <FilterMenu<typeof dealFilter>
                 className="w-52"
-                label="Discount"
+                label={t('packageFilters.discount')}
                 icon="sell"
                 value={dealFilter}
                 onChange={setDealFilter}
                 options={[
-                  { value: 'all', label: 'All packages' },
-                  { value: 'with', label: 'With a discount' },
-                  { value: 'without', label: 'Without a discount' },
+                  { value: 'all', label: t('packageFilters.allPackages') },
+                  { value: 'with', label: t('packageFilters.withDiscount') },
+                  { value: 'without', label: t('packageFilters.withoutDiscount') },
                 ]}
               />
               {hasActiveFilters ? (
                 <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
                   <MaterialSymbol name="close" size="text-base" />
-                  Clear filters
+                  {t('packageFilters.clear')}
                 </Button>
               ) : null}
             </div>
 
             {filteredRows.length === 0 ? (
               <p className="rounded-xl border border-dashed border-outline-variant p-6 text-center text-sm text-on-surface-variant">
-                No packages match these filters.
+                {t('packageFilters.noMatch')}
               </p>
             ) : (
             <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
@@ -395,13 +422,13 @@ export function AdminPackagesPage() {
                 <table className="w-full min-w-[920px] text-sm">
                   <thead className="bg-surface-container-lowest text-xs uppercase text-on-surface-variant">
                     <tr>
-                      <th className="px-4 py-3 text-start font-semibold">{t('packages.fieldNameEn')}</th>
+                      <th className="px-4 py-3 text-start font-semibold">{t('tuitionPackages.columns.package')}</th>
                       <th className="px-4 py-3 text-start font-semibold">{t('packages.fieldPrice')}</th>
                       <th className="px-4 py-3 text-start font-semibold">{t('packages.fieldType')}</th>
-                      <th className="px-4 py-3 text-start font-semibold">{t('packages.fieldValidityValue')}</th>
-                      <th className="px-4 py-3 text-start font-semibold">Assigned</th>
+                      <th className="px-4 py-3 text-start font-semibold">{t('packages.columns.validity')}</th>
+                      <th className="px-4 py-3 text-start font-semibold">{t('packages.columns.assigned')}</th>
                       <th className="px-4 py-3 text-start font-semibold">{t('packages.active')}</th>
-                      <th className="px-4 py-3 text-end font-semibold">Actions</th>
+                      <th className="px-4 py-3 text-end font-semibold">{t('packages.columns.actions')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-outline-variant">
@@ -417,16 +444,15 @@ export function AdminPackagesPage() {
                           <td className="px-4 py-4 align-top">
                             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                               <span className={live ? 'text-sm text-on-surface-variant line-through' : 'text-sm font-medium text-on-surface'}>
-                                {t('packages.priceLabel', { price: p.price })}
+                                {money(p.price)}
                               </span>
-                              {live ? <span className="text-sm font-semibold text-error">EGP {discounted.toFixed(2)}</span> : null}
+                              {live ? <span className="text-sm font-semibold text-error">{money(discounted)}</span> : null}
                             </div>
                             {deal ? (
                               <span className="mt-1 inline-flex items-center gap-1 rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
-                                {deal.name_en || deal.name_ar}
-                                {' · '}
-                                {deal.discount_type === 'percentage' ? `${deal.discount_value}%` : `EGP ${deal.discount_value}`} off
-                                {!live ? ' (inactive)' : ''}
+                                {live
+                                  ? `${localizedName(deal, isAr)} · ${dealDiscountLabel(t, deal)}`
+                                  : t('deals.inactiveSuffix', { label: `${localizedName(deal, isAr)} · ${dealDiscountLabel(t, deal)}` })}
                               </span>
                             ) : null}
                           </td>
@@ -485,7 +511,7 @@ export function AdminPackagesPage() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={dialogOpen} onOpenChange={(o) => !busy && setDialogOpen(o)}>
+      <Dialog open={dialogOpen} onOpenChange={(o) => !busy && (o ? setDialogOpen(true) : closeDialog())}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
@@ -495,7 +521,7 @@ export function AdminPackagesPage() {
           </DialogHeader>
 
           <div className="mt-4 max-h-[70vh] space-y-4 overflow-y-auto pe-1">
-            <FormSection title="Package name" icon="badge">
+            <FormSection title={t('packages.sections.name')} icon="badge">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <label className="block">
                   <span className="mb-1 block text-xs font-medium text-on-surface-variant">
@@ -503,8 +529,10 @@ export function AdminPackagesPage() {
                   </span>
                   <input
                     value={form.name_en}
+                    aria-invalid={Boolean(nameError)}
+                    onBlur={() => fields.touch('name')}
                     onChange={(e) => setForm((f) => ({ ...f, name_en: e.target.value }))}
-                    className="h-10 w-full rounded-xl border border-outline-variant bg-surface px-3 text-sm outline-none focus:ring-1 focus:ring-primary"
+                    className={cn(inputClass, nameError && invalidFieldClass)}
                   />
                 </label>
                 <label className="block">
@@ -514,14 +542,17 @@ export function AdminPackagesPage() {
                   <input
                     dir="rtl"
                     value={form.name_ar}
+                    aria-invalid={Boolean(nameError)}
+                    onBlur={() => fields.touch('name')}
                     onChange={(e) => setForm((f) => ({ ...f, name_ar: e.target.value }))}
-                    className="h-10 w-full rounded-xl border border-outline-variant bg-surface px-3 text-sm outline-none focus:ring-1 focus:ring-primary"
+                    className={cn(inputClass, nameError && invalidFieldClass)}
                   />
                 </label>
               </div>
+              <FieldError message={nameError} />
             </FormSection>
 
-            <FormSection title="Coverage & price" icon="payments">
+            <FormSection title={t('packages.sections.coveragePrice')} icon="payments">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <label className="block">
                   <span className="mb-1 block text-xs font-medium text-on-surface-variant">
@@ -532,7 +563,7 @@ export function AdminPackagesPage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, coverage_type: e.target.value as CoverageType }))
                     }
-                    className="h-10 w-full rounded-xl border border-outline-variant bg-surface px-3 text-sm outline-none focus:ring-1 focus:ring-primary"
+                    className={inputClass}
                   >
                     <option value="unlimited">{t('packages.optUnlimited')}</option>
                     <option value="hours_quota">{t('packages.optQuota')}</option>
@@ -544,17 +575,21 @@ export function AdminPackagesPage() {
                   </span>
                   <input
                     type="number"
-                    min={0}
+                    min={1}
+                    step={1}
                     disabled={form.coverage_type !== 'hours_quota'}
                     value={form.included_hours ?? ''}
+                    aria-invalid={Boolean(hoursError)}
+                    onBlur={() => fields.touch('includedHours')}
                     onChange={(e) =>
                       setForm((f) => ({
                         ...f,
                         included_hours: e.target.value ? Number(e.target.value) : null,
                       }))
                     }
-                    className="h-10 w-full rounded-xl border border-outline-variant bg-surface px-3 text-sm outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+                    className={cn(inputClass, 'disabled:opacity-50', hoursError && invalidFieldClass)}
                   />
+                  <FieldError message={hoursError} className="mt-1" />
                 </label>
                 <label className="block">
                   <span className="mb-1 block text-xs font-medium text-on-surface-variant">
@@ -565,9 +600,12 @@ export function AdminPackagesPage() {
                     min={0}
                     step={0.01}
                     value={form.price}
+                    aria-invalid={Boolean(priceError)}
+                    onBlur={() => fields.touch('price')}
                     onChange={(e) => setForm((f) => ({ ...f, price: Number(e.target.value) || 0 }))}
-                    className="h-10 w-full rounded-xl border border-outline-variant bg-surface px-3 text-sm outline-none focus:ring-1 focus:ring-primary"
+                    className={cn(inputClass, priceError && invalidFieldClass)}
                   />
+                  <FieldError message={priceError} className="mt-1" />
                 </label>
               </div>
 
@@ -581,14 +619,17 @@ export function AdminPackagesPage() {
                     min={1}
                     placeholder={t('packages.validityNever')}
                     value={form.validity_value ?? ''}
+                    aria-invalid={Boolean(validityValueError)}
+                    onBlur={() => fields.touch('validityValue')}
                     onChange={(e) =>
                       setForm((f) => ({
                         ...f,
                         validity_value: e.target.value ? Number(e.target.value) : null,
                       }))
                     }
-                    className="h-10 w-full rounded-xl border border-outline-variant bg-surface px-3 text-sm outline-none focus:ring-1 focus:ring-primary"
+                    className={cn(inputClass, validityValueError && invalidFieldClass)}
                   />
+                  <FieldError message={validityValueError} className="mt-1" />
                 </label>
                 <label className="block">
                   <span className="mb-1 block text-xs font-medium text-on-surface-variant">
@@ -596,18 +637,22 @@ export function AdminPackagesPage() {
                   </span>
                   <select
                     value={form.validity_unit ?? ''}
-                    onChange={(e) =>
+                    aria-invalid={Boolean(validityUnitError)}
+                    onBlur={() => fields.touch('validityUnit')}
+                    onChange={(e) => {
                       setForm((f) => ({
                         ...f,
                         validity_unit: (e.target.value || null) as ValidityUnit | null,
-                      }))
-                    }
-                    className="h-10 w-full rounded-xl border border-outline-variant bg-surface px-3 text-sm outline-none focus:ring-1 focus:ring-primary"
+                      }));
+                      fields.touch('validityUnit');
+                    }}
+                    className={cn(inputClass, validityUnitError && invalidFieldClass)}
                   >
                     <option value="">{t('packages.validityNever')}</option>
                     <option value="months">{t('packages.validityUnit.months')}</option>
                     <option value="years">{t('packages.validityUnit.years')}</option>
                   </select>
+                  <FieldError message={validityUnitError} className="mt-1" />
                 </label>
               </div>
 
@@ -621,19 +666,16 @@ export function AdminPackagesPage() {
               </label>
             </FormSection>
 
-            <FormSection
-              title="Deal / discount"
-              description="Optional — assign an existing offer or create a one-off discount just for this package."
-              icon="sell"
-            >
+            <FormSection title={t('packages.sections.deal')} description={t('packages.sections.dealHint')} icon="sell">
               <PackageDealPicker
                 nurseryId={nurseryId}
                 dealId={form.deal_id}
                 onChange={(deal_id) => setForm((f) => ({ ...f, deal_id }))}
+                onCustomDealCreated={dealCleanup.track}
               />
             </FormSection>
 
-            <FormSection title="Description" icon="description">
+            <FormSection title={t('packages.sections.description')} icon="description">
               <label className="block">
                 <span className="mb-1 block text-xs font-medium text-on-surface-variant">
                   {t('packages.fieldDescEn')}
@@ -666,13 +708,13 @@ export function AdminPackagesPage() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => setDialogOpen(false)}
+              onClick={closeDialog}
               disabled={busy}
             >
               {t('common.cancel')}
             </Button>
             <Button type="button" onClick={() => void submit()} disabled={busy}>
-              {t('common.save')}
+              {busy ? t('common.saving') : t('common.save')}
             </Button>
           </DialogFooter>
         </DialogContent>

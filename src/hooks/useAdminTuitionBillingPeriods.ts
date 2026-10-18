@@ -23,11 +23,12 @@ export type TuitionBillingPeriodInput = {
   active: boolean;
 };
 
-export const BILLING_PERIODS: { key: BillingPeriodKind; label: string; defaultMonths: number }[] = [
-  { key: 'monthly', label: 'Monthly', defaultMonths: 1 },
-  { key: 'quarterly', label: 'Quarterly (3 months)', defaultMonths: 3 },
-  { key: 'half_annual', label: 'Half-annual (6 months)', defaultMonths: 6 },
-  { key: 'annual', label: 'Annual (12 months)', defaultMonths: 12 },
+/** Labels are under `tuitionPackages.periods.<key>` in the locale files. */
+export const BILLING_PERIODS: { key: BillingPeriodKind; defaultMonths: number }[] = [
+  { key: 'monthly', defaultMonths: 1 },
+  { key: 'quarterly', defaultMonths: 3 },
+  { key: 'half_annual', defaultMonths: 6 },
+  { key: 'annual', defaultMonths: 12 },
 ];
 
 export type BillingPeriodRowState = TuitionBillingPeriodInput & {
