@@ -4,6 +4,7 @@ import {
   methodNeedsReference,
   type ParentPaymentMethodCode,
   type WalletDestinations,
+  type WalletProvider,
 } from '@/lib/paymentApi';
 
 /**
@@ -147,6 +148,38 @@ export function paymentDetailsIssues(
     return ['test_card_invalid'];
   }
   return [];
+}
+
+/** Egyptian mobile prefixes and the wallet each network issues. */
+const WALLET_PREFIXES: Record<string, WalletProvider> = {
+  '010': 'vodafone_cash',
+  '011': 'etisalat_cash',
+  '012': 'orange_cash',
+  '015': 'we_pay',
+};
+
+/**
+ * The wallet a number most likely belongs to, from its network prefix (010 Vodafone, 011
+ * Etisalat, 012 Orange, 015 WE). A hint only: numbers can move between networks.
+ */
+export function walletProviderForPhone(phone: string): WalletProvider | null {
+  return WALLET_PREFIXES[phone.replace(/\D/g, '').slice(0, 3)] ?? null;
+}
+
+export type CardBrand = 'visa' | 'mastercard' | 'meeza';
+
+/** Card networks Paymob's checkout accepts; brand names, shown as-is in every language. */
+export const CARD_BRAND_NAMES = ['VISA', 'Mastercard', 'Meeza'] as const;
+
+/** The card network from the first digits: Meeza 5078…, Mastercard 51–55 / 2221–2720, Visa 4…. */
+export function cardBrandOf(cardNumber: string): CardBrand | null {
+  const digits = cardNumber.replace(/\D/g, '');
+  if (digits.startsWith('5078')) return 'meeza';
+  if (/^5[1-5]/.test(digits)) return 'mastercard';
+  const firstFour = Number(digits.slice(0, 4));
+  if (digits.length >= 4 && firstFour >= 2221 && firstFour <= 2720) return 'mastercard';
+  if (digits.startsWith('4')) return 'visa';
+  return null;
 }
 
 /** The reference saved with the payment request, so finance can match it to the money received. */

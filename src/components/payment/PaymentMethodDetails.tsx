@@ -1,23 +1,21 @@
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
-import { HostedOnlineCheckoutNotice } from '@/components/payment/HostedOnlineCheckoutNotice';
 import { TestBankCardForm } from '@/components/payment/TestBankCardForm';
-import { InstaPayTransferOptions } from '@/components/parent/InstaPayTransferOptions';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { isWalletProvider, type ParentPaymentMethodCode, type WalletDestinations, type WalletProvider } from '@/lib/paymentApi';
-import { cn } from '@/lib/utils';
 import {
-  PAYMENT_DETAILS_ISSUE_KEYS,
   paymentFlowOf,
-  receiptFileError,
   RECEIPT_IMAGE_TYPES,
+  receiptFileError,
+  walletProviderForPhone,
   type PaymentDetails,
   type PaymentDetailsIssue,
 } from '@/lib/paymentMethods';
+import { cn } from '@/lib/utils';
 
 export type PaymentSettingsView = {
   instapayAccountName: string | null;
@@ -37,18 +35,148 @@ type Props = {
   onTestCardValidityChange: (valid: boolean) => void;
   issues: PaymentDetailsIssue[];
   settings: PaymentSettingsView;
-  /** Formatted amount, shown on the online checkout notice. */
+  /** Formatted amount to pay, e.g. "EGP 11,360". */
   amountLabel: string;
   testMode: boolean;
   /** Prefix for input ids; unique per page. */
   idPrefix: string;
-  /** Wallet providers the parent can choose between (the picker folds them into one card). */
+  /** Wallet providers the parent can choose between (the picker folds them into one tile). */
   walletProviders?: WalletProvider[];
   /** Switch to another wallet provider. */
   onMethodChange?: (method: ParentPaymentMethodCode) => void;
 };
 
-/** What the parent sees and fills in for the chosen method: where to pay, and what proof to give. */
+function Field({ label, htmlFor, hint, error, children }: {
+  label: string;
+  htmlFor?: string;
+  hint?: ReactNode;
+  error?: string | null;
+  children: ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={htmlFor} className="text-sm font-semibold text-on-surface">{label}</Label>
+      {children}
+      {error ? <p className="text-xs text-error">{error}</p> : hint ? <div className="text-xs text-on-surface-variant">{hint}</div> : null}
+    </div>
+  );
+}
+
+/** Where the money goes: a label, a large value to type into the bank or wallet app, and Copy. */
+function SendToBox({ label, value, footer, aside }: { label: string; value: string; footer?: ReactNode; aside?: ReactNode }) {
+  const { t } = useTranslation();
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!copied) return;
+    const id = window.setTimeout(() => setCopied(false), 2000);
+    return () => window.clearTimeout(id);
+  }, [copied]);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+    } catch (error) {
+      toast.error(t('payment.errors.actionFailed'), { description: error instanceof Error ? error.message : undefined });
+    }
+  };
+
+  return (
+    <div className="flex items-stretch gap-4 rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-medium text-on-surface-variant">{label}</p>
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <p dir="ltr" className="break-all text-xl font-bold tracking-wide text-on-surface">{value}</p>
+          <button
+            type="button"
+            onClick={() => void copy()}
+            className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold text-primary hover:bg-primary/10"
+          >
+            <MaterialSymbol name={copied ? 'check' : 'content_copy'} size="text-sm" />
+            {t(copied ? 'payment.steps.copied' : 'payment.steps.copy')}
+          </button>
+        </div>
+        {footer ? <div className="mt-1.5 text-xs text-on-surface-variant">{footer}</div> : null}
+      </div>
+      {aside}
+    </div>
+  );
+}
+
+function Unavailable({ children }: { children: ReactNode }) {
+  return (
+    <p role="alert" className="flex items-start gap-2 rounded-xl border border-warning/30 bg-warning/5 p-3 text-sm text-on-surface">
+      <MaterialSymbol name="info" size="text-base" className="mt-0.5 text-warning" />
+      <span>{children}</span>
+    </p>
+  );
+}
+
+/** Pick a receipt image: one line with the file name and Upload / Change / Remove. */
+function ReceiptInput({ file, onChange }: { file: File | null; onChange: (file: File | null) => void }) {
+  const { t } = useTranslation();
+  const inputId = useId();
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <div className="space-y-1.5">
+      <div
+        className={cn(
+          'flex items-center gap-3 rounded-xl border border-dashed px-3 py-2.5',
+          error ? 'border-error/50' : file ? 'border-success/40 bg-success/5' : 'border-outline-variant',
+        )}
+      >
+        <MaterialSymbol name={file ? 'task' : 'receipt_long'} size="text-lg" className={file ? 'text-success' : 'text-on-surface-variant'} />
+        <span className={cn('min-w-0 flex-1 truncate text-sm', file ? 'text-on-surface' : 'text-on-surface-variant')}>
+          {file ? file.name : t('payment.steps.noReceipt')}
+        </span>
+        <label
+          htmlFor={inputId}
+          className="cursor-pointer rounded-lg border border-outline-variant bg-surface px-3 py-1.5 text-xs font-semibold text-on-surface hover:border-primary hover:text-primary"
+        >
+          {t(file ? 'payment.steps.replaceReceipt' : 'payment.steps.uploadReceipt')}
+        </label>
+        <input
+          id={inputId}
+          type="file"
+          className="sr-only"
+          accept={RECEIPT_IMAGE_TYPES.join(',')}
+          onChange={(event) => {
+            const next = event.target.files?.[0] ?? null;
+            event.target.value = '';
+            if (!next) return;
+            const fileError = receiptFileError(next);
+            if (fileError) {
+              setError(t(fileError === 'too_large' ? 'payment.etisalatWallet.fileTooLarge' : 'payment.etisalatWallet.invalidFileType'));
+              return;
+            }
+            setError(null);
+            onChange(next);
+          }}
+        />
+        {file ? (
+          <button
+            type="button"
+            onClick={() => onChange(null)}
+            className="rounded-md p-1 text-on-surface-variant hover:bg-error/10 hover:text-error"
+            aria-label={t('payment.steps.removeReceipt')}
+          >
+            <MaterialSymbol name="close" size="text-base" />
+          </button>
+        ) : null}
+      </div>
+      <p className={cn('text-xs', error ? 'text-error' : 'text-on-surface-variant')}>
+        {error ?? t('payment.etisalatWallet.screenshotHelp')}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * The chosen method's fields, plain and short: where to send the exact amount, and what the
+ * nursery needs to match the payment. Card payments only say where the card is entered: on
+ * Paymob's secure page, never here.
+ */
 export function PaymentMethodDetails({
   method,
   details,
@@ -64,72 +192,91 @@ export function PaymentMethodDetails({
 }: Props) {
   const { t } = useTranslation();
   const flow = paymentFlowOf(method);
-  const issueText = (issue: PaymentDetailsIssue) => (issues.includes(issue) ? t(PAYMENT_DETAILS_ISSUE_KEYS[issue]) : null);
-
-  const walletDestination = isWalletProvider(method) ? settings.walletDestinations[method]?.trim() || null : null;
-  const copyWalletDestination = async () => {
-    if (!walletDestination) return;
-    try {
-      await navigator.clipboard.writeText(walletDestination);
-      toast.success(t('payment.etisalatWallet.destinationCopied'));
-    } catch (error) {
-      toast.error(t('payment.etisalatWallet.destinationCopyFailed'), {
-        description: error instanceof Error ? error.message : undefined,
-      });
-    }
-  };
+  const providerLabel = (provider: WalletProvider) => t(`payment.manualMethods.${provider}.label`);
 
   if (flow === 'online_checkout') {
     return testMode ? (
-      <div className="space-y-3">
-        <div role="status" className="flex items-start gap-3 rounded-xl border border-warning/30 bg-warning/5 p-4 text-sm">
-          <MaterialSymbol name="science" className="mt-0.5 text-warning" />
-          <p className="leading-5 text-on-surface">{t('payment.checkout.testModeNotice')}</p>
-        </div>
-        <TestBankCardForm onValidityChange={onTestCardValidityChange} />
-      </div>
+      <TestBankCardForm onValidityChange={onTestCardValidityChange} />
     ) : (
-      <HostedOnlineCheckoutNotice amount={amountLabel} note={t('payment.checkout.onlineReviewNote')} />
+      <div className="flex items-start gap-3 rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <MaterialSymbol name="lock" size="text-lg" />
+        </span>
+        <div className="min-w-0 space-y-1">
+          <p className="text-sm font-semibold text-on-surface">{t('payment.steps.cardSecure', { amount: amountLabel })}</p>
+          <p className="text-xs leading-5 text-on-surface-variant">{t('payment.steps.cardOtp')}</p>
+        </div>
+      </div>
     );
   }
 
-  const referenceError = details.reference.length > 0 ? issueText('reference_required') : null;
-  const phoneError = details.walletPhone.length > 0 ? issueText('wallet_phone_invalid') : null;
-  const nameError = details.walletCustomerName.length > 0 ? issueText('wallet_name_required') : null;
+  const approval = (
+    <p className="text-xs leading-5 text-on-surface-variant">{t('payment.approvalNote')}</p>
+  );
 
-  return (
-    <div className="space-y-4">
-      {method === 'instapay' ? (
-        <InstaPayTransferOptions
-          accountName={settings.instapayAccountName}
-          accountNumber={settings.instapayAccountNumber}
-          qrImageUrl={settings.instapayQrImageUrl}
-        />
-      ) : null}
+  if (flow === 'review') return approval;
 
-      {method === 'fawry' ? (
-        <div className="space-y-2 rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
-          <div className="flex items-start gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning/10 text-warning">
-              <MaterialSymbol name="confirmation_number" />
-            </span>
-            <div>
-              <h3 className="font-semibold text-on-surface">{t('payment.fawry.title')}</h3>
-              <p className="mt-1 text-sm leading-5 text-on-surface-variant">{t('payment.fawry.description')}</p>
-            </div>
-          </div>
-          <p className="rounded-lg bg-surface-container p-3 text-sm text-on-surface-variant">{t('payment.fawry.referenceNotice')}</p>
-        </div>
-      ) : null}
+  const referenceField = (label: string, hint: string) => (
+    <Field label={label} htmlFor={`${idPrefix}-reference`} hint={hint}>
+      <Input
+        id={`${idPrefix}-reference`}
+        dir="auto"
+        className="tabular-nums"
+        value={details.reference}
+        maxLength={80}
+        autoComplete="off"
+        placeholder={t('payment.referencePlaceholder')}
+        aria-invalid={details.reference.length > 0 && issues.includes('reference_required')}
+        onChange={(event) => onChange({ reference: event.target.value })}
+      />
+    </Field>
+  );
 
-      {flow === 'wallet_receipt' ? (
-        <fieldset className="space-y-4 rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
-          <legend className="px-1 font-semibold text-on-surface">{t('payment.wallet.title')}</legend>
-          <p className="text-sm leading-5 text-on-surface-variant">{t('payment.wallet.description')}</p>
+  const nurseryNote = settings.instructions ? (
+    <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
+      <p className="text-xs font-medium text-on-surface-variant">{t('payment.instructionsTitle')}</p>
+      <p className="mt-1.5 whitespace-pre-line break-words text-sm text-on-surface">{settings.instructions}</p>
+    </div>
+  ) : null;
 
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-on-surface">{t('payment.wallet.chooseProvider')}</p>
-            <div role="radiogroup" aria-label={t('payment.wallet.chooseProvider')} className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+  if (method === 'instapay') {
+    const address = settings.instapayAccountNumber?.trim() || '';
+    const accountName = settings.instapayAccountName?.trim() || '';
+    return (
+      <div className="space-y-4">
+        {address ? (
+          <SendToBox
+            label={t('payment.steps.instapaySend', { amount: amountLabel })}
+            value={address}
+            footer={accountName ? <>{t('payment.steps.accountName')} <span className="font-semibold text-on-surface">{accountName}</span></> : null}
+            aside={settings.instapayQrImageUrl ? (
+              <img
+                src={settings.instapayQrImageUrl}
+                alt={t('payment.instaPay.qrAlt')}
+                title={t('payment.steps.scanQr')}
+                className="hidden h-20 w-20 shrink-0 rounded-lg border border-outline-variant bg-surface object-contain p-1 sm:block"
+              />
+            ) : null}
+          />
+        ) : (
+          <Unavailable>{t('payment.steps.instapayNotConfigured')}</Unavailable>
+        )}
+        {referenceField(t('payment.reference'), t('payment.steps.enterReferenceHint'))}
+        {nurseryNote}
+        {approval}
+      </div>
+    );
+  }
+
+  if (flow === 'wallet_receipt' && isWalletProvider(method)) {
+    const destination = settings.walletDestinations[method]?.trim() || null;
+    const detected = details.walletPhone.length >= 3 ? walletProviderForPhone(details.walletPhone) : null;
+    const phoneInvalid = details.walletPhone.length === 11 && issues.includes('wallet_phone_invalid');
+    return (
+      <div className="space-y-4">
+        {walletProviders.length > 1 ? (
+          <Field label={t('payment.steps.walletChoose')}>
+            <div role="radiogroup" aria-label={t('payment.steps.walletChoose')} className="flex flex-wrap gap-2">
               {walletProviders.map((provider) => {
                 const active = provider === method;
                 return (
@@ -140,133 +287,125 @@ export function PaymentMethodDetails({
                     aria-checked={active}
                     onClick={() => onMethodChange?.(provider)}
                     className={cn(
-                      'flex min-h-11 items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                      'rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                       active
-                        ? 'border-primary bg-primary text-primary-foreground'
-                        : 'border-outline-variant bg-surface text-on-surface hover:border-primary/50',
+                        ? 'border-primary bg-primary/[0.07] text-primary'
+                        : 'border-outline-variant bg-surface text-on-surface hover:border-primary/40',
                     )}
                   >
-                    {active ? <MaterialSymbol name="check" size="text-base" /> : null}
-                    {t(`payment.manualMethods.${provider}.label`)}
+                    {providerLabel(provider)}
                   </button>
                 );
               })}
             </div>
-          </div>
+          </Field>
+        ) : null}
 
-          {walletDestination ? (
-            <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-container p-3">
-              <div className="min-w-0">
-                <p className="text-xs text-on-surface-variant">
-                  {t('payment.wallet.destination', { provider: t(`payment.manualMethods.${method}.label`) })}
-                </p>
-                <p dir="ltr" className="mt-1 break-all font-mono text-lg font-bold text-primary">{walletDestination}</p>
-              </div>
-              <Button type="button" variant="outline" size="sm" onClick={() => void copyWalletDestination()}>
-                <MaterialSymbol name="content_copy" size="text-base" />
-                {t('payment.etisalatWallet.copyDestination')}
-              </Button>
-            </div>
-          ) : (
-            <p role="alert" className="rounded-lg border border-warning/30 bg-warning/5 p-3 text-sm text-on-surface">
-              {t('payment.wallet.destinationNotConfigured')}
-            </p>
-          )}
+        {destination ? (
+          <SendToBox label={t('payment.steps.walletSend', { amount: amountLabel, provider: providerLabel(method) })} value={destination} />
+        ) : (
+          <Unavailable>{t('payment.wallet.destinationNotConfigured')}</Unavailable>
+        )}
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor={`${idPrefix}-wallet-phone`}>{t('payment.wallet.phone')}</Label>
-              <Input
-                id={`${idPrefix}-wallet-phone`}
-                inputMode="numeric"
-                autoComplete="tel"
-                maxLength={11}
-                placeholder="01XXXXXXXXX"
-                value={details.walletPhone}
-                aria-invalid={Boolean(phoneError)}
-                onChange={(event) => onChange({ walletPhone: event.target.value.replace(/\D/g, '').slice(0, 11) })}
-              />
-              {phoneError ? <p className="text-xs text-error">{phoneError}</p> : null}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={`${idPrefix}-wallet-name`}>{t('payment.wallet.customerName')}</Label>
-              <Input
-                id={`${idPrefix}-wallet-name`}
-                autoComplete="name"
-                maxLength={100}
-                placeholder={t('payment.etisalatWallet.namePlaceholder')}
-                value={details.walletCustomerName}
-                aria-invalid={Boolean(nameError)}
-                onChange={(event) => onChange({ walletCustomerName: event.target.value })}
-              />
-              {nameError ? <p className="text-xs text-error">{nameError}</p> : null}
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={`${idPrefix}-wallet-transaction`}>{t('payment.wallet.transaction')}</Label>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field
+            label={t('payment.wallet.phone')}
+            htmlFor={`${idPrefix}-wallet-phone`}
+            error={phoneInvalid ? t('payment.wallet.phoneInvalid') : null}
+            hint={
+              detected === method ? (
+                <span className="inline-flex items-center gap-1 text-success">
+                  <MaterialSymbol name="check_circle" size="text-sm" />
+                  {t('payment.steps.walletPrefixMatch', { provider: providerLabel(method) })}
+                </span>
+              ) : detected && walletProviders.includes(detected) ? (
+                <>
+                  {t('payment.steps.walletPrefixSuggest', { provider: providerLabel(detected) })}{' '}
+                  <button type="button" className="font-semibold text-primary hover:underline" onClick={() => onMethodChange?.(detected)}>
+                    {t('payment.steps.walletUse', { provider: providerLabel(detected) })}
+                  </button>
+                </>
+              ) : (
+                t('payment.steps.walletPhoneHint')
+              )
+            }
+          >
             <Input
-              id={`${idPrefix}-wallet-transaction`}
-              maxLength={80}
-              autoComplete="off"
-              placeholder={t('payment.referencePlaceholder')}
-              value={details.walletTransaction}
-              onChange={(event) => onChange({ walletTransaction: event.target.value })}
+              id={`${idPrefix}-wallet-phone`}
+              dir="ltr"
+              inputMode="numeric"
+              autoComplete="tel"
+              maxLength={11}
+              placeholder="01XXXXXXXXX"
+              className="tabular-nums tracking-wide"
+              value={details.walletPhone}
+              aria-invalid={phoneInvalid}
+              onChange={(event) => onChange({ walletPhone: event.target.value.replace(/\D/g, '').slice(0, 11) })}
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={`${idPrefix}-wallet-receipt`}>{t('payment.wallet.screenshot')}</Label>
+          </Field>
+          <Field label={t('payment.wallet.customerName')} htmlFor={`${idPrefix}-wallet-name`}>
             <Input
-              id={`${idPrefix}-wallet-receipt`}
-              type="file"
-              accept={RECEIPT_IMAGE_TYPES.join(',')}
-              onChange={(event) => {
-                const file = event.target.files?.[0] ?? null;
-                const fileError = file ? receiptFileError(file) : null;
-                if (fileError) {
-                  toast.error(t(fileError === 'too_large' ? 'payment.etisalatWallet.fileTooLarge' : 'payment.etisalatWallet.invalidFileType'));
-                  event.target.value = '';
-                  onChange({ walletReceipt: null });
-                  return;
-                }
-                onChange({ walletReceipt: file });
-              }}
+              id={`${idPrefix}-wallet-name`}
+              autoComplete="name"
+              maxLength={100}
+              placeholder={t('payment.etisalatWallet.namePlaceholder')}
+              value={details.walletCustomerName}
+              onChange={(event) => onChange({ walletCustomerName: event.target.value })}
             />
-            <p className="text-xs text-on-surface-variant">
-              {details.walletReceipt ? details.walletReceipt.name : t('payment.etisalatWallet.screenshotHelp')}
-            </p>
-          </div>
-        </fieldset>
-      ) : null}
-
-      {settings.instructions && method !== 'cash' ? (
-        <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3 text-sm">
-          <p className="text-xs font-semibold text-on-surface-variant">{t('payment.instructionsTitle')}</p>
-          <p className="mt-1 whitespace-pre-line break-words text-on-surface">{settings.instructions}</p>
+          </Field>
         </div>
-      ) : null}
 
-      {flow === 'transfer' ? (
-        <div className="space-y-1">
-          <Label htmlFor={`${idPrefix}-reference`}>{t(method === 'fawry' ? 'payment.fawry.reference' : 'payment.reference')}</Label>
+        <Field label={t('payment.wallet.screenshot')}>
+          <ReceiptInput file={details.walletReceipt} onChange={(file) => onChange({ walletReceipt: file })} />
+        </Field>
+
+        <Field label={t('payment.wallet.transaction')} htmlFor={`${idPrefix}-wallet-transaction`}>
           <Input
-            id={`${idPrefix}-reference`}
-            value={details.reference}
+            id={`${idPrefix}-wallet-transaction`}
+            dir="auto"
+            className="tabular-nums"
             maxLength={80}
             autoComplete="off"
             placeholder={t('payment.referencePlaceholder')}
-            aria-invalid={Boolean(referenceError)}
-            onChange={(event) => onChange({ reference: event.target.value })}
+            value={details.walletTransaction}
+            onChange={(event) => onChange({ walletTransaction: event.target.value })}
           />
-          <p className={referenceError ? 'text-xs text-error' : 'text-xs text-on-surface-variant'}>
-            {referenceError ?? t('payment.referenceHelp')}
-          </p>
-        </div>
-      ) : null}
-
-      <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-3 text-sm text-primary">
-        <MaterialSymbol name="verified_user" size="text-base" className="mt-0.5" />
-        <p className="leading-5">{t('payment.approvalNote')}</p>
+        </Field>
+        {nurseryNote}
+        {approval}
       </div>
+    );
+  }
+
+  if (method === 'bank_transfer') {
+    return (
+      <div className="space-y-4">
+        {settings.instructions ? (
+          <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
+            <p className="text-xs font-medium text-on-surface-variant">
+              {t('payment.steps.bankSend', { amount: amountLabel })}
+            </p>
+            <p className="mt-1.5 whitespace-pre-line break-words text-sm font-medium text-on-surface">{settings.instructions}</p>
+          </div>
+        ) : (
+          <Unavailable>{t('payment.steps.bankNoDetails')}</Unavailable>
+        )}
+        {referenceField(t('payment.reference'), t('payment.steps.bankReferenceHint'))}
+        {approval}
+      </div>
+    );
+  }
+
+  // Fawry, with a reference the nursery or Fawry issued.
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
+        <p className="text-sm font-semibold text-on-surface">{t('payment.steps.fawrySend', { amount: amountLabel })}</p>
+        <p className="mt-1 text-xs leading-5 text-on-surface-variant">{t('payment.fawry.description')}</p>
+      </div>
+      {referenceField(t('payment.fawry.reference'), t('payment.fawry.referenceNotice'))}
+      {nurseryNote}
+      {approval}
     </div>
   );
 }

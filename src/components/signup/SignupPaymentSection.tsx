@@ -109,43 +109,43 @@ export function SignupPaymentSection({
         <PaymentMethodPicker
           name="signup-payment-method"
           methods={options.methods}
-          value={method}
+          value={options.methods.includes(method) ? method : null}
           onChange={onMethodChange}
           testMode={options.testMode}
+          renderDetails={(selected) => (
+            <div className="space-y-3">
+              {!options.testMode && selected === 'card' && options.paymobCheckoutUnavailable ? (
+                <p role="status" className="rounded-xl border border-warning/30 bg-warning/5 p-3 text-sm text-on-surface">
+                  {t('signup.payment.cardCheckout.unavailable')}
+                </p>
+              ) : null}
+              <PaymentMethodDetails
+                method={selected}
+                details={details}
+                onChange={onDetailsChange}
+                onTestCardValidityChange={onTestCardValidityChange}
+                issues={issues}
+                settings={{
+                  instapayAccountName: options.instapay.accountName,
+                  instapayAccountNumber: options.instapay.accountNumber,
+                  instapayQrImageUrl: options.instapay.qrImageUrl,
+                  walletDestinations: options.walletDestinations,
+                  instructions: options.instructions,
+                }}
+                amountLabel={money(order.totalDue)}
+                testMode={options.testMode}
+                idPrefix="signup-payment"
+                walletProviders={options.methods.filter(isWalletProvider)}
+                onMethodChange={onMethodChange}
+              />
+            </div>
+          )}
         />
       ) : (
         <p role="alert" className="rounded-xl border border-warning/30 bg-warning/5 p-3 text-sm text-on-surface">
           {t('payment.noEnabledMethods')}
         </p>
       )}
-
-      {!options.testMode && method === 'card' && options.paymobCheckoutUnavailable ? (
-        <p role="status" className="rounded-xl border border-warning/30 bg-warning/5 p-3 text-sm text-on-surface">
-          {t('signup.payment.cardCheckout.unavailable')}
-        </p>
-      ) : null}
-
-      {options.methods.includes(method) ? (
-        <PaymentMethodDetails
-          method={method}
-          details={details}
-          onChange={onDetailsChange}
-          onTestCardValidityChange={onTestCardValidityChange}
-          issues={issues}
-          settings={{
-            instapayAccountName: options.instapay.accountName,
-            instapayAccountNumber: options.instapay.accountNumber,
-            instapayQrImageUrl: options.instapay.qrImageUrl,
-            walletDestinations: options.walletDestinations,
-            instructions: options.instructions,
-          }}
-          amountLabel={money(order.totalDue)}
-          testMode={options.testMode}
-          idPrefix="signup-payment"
-          walletProviders={options.methods.filter(isWalletProvider)}
-          onMethodChange={onMethodChange}
-        />
-      ) : null}
 
       <div className="flex items-start gap-3 rounded-xl border border-warning/20 bg-warning/5 p-4 text-sm text-on-surface-variant">
         <MaterialSymbol name="schedule" className="mt-0.5 text-warning" />

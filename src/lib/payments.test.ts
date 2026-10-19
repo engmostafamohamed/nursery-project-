@@ -8,6 +8,7 @@ import { formatMoneyAmount } from './money';
 import { paymentError, walletDestinationsFrom } from './paymentApi';
 import {
   availableParentPaymentMethods,
+  cardBrandOf,
   EMPTY_PAYMENT_DETAILS,
   invoiceApplicationId,
   payableNow,
@@ -16,6 +17,7 @@ import {
   paymentReferenceFor,
   receiptFileError,
   receiptStoragePath,
+  walletProviderForPhone,
   RECEIPT_MAX_BYTES,
 } from './paymentMethods';
 import {
@@ -168,6 +170,27 @@ describe('extra-hours package on the application invoice', () => {
   it('means pay per hour when no package is on the invoice', () => {
     expect(lineExtraHours({ application_id: 'app-1', items: [] })).toBeNull();
     expect(lineExtraHours(null)).toBeNull();
+  });
+});
+
+describe('helping the parent fill in a payment', () => {
+  it('suggests the wallet from the number prefix', () => {
+    expect(walletProviderForPhone('01012345678')).toBe('vodafone_cash');
+    expect(walletProviderForPhone('011')).toBe('etisalat_cash');
+    expect(walletProviderForPhone('0122 345 6789')).toBe('orange_cash');
+    expect(walletProviderForPhone('01512345678')).toBe('we_pay');
+    expect(walletProviderForPhone('01312345678')).toBeNull();
+    expect(walletProviderForPhone('01')).toBeNull();
+  });
+
+  it('recognises the card network from its first digits', () => {
+    expect(cardBrandOf('4716 9627 1635 8047')).toBe('visa');
+    expect(cardBrandOf('5123 4567 8901 2346')).toBe('mastercard');
+    expect(cardBrandOf('2221 0000 0000 0009')).toBe('mastercard');
+    expect(cardBrandOf('2720 9900 0000 0000')).toBe('mastercard');
+    expect(cardBrandOf('5078 0312 3456 7890')).toBe('meeza');
+    expect(cardBrandOf('6011 0000 0000 0004')).toBeNull();
+    expect(cardBrandOf('')).toBeNull();
   });
 });
 

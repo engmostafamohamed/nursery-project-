@@ -11,6 +11,7 @@ import {
   type CheckoutAmountPolicy,
   type CheckoutInvoice,
 } from '@/hooks/useInvoiceCheckout';
+import { formatMoneyAmount } from '@/lib/money';
 import { isWalletProvider, type ParentPaymentMethodCode } from '@/lib/paymentApi';
 import { PAYMENT_DETAILS_ISSUE_KEYS, paymentFlowOf } from '@/lib/paymentMethods';
 import { cn } from '@/lib/utils';
@@ -24,8 +25,6 @@ type Props = {
   /** Runs before the confirmation; return false to stop. */
   beforePay?: () => Promise<boolean>;
   onSubmitted?: (result: { duplicate: boolean }) => void;
-  /** Single-column layout for narrow side panels. */
-  compact?: boolean;
   /** Namespace for input ids and the radio group; unique per page. */
   idPrefix?: string;
   /** Method selected at first, when offered. Remount (change `key`) to apply a new one. */
@@ -49,14 +48,13 @@ export function InvoiceCheckoutPanel({
   returnPath,
   beforePay,
   onSubmitted,
-  compact = false,
   idPrefix = 'invoice-checkout',
   initialMethod = null,
   className,
 }: Props) {
   const { t } = useTranslation();
   const checkout = useInvoiceCheckout({ invoice, amountPolicy, returnPath, beforePay, onSubmitted, initialMethod });
-  const amountLabel = t('invoice.egpAmount', { amount: (checkout.amountValid ? checkout.amount : 0).toFixed(2) });
+  const amountLabel = t('invoice.egpAmount', { amount: formatMoneyAmount(checkout.amountValid ? checkout.amount : 0) });
   const redirectsToProvider = checkout.method !== null && paymentFlowOf(checkout.method) === 'online_checkout' && !checkout.testMode;
   const pendingHints = [
     ...(checkout.amountValid ? [] : [t('payment.invalidPartialAmount', { defaultValue: 'Enter an amount greater than 0 and not more than the balance.' })]),
@@ -69,7 +67,7 @@ export function InvoiceCheckoutPanel({
         <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
           <p className="text-xs font-semibold uppercase text-primary">{t('payment.checkout.fullAmountLabel')}</p>
           <p className="mt-1 text-2xl font-bold tracking-tight text-on-surface">
-            {t('invoice.egpAmount', { amount: checkout.payable.toFixed(2) })}
+            {t('invoice.egpAmount', { amount: formatMoneyAmount(checkout.payable) })}
           </p>
           <p className="mt-1 flex items-start gap-1.5 text-xs leading-5 text-on-surface-variant">
             <MaterialSymbol name="info" size="text-sm" className="mt-0.5" />
@@ -125,25 +123,23 @@ export function InvoiceCheckoutPanel({
           onChange={checkout.selectMethod}
           testMode={checkout.testMode}
           disabled={checkout.submitting}
-          compact={compact}
+          renderDetails={(method) => (
+            <PaymentMethodDetails
+              method={method}
+              details={checkout.details}
+              onChange={checkout.updateDetails}
+              onTestCardValidityChange={checkout.setTestCardValid}
+              issues={checkout.issues}
+              settings={checkout.settings}
+              amountLabel={amountLabel}
+              testMode={checkout.testMode}
+              idPrefix={idPrefix}
+              walletProviders={checkout.methods.filter(isWalletProvider)}
+              onMethodChange={checkout.selectMethod}
+            />
+          )}
         />
       )}
-
-      {checkout.method && !checkout.isLoadingMethods ? (
-        <PaymentMethodDetails
-          method={checkout.method}
-          details={checkout.details}
-          onChange={checkout.updateDetails}
-          onTestCardValidityChange={checkout.setTestCardValid}
-          issues={checkout.issues}
-          settings={checkout.settings}
-          amountLabel={amountLabel}
-          testMode={checkout.testMode}
-          idPrefix={idPrefix}
-          walletProviders={checkout.methods.filter(isWalletProvider)}
-          onMethodChange={checkout.selectMethod}
-        />
-      ) : null}
 
       <div className="space-y-2">
         <Button
@@ -153,13 +149,16 @@ export function InvoiceCheckoutPanel({
           aria-busy={checkout.submitting}
           onClick={() => void checkout.pay()}
         >
-          <MaterialSymbol name={checkout.submitting ? 'hourglass_top' : redirectsToProvider ? 'lock' : 'payments'} size="text-lg" />
+          <MaterialSymbol name={checkout.submitting ? 'hourglass_top' : 'lock'} size="text-lg" />
           {checkout.submitting
             ? t('payment.submitting')
-            : redirectsToProvider
-              ? t('payment.checkout.continueToCheckout', { amount: amountLabel })
-              : t('payment.payNowAmount', { amount: (checkout.amountValid ? checkout.amount : 0).toFixed(2) })}
+            : t('payment.payNowAmount', { amount: formatMoneyAmount(checkout.amountValid ? checkout.amount : 0) })}
         </Button>
+        {checkout.method && !checkout.submitting ? (
+          <p className="text-center text-xs text-on-surface-variant">
+            {t(redirectsToProvider ? 'payment.checkout.redirectHint' : 'payment.checkout.reviewHint')}
+          </p>
+        ) : null}
         {invoice && checkout.method && pendingHints.length > 0 ? (
           <ul className="space-y-1 text-xs text-on-surface-variant" aria-live="polite">
             {pendingHints.map((hint) => (

@@ -2602,6 +2602,59 @@
     }
   },
   "payment": {
+    "picker": {
+      "title": "طريقة الدفع",
+      "short": {
+        "instapay": "حوّل من تطبيق البنك",
+        "card": "فيزا، ماستركارد، ميزة",
+        "bank_transfer": "تحويل من حسابك البنكي",
+        "fawry": "ادفع في أي منفذ فوري",
+        "manual": "تؤكدها الحضانة"
+      },
+      "walletShort": {
+        "vodafone_cash": "فودافون",
+        "etisalat_cash": "اتصالات",
+        "orange_cash": "أورنج",
+        "we_pay": "WE"
+      }
+    },
+    "steps": {
+      "copy": "نسخ",
+      "copied": "تم النسخ",
+      "cardSecure": "ستُدخل بيانات بطاقتك في صفحة Paymob الآمنة لدفع {{amount}}.",
+      "cardOtp": "قد يطلب بنكك رمزًا لمرة واحدة (3-D Secure). ولا ترى الحضانة بطاقتك أبدًا.",
+      "instapaySend": "حوّل {{amount}} عبر InstaPay إلى",
+      "accountName": "اسم الحساب:",
+      "scanQr": "أو امسح الرمز من تطبيق البنك",
+      "instapayNotConfigured": "لم تُضف الحضانة عنوان InstaPay بعد. اختر طريقة أخرى أو تواصل مع الحضانة.",
+      "enterReferenceHint": "تجده في رسالة التأكيد من البنك أو التطبيق.",
+      "walletChoose": "محفظتك",
+      "walletSend": "حوّل {{amount}} إلى {{provider}} الحضانة",
+      "walletPrefixMatch": "رقم {{provider}}",
+      "walletPrefixSuggest": "يبدو أن هذا رقم {{provider}}.",
+      "walletUse": "استخدم {{provider}}",
+      "walletPhoneHint": "11 رقمًا تبدأ بـ 010 أو 011 أو 012 أو 015.",
+      "noReceipt": "لم يُرفق إيصال بعد",
+      "uploadReceipt": "رفع",
+      "replaceReceipt": "تغيير",
+      "removeReceipt": "إزالة الإيصال",
+      "bankSend": "حوّل {{amount}} إلى",
+      "bankNoDetails": "لم تُضف الحضانة بيانات حسابها البنكي بعد. تواصل مع الحضانة للحصول عليها.",
+      "bankReferenceHint": "رقم مرجع التحويل من بنكك لتتمكن الحضانة من مطابقته.",
+      "fawrySend": "ادفع {{amount}} في أي منفذ فوري",
+      "cvvWhere": "أين رمز CVC؟",
+      "cvvHelp": "الأرقام الثلاثة على ظهر البطاقة بجوار شريط التوقيع (4 أرقام على الوجه في أمريكان إكسبريس).",
+      "testCardNote": "وضع الاختبار: يعمل أي رقم بطاقة صالح الشكل (مثل 4242 4242 4242 4242). لا يُخصم أي مبلغ ولا تُرسل البطاقة."
+    },
+    "status": {
+      "awaitingPayment": "بانتظار الدفع",
+      "awaitingConfirmation": "بانتظار التأكيد",
+      "paid": "مدفوع",
+      "closed": "مغلق",
+      "notStarted": "لم يبدأ",
+      "waitingTitle": "بانتظار دفعتك",
+      "reference": "الرقم المرجعي"
+    },
     "manualMethods": {
       "card": {
         "label": "الدفع أونلاين",
@@ -2707,6 +2760,8 @@
     "invalidPartialAmount": "أدخل مبلغًا أكبر من صفر ولا يتجاوز الرصيد.",
     "alreadySubmitted": "تم إرسال هذه الدفعة من قبل — لم تُرسل مرتين.",
     "checkout": {
+      "redirectHint": "ستؤكد الدفع على صفحة Paymob الآمنة.",
+      "reviewHint": "تؤكد الحضانة دفعتك بعد مراجعتها.",
       "fullAmountLabel": "المبلغ المستحق — دفعة واحدة",
       "fullAmountHint": "يُدفع المبلغ كاملًا على دفعة واحدة. الدفع الجزئي غير متاح لهذه الفاتورة.",
       "continueToCheckout": "المتابعة إلى الدفع الآمن · {{amount}}",
@@ -6968,7 +7023,7 @@
         "numberRequired": "أدخل رقم بطاقة تجريبياً.",
         "numberLength": "أدخل أرقام البطاقة الستة عشر كاملة.",
         "numberInvalid": "تحقق من رقم البطاقة.",
-        "expiryRequired": "اختر شهر وسنة الانتهاء.",
+        "expiryRequired": "أدخل تاريخ الانتهاء بالشكل MM/YY.",
         "expiryInvalid": "أدخل تاريخ انتهاء صحيحاً.",
         "expiryPast": "يجب أن يكون تاريخ الانتهاء في المستقبل.",
         "cvvRequired": "أدخل رمز أمان تجريبياً.",

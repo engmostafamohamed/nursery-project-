@@ -363,7 +363,6 @@ export function ParentPaymentPage() {
             ) : invoice && balanceDue > 0 ? (
               <InvoiceCheckoutPanel
                 className="mt-4"
-                compact
                 idPrefix="invoice-pay"
                 invoice={{ id: invoice.id, invoiceNumber: invoice.invoiceNumber, payableAmount: payableNow(invoice) }}
                 amountPolicy={amountPolicy}

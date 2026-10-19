@@ -2602,6 +2602,59 @@
     }
   },
   "payment": {
+    "picker": {
+      "title": "Payment method",
+      "short": {
+        "instapay": "Send from your banking app",
+        "card": "Visa, Mastercard, Meeza",
+        "bank_transfer": "Transfer from your bank account",
+        "fawry": "Pay at any Fawry outlet",
+        "manual": "Confirmed by the nursery"
+      },
+      "walletShort": {
+        "vodafone_cash": "Vodafone",
+        "etisalat_cash": "e&",
+        "orange_cash": "Orange",
+        "we_pay": "WE"
+      }
+    },
+    "steps": {
+      "copy": "Copy",
+      "copied": "Copied",
+      "cardSecure": "You'll enter your card on Paymob's secure page to pay {{amount}}.",
+      "cardOtp": "Your bank may ask for a one-time code (3-D Secure). The nursery never sees your card.",
+      "instapaySend": "Send {{amount}} with InstaPay to",
+      "accountName": "Account name:",
+      "scanQr": "Or scan with your bank app",
+      "instapayNotConfigured": "The nursery hasn't added its InstaPay address yet. Choose another method or contact the nursery.",
+      "enterReferenceHint": "It's in the confirmation message from your bank or app.",
+      "walletChoose": "Your wallet",
+      "walletSend": "Send {{amount}} to the nursery's {{provider}}",
+      "walletPrefixMatch": "{{provider}} number",
+      "walletPrefixSuggest": "This number looks like {{provider}}.",
+      "walletUse": "Use {{provider}}",
+      "walletPhoneHint": "11 digits, starting with 010, 011, 012 or 015.",
+      "noReceipt": "No receipt attached yet",
+      "uploadReceipt": "Upload",
+      "replaceReceipt": "Change",
+      "removeReceipt": "Remove receipt",
+      "bankSend": "Transfer {{amount}} to",
+      "bankNoDetails": "The nursery hasn't added its bank details yet. Contact the nursery for them.",
+      "bankReferenceHint": "The transfer reference from your bank, so the nursery can match it.",
+      "fawrySend": "Pay {{amount}} at any Fawry outlet",
+      "cvvWhere": "Where is the CVC?",
+      "cvvHelp": "The 3 digits on the back of the card, next to the signature strip (4 digits on the front for American Express).",
+      "testCardNote": "Test mode: any valid-looking card number works (for example 4242 4242 4242 4242). Nothing is charged and the card is never sent."
+    },
+    "status": {
+      "awaitingPayment": "Awaiting payment",
+      "awaitingConfirmation": "Awaiting confirmation",
+      "paid": "Paid",
+      "closed": "Closed",
+      "notStarted": "Not started",
+      "waitingTitle": "Waiting for your payment",
+      "reference": "Reference"
+    },
     "manualMethods": {
       "card": {
         "label": "Pay online",
@@ -2707,6 +2760,8 @@
     "invalidPartialAmount": "Enter an amount greater than 0 and not more than the balance.",
     "alreadySubmitted": "This payment was already submitted — it was not sent twice.",
     "checkout": {
+      "redirectHint": "You'll confirm the payment on Paymob's secure page.",
+      "reviewHint": "The nursery confirms your payment after checking it.",
       "fullAmountLabel": "Amount due — one payment",
       "fullAmountHint": "The full amount is paid in one payment. Partial payments are not available for this invoice.",
       "continueToCheckout": "Continue to secure checkout · {{amount}}",
@@ -6945,7 +7000,7 @@
         "numberRequired": "Enter the test card number.",
         "numberLength": "Enter all 16 card digits.",
         "numberInvalid": "Check the card number.",
-        "expiryRequired": "Select the expiry month and year.",
+        "expiryRequired": "Enter the expiry date as MM/YY.",
         "expiryInvalid": "Enter a valid expiry date.",
         "expiryPast": "The expiry date must be in the future.",
         "cvvRequired": "Enter the test security code.",

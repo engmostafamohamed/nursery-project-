@@ -52,30 +52,32 @@ const FAILURE_REASONS = new Set([
 
 type ReturnCheck = 'idle' | 'checking' | 'done' | { errorKey: string };
 
-function StateCard({ icon, tone, title, body, children }: {
-  icon: string;
-  tone: 'primary' | 'success' | 'warning';
+type StatusTone = 'pending' | 'success' | 'neutral' | 'closed';
+
+const STATUS_DOT: Record<StatusTone, string> = {
+  pending: 'bg-warning',
+  success: 'bg-success',
+  neutral: 'bg-on-surface-variant/50',
+  closed: 'bg-error',
+};
+
+/** Where the payment stands: a status pill, a clear title, one line on what happens next. */
+function StateCard({ tone, status, title, body, children }: {
+  tone: StatusTone;
+  status: string;
   title: string;
   body: string;
   children?: ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-outline-variant bg-surface px-4 py-8 shadow-sm sm:px-6">
-      <div className="mx-auto flex max-w-md flex-col items-center text-center">
-        <span
-          className={cn(
-            'flex h-12 w-12 items-center justify-center rounded-full',
-            tone === 'success' && 'bg-success/15 text-success',
-            tone === 'warning' && 'bg-warning/15 text-warning',
-            tone === 'primary' && 'bg-primary/10 text-primary',
-          )}
-        >
-          <MaterialSymbol name={icon} size="text-2xl" />
-        </span>
-        <h2 className="mt-3 text-base font-semibold text-on-surface">{title}</h2>
-        <p className="mt-1 text-sm leading-6 text-on-surface-variant">{body}</p>
-        {children}
-      </div>
+    <section className="rounded-2xl border border-outline-variant bg-surface p-6 shadow-sm sm:p-7">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-container px-2.5 py-1 text-xs font-semibold text-on-surface-variant">
+        <span aria-hidden className={cn('h-2 w-2 rounded-full', STATUS_DOT[tone])} />
+        {status}
+      </span>
+      <h2 className="mt-4 text-2xl font-bold tracking-tight text-on-surface">{title}</h2>
+      <p className="mt-1.5 max-w-xl text-sm leading-6 text-on-surface-variant">{body}</p>
+      {children}
     </section>
   );
 }
@@ -159,25 +161,23 @@ function FawryReferenceCard({ reference, amount }: { reference: string; amount: 
     }
   };
   return (
-    <section className="rounded-xl border border-outline-variant bg-surface p-5 shadow-sm">
-      <div className="flex items-start gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning/10 text-warning">
-          <MaterialSymbol name="confirmation_number" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <h2 className="text-base font-semibold text-on-surface">{t('payment.fawryCode.title')}</h2>
-          <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4">
-            <p dir="ltr" className="font-mono text-3xl font-bold tracking-widest text-primary">{reference}</p>
-            <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => void copy()}>
-              <MaterialSymbol name="content_copy" size="text-base" />
-              {t('payment.fawryCode.copy')}
-            </Button>
-          </div>
-          <p className="mt-3 text-sm leading-6 text-on-surface">{t('payment.fawryCode.instructions', { amount })}</p>
-          <p className="mt-1 text-xs text-on-surface-variant">{t('payment.fawryCode.expiryNote')}</p>
-        </div>
+    <StateCard
+      tone="pending"
+      status={t('payment.status.awaitingPayment')}
+      title={t('payment.status.waitingTitle')}
+      body={t('payment.fawryCode.instructions', { amount })}
+    >
+      <div className="mt-5 rounded-xl border border-outline-variant bg-surface-container-lowest px-5 py-5 text-center">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-on-surface-variant">{t('payment.status.reference')}</p>
+        <p dir="ltr" className="mt-2 break-all text-3xl font-bold tracking-[0.18em] text-on-surface">{reference}</p>
+        <p className="mt-1 text-sm font-semibold text-on-surface-variant">{amount}</p>
+        <Button type="button" variant="outline" size="sm" className="mt-4 gap-1.5" onClick={() => void copy()}>
+          <MaterialSymbol name="content_copy" size="text-base" />
+          {t('payment.fawryCode.copy')}
+        </Button>
       </div>
-    </section>
+      <p className="mt-3 text-xs text-on-surface-variant">{t('payment.fawryCode.expiryNote')}</p>
+    </StateCard>
   );
 }
 
@@ -285,8 +285,8 @@ export function ApplicationPaymentStep({
   if (rejected) {
     return (
       <StateCard
-        icon="block"
-        tone="warning"
+        tone="closed"
+        status={t('payment.status.closed')}
         title={t('applications.paymentTab.rejectedTitle')}
         body={t('applications.paymentTab.rejectedBody')}
       />
@@ -296,8 +296,8 @@ export function ApplicationPaymentStep({
   if (!invoice) {
     return (
       <StateCard
-        icon="inventory_2"
-        tone="warning"
+        tone="neutral"
+        status={t('payment.status.notStarted')}
         title={t('applications.paymentTab.noInvoiceTitle')}
         body={t('applications.paymentTab.noInvoiceBody')}
       >
@@ -314,8 +314,8 @@ export function ApplicationPaymentStep({
   if (invoice.status === 'paid' || invoice.balanceDue <= 0) {
     return (
       <StateCard
-        icon="verified"
         tone="success"
+        status={t('payment.status.paid')}
         title={t('applications.paymentTab.paidTitle')}
         body={t('applications.paymentTab.paidBody', { amount: money(invoice.paidAmount) })}
       />
@@ -331,10 +331,10 @@ export function ApplicationPaymentStep({
           <FawryReferenceCard reference={attempt.providerReference} amount={money(invoice.pendingAmount)} />
         ) : (
           <StateCard
-            icon="hourglass_top"
-            tone="primary"
+            tone="pending"
+            status={t('payment.status.awaitingConfirmation')}
             title={t('applications.paymentTab.awaitingTitle')}
-            body={t('applications.paymentPackage.pendingCoversBalance', { amount: invoice.pendingAmount.toFixed(2) })}
+            body={t('applications.paymentPackage.pendingCoversBalance', { amount: formatMoneyAmount(invoice.pendingAmount) })}
           >
             {onlinePending && !attempt.hasTransaction ? (
               <div className="mt-4 space-y-2">
