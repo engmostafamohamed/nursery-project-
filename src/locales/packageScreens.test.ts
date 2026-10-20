@@ -26,6 +26,7 @@ const SCREENS = [
   'components/signup/SignupOrderSummary.tsx',
   'components/signup/SignupOptionsStatus.tsx',
   'features/parent-signup/signupOrder.ts',
+  'components/payment/PaymentMethodPicker.tsx',
 ];
 
 const source = (file: string) => readFileSync(path.join(root, file), 'utf8');
@@ -61,6 +62,11 @@ describe('admin package and deal screens', () => {
       ...periodNames.map((period) => `applications.paymentPackage.period.${period}`),
       // Every sign-up step has a name in the step list.
       ...SIGNUP_STEPS.map((step) => `signup.steps.${step}`),
+      // Every payment method row has a name, and every wallet provider a short name.
+      ...['card', 'instapay', 'vodafone_cash', 'etisalat_cash', 'orange_cash', 'we_pay', 'fawry', 'bank_transfer', 'cash', 'manual'].map(
+        (method) => `payment.manualMethods.${method}.label`,
+      ),
+      ...['vodafone_cash', 'etisalat_cash', 'orange_cash', 'we_pay'].map((provider) => `payment.picker.walletShort.${provider}`),
       // The standard texts shown in the empty boxes.
       'signup.payment.description',
       'signup.payment.chooseTuitionHint',

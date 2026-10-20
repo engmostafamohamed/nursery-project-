@@ -2603,6 +2603,7 @@
   },
   "payment": {
     "picker": {
+      "badgeInstant": "Confirmed instantly",
       "title": "Payment method",
       "short": {
         "instapay": "Send from your banking app",
@@ -6948,6 +6949,8 @@
       "payment": "Payment"
     },
     "packages": {
+      "stillNeeded": "Still needed before you can submit",
+      "completeStep": "Complete “{{step}}”",
       "summaryTitle": "Your total",
       "summaryLive": "Updates as you choose",
       "orderTitle": "Your order",

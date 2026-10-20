@@ -2603,6 +2603,7 @@
   },
   "payment": {
     "picker": {
+      "badgeInstant": "تأكيد فوري",
       "title": "طريقة الدفع",
       "short": {
         "instapay": "حوّل من تطبيق البنك",
@@ -6971,6 +6972,8 @@
       "payment": "الدفع"
     },
     "packages": {
+      "stillNeeded": "مطلوب قبل الإرسال",
+      "completeStep": "أكمل «{{step}}»",
       "summaryTitle": "إجمالي طلبك",
       "summaryLive": "يتحدّث مع كل اختيار",
       "orderTitle": "طلبك",

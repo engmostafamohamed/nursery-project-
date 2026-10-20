@@ -17,7 +17,7 @@ import { SignupShell } from '@/components/signup/SignupShell';
 import { StepMedicationConsents } from '@/components/signup/StepMedicationConsents';
 import { StepReview } from '@/components/signup/StepReview';
 import { SignupPackagesSection } from '@/components/signup/SignupPackagesSection';
-import { SignupPaymentSection } from '@/components/signup/SignupPaymentSection';
+import { SignupPaymentSection, type SignupSubmitBlocker } from '@/components/signup/SignupPaymentSection';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { childDateOfBirthBounds, isChildAgeValid } from '@/lib/onboardingDateBounds';
 import { nationalityOptions } from '@/lib/nationalities';
@@ -1704,6 +1704,38 @@ export function ParentSignUpPage() {
     return set;
   }, [activeRegistrationTemplate, currentStep, files, form.formState.errors, liveValues, packageSelectionComplete]);
 
+  const paymentTestMode = signupPaymentOptions.data?.testMode ?? false;
+  const submitLabel = submitting
+    ? t('common.loading')
+    : paymentMethod === 'card' && paymentTestMode
+      ? t('signup.payment.testModeSubmit', { defaultValue: 'Simulate test payment & submit application' })
+      : paymentMethod === 'card'
+        ? t('signup.payment.cardCheckout.continue', { defaultValue: 'Continue to secure online checkout' })
+        : t('signup.payment.submitPaymentAndApplication', { defaultValue: 'Submit payment & application' });
+  const submitIcon = paymentMethod === 'card' && !paymentTestMode ? 'open_in_new' : 'send';
+  // Everything that still stops the submit, in order; earlier steps link back to themselves.
+  const submitBlockers: SignupSubmitBlocker[] = [];
+  if (firstMissingStep) {
+    submitBlockers.push({
+      text: firstMissingStep === 'pickups'
+        ? t('signup.pickupPhotoRequired')
+        : firstMissingStep === 'documents'
+          ? t('signup.documentsRequired')
+          : t('signup.packages.completeStep', { step: t(`signup.steps.${firstMissingStep}`) }),
+      step: firstMissingStep,
+    });
+  } else if (!templateRequiredQuestionsComplete) {
+    submitBlockers.push({ text: t('signup.completeRequiredBeforeSubmit') });
+  }
+  if (!packageSelectionComplete) {
+    submitBlockers.push({ text: t('signup.packages.chooseFirst'), step: 'packages' });
+  } else if (!availablePaymentMethods.includes(paymentMethod)) {
+    submitBlockers.push({ text: t('signup.payment.completeSelection') });
+  }
+  for (const issue of paymentIssues) submitBlockers.push({ text: t(PAYMENT_DETAILS_ISSUE_KEYS[issue]) });
+  // On the payment step with a plan chosen, wide screens show the confirm button beside the order.
+  const submitInSidePanel = currentStep === 'payment' && packageSelectionComplete;
+
   const goNext = async () => {
     if (isLast || !canContinue) return;
     const fieldsToValidate = STEP_FIELDS[currentStep];
@@ -1938,6 +1970,14 @@ export function ParentSignUpPage() {
               issues={paymentIssues}
               onDetailsChange={updatePaymentDetails}
               onTestCardValidityChange={setTestCardValid}
+              submit={{
+                label: submitLabel,
+                icon: submitIcon,
+                disabled: submitting || !canSubmit,
+                submitting,
+                blockers: canSubmit ? [] : submitBlockers,
+                onGoToStep: goToStepByName,
+              }}
             />
           </div>
         );
@@ -1973,42 +2013,20 @@ export function ParentSignUpPage() {
           </Button>
 
           {isLast ? (
-            <div className="flex flex-col items-end gap-2">
+            <div className={cn('flex flex-col items-end gap-2', submitInSidePanel && 'xl:hidden')}>
               {!canSubmit ? (
                 <p className="max-w-xs text-end text-xs text-warning">
-                  {firstMissingStep === 'pickups'
-                    ? t('signup.pickupPhotoRequired')
-                    : firstMissingStep === 'documents'
-                      ? t('signup.documentsRequired')
-                      : !packageSelectionComplete
-                        ? t('signup.packages.chooseFirst')
-                      : !paymentSelectionComplete && paymentIssues.length > 0
-                        ? t(PAYMENT_DETAILS_ISSUE_KEYS[paymentIssues[0]])
-                        : !paymentSelectionComplete
-                    ? t('signup.payment.completeSelection', {
-                        defaultValue: 'Choose a tuition package, billing period, and payment method before submitting.',
-                      })
-                      : t('signup.completeRequiredBeforeSubmit')}
+                  {submitBlockers[0]?.text ?? t('signup.completeRequiredBeforeSubmit')}
                 </p>
               ) : null}
               <Button
                 type="submit"
-                className={`btn-gradient text-primary-foreground ${
-                  currentStep === 'payment' ? 'min-h-12 px-6 shadow-md shadow-primary/20' : ''
-                }`}
+                className={cn('btn-gradient text-primary-foreground', currentStep === 'payment' && 'min-h-12 px-6 shadow-md shadow-primary/20')}
                 disabled={submitting || !canSubmit}
+                aria-busy={submitting}
               >
-              {submitting
-                ? t('common.loading')
-                : paymentMethod === 'card' && signupPaymentOptions.data?.testMode
-                  ? t('signup.payment.testModeSubmit', { defaultValue: 'Simulate test payment & submit application' })
-                  : paymentMethod === 'card'
-                    ? t('signup.payment.cardCheckout.continue', { defaultValue: 'Continue to secure online checkout' })
-                    : t('signup.payment.submitPaymentAndApplication', { defaultValue: 'Submit payment & application' })}
-              <MaterialSymbol
-                name={paymentMethod === 'card' && !signupPaymentOptions.data?.testMode ? 'open_in_new' : 'send'}
-                size="text-base"
-              />
+                {submitLabel}
+                <MaterialSymbol name={submitIcon} size="text-base" />
               </Button>
             </div>
           ) : (
