@@ -3,7 +3,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ApplicationExtraHoursPackage } from '@/hooks/useApplicationExtraHoursPackage';
-import type { ApplicationPaymentPackage } from '@/hooks/useApplicationPackagePayment';
+import { bestPeriodSaving, periodsOfferedByAny, type ApplicationPaymentPackage } from '@/hooks/useApplicationPackagePayment';
 
 import { computeSignupOrder } from './signupOrder';
 
@@ -74,5 +74,21 @@ describe('sign-up order total', () => {
       complete: false,
       totalDue: 0,
     });
+  });
+});
+
+describe('sign-up billing period choice', () => {
+  it('offers every period some plan has, in order, and skips the ones none has', () => {
+    expect(periodsOfferedByAny([fullDay, annualOnly])).toEqual(['monthly', 'quarterly', 'annual']);
+    expect(periodsOfferedByAny([annualOnly])).toEqual(['annual']);
+    // A plan with no periods set is sold for all of them.
+    expect(periodsOfferedByAny([{ ...fullDay, billingPeriods: [] }])).toEqual(['monthly', 'quarterly', 'half_annual', 'annual']);
+  });
+
+  it('shows the best saving against paying month by month, from plans that offer the period', () => {
+    // 30,000 for 3 months against 3 × 11,000.
+    expect(bestPeriodSaving([fullDay, annualOnly], 'quarterly')).toBe(9);
+    expect(bestPeriodSaving([fullDay, annualOnly], 'monthly')).toBe(0);
+    expect(bestPeriodSaving([fullDay, annualOnly], 'half_annual')).toBe(0);
   });
 });

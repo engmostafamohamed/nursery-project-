@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { DiscountCountdown } from '@/components/parent/DiscountCountdown';
 import {
+  bestPeriodSaving,
   computePackageBillingQuote,
   isApplicationDealActive,
   offeredBillingPeriods,
@@ -66,14 +67,6 @@ function statusVariant(status: ApplicationPackageInvoice['status'] | 'not_select
   if (status === 'partial' || status === 'in_review') return 'warning';
   if (status === 'overdue') return 'error';
   return 'secondary';
-}
-
-/** How much cheaper a longer period is than paying the same months one by one (before any deal). */
-function periodSavingPercent(pkg: ApplicationPaymentPackage, period: ApplicationPackageBillingPeriod): number {
-  const quote = computePackageBillingQuote(pkg, period);
-  const monthByMonth = pkg.price * quote.billingMonths;
-  if (monthByMonth <= 0 || quote.subtotal >= monthByMonth) return 0;
-  return Math.round((1 - quote.subtotal / monthByMonth) * 100);
 }
 
 function SectionHeading({ index, title, hint, action }: { index: number; title: string; hint?: string; action?: ReactNode }) {
@@ -155,12 +148,7 @@ export function ApplicationPackagePaymentCard({
     () => Object.fromEntries(
       billingPeriodOptions.map((option) => [
         option.value,
-        Math.max(
-          0,
-          ...packages
-            .filter((pkg) => offeredBillingPeriods(pkg).includes(option.value))
-            .map((pkg) => periodSavingPercent(pkg, option.value)),
-        ),
+        bestPeriodSaving(packages, option.value),
       ]),
     ) as Record<ApplicationPackageBillingPeriod, number>,
     [packages],

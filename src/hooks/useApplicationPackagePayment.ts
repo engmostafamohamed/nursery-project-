@@ -54,6 +54,11 @@ export function offeredBillingPeriods(pkg: Pick<ApplicationPaymentPackage, 'bill
   return ALL_BILLING_PERIODS.filter((period) => pkg.billingPeriods.some((option) => option.billingPeriod === period));
 }
 
+/** The periods at least one of these plans offers, in the usual order: the choices on a period switch. */
+export function periodsOfferedByAny(packages: Pick<ApplicationPaymentPackage, 'billingPeriods'>[]): ApplicationPackageBillingPeriod[] {
+  return ALL_BILLING_PERIODS.filter((period) => packages.some((pkg) => offeredBillingPeriods(pkg).includes(period)));
+}
+
 /** Whether a deal is currently claimable: active and inside its optional start/end window. */
 export function isApplicationDealActive(deal: Pick<ApplicationPackageDeal, 'active' | 'startsAt' | 'endsAt'>): boolean {
   if (!deal.active) return false;
@@ -94,6 +99,28 @@ export function computePackageBillingQuote(
   }
   const total = Math.max(subtotal - discountAmount, 0);
   return { billingMonths, subtotal, discountAmount, total, dealApplied };
+}
+
+/** How much cheaper a longer period is than paying the same months one by one (before any deal). */
+export function periodSavingPercent(
+  pkg: Pick<ApplicationPaymentPackage, 'price' | 'billingPeriods' | 'deal'>,
+  period: ApplicationPackageBillingPeriod,
+): number {
+  const quote = computePackageBillingQuote(pkg, period);
+  const monthByMonth = pkg.price * quote.billingMonths;
+  if (monthByMonth <= 0 || quote.subtotal >= monthByMonth) return 0;
+  return Math.round((1 - quote.subtotal / monthByMonth) * 100);
+}
+
+/** The best such saving among the plans that offer this period, shown on the period switch. */
+export function bestPeriodSaving(
+  packages: Pick<ApplicationPaymentPackage, 'price' | 'billingPeriods' | 'deal'>[],
+  period: ApplicationPackageBillingPeriod,
+): number {
+  return Math.max(
+    0,
+    ...packages.filter((pkg) => offeredBillingPeriods(pkg).includes(period)).map((pkg) => periodSavingPercent(pkg, period)),
+  );
 }
 
 export type ApplicationPackageInvoice = {

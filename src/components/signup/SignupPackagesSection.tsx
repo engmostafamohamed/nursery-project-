@@ -1,3 +1,4 @@
+import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ApplicationExtraHoursPackageCard } from '@/components/parent/ApplicationExtraHoursPackageCard';
@@ -5,8 +6,10 @@ import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { billingPeriodName, signupOptionsReady, type SignupOrder } from '@/features/parent-signup/signupOrder';
 import type { SignupPaymentOptions } from '@/features/parent-signup/signupPayment';
 import {
+  bestPeriodSaving,
   computePackageBillingQuote,
   offeredBillingPeriods,
+  periodsOfferedByAny,
   type ApplicationPackageBillingPeriod,
   type ApplicationPaymentPackage,
 } from '@/hooks/useApplicationPackagePayment';
@@ -16,8 +19,6 @@ import { cn } from '@/lib/utils';
 
 import { SignupOrderSummary, SignupTotalBar } from './SignupOrderSummary';
 import { SignupOptionsStatus } from './SignupOptionsStatus';
-
-const ALL_PERIODS: ApplicationPackageBillingPeriod[] = ['monthly', 'quarterly', 'half_annual', 'annual'];
 
 function localName(pkg: ApplicationPaymentPackage, isArabic: boolean) {
   return isArabic ? pkg.nameAr || pkg.nameEn : pkg.nameEn || pkg.nameAr;
@@ -76,6 +77,12 @@ export function SignupPackagesSection({
   const money = (amount: number) => t('invoice.egpAmount', { amount: formatMoneyAmount(amount) });
   // The nursery's own texts, when it wrote them in this language; otherwise the standard ones.
   const texts = options?.texts ?? EMPTY_PARENT_PACKAGE_TEXTS;
+  // The parent picks the period first: every period at least one plan offers.
+  const periodOptions = useMemo(() => periodsOfferedByAny(options?.packages ?? []), [options?.packages]);
+  // Start on (or move to) a period some plan offers, e.g. when no plan is sold monthly.
+  useEffect(() => {
+    if (periodOptions.length > 0 && !periodOptions.includes(billingPeriod)) onBillingPeriodChange(periodOptions[0]);
+  }, [periodOptions, billingPeriod, onBillingPeriodChange]);
 
   if (!signupOptionsReady(options, isLoading, isError)) {
     return (
@@ -93,6 +100,13 @@ export function SignupPackagesSection({
   const selectedPackage = order.tuitionPackage;
   const hourlyRate = options.extraHoursHourlyPlan?.rate ?? null;
   const showExtraHours = options.extraHoursPackages.length > 0 || Boolean(options.extraHoursHourlyPlan);
+  const activePeriod = periodOptions.includes(billingPeriod) ? billingPeriod : periodOptions[0];
+
+  const choosePeriod = (period: ApplicationPackageBillingPeriod) => {
+    onBillingPeriodChange(period);
+    // A plan without this period cannot stay chosen.
+    if (selectedPackage && !offeredBillingPeriods(selectedPackage).includes(period)) onPackageChange('');
+  };
 
   return (
     <div className="space-y-6">
@@ -103,31 +117,64 @@ export function SignupPackagesSection({
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px] xl:items-start">
         <div className="min-w-0 space-y-8">
           <fieldset>
+            <SectionTitle index={1} title={t('signup.payment.billingPeriod')} hint={t('signup.packages.periodHint')} />
+            <div
+              role="radiogroup"
+              aria-label={t('signup.payment.billingPeriod')}
+              className={cn('grid gap-2', periodOptions.length >= 4 ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3')}
+            >
+              {periodOptions.map((period) => {
+                const active = period === activePeriod;
+                const saving = bestPeriodSaving(options.packages, period);
+                return (
+                  <button
+                    key={period}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => choosePeriod(period)}
+                    className={cn(
+                      'flex min-h-14 flex-col items-center justify-center rounded-xl border px-3 py-2 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                      active ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-outline-variant bg-surface hover:border-primary/50',
+                    )}
+                  >
+                    <span className={cn('text-sm font-semibold', active ? 'text-primary' : 'text-on-surface')}>{billingPeriodName(t, period)}</span>
+                    {saving > 0 ? (
+                      <span className="mt-0.5 text-[11px] font-medium text-success">
+                        {t('applications.paymentPackage.saveUpTo', { percent: saving })}
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          <fieldset>
             <SectionTitle
-              index={1}
+              index={2}
               title={t('signup.payment.tuitionPlan')}
               hint={textFor(texts.tuitionIntro, isArabic) ?? t('signup.payment.chooseTuitionHint')}
             />
             <div className="grid gap-3 sm:grid-cols-2">
               {options.packages.map((pkg) => {
-                // A plan without the chosen period shows (and switches to) its shortest offered one.
-                const cardPeriods = offeredBillingPeriods(pkg);
-                const cardPeriod = cardPeriods.includes(billingPeriod) ? billingPeriod : cardPeriods[0];
-                const quote = computePackageBillingQuote(pkg, cardPeriod);
-                const active = packageId === pkg.id;
+                const offered = offeredBillingPeriods(pkg).includes(activePeriod);
+                const quote = computePackageBillingQuote(pkg, activePeriod);
+                const active = packageId === pkg.id && offered;
                 const description = isArabic ? pkg.descriptionAr || pkg.descriptionEn : pkg.descriptionEn || pkg.descriptionAr;
                 return (
                   <button
                     key={pkg.id}
                     type="button"
                     aria-pressed={active}
+                    disabled={!offered}
                     onClick={() => {
                       onPackageChange(pkg.id);
-                      if (cardPeriod !== billingPeriod) onBillingPeriodChange(cardPeriod);
+                      if (activePeriod !== billingPeriod) onBillingPeriodChange(activePeriod);
                     }}
                     className={cn(
-                      'group relative flex min-h-28 flex-col rounded-xl border p-4 text-start transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
-                      active ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-outline-variant bg-surface hover:border-primary/50',
+                      'group relative flex min-h-28 flex-col rounded-xl border p-4 text-start transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60',
+                      active ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-outline-variant bg-surface enabled:hover:border-primary/50',
                     )}
                   >
                     <span className="flex w-full items-start justify-between gap-3">
@@ -141,74 +188,48 @@ export function SignupPackagesSection({
                         <MaterialSymbol name="check" size="text-xs" />
                       </span>
                     </span>
-                    {quote.discountAmount > 0 ? (
+                    {offered && quote.discountAmount > 0 ? (
                       <span className="mt-2 inline-flex w-fit items-center rounded-full border border-success/20 bg-success/10 px-2 py-0.5 text-[11px] font-semibold text-success">
                         {t('signup.payment.discountBadge')}
                       </span>
                     ) : null}
                     {description ? <span className="mt-1.5 block whitespace-pre-line text-xs leading-5 text-on-surface-variant">{description}</span> : null}
-                    <span className="mt-auto flex flex-wrap items-baseline gap-2 pt-4">
-                      {quote.discountAmount > 0 ? (
-                        <span className="text-xs tabular-nums text-on-surface-variant line-through">{money(quote.subtotal)}</span>
-                      ) : null}
-                      <span className="text-lg font-bold tracking-tight tabular-nums text-on-surface">{money(quote.total)}</span>
-                      <span className="text-xs text-on-surface-variant">{billingPeriodName(t, cardPeriod)}</span>
-                    </span>
-                    {quote.discountAmount > 0 ? (
-                      <span className="mt-1 block text-xs font-medium text-success">
-                        {t('signup.payment.discountSaved', { amount: money(quote.discountAmount) })}
+                    {offered ? (
+                      <>
+                        <span className="mt-auto flex flex-wrap items-baseline gap-2 pt-4">
+                          {quote.discountAmount > 0 ? (
+                            <span className="text-xs tabular-nums text-on-surface-variant line-through">{money(quote.subtotal)}</span>
+                          ) : null}
+                          <span className="text-lg font-bold tracking-tight tabular-nums text-on-surface">{money(quote.total)}</span>
+                          <span className="text-xs text-on-surface-variant">{billingPeriodName(t, activePeriod)}</span>
+                        </span>
+                        {quote.billingMonths > 1 ? (
+                          <span className="mt-0.5 block text-xs tabular-nums text-on-surface-variant">
+                            {t('applications.paymentPackage.perMonthEquivalent', { amount: money(quote.total / quote.billingMonths) })}
+                          </span>
+                        ) : null}
+                        {quote.discountAmount > 0 ? (
+                          <span className="mt-1 block text-xs font-medium text-success">
+                            {t('signup.payment.discountSaved', { amount: money(quote.discountAmount) })}
+                          </span>
+                        ) : null}
+                      </>
+                    ) : (
+                      <span className="mt-auto flex items-center gap-1.5 pt-4 text-xs text-on-surface-variant">
+                        <MaterialSymbol name="event_busy" size="text-sm" />
+                        {t('applications.paymentPackage.periodNotOffered', { period: billingPeriodName(t, activePeriod) })}
                       </span>
-                    ) : null}
+                    )}
                   </button>
                 );
               })}
             </div>
           </fieldset>
 
-          {selectedPackage ? (
-            <fieldset>
-              <SectionTitle index={2} title={t('signup.payment.billingPeriod')} hint={t('signup.packages.periodHint')} />
-              <div role="radiogroup" aria-label={t('signup.payment.billingPeriod')} className="grid gap-2 sm:grid-cols-2">
-                {ALL_PERIODS.filter((period) => offeredBillingPeriods(selectedPackage).includes(period)).map((period) => {
-                  const quote = computePackageBillingQuote(selectedPackage, period);
-                  const active = period === billingPeriod;
-                  return (
-                    <button
-                      key={period}
-                      type="button"
-                      role="radio"
-                      aria-checked={active}
-                      onClick={() => onBillingPeriodChange(period)}
-                      className={cn(
-                        'flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                        active ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-outline-variant bg-surface hover:border-primary/50',
-                      )}
-                    >
-                      <span className="min-w-0">
-                        <span className="block text-sm font-semibold text-on-surface">{billingPeriodName(t, period)}</span>
-                        {quote.billingMonths > 1 ? (
-                          <span className="block text-xs text-on-surface-variant">
-                            {t('applications.paymentPackage.perMonthEquivalent', { amount: money(quote.total / quote.billingMonths) })}
-                          </span>
-                        ) : null}
-                      </span>
-                      <span className="shrink-0 text-end">
-                        <span className="block text-sm font-bold tabular-nums text-on-surface">{money(quote.total)}</span>
-                        {quote.discountAmount > 0 ? (
-                          <span className="block text-[11px] tabular-nums text-on-surface-variant line-through">{money(quote.subtotal)}</span>
-                        ) : null}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </fieldset>
-          ) : null}
-
           {showExtraHours ? (
             <fieldset>
               <SectionTitle
-                index={selectedPackage ? 3 : 2}
+                index={3}
                 title={t('applications.extraHoursPackage.title')}
                 hint={textFor(texts.extraHoursIntro, isArabic) ?? t('signup.payment.extraHoursHint')}
               />
