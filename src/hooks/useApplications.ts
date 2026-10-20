@@ -497,17 +497,21 @@ export function useApplications(params: { nurseryId?: string; applicationId?: st
       }
 
       if (resolvedParentId && payload.nurseryId && payload.status !== 'under_review') {
-        const reason = payload.status === 'approved' ? '' : payload.reason?.trim() ?? '';
-        await supabase.from('notifications').insert(
-          templateNotificationRow({
-            nurseryId: payload.nurseryId,
-            userId: resolvedParentId,
-            type: `application_${payload.status}`,
-            params: reason ? { reason, segments: ['reason'] } : {},
-            actionLink: `/parent/applications/${payload.id}`,
-            urgency: payload.status === 'approved' ? 'normal' : 'high',
-          }) as never,
-        );
+        // The database tells the parent about an approval (trg_notify_parent_application_approved).
+        // A request for documents or a rejection carries the reviewer's message, sent from here.
+        if (payload.status !== 'approved') {
+          const reason = payload.reason?.trim() ?? '';
+          await supabase.from('notifications').insert(
+            templateNotificationRow({
+              nurseryId: payload.nurseryId,
+              userId: resolvedParentId,
+              type: `application_${payload.status}`,
+              params: reason ? { reason, segments: ['reason'] } : {},
+              actionLink: `/parent/applications/${payload.id}`,
+              urgency: 'high',
+            }) as never,
+          );
+        }
 
         if (payload.openChat && payload.reviewedBy && payload.chatMessage?.trim()) {
           const conversationId = getOrCreateConversationId(undefined);

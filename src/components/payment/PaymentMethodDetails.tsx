@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { isWalletProvider, type ParentPaymentMethodCode, type WalletDestinations, type WalletProvider } from '@/lib/paymentApi';
 import {
+  PAYMENT_DETAILS_ISSUE_KEYS,
   paymentFlowOf,
   RECEIPT_IMAGE_TYPES,
   receiptFileError,
@@ -61,6 +62,12 @@ function Field({ label, htmlFor, hint, error, children }: {
     </div>
   );
 }
+
+/** Common Egyptian banks, suggested in the bank-name field (any other name can be typed). */
+const EGYPTIAN_BANKS = {
+  en: ['National Bank of Egypt', 'Banque Misr', 'CIB', 'QNB Alahli', 'Banque du Caire', 'Bank of Alexandria', 'Arab African International Bank', 'Faisal Islamic Bank', 'HSBC Egypt', 'Emirates NBD Egypt'],
+  ar: ['البنك الأهلي المصري', 'بنك مصر', 'البنك التجاري الدولي CIB', 'بنك QNB الأهلي', 'بنك القاهرة', 'بنك الإسكندرية', 'البنك العربي الأفريقي الدولي', 'بنك فيصل الإسلامي', 'HSBC مصر', 'بنك الإمارات دبي الوطني مصر'],
+} as const;
 
 /** Where the money goes: a label, a large value to type into the bank or wallet app, and Copy. */
 function SendToBox({ label, value, footer, aside }: { label: string; value: string; footer?: ReactNode; aside?: ReactNode }) {
@@ -190,9 +197,14 @@ export function PaymentMethodDetails({
   walletProviders = [],
   onMethodChange,
 }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const flow = paymentFlowOf(method);
   const providerLabel = (provider: WalletProvider) => t(`payment.manualMethods.${provider}.label`);
+  // A field's error shows once the parent has left it, not while the form is still empty.
+  const [touched, setTouched] = useState<ReadonlySet<string>>(() => new Set());
+  const touch = (field: string) => () => setTouched((current) => (current.has(field) ? current : new Set(current).add(field)));
+  const shownIssue = (field: string, issue: PaymentDetailsIssue) =>
+    touched.has(field) && issues.includes(issue) ? t(PAYMENT_DETAILS_ISSUE_KEYS[issue]) : null;
 
   if (flow === 'online_checkout') {
     return testMode ? (
@@ -210,13 +222,12 @@ export function PaymentMethodDetails({
     );
   }
 
-  const approval = (
-    <p className="text-xs leading-5 text-on-surface-variant">{t('payment.approvalNote')}</p>
-  );
+  // A method with nothing to fill in only says who confirms it.
+  if (flow === 'review') {
+    return <p className="text-xs leading-5 text-on-surface-variant">{t('payment.approvalNote')}</p>;
+  }
 
-  if (flow === 'review') return approval;
-
-  const referenceField = (label: string, hint: string) => (
+  const referenceField = (label: string, hint?: string) => (
     <Field label={label} htmlFor={`${idPrefix}-reference`} hint={hint}>
       <Input
         id={`${idPrefix}-reference`}
@@ -261,9 +272,28 @@ export function PaymentMethodDetails({
         ) : (
           <Unavailable>{t('payment.steps.instapayNotConfigured')}</Unavailable>
         )}
-        {referenceField(t('payment.reference'), t('payment.steps.enterReferenceHint'))}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field
+            label={t('payment.steps.instapaySender')}
+            htmlFor={`${idPrefix}-instapay-sender`}
+            hint={t('payment.steps.instapaySenderHint')}
+            error={shownIssue('instapay-sender', 'instapay_sender_invalid')}
+          >
+            <Input
+              id={`${idPrefix}-instapay-sender`}
+              dir="ltr"
+              autoComplete="off"
+              maxLength={80}
+              placeholder="name@instapay"
+              value={details.senderAccount}
+              aria-invalid={Boolean(shownIssue('instapay-sender', 'instapay_sender_invalid'))}
+              onBlur={touch('instapay-sender')}
+              onChange={(event) => onChange({ senderAccount: event.target.value.trimStart() })}
+            />
+          </Field>
+          {referenceField(t('payment.reference'), t('payment.steps.enterReferenceHint'))}
+        </div>
         {nurseryNote}
-        {approval}
       </div>
     );
   }
@@ -372,7 +402,6 @@ export function PaymentMethodDetails({
           />
         </Field>
         {nurseryNote}
-        {approval}
       </div>
     );
   }
@@ -390,8 +419,45 @@ export function PaymentMethodDetails({
         ) : (
           <Unavailable>{t('payment.steps.bankNoDetails')}</Unavailable>
         )}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field
+            label={t('payment.steps.bankSenderName')}
+            htmlFor={`${idPrefix}-bank-sender`}
+            error={shownIssue('bank-sender', 'bank_sender_name_required')}
+          >
+            <Input
+              id={`${idPrefix}-bank-sender`}
+              autoComplete="name"
+              maxLength={100}
+              placeholder={t('payment.steps.bankSenderNamePlaceholder')}
+              value={details.senderName}
+              aria-invalid={Boolean(shownIssue('bank-sender', 'bank_sender_name_required'))}
+              onBlur={touch('bank-sender')}
+              onChange={(event) => onChange({ senderName: event.target.value })}
+            />
+          </Field>
+          <Field
+            label={t('payment.steps.bankSenderBank')}
+            htmlFor={`${idPrefix}-bank-name`}
+            error={shownIssue('bank-name', 'bank_sender_bank_required')}
+          >
+            <Input
+              id={`${idPrefix}-bank-name`}
+              autoComplete="off"
+              maxLength={100}
+              list={`${idPrefix}-bank-list`}
+              placeholder={t('payment.steps.bankSenderBankPlaceholder')}
+              value={details.senderBank}
+              aria-invalid={Boolean(shownIssue('bank-name', 'bank_sender_bank_required'))}
+              onBlur={touch('bank-name')}
+              onChange={(event) => onChange({ senderBank: event.target.value })}
+            />
+            <datalist id={`${idPrefix}-bank-list`}>
+              {EGYPTIAN_BANKS[i18n.language.startsWith('ar') ? 'ar' : 'en'].map((bank) => <option key={bank} value={bank} />)}
+            </datalist>
+          </Field>
+        </div>
         {referenceField(t('payment.reference'), t('payment.steps.bankReferenceHint'))}
-        {approval}
       </div>
     );
   }
@@ -399,13 +465,8 @@ export function PaymentMethodDetails({
   // Fawry, with a reference the nursery or Fawry issued.
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
-        <p className="text-sm font-semibold text-on-surface">{t('payment.steps.fawrySend', { amount: amountLabel })}</p>
-        <p className="mt-1 text-xs leading-5 text-on-surface-variant">{t('payment.fawry.description')}</p>
-      </div>
-      {referenceField(t('payment.fawry.reference'), t('payment.fawry.referenceNotice'))}
+      {referenceField(t('payment.fawry.reference'))}
       {nurseryNote}
-      {approval}
     </div>
   );
 }

@@ -11,6 +11,7 @@ import {
   cardBrandOf,
   EMPTY_PAYMENT_DETAILS,
   invoiceApplicationId,
+  isInstapaySender,
   payableNow,
   paymentDetailsIssues,
   paymentFlowOf,
@@ -78,8 +79,32 @@ describe('payment methods a parent can choose', () => {
 describe('what each method needs before it can be paid', () => {
   it('asks for a transaction number of at least 4 characters for transfers', () => {
     const details = { ...EMPTY_PAYMENT_DETAILS, reference: ' 12 ' };
-    expect(paymentDetailsIssues('instapay', details, noWallet)).toEqual(['reference_required']);
-    expect(paymentDetailsIssues('instapay', { ...details, reference: ' 1234 ' }, noWallet)).toEqual([]);
+    expect(paymentDetailsIssues('fawry', details, noWallet)).toEqual(['reference_required']);
+    expect(paymentDetailsIssues('fawry', { ...details, reference: ' 1234 ' }, noWallet)).toEqual([]);
+  });
+
+  it("asks InstaPay for the parent's own InstaPay address or mobile", () => {
+    const details = { ...EMPTY_PAYMENT_DETAILS, reference: 'TX1234' };
+    expect(paymentDetailsIssues('instapay', details, noWallet)).toEqual(['instapay_sender_invalid']);
+    expect(paymentDetailsIssues('instapay', { ...details, senderAccount: 'mona@instapay' }, noWallet)).toEqual([]);
+    expect(paymentDetailsIssues('instapay', { ...details, senderAccount: '01012345678' }, noWallet)).toEqual([]);
+    expect(paymentDetailsIssues('instapay', { ...details, senderAccount: 'mona@gmail.com' }, noWallet)).toEqual(['instapay_sender_invalid']);
+    expect(isInstapaySender(' Mona.Ali@InstaPay ')).toBe(true);
+    expect(isInstapaySender('0101234567')).toBe(false);
+  });
+
+  it('asks a bank transfer for the account holder, the bank and the reference', () => {
+    expect(paymentDetailsIssues('bank_transfer', EMPTY_PAYMENT_DETAILS, noWallet)).toEqual([
+      'bank_sender_name_required',
+      'bank_sender_bank_required',
+      'reference_required',
+    ]);
+    expect(paymentDetailsIssues('bank_transfer', {
+      ...EMPTY_PAYMENT_DETAILS,
+      senderName: 'Mona Ali',
+      senderBank: 'Banque Misr',
+      reference: 'FT2610',
+    }, noWallet)).toEqual([]);
   });
 
   it('asks every wallet for its nursery number, a valid wallet phone, the name and the receipt', () => {
@@ -114,6 +139,10 @@ describe('what each method needs before it can be paid', () => {
 
   it('saves the reference finance matches the money with', () => {
     expect(paymentReferenceFor('bank_transfer', { ...EMPTY_PAYMENT_DETAILS, reference: '  TX-9  ' })).toBe('TX-9');
+    expect(paymentReferenceFor('bank_transfer', { ...EMPTY_PAYMENT_DETAILS, reference: 'TX-9', senderName: ' Mona ', senderBank: 'CIB' }))
+      .toBe('Reference: TX-9; sender: Mona; bank: CIB');
+    expect(paymentReferenceFor('instapay', { ...EMPTY_PAYMENT_DETAILS, reference: 'TX-9', senderAccount: 'mona@instapay' }))
+      .toBe('Reference: TX-9; sender: mona@instapay');
     expect(paymentReferenceFor('bank_transfer', EMPTY_PAYMENT_DETAILS)).toBeNull();
     expect(paymentReferenceFor('etisalat_cash', { ...EMPTY_PAYMENT_DETAILS, walletPhone: '01112345678', walletCustomerName: ' Mona ' }))
       .toBe('Wallet phone: 01112345678; customer name: Mona');

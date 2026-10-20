@@ -2620,6 +2620,15 @@
       }
     },
     "steps": {
+      "instapaySender": "Your InstaPay address or mobile",
+      "instapaySenderHint": "The account you're sending from, e.g. name@instapay or 01XXXXXXXXX.",
+      "instapaySenderInvalid": "Enter your InstaPay address (name@instapay) or your 11-digit mobile number.",
+      "bankSenderName": "Account holder name",
+      "bankSenderNamePlaceholder": "Name on the account you sent from",
+      "bankSenderNameRequired": "Enter the name on the account you sent from.",
+      "bankSenderBank": "Bank",
+      "bankSenderBankPlaceholder": "Choose or type your bank",
+      "bankSenderBankRequired": "Enter the bank you sent from.",
       "copy": "Copy",
       "copied": "Copied",
       "cardSecure": "You'll enter your card on Paymob's secure page to pay {{amount}}.",
@@ -2642,7 +2651,6 @@
       "bankSend": "Transfer {{amount}} to",
       "bankNoDetails": "The nursery hasn't added its bank details yet. Contact the nursery for them.",
       "bankReferenceHint": "The transfer reference from your bank, so the nursery can match it.",
-      "fawrySend": "Pay {{amount}} at any Fawry outlet",
       "cvvWhere": "Where is the CVC?",
       "cvvHelp": "The 3 digits on the back of the card, next to the signature strip (4 digits on the front for American Express).",
       "testCardNote": "Test mode: any valid-looking card number works (for example 4242 4242 4242 4242). Nothing is charged and the card is never sent."
@@ -2701,9 +2709,7 @@
     "instructionsTitle": "Where to send the money",
     "fawry": {
       "title": "Pay with Fawry",
-      "description": "Use the reference number supplied by the nursery to pay at a Fawry outlet or supported channel. The nursery will verify the payment manually.",
-      "reference": "Fawry reference number",
-      "referenceNotice": "A valid Fawry reference must be issued by the nursery or Fawry. This page does not generate payment codes."
+      "reference": "Fawry reference number"
     },
     "etisalatWallet": {
       "title": "Etisalat Cash wallet payment",
@@ -2917,6 +2923,7 @@
     "errors": {
       "payment_exceeds_balance": "The amount is more than the balance still due on this invoice.",
       "payment_full_amount_required": "This invoice must be paid in full in one payment (EGP {{amount}}).",
+      "payment_application_incomplete": "Finish the application before paying: accept the terms and upload the four required documents.",
       "payment_checkout_unavailable": "Online card payment is not available right now. Please choose another payment method.",
       "payment_checkout_invalid_url": "The payment provider returned an invalid checkout page. Nothing was charged; please try again.",
       "payment_checkout_failed": "Could not start the online payment. Please try again.",
@@ -5491,6 +5498,10 @@
         "payment_submitted": "payment submitted"
       }
     },
+    "class_child_added": {
+      "title": "New child in your class",
+      "body": "{{child}} joined {{class}}."
+    },
     "application_approved": {
       "title": "Application approved",
       "body": "Your child's application was approved and the child profile is now on your dashboard."
@@ -6341,11 +6352,11 @@
       },
       "late_billing_unit_minutes": {
         "label": "Extra-hours rounding unit",
-        "helper": "Late time is rounded up to this block before billing."
+        "helper": "Late time is rounded up to this block before billing. Example: 70 minutes late is billed as 2 hours with a full hour, 1.5 hours with a half hour, 1.25 hours with 15 minutes."
       },
       "late_billing_from": {
         "label": "Bill extra time from",
-        "helper": "Whether billing counts from closing time or from the end of the grace period."
+        "helper": "A pickup is late only after the grace period. Closing time bills the whole time since closing; end of grace period bills only the time after it. Example: closing 5:00 PM, 15 minutes grace, picked up 6:10 PM: 70 minutes from closing time, 55 minutes from the end of the grace period."
       },
       "late_sweep_cap_hours": {
         "label": "Automatic charge cap (hours)",

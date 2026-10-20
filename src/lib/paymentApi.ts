@@ -172,6 +172,7 @@ export async function redeemLoyaltyPoints(input: { invoiceId: string; points: nu
 const PAYMENT_ERROR_CODES = [
   'payment_exceeds_balance',
   'payment_full_amount_required',
+  'payment_application_incomplete',
   'payment_checkout_unavailable',
   'payment_checkout_invalid_url',
   'payment_checkout_failed',

@@ -73,6 +73,7 @@ import {
   EMPTY_PAYMENT_DETAILS,
   PAYMENT_DETAILS_ISSUE_KEYS,
   paymentDetailsIssues,
+  paymentReferenceFor,
   type PaymentDetails,
 } from '@/lib/paymentMethods';
 import type { ApplicationPackageBillingPeriod } from '@/hooks/useApplicationPackagePayment';
@@ -1838,7 +1839,8 @@ export function ParentSignUpPage() {
         billingPeriod: paymentBillingPeriod,
         extraHoursPackageId,
         method: paymentMethod,
-        reference: requiresPaymentReference ? paymentDetails.reference.trim() : null,
+        // Transfers carry the sender details too (InstaPay address, bank and account name).
+        reference: requiresPaymentReference ? paymentReferenceFor(paymentMethod, paymentDetails) : null,
         idempotencyKey: newIdempotencyKey(),
         walletPhone: isWalletProvider(paymentMethod) ? paymentDetails.walletPhone : null,
         walletCustomerName: isWalletProvider(paymentMethod) ? paymentDetails.walletCustomerName : null,

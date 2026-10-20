@@ -261,6 +261,7 @@ describe('payment requests to the server', () => {
 describe('payment error messages', () => {
   const CODES = [
     'payment_exceeds_balance',
+    'payment_application_incomplete',
     'payment_duplicate',
     'payment_invoice_closed',
     'payment_invoice_not_yours',

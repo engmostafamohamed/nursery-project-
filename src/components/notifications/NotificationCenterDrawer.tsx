@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Calendar, CircleAlert, MessageCircle, Receipt, UserRound } from 'lucide-react';
+import { Calendar, CircleAlert, MessageCircle, Receipt, UserRound, Users } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
@@ -31,6 +31,7 @@ function iconForType(type: string) {
   if (filter === 'messages') return <MessageCircle className="h-4 w-4" />;
   if (filter === 'financial') return <Receipt className="h-4 w-4" />;
   if (type.includes('event')) return <Calendar className="h-4 w-4" />;
+  if (type.startsWith('class_')) return <Users className="h-4 w-4" />;
   return <CircleAlert className="h-4 w-4" />;
 }
 

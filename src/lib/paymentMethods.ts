@@ -79,6 +79,12 @@ export function availableParentPaymentMethods(input: {
 /** What the parent typed or attached for the chosen method. */
 export type PaymentDetails = {
   reference: string;
+  /** InstaPay: the parent's own InstaPay address (name@instapay) or registered mobile. */
+  senderAccount: string;
+  /** Bank transfer: the name on the account the money was sent from. */
+  senderName: string;
+  /** Bank transfer: the bank the money was sent from. */
+  senderBank: string;
   walletPhone: string;
   walletCustomerName: string;
   walletReceipt: File | null;
@@ -90,6 +96,9 @@ export type PaymentDetails = {
 
 export const EMPTY_PAYMENT_DETAILS: PaymentDetails = {
   reference: '',
+  senderAccount: '',
+  senderName: '',
+  senderBank: '',
   walletPhone: '',
   walletCustomerName: '',
   walletReceipt: null,
@@ -99,6 +108,9 @@ export const EMPTY_PAYMENT_DETAILS: PaymentDetails = {
 
 export type PaymentDetailsIssue =
   | 'reference_required'
+  | 'instapay_sender_invalid'
+  | 'bank_sender_name_required'
+  | 'bank_sender_bank_required'
   | 'wallet_destination_missing'
   | 'wallet_phone_invalid'
   | 'wallet_name_required'
@@ -108,6 +120,9 @@ export type PaymentDetailsIssue =
 /** Translation key for each issue, shown under the field or on the pay button. */
 export const PAYMENT_DETAILS_ISSUE_KEYS: Record<PaymentDetailsIssue, string> = {
   reference_required: 'payment.referenceRequired',
+  instapay_sender_invalid: 'payment.steps.instapaySenderInvalid',
+  bank_sender_name_required: 'payment.steps.bankSenderNameRequired',
+  bank_sender_bank_required: 'payment.steps.bankSenderBankRequired',
   wallet_destination_missing: 'payment.wallet.destinationNotConfigured',
   wallet_phone_invalid: 'payment.wallet.phoneInvalid',
   wallet_name_required: 'payment.wallet.nameRequired',
@@ -123,6 +138,8 @@ export type PaymentMethodContext = {
 };
 
 const WALLET_PHONE_PATTERN = /^01[0125]\d{8}$/;
+/** An InstaPay address: something@instapay. */
+const INSTAPAY_ADDRESS_PATTERN = /^[^\s@]{2,}@instapay$/i;
 const MIN_REFERENCE_LENGTH = 4;
 const MIN_WALLET_NAME_LENGTH = 2;
 
@@ -134,7 +151,14 @@ export function paymentDetailsIssues(
 ): PaymentDetailsIssue[] {
   const flow = paymentFlowOf(method);
   if (flow === 'transfer') {
-    return details.reference.trim().length < MIN_REFERENCE_LENGTH ? ['reference_required'] : [];
+    const issues: PaymentDetailsIssue[] = [];
+    if (method === 'instapay' && !isInstapaySender(details.senderAccount)) issues.push('instapay_sender_invalid');
+    if (method === 'bank_transfer') {
+      if (details.senderName.trim().length < MIN_WALLET_NAME_LENGTH) issues.push('bank_sender_name_required');
+      if (details.senderBank.trim().length < MIN_WALLET_NAME_LENGTH) issues.push('bank_sender_bank_required');
+    }
+    if (details.reference.trim().length < MIN_REFERENCE_LENGTH) issues.push('reference_required');
+    return issues;
   }
   if (flow === 'wallet_receipt') {
     const issues: PaymentDetailsIssue[] = [];
@@ -148,6 +172,12 @@ export function paymentDetailsIssues(
     return ['test_card_invalid'];
   }
   return [];
+}
+
+/** The parent's InstaPay identity: an InstaPay address (name@instapay) or an Egyptian mobile. */
+export function isInstapaySender(value: string): boolean {
+  const trimmed = value.trim();
+  return INSTAPAY_ADDRESS_PATTERN.test(trimmed) || WALLET_PHONE_PATTERN.test(trimmed.replace(/\s/g, ''));
 }
 
 /** Egyptian mobile prefixes and the wallet each network issues. */
@@ -189,7 +219,17 @@ export function paymentReferenceFor(method: ParentPaymentMethodCode, details: Pa
     const transaction = details.walletTransaction.trim();
     return `Wallet phone: ${details.walletPhone}; customer name: ${details.walletCustomerName.trim()}${transaction ? `; transaction: ${transaction}` : ''}`;
   }
-  if (flow === 'transfer') return details.reference.trim() || null;
+  if (flow === 'transfer') {
+    const reference = details.reference.trim();
+    if (!reference) return null;
+    if (method === 'instapay' && details.senderAccount.trim()) {
+      return `Reference: ${reference}; sender: ${details.senderAccount.trim()}`;
+    }
+    if (method === 'bank_transfer' && (details.senderName.trim() || details.senderBank.trim())) {
+      return `Reference: ${reference}; sender: ${details.senderName.trim()}; bank: ${details.senderBank.trim()}`;
+    }
+    return reference;
+  }
   return null;
 }
 
