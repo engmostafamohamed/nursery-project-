@@ -108,6 +108,17 @@ type SourceApplication = {
 
 type PackageSummary = { id: string; name_ar: string | null; name_en: string | null; price: number | string | null };
 
+/** The plan the parent chose at registration, kept as the child's ongoing tuition subscription. */
+type TuitionPlanSummary = {
+  tuition_package_name_ar: string | null;
+  tuition_package_name_en: string | null;
+  billing_period: string;
+  locked_price: number | string;
+  next_invoice_date: string | null;
+};
+
+type NameSummary = { name_ar: string | null; name_en: string | null };
+
 type ChildRecordPayload = {
   child: ChildRecord | null;
   parents: ParentLink[];
@@ -117,7 +128,10 @@ type ChildRecordPayload = {
   childClass: { name_ar: string | null; name_en: string | null } | null;
   sourceApplication: SourceApplication | null;
   documents: JsonRecord[];
+  /** Enrollments before tuition subscriptions only kept the chosen package id. */
   selectedPackage: PackageSummary | null;
+  tuitionPlan: TuitionPlanSummary | null;
+  extraHoursPackage: NameSummary | null;
 };
 
 type ChildRecordTab = 'overview' | 'parents' | 'care' | 'health' | 'emergency' | 'billing' | 'documents' | 'tools';
@@ -191,6 +205,8 @@ export function AdminChildRecordPage() {
         sourceApplication: null,
         documents: [],
         selectedPackage: null,
+        tuitionPlan: null,
+        extraHoursPackage: null,
       };
       if (!childId || !profile?.id) return empty;
 
@@ -208,7 +224,7 @@ export function AdminChildRecordPage() {
       const sourceApplicationId = text(extended, 'source_application_id');
       const selectedPackageId = text(extended, 'selected_package_id');
 
-      const [classRes, linksRes, pickupsRes, dietaryRes, diaperRes, applicationRes, documentsRes, packageRes] = await Promise.all([
+      const [classRes, linksRes, pickupsRes, dietaryRes, diaperRes, applicationRes, documentsRes, packageRes, tuitionRes, extraHoursRes] = await Promise.all([
         child.class_id
           ? supabase.from('classes').select('name_ar, name_en').eq('id', child.class_id).maybeSingle()
           : Promise.resolve({ data: null, error: null }),
@@ -247,6 +263,22 @@ export function AdminChildRecordPage() {
         selectedPackageId
           ? supabase.from('packages').select('id, name_ar, name_en, price').eq('id', selectedPackageId).maybeSingle()
           : Promise.resolve({ data: null, error: null }),
+        supabase
+          .from('child_tuition_subscriptions')
+          .select('tuition_package_name_ar, tuition_package_name_en, billing_period, locked_price, next_invoice_date')
+          .eq('child_id', childId)
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from('child_packages')
+          .select('packages (name_ar, name_en)')
+          .eq('child_id', childId)
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
       ]);
       if (linksRes.error) throw linksRes.error;
 
@@ -297,6 +329,8 @@ export function AdminChildRecordPage() {
         sourceApplication: (applicationRes.data as SourceApplication | null) ?? null,
         documents: latestDocuments,
         selectedPackage: (packageRes.data as PackageSummary | null) ?? null,
+        tuitionPlan: (tuitionRes.data as TuitionPlanSummary | null) ?? null,
+        extraHoursPackage: (extraHoursRes.data as { packages: NameSummary | null } | null)?.packages ?? null,
       };
     },
     enabled: Boolean(childId && profile?.id),
@@ -349,7 +383,8 @@ export function AdminChildRecordPage() {
     return <EmptyState icon="child_care" title={t('qr.childNotFoundTitle')} description={t('qr.childNotFoundDescription')} />;
   }
 
-  const { child, parents, pickups, legacyDietary, legacyDiaper, childClass, sourceApplication, documents, selectedPackage } = childQuery.data;
+  const { child, parents, pickups, legacyDietary, legacyDiaper, childClass, sourceApplication, documents, selectedPackage, tuitionPlan, extraHoursPackage } =
+    childQuery.data;
   const extended = isRecord(child.enrollment_extended_json) ? child.enrollment_extended_json : {};
   const family = recordAt(extended, 'family');
   const extendedParents = recordAt(extended, 'parents');
@@ -364,6 +399,19 @@ export function AdminChildRecordPage() {
   const childName = localized(child.full_name_ar, child.full_name_en) || dash;
   const className = childClass ? localized(childClass.name_ar, childClass.name_en) || dash : dash;
   const packageName = selectedPackage ? localized(selectedPackage.name_ar, selectedPackage.name_en) || dash : dash;
+  const egp = (amount: number | string | null | undefined) => t('invoice.egpAmount', { amount: Number(amount ?? 0).toFixed(2) });
+  // The tuition plan and how often it is paid; older enrollments only have the package.
+  const tuitionPlanShort = tuitionPlan
+    ? `${localized(tuitionPlan.tuition_package_name_ar, tuitionPlan.tuition_package_name_en) || dash} · ${t(`tuitionPackages.periods.${tuitionPlan.billing_period}`, { defaultValue: tuitionPlan.billing_period })}`
+    : selectedPackage
+      ? packageName
+      : dash;
+  const tuitionPlanFull = tuitionPlan
+    ? [tuitionPlanShort, egp(tuitionPlan.locked_price), tk('nextInvoiceOn', 'Next invoice {{date}}', { date: fmtDate(tuitionPlan.next_invoice_date) })].join(' · ')
+    : selectedPackage
+      ? `${packageName} · ${egp(selectedPackage.price)}`
+      : dash;
+  const extraHoursName = extraHoursPackage ? localized(extraHoursPackage.name_ar, extraHoursPackage.name_en) || dash : dash;
   const avatarSrc = child.avatar_url ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(initialsOf(childName))}&background=eceef0&color=191c1e`;
   const parentName = (p: ParentLink) => localized(p.user?.name_ar, p.user?.name_en) || dash;
   const enrolledOn = child.enrollment_date ?? child.created_at;
@@ -460,7 +508,7 @@ export function AdminChildRecordPage() {
           <FactTile icon="public" label={tk('nationality', 'Nationality')} value={show(child.nationality)} />
           <FactTile icon="badge" label={tk('department', 'Department')} value={show(child.enrollment_department)} />
           <FactTile icon="calendar_month" label={tk('academicYear', 'Academic year')} value={show(child.academic_year)} />
-          <FactTile icon="inventory_2" label={tk('package', 'Package')} value={selectedPackage ? `${packageName} · ${t('invoice.egpAmount', { amount: Number(selectedPackage.price ?? 0).toFixed(2) })}` : dash} />
+          <FactTile icon="inventory_2" label={tk('tuitionPlan', 'Tuition plan')} value={tuitionPlanShort} />
           <FactTile icon="call" label={tk('primaryPhone', 'Primary phone')} value={show(text(mother, 'mobile') || text(father, 'mobile') || parents.find((p) => p.user?.phone)?.user?.phone)} />
         </div>
       </section>
@@ -522,11 +570,8 @@ export function AdminChildRecordPage() {
               <Field label={tk('schoolPreference', 'School preference')} value={showCode(child.school_preference)} />
               <Field label={tk('admissionPlan', 'Future school plan')} value={show(child.school_admissions_plan || child.school_admission_plan)} />
               <Field label={tk('leadSource', 'How they heard about us')} value={showCode(child.lead_source || text(family, 'referral_source'))} />
-              <Field
-                label={tk('package', 'Package')}
-                value={selectedPackage ? `${packageName} · ${t('invoice.egpAmount', { amount: Number(selectedPackage.price ?? 0).toFixed(2) })}` : dash}
-                wide
-              />
+              <Field label={tk('tuitionPlan', 'Tuition plan')} value={tuitionPlanFull} wide />
+              <Field label={tk('extraHoursPackage', 'Extra hours package')} value={extraHoursName} wide />
               {sourceApplication ? (
                 <Field
                   label={tk('sourceApplication', 'Registration application')}
