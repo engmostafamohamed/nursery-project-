@@ -363,7 +363,7 @@ export function ParentChildrenPage() {
                     </td>
                     <td className="px-4 py-4">
                       <span className={cn('inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold', statusTone(child.status))}>
-                        {child.status || '-'}
+                        {child.status ? t(`admin.children.list.status.${child.status}`, { defaultValue: child.status }) : '-'}
                       </span>
                     </td>
                     <td className="px-4 py-4">
@@ -400,7 +400,7 @@ export function ParentChildrenPage() {
                       <p className={cn('font-semibold', financial.outstanding > 0 ? 'text-error' : 'text-success')}>
                         {financial.outstanding.toFixed(0)} EGP
                       </p>
-                      <p className="mt-1 text-xs text-on-surface-variant">{financial.invoices} {t('parent.children.invoices', { defaultValue: 'invoice(s)' })}</p>
+                      <p className="mt-1 text-xs text-on-surface-variant">{t('parent.children.invoiceCount', { count: financial.invoices })}</p>
                     </td>
                     <td className="px-4 py-4">
                       <ChildActionsMenu actions={actions} label={t('common.actions', { defaultValue: 'Actions' })} />

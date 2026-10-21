@@ -1,5 +1,6 @@
 {
   "common": {
+    "status": "الحالة",
     "created": "تاريخ الإنشاء",
     "appName": "XO حضانة",
     "loading": "جاري التحميل...",
@@ -1314,6 +1315,7 @@
       }
     },
     "children": {
+      "childColumn": "الطفل",
       "title": "الأطفال",
       "emptyTitle": "لا يوجد أطفال بعد",
       "emptyDescription": "أضف أطفالاً أولاً لتوليد رموز QR الخاصة بهم.",
@@ -3184,6 +3186,34 @@
     "parentEmptyDesc": "ستظهر تقارير الفترة هنا بمجرد إرسالها من الحضانة."
   },
   "parent": {
+    "children": {
+      "eyebrow": "أطفال الأسرة",
+      "subtitle": "سجلات الأسرة، والحضور، والمدفوعات، وطلبات التسجيل، ورسائل الحضانة.",
+      "filters": {
+        "allStatuses": "كل الحالات",
+        "allAttendance": "كل الحضور",
+        "allApplications": "كل الطلبات",
+        "allPayments": "كل المدفوعات"
+      },
+      "active": "نشط",
+      "notActive": "غير نشط",
+      "noApplication": "لا يوجد طلب",
+      "paymentDue": "مستحق الدفع",
+      "paymentClear": "لا يوجد رصيد مستحق",
+      "presentToday": "حاضر اليوم",
+      "emptyTitle": "لا يوجد أطفال بعد",
+      "emptyDescription": "سيظهر الأطفال المقبولون هنا. استخدم بطاقات الطلبات بالأعلى لإكمال المسودات.",
+      "search": "ابحث باسم الطفل",
+      "records": "سجلات الأطفال",
+      "thirtyDays": "آخر 30 يومًا",
+      "invoiceCount_zero": "لا توجد فواتير",
+      "invoiceCount_one": "فاتورة واحدة",
+      "invoiceCount_two": "فاتورتان",
+      "invoiceCount_few": "{{count}} فواتير",
+      "invoiceCount_many": "{{count}} فاتورة",
+      "invoiceCount_other": "{{count}} فاتورة",
+      "noResults": "لا يوجد أطفال يطابقون هذه الفلاتر."
+    },
     "applications": {
       "eyebrow": "القبول والتسجيل",
       "subtitle": "طلبات تسجيل أطفالك. افتح المسودة لإكمال البيانات والباقة والمستندات والدفع ثم أرسلها للمراجعة.",
@@ -3200,6 +3230,14 @@
     "atNursery": "داخل الحضانة",
     "homeTitle": "الرئيسية",
     "dashboard": {
+      "stats": {
+        "children": "الأطفال",
+        "applications": "الطلبات"
+      },
+      "analytics": {
+        "present": "حاضر",
+        "absent": "غائب"
+      },
       "title": "عائلتك",
       "subtitle": "الأطفال والجدول والتحديثات في مكان واحد.",
       "sectionChildren": "أطفالك",
@@ -4493,6 +4531,7 @@
     }
   },
   "applications": {
+    "createApplication": "إضافة طفل",
     "parentFormTitle": "نموذج التقديم",
     "adminListTitle": "طلبات التسجيل",
     "detailTitle": "تفاصيل الطلب",
@@ -4747,6 +4786,7 @@
       "payment": "الدفع"
     },
     "statuses": {
+      "pending": "قيد الانتظار",
       "draft": "مسودة",
       "submitted": "مرسل",
       "under_review": "قيد المراجعة",
@@ -5464,6 +5504,22 @@
     }
   },
   "notificationTemplates": {
+    "demo_message_password_reset": {
+      "title": "رمز التحقق (بريد تجريبي)",
+      "body": "رمزك هو {{code}}. في الوضع التجريبي لا تُرسل رسائل البريد، لذلك تظهر الرسالة هنا."
+    },
+    "demo_message_otp_login": {
+      "title": "رمز التحقق (رسالة نصية تجريبية)",
+      "body": "رمزك هو {{code}}. في الوضع التجريبي لا تُرسل الرسائل النصية، لذلك تظهر الرسالة هنا."
+    },
+    "demo_message_invoice": {
+      "title": "فاتورة جديدة (بريد تجريبي)",
+      "body": "تم إصدار فاتورة جديدة بقيمة {{amount}}. في الوضع التجريبي لا تُرسل رسائل البريد، لذلك تظهر الرسالة هنا."
+    },
+    "demo_message_invoice_ready": {
+      "title": "فاتورة جديدة (واتساب تجريبي)",
+      "body": "تم إصدار فاتورة جديدة بقيمة {{amount}}. في الوضع التجريبي لا تُرسل رسائل واتساب، لذلك تظهر الرسالة هنا."
+    },
     "unknown": {
       "title": "إشعار"
     },

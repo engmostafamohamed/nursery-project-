@@ -244,9 +244,9 @@ Deno.serve(async (req) => {
   // cross-tenant linking. Returns auth user id (== public.users.id) or throws
   // with a descriptive message when the email belongs to a user in another
   // nursery — caller can decide whether to skip the parent link or fail the row.
-  const ensure = (cond: unknown, msg: string): asserts cond => {
+  function ensure(cond: unknown, msg: string): asserts cond {
     if (!cond) throw new Error(msg);
-  };
+  }
 
   const resolveParent = async (
     email: string,
@@ -413,8 +413,9 @@ Deno.serve(async (req) => {
       const dupNameEn = String(childPayload.full_name_en ?? '').trim();
       const dupDob = childPayload.dob as string | null | undefined;
 
-      let childId: string;
-      let nurseryId: string;
+      // Set below from the existing child or the new insert (which throws if it fails).
+      let childId = '';
+      let nurseryId = '';
       let isExisting = false;
 
       if (dupDob) {

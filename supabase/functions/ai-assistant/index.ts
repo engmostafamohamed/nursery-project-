@@ -98,7 +98,8 @@ Deno.serve(async (req) => {
   };
 
   const tools = Array.isArray(body.tools) ? body.tools : [];
-  const model = Deno.env.get('ANTHROPIC_MODEL') ?? 'claude-3-5-haiku-20241022';
+  // The current Haiku; set ANTHROPIC_MODEL to use another model.
+  const model = Deno.env.get('ANTHROPIC_MODEL') || 'claude-haiku-5-5';
 
   const anthropicBody: Record<string, unknown> = {
     model,

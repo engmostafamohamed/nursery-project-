@@ -254,10 +254,15 @@ Map these columns to XO database schema.`;
         'Content-Type': 'application/json',
         'x-api-key': anthropicKey,
         'anthropic-version': '2023-06-01',
+        // If the model declines, the API retries the same request on a fallback model it picks.
+        'anthropic-beta': 'server-side-fallback-2026-07-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 4000,
+        // The current Sonnet; set ANTHROPIC_IMPORT_MODEL to use another model.
+        model: Deno.env.get('ANTHROPIC_IMPORT_MODEL') || 'claude-sonnet-5-5',
+        // Room for the model's thinking as well as the JSON mapping.
+        max_tokens: 16000,
+        fallbacks: 'default',
         system: systemPrompt,
         messages: [{ role: 'user', content: userPrompt }],
       }),
@@ -272,8 +277,12 @@ Map these columns to XO database schema.`;
 
     let responseText = '';
     try {
-      const anthropicJson = JSON.parse(anthropicText);
-      responseText = anthropicJson.content?.[0]?.text || '';
+      // Thinking blocks come before the answer: read the text blocks.
+      const anthropicJson = JSON.parse(anthropicText) as { content?: Array<{ type?: string; text?: string }>; stop_reason?: string };
+      responseText = (anthropicJson.content ?? [])
+        .filter((block) => block.type === 'text' && typeof block.text === 'string')
+        .map((block) => block.text)
+        .join('');
     } catch {
       responseText = '';
     }

@@ -1,5 +1,6 @@
 {
   "common": {
+    "status": "Status",
     "created": "Created",
     "appName": "XO Nursery",
     "loading": "Loading...",
@@ -1314,6 +1315,7 @@
       }
     },
     "children": {
+      "childColumn": "Child",
       "title": "Children",
       "emptyTitle": "No children yet",
       "emptyDescription": "Add children first to generate their QR codes.",
@@ -3180,6 +3182,30 @@
     "parentEmptyDesc": "Term reports will appear here once the nursery sends them."
   },
   "parent": {
+    "children": {
+      "eyebrow": "Family children",
+      "subtitle": "Family records, attendance, payments, applications, and nursery messages.",
+      "filters": {
+        "allStatuses": "All statuses",
+        "allAttendance": "All attendance",
+        "allApplications": "All applications",
+        "allPayments": "All payments"
+      },
+      "active": "Active",
+      "notActive": "Not active",
+      "noApplication": "No application",
+      "paymentDue": "Payment due",
+      "paymentClear": "No balance",
+      "presentToday": "Present today",
+      "emptyTitle": "No children yet",
+      "emptyDescription": "Approved children will appear here. Use the application cards above to continue drafts.",
+      "search": "Search child name",
+      "records": "Children records",
+      "thirtyDays": "30 days",
+      "invoiceCount_one": "{{count}} invoice",
+      "invoiceCount_other": "{{count}} invoices",
+      "noResults": "No children match these filters."
+    },
     "applications": {
       "eyebrow": "Admissions",
       "subtitle": "Registration applications for your children. Open a draft to complete information, package, documents, and payment, then submit it for review.",
@@ -3196,6 +3222,14 @@
     "atNursery": "At Nursery",
     "homeTitle": "Parent Home",
     "dashboard": {
+      "stats": {
+        "children": "Children",
+        "applications": "Applications"
+      },
+      "analytics": {
+        "present": "Present",
+        "absent": "Absent"
+      },
       "title": "Your family",
       "subtitle": "Children, schedule, and updates in one place.",
       "sectionChildren": "Your children",
@@ -4490,6 +4524,7 @@
     }
   },
   "applications": {
+    "createApplication": "Add child",
     "parentFormTitle": "Application Form",
     "adminListTitle": "Applications",
     "detailTitle": "Application Details",
@@ -4732,6 +4767,7 @@
       "payment": "Payment"
     },
     "statuses": {
+      "pending": "Pending",
       "draft": "Draft",
       "submitted": "Submitted",
       "under_review": "Under Review",
@@ -5449,6 +5485,22 @@
     }
   },
   "notificationTemplates": {
+    "demo_message_password_reset": {
+      "title": "Your verification code (demo email)",
+      "body": "Your code is {{code}}. In demo mode emails are not sent, so the email appears here."
+    },
+    "demo_message_otp_login": {
+      "title": "Your verification code (demo SMS)",
+      "body": "Your code is {{code}}. In demo mode text messages are not sent, so the message appears here."
+    },
+    "demo_message_invoice": {
+      "title": "New invoice (demo email)",
+      "body": "A new invoice of {{amount}} is ready. In demo mode emails are not sent, so the email appears here."
+    },
+    "demo_message_invoice_ready": {
+      "title": "New invoice (demo WhatsApp)",
+      "body": "A new invoice of {{amount}} is ready. In demo mode WhatsApp messages are not sent, so the message appears here."
+    },
     "unknown": {
       "title": "Notification"
     },
