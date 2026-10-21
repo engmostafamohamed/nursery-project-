@@ -3,18 +3,22 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import { AdmissionJourneySteps } from '@/components/admissions/AdmissionJourney';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FilterMenu, type FilterMenuOption } from '@/components/ui/FilterMenu';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAdmissionTimelines } from '@/hooks/useAdmissionTimelines';
 import { useAllChildrenAttendanceSummary } from '@/hooks/useAllChildrenAttendanceSummary';
 import { useApplications } from '@/hooks/useApplications';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useParentChildrenOverview, type ParentChildOverview } from '@/hooks/useParentChildrenOverview';
 import { useParentInvoices } from '@/hooks/useParentInvoices';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { joinedWhenText } from '@/lib/admissionTimeline';
 import { cn } from '@/lib/utils';
 
 type ChildStatusFilter = 'all' | 'active' | 'pending' | 'inactive';
@@ -70,11 +74,7 @@ function StatTile({ icon, label, value, tone = 'primary' }: { icon: string; labe
   );
 }
 
-type ChildAction = {
-  to: string;
-  icon: string;
-  label: string;
-};
+type ChildAction = { icon: string; label: string } & ({ to: string } | { key: string; onSelect: () => void });
 
 function ChildActionsMenu({ actions, label }: { actions: ChildAction[]; label: string }) {
   return (
@@ -92,14 +92,21 @@ function ChildActionsMenu({ actions, label }: { actions: ChildAction[]; label: s
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56 rounded-xl p-2">
-        {actions.map((action) => (
-          <DropdownMenuItem key={action.to} asChild className="rounded-lg px-3 py-2.5">
-            <Link to={action.to} className="gap-3">
+        {actions.map((action) =>
+          'to' in action ? (
+            <DropdownMenuItem key={action.to} asChild className="rounded-lg px-3 py-2.5">
+              <Link to={action.to} className="gap-3">
+                <span className="material-symbols-outlined text-base text-primary" aria-hidden>{action.icon}</span>
+                <span className="min-w-0 flex-1 truncate">{action.label}</span>
+              </Link>
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem key={action.key} onSelect={action.onSelect} className="gap-3 rounded-lg px-3 py-2.5">
               <span className="material-symbols-outlined text-base text-primary" aria-hidden>{action.icon}</span>
               <span className="min-w-0 flex-1 truncate">{action.label}</span>
-            </Link>
-          </DropdownMenuItem>
-        ))}
+            </DropdownMenuItem>
+          ),
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -115,6 +122,11 @@ export function ParentChildrenPage() {
   const children = useMemo(() => childrenQuery.data ?? [], [childrenQuery.data]);
   const childIds = useMemo(() => children.map((child) => child.id), [children]);
   const attendanceSummary = useAllChildrenAttendanceSummary({ childIds, nurseryId });
+  // When each child applied, joined and first came, with the time; one child's in a dialog.
+  const journeys = useAdmissionTimelines(childIds);
+  const [journeyChildId, setJourneyChildId] = useState<string | null>(null);
+  const journeyChild = children.find((child) => child.id === journeyChildId) ?? null;
+  const journeyTimeline = journeyChildId ? journeys.byChild.get(journeyChildId) : undefined;
   const invoicesQuery = useParentInvoices({ parentId: user?.id, status: 'all', sort: 'newest' });
   const applications = useApplications({ parentId: user?.id, nurseryId });
 
@@ -328,12 +340,26 @@ export function ParentChildrenPage() {
                   ...(child.applicationId
                     ? [{ to: `/parent/applications/${child.applicationId}`, icon: 'assignment', label: t('parent.dashboard.stats.applications', { defaultValue: 'Application' }) }]
                     : []),
+                  ...(journeys.byChild.has(child.id)
+                    ? [{ key: 'journey', icon: 'route', label: t('admissionJourney.open'), onSelect: () => setJourneyChildId(child.id) }]
+                    : []),
                 ];
+                const timeline = journeys.byChild.get(child.id);
 
                 return (
                   <tr key={child.id} className="bg-surface align-top transition hover:bg-surface-container-lowest">
                     <td className="px-4 py-4 font-semibold text-on-surface">
                       {name}
+                      {timeline ? (
+                        <button
+                          type="button"
+                          onClick={() => setJourneyChildId(child.id)}
+                          className="mt-1 flex items-center gap-1 text-start text-xs font-normal text-on-surface-variant hover:text-primary hover:underline"
+                        >
+                          <span className="material-symbols-outlined text-sm" aria-hidden>how_to_reg</span>
+                          {t('admissionJourney.joinedShort', { when: joinedWhenText(timeline) })}
+                        </button>
+                      ) : null}
                     </td>
                     <td className="px-4 py-4">
                       <span className={cn('inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold', statusTone(child.status))}>
@@ -391,6 +417,16 @@ export function ParentChildrenPage() {
           </div>
         ) : null}
       </section> : null}
+
+      <Dialog open={journeyChildId !== null} onOpenChange={(open) => { if (!open) setJourneyChildId(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('admissionJourney.title')}</DialogTitle>
+            <DialogDescription>{journeyChild ? displayChildName(journeyChild, i18n.language) : ''}</DialogDescription>
+          </DialogHeader>
+          {journeyTimeline ? <AdmissionJourneySteps timeline={journeyTimeline} /> : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

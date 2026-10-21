@@ -5144,6 +5144,31 @@
     "goHome": "Home",
     "pushSubscriptionSave": "Could not save notification settings. Try again when you are online."
   },
+  "admissionJourney": {
+    "title": "Admission journey",
+    "subtitle": "Each step from the application to the first day, with its date and time.",
+    "steps": {
+      "started": "Application started",
+      "submitted": "Application submitted",
+      "paid": "Payment confirmed",
+      "approved": "Application approved",
+      "joined": "Joined the nursery",
+      "firstDay": "First day at the nursery"
+    },
+    "notYet": "Not yet",
+    "timeUnknown": "time not recorded",
+    "approvedBy": "By {{name}}",
+    "afterSubmit": "{{wait}} after it was submitted",
+    "direct": "Added directly by the nursery, without an online application.",
+    "loadError": "The admission journey could not be loaded.",
+    "open": "Admission journey",
+    "joinedShort": "Joined {{when}}",
+    "wait": {
+      "days": "{{days}} d {{hours}} h",
+      "hoursMinutes": "{{hours}} h {{minutes}} min",
+      "minutes": "{{minutes}} min"
+    }
+  },
   "attendanceHistory": {
     "introStaff": "Every day the child was expected: who brought and picked them up, who received and handed them over, and the family’s notice for each absence.",
     "introParent": "Every school day: when your child arrived and left, who brought and picked them up, and the absence notices you sent.",

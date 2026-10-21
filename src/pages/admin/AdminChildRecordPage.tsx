@@ -6,16 +6,20 @@ import { Link, useParams } from 'react-router-dom';
 import { ChildAvatarUpload } from '@/components/admin/ChildAvatarUpload';
 import { ChildBillingTab } from '@/components/admin/children/ChildBillingTab';
 import { ApplicationDocumentPreview } from '@/components/applications/ApplicationDocumentPreview';
+import { AdmissionJourneyCard } from '@/components/admissions/AdmissionJourney';
 import { ChildAttendanceHistory } from '@/components/attendance/ChildAttendanceHistory';
 import { ChildQrCodeCard, type ChildQrInput } from '@/components/qr/ChildQrCodeCard';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
+import { useAdmissionTimelines } from '@/hooks/useAdmissionTimelines';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useNurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { STEP_DATE_TIME } from '@/lib/admissionTimeline';
 import { MEDICATION_CONSENT_OPTIONS } from '@/lib/admissions/medicationConsentOptions';
 import { allergyLabel } from '@/lib/allergies';
+import { formatDateTime } from '@/lib/datetime';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 
@@ -192,6 +196,9 @@ export function AdminChildRecordPage() {
   const { data: languagePref = 'both' } = useNurseryLanguagePref(profile?.nursery_id);
   const [tab, setTab] = useState<ChildRecordTab>('overview');
   const isAr = i18n.language.startsWith('ar');
+  // The admission journey (application → first day), with the exact time of each step.
+  const journeyIds = useMemo(() => (childId ? [childId] : []), [childId]);
+  const journey = useAdmissionTimelines(journeyIds);
 
   const childQuery = useQuery({
     queryKey: ['admin-child-record', childId, profile?.id],
@@ -416,6 +423,9 @@ export function AdminChildRecordPage() {
   const avatarSrc = child.avatar_url ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(initialsOf(childName))}&background=eceef0&color=191c1e`;
   const parentName = (p: ParentLink) => localized(p.user?.name_ar, p.user?.name_en) || dash;
   const enrolledOn = child.enrollment_date ?? child.created_at;
+  const journeyRow = journey.byChild.get(child.id);
+  // The joining moment with its time when known, otherwise the enrollment day.
+  const enrolledOnLabel = journeyRow?.joinedAt ? formatDateTime(journeyRow.joinedAt, STEP_DATE_TIME) : fmtDate(enrolledOn);
 
   // Daily care: application data first, legacy per-child tables as fallback.
   const careValue = (careKey: string, legacy?: string | number | boolean | null | undefined) => {
@@ -510,7 +520,7 @@ export function AdminChildRecordPage() {
 
         <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4 sm:p-5">
           <FactTile icon="school" label={tk('class', 'Class')} value={className} />
-          <FactTile icon="how_to_reg" label={tk('enrolledOn', 'Enrolled on')} value={fmtDate(enrolledOn)} />
+          <FactTile icon="how_to_reg" label={tk('enrolledOn', 'Enrolled on')} value={enrolledOnLabel} />
           <FactTile icon="cake" label={tk('age', 'Age')} value={ageOf(child.dob)} />
           <FactTile icon="public" label={tk('nationality', 'Nationality')} value={show(child.nationality)} />
           <FactTile icon="badge" label={tk('department', 'Department')} value={show(child.enrollment_department)} />
@@ -571,7 +581,7 @@ export function AdminChildRecordPage() {
             <FieldGrid>
               <Field label={tk('status', 'Status')} value={showCode(child.status)} />
               <Field label={tk('class', 'Class')} value={className} />
-              <Field label={tk('enrolledOn', 'Enrolled on')} value={fmtDate(enrolledOn)} />
+              <Field label={tk('enrolledOn', 'Enrolled on')} value={enrolledOnLabel} />
               <Field label={tk('department', 'Department')} value={show(child.enrollment_department)} />
               <Field label={tk('academicYear', 'Academic year')} value={show(child.academic_year)} />
               <Field label={tk('schoolPreference', 'School preference')} value={showCode(child.school_preference)} />
@@ -589,7 +599,7 @@ export function AdminChildRecordPage() {
                         {sourceApplication.id.slice(0, 8)}
                       </Link>
                       <span className="text-on-surface-variant">
-                        {t(`applications.statuses.${sourceApplication.status ?? 'draft'}`, { defaultValue: showCode(sourceApplication.status) })} · {t('applications.submittedAt')}: {fmtDate(sourceApplication.submitted_at)}
+                        {t(`applications.statuses.${sourceApplication.status ?? 'draft'}`, { defaultValue: showCode(sourceApplication.status) })} · {t('applications.submittedAt')}: {sourceApplication.submitted_at ? formatDateTime(sourceApplication.submitted_at, STEP_DATE_TIME) : dash}
                       </span>
                       {applicationInvoiceId ? (
                         <Link className="font-semibold text-primary underline" to={`/admin/invoices/${applicationInvoiceId}`}>
@@ -602,6 +612,15 @@ export function AdminChildRecordPage() {
               ) : null}
             </FieldGrid>
           </Section>
+
+          <AdmissionJourneyCard
+            className="xl:col-span-2"
+            wide
+            timeline={journeyRow}
+            isLoading={journey.isPending}
+            isError={journey.isError}
+            onRetry={() => void journey.refetch()}
+          />
 
           <Section icon="diversity_1" title={tk('familyTitle', 'Family & siblings')} className="xl:col-span-2">
             <FieldGrid columns={3}>

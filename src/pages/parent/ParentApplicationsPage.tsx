@@ -10,6 +10,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useApplications } from '@/hooks/useApplications';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { STEP_DATE_TIME } from '@/lib/admissionTimeline';
+import { formatDateTime } from '@/lib/datetime';
 import { cn } from '@/lib/utils';
 
 type ApplicationStatusFilter = 'all' | 'draft' | 'submitted' | 'under_review' | 'documents_pending' | 'approved' | 'rejected';
@@ -43,10 +45,10 @@ function statusIcon(status: string) {
   return 'edit_document';
 }
 
-function formatDate(value: unknown, language: string) {
+/** Date and time, in the app's language. */
+function formatWhen(value: unknown) {
   if (typeof value !== 'string' || !value) return '-';
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleDateString(language.startsWith('ar') ? 'ar-EG' : undefined);
+  return formatDateTime(value, STEP_DATE_TIME);
 }
 
 function StatTile({ icon, label, value, tone }: { icon: string; label: string; value: number; tone: 'primary' | 'warning' | 'success' | 'error' }) {
@@ -70,7 +72,7 @@ function StatTile({ icon, label, value, tone }: { icon: string; label: string; v
 }
 
 export function ParentApplicationsPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuthSession();
   const { data: profile } = useUserProfile(user?.id);
@@ -207,8 +209,8 @@ export function ParentApplicationsPage() {
                       <p className="truncate text-sm font-semibold text-on-surface">{name}</p>
                       <p className="mt-1 text-xs text-on-surface-variant">
                         {status === 'draft'
-                          ? `${t('common.created', { defaultValue: 'Created' })}: ${formatDate(row.created_at, i18n.language)}`
-                          : `${t('applications.submittedAt')}: ${formatDate(row.submitted_at, i18n.language)}`}
+                          ? `${t('common.created', { defaultValue: 'Created' })}: ${formatWhen(row.created_at)}`
+                          : `${t('applications.submittedAt')}: ${formatWhen(row.submitted_at)}`}
                       </p>
                     </div>
                   </div>

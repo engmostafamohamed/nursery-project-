@@ -18,6 +18,8 @@ import { useAuthSession } from '@/hooks/useAuthSession';
 import { usePaymentAttempts } from '@/hooks/usePaymentAttempts';
 import { usePaymentHistory } from '@/hooks/usePaymentHistory';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { STEP_DATE_TIME } from '@/lib/admissionTimeline';
+import { formatDateTime } from '@/lib/datetime';
 
 const requiredDocs = ['birth_certificate', 'vaccination_card', 'parent_id', 'proof_of_address'] as const;
 
@@ -226,7 +228,7 @@ export function AdminApplicationDetailPage() {
               <p className="text-xs font-semibold uppercase text-primary">{t('applications.detailTitle')}</p>
               <h1 className="mt-1 truncate text-2xl font-semibold text-on-surface">{applicantChildName(child)}</h1>
               <p className="mt-1 text-xs text-on-surface-variant">
-                {t('applications.submittedAt')}: {app.submitted_at ? new Date(String(app.submitted_at)).toLocaleString() : '-'}
+                {t('applications.submittedAt')}: {app.submitted_at ? formatDateTime(String(app.submitted_at), STEP_DATE_TIME) : '-'}
               </p>
             </div>
           </div>

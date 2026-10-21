@@ -42,6 +42,8 @@ import { parentDisplayNameFromProfile, useParentAccountProfile } from '@/hooks/u
 import { usePaymentHistory, type PaymentHistoryRow } from '@/hooks/usePaymentHistory';
 import { parentNurseryLabel, useParentNursery } from '@/hooks/useParentNursery';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { STEP_DATE_TIME } from '@/lib/admissionTimeline';
+import { formatDateTime } from '@/lib/datetime';
 import { cn } from '@/lib/utils';
 
 function SectionHeading({ icon, children }: { icon: string; children: React.ReactNode }) {
@@ -381,7 +383,7 @@ function ParentDashboardApplicationsCard({
           {applicationRows.map((row) => {
             const id = String(row.id);
             const status = String(row.status ?? 'draft');
-            const submittedAt = row.submitted_at ? new Date(String(row.submitted_at)).toLocaleDateString() : '-';
+            const submittedAt = row.submitted_at ? formatDateTime(String(row.submitted_at), STEP_DATE_TIME) : '-';
             return (
               <Link
                 key={id}
@@ -481,7 +483,7 @@ function ParentAdmissionCyclePanel({
           </SectionHeading>
           <p className="mt-3 truncate text-lg font-semibold text-on-surface">{applicationChildName(application)}</p>
           <p className="mt-1 text-xs text-on-surface-variant">
-            {t('applications.submittedAt')}: {application.submitted_at ? new Date(String(application.submitted_at)).toLocaleDateString() : '-'}
+            {t('applications.submittedAt')}: {application.submitted_at ? formatDateTime(String(application.submitted_at), STEP_DATE_TIME) : '-'}
           </p>
         </div>
         <span className={`inline-flex w-fit items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold ${statusUi.className}`}>

@@ -7,6 +7,8 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Input } from '@/components/ui/input';
 import { useActiveNurseryId } from '@/hooks/useActiveNurseryId';
 import { useApplications } from '@/hooks/useApplications';
+import { STEP_DATE_TIME } from '@/lib/admissionTimeline';
+import { formatDateTime } from '@/lib/datetime';
 
 /**
  * Two flows write applications with different shapes: the inquiry flow stores a flat
@@ -106,7 +108,7 @@ export function AdminApplicationsPage() {
                     </td>
                     <td className="px-3 py-2">{applicantParentName(parent) || '-'}</td>
                     <td className="px-3 py-2">{applicantChildName(child) || '-'}</td>
-                    <td className="px-3 py-2">{r.submitted_at ? new Date(String(r.submitted_at)).toLocaleDateString() : '-'}</td>
+                    <td className="px-3 py-2">{r.submitted_at ? formatDateTime(String(r.submitted_at), STEP_DATE_TIME) : '-'}</td>
                     <td className="px-3 py-2">{t(`applications.statuses.${String(r.status)}`)}</td>
                     <td className="px-3 py-2">{Number(r.documents_count ?? 0)}</td>
                     <td className="px-3 py-2">
