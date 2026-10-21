@@ -11,9 +11,11 @@ type ChildSelectorProps = {
   children?: ChildOption[];
   showAllOption?: boolean;
   autoSelectFirst?: boolean;
+  /** Plain labelled menu, to sit in a row of other filters instead of in its own box. */
+  inline?: boolean;
 };
 
-export function ChildSelector({ value, onChange, children: childrenProp, showAllOption = true, autoSelectFirst = false }: ChildSelectorProps) {
+export function ChildSelector({ value, onChange, children: childrenProp, showAllOption = true, autoSelectFirst = false, inline = false }: ChildSelectorProps) {
   const { t, i18n } = useTranslation();
   const parentChildrenQuery = useParentChildren();
   const children = childrenProp ?? parentChildrenQuery.data ?? [];
@@ -40,6 +42,10 @@ export function ChildSelector({ value, onChange, children: childrenProp, showAll
   }, [children, getName, showAllOption, t]);
 
   if (children.length <= 1) return null;
+
+  if (inline) {
+    return <FilterMenu value={value} options={options} onChange={onChange} label={t('parent.childSelector.label')} />;
+  }
 
   return (
     <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3">

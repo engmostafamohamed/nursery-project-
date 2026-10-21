@@ -1,5 +1,14 @@
 {
   "common": {
+    "paginationRange": "Showing {{start}}–{{end}}",
+    "rowsPerPage": "Rows per page",
+    "pagination": "Pages",
+    "pageNumber": "Page {{page}}",
+    "child": "Child",
+    "fromDate": "From date",
+    "toDate": "To date",
+    "sort": "Sort",
+    "viewAll": "View all",
     "status": "Status",
     "created": "Created",
     "appName": "XO Nursery",
@@ -437,7 +446,7 @@
   "nav": {
     "language": "Language"
   },
-  "auth": {
+  "auth": {
 
     "showPassword": "Show password",
 
@@ -695,6 +704,7 @@
       "home": "Home"
     },
     "payments": {
+      "searchPlaceholder": "Nursery, parent or invoice number",
       "title": "Payments",
       "subtitle": "Every parent payment across all nurseries — who paid, who accepted it, and when.",
       "emptyTitle": "No payments yet",
@@ -954,6 +964,17 @@
     },
     "classes": {
       "list": {
+        "showLabel": "Show",
+        "showAll": "All classes",
+        "stats": {
+          "classes": "Classes",
+          "capacityHelper": "of {{capacity}} places",
+          "overCapacity": "Over capacity",
+          "noLead": "Without a lead teacher"
+        },
+        "resultsCount_one": "{{count}} class",
+        "resultsCount_other": "{{count}} classes",
+        "overBy": "Over by {{count}}",
         "title": "Classes",
         "subtitle": "Create classes, assign staff, and manage rosters.",
         "searchPlaceholder": "Search classes by name, age group, or room",
@@ -1156,6 +1177,8 @@
       "statPendingApprovalsHint": "Applications {{applications}} · Payments {{payments}} · Media {{media}}"
     },
     "attendance": {
+      "dayLabel": "Day",
+      "classLabel": "Class",
       "title": "Attendance today",
       "titlePast": "Attendance",
       "description": "Children checked in at your nursery.",
@@ -1560,6 +1583,8 @@
       "avatarSaved": "Photo updated."
     },
     "invoices": {
+      "subtitle": "Every invoice, payment and balance due in your nursery.",
+      "dateFieldLabel": "Date by",
       "title": "Invoices",
       "emptyTitle": "No invoices yet",
       "emptyDescription": "Invoices are generated automatically for events, or you can create manual invoices."
@@ -2196,6 +2221,8 @@
     "noMatch": "No packages match these filters."
   },
   "deals": {
+    "resultsCount_one": "{{count}} deal",
+    "resultsCount_other": "{{count}} deals",
     "title": "Deals & Discounts",
     "subtitle": "Create time-limited offers, then assign one to a tuition or extra-hours package from its own editor.",
     "newDeal": "New deal",
@@ -3222,11 +3249,33 @@
     "atNursery": "At Nursery",
     "homeTitle": "Parent Home",
     "dashboard": {
+      "unread": "Unread",
+      "admissionCycle": {
+        "title": "Admission cycle",
+        "empty": "Start an application to track review status, choose a package, and pay registration fees.",
+        "contact": "Contact nursery",
+        "reviewInvoice": "Review invoice",
+        "choosePackage": "Choose package",
+        "openApplication": "Open application",
+        "status": "Application"
+      },
       "stats": {
+        "outstanding": "Outstanding",
+        "unread": "Unread",
+        "paymentsInReview": "Payments in review",
         "children": "Children",
         "applications": "Applications"
       },
       "analytics": {
+        "title": "Weekly family overview",
+        "openReports": "Open reports",
+        "openAttendance": "Attendance details",
+        "monthRate": "30-day attendance",
+        "presentDays": "Present days",
+        "absentDays": "Absent days",
+        "emptyChart": "Attendance chart will appear after the first check-in.",
+        "weekTitle": "This week",
+        "childWeek": "{{present}} present, {{absent}} absent this week",
         "present": "Present",
         "absent": "Absent"
       },
@@ -3686,6 +3735,7 @@
       "emptyDescription": "No invoices yet."
     },
     "financial": {
+      "nextDueLabel": "Next payment",
       "title": "Financial Summary",
       "overdueAlert": "Overdue",
       "totalOutstanding": "Total outstanding: EGP {{amount}}",
@@ -3696,6 +3746,24 @@
       "generalInvoices": "General / Family"
     },
     "attendanceHistory": {
+      "partial": "Partial",
+      "last7": "Last 7 days",
+      "last14": "Last 14 days",
+      "last30": "Last 30 days",
+      "period": "Period",
+      "attendanceRate": "Attendance rate",
+      "avgCheckInShort": "Avg check-in",
+      "latePickupCount": "Late pickup",
+      "chartTitle": "Attendance trend",
+      "chartSubtitle": "Present, partial, and absent days for the last {{days}} days.",
+      "breakdownTitle": "Breakdown",
+      "schoolDaysCount_one": "{{count}} school day",
+      "schoolDaysCount_other": "{{count}} school days",
+      "noChartData": "No records yet",
+      "recordsTitle": "Attendance records",
+      "filteredCount_one": "{{count}} record after filters",
+      "filteredCount_other": "{{count}} records after filters",
+      "noFilteredRecords": "No attendance records match these filters.",
       "title": "Attendance history",
       "filterChild": "Child",
       "monthlySummary": "{{month}}: {{rate}}% attendance ({{present}} / {{total}} school days with check-in)",
@@ -3739,6 +3807,20 @@
       }
     },
     "reports": {
+      "eyebrow": "Daily updates",
+      "subtitle": "Meals, naps, mood, activities, and teacher notes in one place.",
+      "last7Days": "Last 7 days",
+      "currentMonth": "Current month",
+      "newUpdates": "New published reports",
+      "childrenCovered": "Children covered",
+      "trendTitle": "Report activity",
+      "trendSubtitle": "Published daily reports across the last week.",
+      "noWeekReports": "No reports were published in the last 7 days.",
+      "moodBreakdown": "Mood breakdown",
+      "moodBreakdownSubtitle": "Mood labels from published reports.",
+      "noMoodData": "Mood chart appears after reports are published.",
+      "listTitle": "Report timeline",
+      "latestFrom": "Latest from {{teacher}}",
       "title": "Daily Reports",
       "allChildren": "All children",
       "sortNewest": "Newest first",
@@ -3865,7 +3947,7 @@
       "openMedia": "Open media",
       "noMediaToday": "No photos uploaded today. Tap to upload."
     },
-    "nav": {
+    "nav": {
 
       "community": "Community",
       "bottomBarLabel": "Teacher app main sections",
@@ -4320,11 +4402,18 @@
     },
     "filterStatus": "Status",
     "directory": {
+      "stats": {
+        "inactive": "Inactive staff",
+        "teaching": "Teaching staff"
+      },
+      "resultsCount_one": "{{count}} staff member",
+      "resultsCount_other": "{{count}} staff members",
       "title": "Staff directory",
       "subtitle": "Teachers, admins, and operational staff in your nursery.",
       "exportCsv": "Export CSV",
       "importCsv": "Import CSV",
       "col": {
+        "nursery": "Nursery",
         "photo": "Photo",
         "name": "Name",
         "position": "Position",
@@ -4454,6 +4543,13 @@
     }
   },
   "admissions": {
+    "inquiriesSubtitle": "Families who asked about the nursery, from first contact to enrollment.",
+    "resultsCount_one": "{{count}} inquiry",
+    "resultsCount_other": "{{count}} inquiries",
+    "viewLabel": "View",
+    "assignedLabel": "Assigned to",
+    "anyone": "Anyone",
+    "receivedAt": "Received",
     "inquiriesTitle": "Admissions Inquiries",
     "waitlistTitle": "Waitlist Management",
     "kanban": "Kanban",
@@ -4524,6 +4620,13 @@
     }
   },
   "applications": {
+    "adminListSubtitle": "Review family applications, check documents, and approve enrollments.",
+    "openApplications": "Open applications",
+    "allApplications": "All applications",
+    "avgReviewHoursValue": "{{hours}} h",
+    "notSubmitted": "Not submitted",
+    "resultsCount_one": "{{count}} application",
+    "resultsCount_other": "{{count}} applications",
     "createApplication": "Add child",
     "parentFormTitle": "Application Form",
     "adminListTitle": "Applications",
@@ -5412,6 +5515,8 @@
       "doneManualRefund": "Charge waived. The invoice was already paid, so refund the parent manually."
     },
     "logs": {
+      "resultsCount_one": "{{count}} record",
+      "resultsCount_other": "{{count}} records",
       "open": "Attendance logs",
       "title": "Attendance logs",
       "subtitle": "Every check-in and pickup: who scanned it, how, who collected the child, and extra-hours charges.",
@@ -5736,9 +5841,17 @@
       "description": "The current QR code and 6-digit backup code, including any copied or printed copies, will stop working immediately. Continue only if you can share the new codes.",
       "confirm": "Refresh and revoke old code"
     },
-    "showToken": "Show 6-digit code",
-    "hideToken": "Hide 6-digit code",
-    "copyToken": "Copy 6-digit code",
+    "card": {
+      "scanHint": "Show this code at the gate for drop-off and pick-up.",
+      "backupTitle": "Backup 6-digit code",
+      "backupHint": "Enter it in the scanner manually if the camera cannot read the QR.",
+      "showCode": "Show code",
+      "hideCode": "Hide code",
+      "copyCode": "Copy code",
+      "codeHidden": "Code hidden",
+      "revokeHint": "Lost a phone or shared an old copy? Refreshing revokes every copy of this QR and its backup code.",
+      "printTitle": "Pickup QR code"
+    },
     "tokenCopied": "6-digit code copied. Enter it in the scanner's manual entry if the camera cannot scan.",
     "copyTokenFailed": "Could not copy the code. Reveal it here and select it to copy.",
     "refreshManualCode": "Get a new code",
@@ -5773,8 +5886,6 @@
       "subtitle": "Show this code at drop-off and pick-up.",
       "expiresInDaysFull": "This QR code expires in {{count}} day(s).",
       "alwaysAvailable": "Always available",
-      "alwaysAvailableHint": "Show this code at the gate. Refresh it if you lose your phone or want to revoke an old copy.",
-      "manualHint": "If the camera cannot scan, copy or reveal this 6-digit code and enter it manually. It refreshes every 5 minutes.",
       "loadErrorTitle": "Could not load children",
       "loadErrorDescription": "Check your connection and try again.",
       "tabLive": "Live",

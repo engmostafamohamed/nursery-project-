@@ -2,13 +2,12 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { DataTable, IconAction, StatusPill, TBody, THead, Td, Th, Tr } from '@/components/ui/DataTable';
 import type { StaffProfileView } from '@/hooks/useStaff';
-import { staffAvatarUrl } from '@/lib/staffAvatar';
+import { readableCode } from '@/lib/readableCode';
 import { supabase } from '@/lib/supabase';
-import { cn, getUserInitials } from '@/lib/utils';
+import { getUserInitials } from '@/lib/utils';
 
 type Props = {
   rows: StaffProfileView[];
@@ -17,8 +16,6 @@ type Props = {
   showNurseryColumn?: boolean;
   /** When true, render an Edit button per row. */
   canEdit?: boolean;
-  /** When true, render a Delete button per row. */
-  canDelete?: boolean;
 };
 
 interface NurseryName { id: string; name_en: string; name_ar: string }
@@ -55,147 +52,96 @@ function displayName(u: Record<string, unknown> | null, lang: string): string {
   return en || ar || '—';
 }
 
+function formatHireDate(value: string, lang: string): string {
+  // A plain day is read at noon so no timezone moves it to the day before.
+  const date = new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00` : value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString(lang.startsWith('ar') ? 'ar-EG' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
 export function StaffDirectoryTable({
   rows,
   language,
   showNurseryColumn = false,
   canEdit = false,
-  canDelete = false,
 }: Props) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const nurseryNames = useNurseryNameLookup(showNurseryColumn, rows);
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-outline-variant bg-surface-container-lowest">
-      <table className="w-full min-w-[900px] text-sm">
-        <thead>
-          <tr className="border-b border-outline-variant bg-surface-container text-on-surface-variant">
-            <th className="px-3 py-2 text-start">{t('staff.directory.col.photo')}</th>
-            <th className="px-3 py-2 text-start">{t('staff.directory.col.name')}</th>
-            {showNurseryColumn ? (
-              <th className="px-3 py-2 text-start">Nursery</th>
-            ) : null}
-            <th className="px-3 py-2 text-start">{t('staff.directory.col.position')}</th>
-            <th className="px-3 py-2 text-start">{t('staff.directory.col.department')}</th>
-            <th className="px-3 py-2 text-start">{t('staff.directory.col.hireDate')}</th>
-            <th className="px-3 py-2 text-start">{t('staff.directory.col.status')}</th>
-            <th className="px-3 py-2 text-start">{t('staff.directory.col.role')}</th>
-            {canEdit || canDelete ? (
-              <th className="px-3 py-2 text-start">Actions</th>
-            ) : null}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((s) => {
-            const u = (s.user as Record<string, unknown> | null) ?? {};
-            const name = displayName(u, language);
-            const status = String(u.status ?? 'active');
-            const avatar = staffAvatarUrl(name);
-            const routeId = String(s.id);
-            const nurseryId = String((s as { nursery_id?: string }).nursery_id ?? '');
-            const nursery = nurseryNames.data?.get(nurseryId);
-            const nurseryLabel = nursery
-              ? language.startsWith('ar')
-                ? nursery.name_ar
-                : nursery.name_en
-              : '—';
-            return (
-              <tr
-                key={routeId}
-                role="button"
-                tabIndex={0}
-                className={cn(
-                  'cursor-pointer border-t border-outline-variant hover:bg-surface-container/60',
-                )}
-                onClick={() => navigate(`/admin/staff/${routeId}`)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') navigate(`/admin/staff/${routeId}`);
-                }}
-              >
-                <td className="px-3 py-2">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={avatar} alt="" />
-                    <AvatarFallback>{getUserInitials(name, (u.email as string | null | undefined) ?? null)}</AvatarFallback>
+    <DataTable minWidth={880}>
+      <THead>
+        <Th>{t('staff.directory.col.name')}</Th>
+        {showNurseryColumn ? <Th>{t('staff.directory.col.nursery')}</Th> : null}
+        <Th>{t('staff.directory.col.position')}</Th>
+        <Th>{t('staff.directory.col.department')}</Th>
+        <Th>{t('staff.directory.col.hireDate')}</Th>
+        <Th>{t('staff.directory.col.status')}</Th>
+        <Th>{t('staff.directory.col.role')}</Th>
+        {canEdit ? <Th align="end">{t('common.actions')}</Th> : null}
+      </THead>
+      <TBody>
+        {rows.map((s) => {
+          const u = (s.user as Record<string, unknown> | null) ?? {};
+          const name = displayName(u, language);
+          const email = typeof u.email === 'string' ? u.email : '';
+          const active = String(u.status ?? 'active') === 'active';
+          const hasProfile = Boolean((s as { hasStaffProfile?: boolean }).hasStaffProfile);
+          const routeId = String(s.id);
+          const nurseryId = String((s as { nursery_id?: string }).nursery_id ?? '');
+          const nursery = nurseryNames.data?.get(nurseryId);
+          const nurseryLabel = nursery ? (language.startsWith('ar') ? nursery.name_ar : nursery.name_en) : '—';
+          // Prefer the custom role name (e.g. "Manager Teacher") over the base auth enum.
+          const roleData = (u.role_data as { name_en?: string | null; name_ar?: string | null } | null) ?? null;
+          const customRole = ((language.startsWith('ar') ? roleData?.name_ar : roleData?.name_en) ?? '').trim();
+          const baseRole = String(u.role ?? '');
+          const role = customRole || (baseRole ? t(`chatAdmin.roles.${baseRole}`, { defaultValue: readableCode(baseRole) }) : '—');
+          const position = hasProfile && s.position && s.position !== '—' ? readableCode(String(s.position)) : '';
+          return (
+            <Tr key={routeId} onClick={() => navigate(`/admin/staff/${routeId}`)}>
+              <Td>
+                <div className="flex min-w-0 items-center gap-3">
+                  <Avatar className="h-10 w-10 shrink-0">
+                    <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+                      {getUserInitials(name.replace(/[^\p{L}\p{N}\s]/gu, ' '), email || null)}
+                    </AvatarFallback>
                   </Avatar>
-                </td>
-                <td className="px-3 py-2 font-medium text-on-surface">{name}</td>
-                {showNurseryColumn ? (
-                  <td className="px-3 py-2 text-on-surface-variant">{nurseryLabel}</td>
-                ) : null}
-                <td className="px-3 py-2">
-                  {(s as { hasStaffProfile?: boolean }).hasStaffProfile && s.position && s.position !== '—'
-                    ? String(s.position)
-                    : '—'}
-                </td>
-                <td className="px-3 py-2">
-                  {(s as { hasStaffProfile?: boolean }).hasStaffProfile && s.department
-                    ? t(`staff.departments.${String(s.department)}`)
-                    : '—'}
-                </td>
-                <td className="px-3 py-2">
-                  {(s as { hasStaffProfile?: boolean }).hasStaffProfile && s.hire_date
-                    ? String(s.hire_date)
-                    : '—'}
-                </td>
-                <td className="px-3 py-2">
-                  <Badge
-                    className={cn(
-                      status === 'active'
-                        ? 'border-success/40 bg-success/10 text-success'
-                        : 'border-outline-variant bg-surface-container text-on-surface-variant',
-                    )}
-                  >
-                    {status === 'active' ? t('staff.status.active') : t('staff.status.inactive')}
-                  </Badge>
-                </td>
-                <td className="px-3 py-2">
-                  {/* Prefer the custom role name (e.g. "Manager Teacher") over
-                      the base auth enum (e.g. "teacher"). Falls back to the
-                      enum when the user has no custom role assigned. */}
-                  {(() => {
-                    const roleData = (u.role_data as { name_en?: string | null; name_ar?: string | null } | null) ?? null;
-                    const customName = (language.startsWith('ar') ? roleData?.name_ar : roleData?.name_en) ?? null;
-                    return customName?.trim() ? customName.trim() : (
-                      <span className="capitalize">{String(u.role ?? '—')}</span>
-                    );
-                  })()}
-                </td>
-                {canEdit || canDelete ? (
-                  <td
-                    className="px-3 py-2"
-                    onClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => e.stopPropagation()}
-                  >
-                    <div className="flex items-center gap-1">
-                      {canEdit ? (
-                        <button
-                          type="button"
-                          aria-label={`Edit ${name}`}
-                          className="rounded p-1 text-on-surface hover:bg-surface-container"
-                          onClick={() => navigate(`/admin/staff/${routeId}`)}
-                        >
-                          <MaterialSymbol name="edit" size="text-base" />
-                        </button>
-                      ) : null}
-                      {canDelete ? (
-                        <button
-                          type="button"
-                          aria-label={`Delete ${name}`}
-                          className="rounded p-1 text-error hover:bg-error/10"
-                          onClick={() => navigate(`/admin/staff/${routeId}`)}
-                        >
-                          <MaterialSymbol name="delete" size="text-base" />
-                        </button>
-                      ) : null}
-                    </div>
-                  </td>
-                ) : null}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-on-surface">{name}</p>
+                    {email ? <p className="truncate text-xs text-on-surface-variant" dir="ltr">{email}</p> : null}
+                  </div>
+                </div>
+              </Td>
+              {showNurseryColumn ? <Td className="text-on-surface-variant">{nurseryLabel}</Td> : null}
+              <Td className="text-on-surface">{position || <span className="text-on-surface-variant">—</span>}</Td>
+              <Td>
+                {hasProfile && s.department ? (
+                  <span className="inline-flex rounded-md bg-surface-high px-2 py-1 text-xs font-medium text-on-surface">
+                    {t(`staff.departments.${String(s.department)}`)}
+                  </span>
+                ) : (
+                  <span className="text-on-surface-variant">—</span>
+                )}
+              </Td>
+              <Td className="text-on-surface-variant">
+                {hasProfile && s.hire_date ? formatHireDate(String(s.hire_date), language) : '—'}
+              </Td>
+              <Td>
+                <StatusPill tone={active ? 'success' : 'neutral'}>
+                  {active ? t('staff.status.active') : t('staff.status.inactive')}
+                </StatusPill>
+              </Td>
+              <Td className="text-on-surface">{role}</Td>
+              {canEdit ? (
+                <Td align="end">
+                  <IconAction icon="edit" label={`${t('common.edit')}: ${name}`} to={`/admin/staff/${routeId}`} />
+                </Td>
+              ) : null}
+            </Tr>
+          );
+        })}
+      </TBody>
+    </DataTable>
   );
 }

@@ -1,17 +1,32 @@
 import { useQuery } from '@tanstack/react-query';
-import { useMemo, useState, type MouseEvent } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge, type BadgeProps } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import {
+  DataTable,
+  StatusPill,
+  TableCard,
+  TableEmpty,
+  TablePagination,
+  TBody,
+  THead,
+  Td,
+  Th,
+  Tr,
+  type PillTone,
+} from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { FilterBar, SearchInput } from '@/components/ui/FilterBar';
+import { FilterField } from '@/components/ui/FilterField';
 import { Input } from '@/components/ui/input';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
-import { Pagination } from '@/components/ui/Pagination';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Select } from '@/components/ui/select';
+import { StatTile } from '@/components/ui/StatTile';
 import { useAttendanceDays } from '@/hooks/useAttendanceDays';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
@@ -63,14 +78,14 @@ const MAX_ABSENCE_RANGE_DAYS = 366;
 
 const CHILD_STATUSES = ['active', 'pending', 'inactive', 'graduated', 'withdrawn', 'suspended', 'archived'];
 
-const STATUS_BADGE: Record<string, BadgeProps['variant']> = {
+const STATUS_TONE: Record<string, PillTone> = {
   active: 'success',
   pending: 'warning',
   suspended: 'error',
-  graduated: 'default',
-  inactive: 'secondary',
-  withdrawn: 'secondary',
-  archived: 'secondary',
+  graduated: 'primary',
+  inactive: 'neutral',
+  withdrawn: 'neutral',
+  archived: 'neutral',
 };
 
 const STATUS_ICON: Record<string, string> = {
@@ -143,85 +158,15 @@ function humanize(value: string): string {
   return value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-function ModernFilterSelect({
-  label,
-  value,
-  options,
-  onChange,
-  className,
-}: {
-  label: string;
-  value: string;
-  options: FilterSelectOption[];
-  onChange: (value: string) => void;
-  className?: string;
-}) {
-  const selected = options.find((option) => option.value === value) ?? options[0];
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className={cn(
-            'group flex h-11 min-w-0 items-center gap-2 rounded-xl border border-outline-variant bg-surface px-2.5 text-start text-sm font-semibold text-on-surface transition hover:border-primary/50 hover:bg-surface-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25',
-            className,
-          )}
-          aria-label={label}
-        >
-          <span className="material-symbols-outlined flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-base text-primary">
-            {selected?.icon ?? 'tune'}
-          </span>
-          <span className="min-w-0 flex-1 truncate">{selected?.label ?? label}</span>
-          <span className="material-symbols-outlined text-lg text-on-surface-variant transition group-data-[state=open]:rotate-180">
-            expand_more
-          </span>
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="start"
-        sideOffset={8}
-        className="max-h-80 w-[var(--radix-dropdown-menu-trigger-width)] min-w-[14rem] overflow-y-auto rounded-2xl border-outline-variant bg-surface-container-lowest p-2 shadow-xl"
-      >
-        <div className="px-3 pb-2 pt-1 text-[0.7rem] font-bold uppercase text-on-surface-variant">{label}</div>
-        {options.map((option) => {
-          const selectedOption = option.value === value;
-          return (
-            <DropdownMenuItem
-              key={option.value}
-              onSelect={() => onChange(option.value)}
-              className={cn(
-                'flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-on-surface outline-none transition-colors focus:bg-surface-container',
-                selectedOption && 'bg-primary/10 text-primary focus:bg-primary/10',
-              )}
-            >
-              <span className={cn('material-symbols-outlined text-lg', selectedOption ? 'text-primary' : 'text-on-surface-variant')}>
-                {selectedOption ? 'check_circle' : option.icon ?? 'radio_button_unchecked'}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate">{option.label}</span>
-                {option.helper ? (
-                  <span className="block truncate text-xs font-medium text-on-surface-variant">{option.helper}</span>
-                ) : null}
-              </span>
-            </DropdownMenuItem>
-          );
-        })}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
+/** Two dates under one label, styled like a FilterField. */
 function DateRangeField({
   label,
-  icon,
   from,
   to,
   onFrom,
   onTo,
 }: {
   label: string;
-  icon: string;
   from: string;
   to: string;
   onFrom: (value: string) => void;
@@ -229,18 +174,14 @@ function DateRangeField({
 }) {
   const { t } = useTranslation();
   return (
-    <fieldset className="min-w-0">
-      <legend className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant">
-        <MaterialSymbol name={icon} size="text-base" />
-        {label}
-      </legend>
+    <fieldset className="min-w-0 space-y-1">
+      <legend className="mb-1 text-xs font-semibold text-on-surface-variant">{label}</legend>
       <div className="grid grid-cols-2 gap-2">
         <Input
           type="date"
           value={from}
           max={to || undefined}
           onChange={(event) => onFrom(event.target.value)}
-          className="h-11 rounded-xl bg-surface"
           aria-label={`${label} · ${t(`${LIST}.filters.from`)}`}
         />
         <Input
@@ -248,7 +189,6 @@ function DateRangeField({
           value={to}
           min={from || undefined}
           onChange={(event) => onTo(event.target.value)}
-          className="h-11 rounded-xl bg-surface"
           aria-label={`${label} · ${t(`${LIST}.filters.to`)}`}
         />
       </div>
@@ -682,11 +622,6 @@ export function AdminChildrenListPage() {
   ].filter(Boolean).length;
   const anyFilterActive = activeFilters.length > 0 || search.trim().length > 0;
 
-  // The whole row opens the record; links and buttons inside it keep their own behaviour.
-  const openFromRow = (event: MouseEvent<HTMLTableRowElement>, childId: string) => {
-    if ((event.target as HTMLElement).closest('a, button')) return;
-    navigate(childId);
-  };
 
   if (waitingForAuthOrProfile || (Boolean(nurseryId) && childrenQuery.isPending)) {
     return <LoadingSkeleton />;
@@ -742,7 +677,7 @@ export function AdminChildrenListPage() {
       label: t(`${LIST}.cards.all`),
       value: stats.total,
       icon: 'groups',
-      tone: 'text-primary bg-primary/10',
+      tone: 'primary' as const,
       selected: filter === 'all' && todayFilter === 'all',
       onSelect: () => {
         setFilter('all');
@@ -755,9 +690,8 @@ export function AdminChildrenListPage() {
       label: t(`${LIST}.cards.presentToday`),
       value: todayValue(todayStats.present),
       icon: 'how_to_reg',
-      tone: 'text-success bg-success/10',
+      tone: 'success' as const,
       note: todayNote(t(`${LIST}.cards.hereNow`, { count: todayStats.here })),
-      noteTone: 'text-success',
       selected: todayFilter === 'present',
       onSelect: () => setTodayFilter(todayFilter === 'present' ? 'all' : 'present'),
     },
@@ -766,9 +700,8 @@ export function AdminChildrenListPage() {
       label: t(`${LIST}.cards.absentToday`),
       value: todayValue(todayStats.absent),
       icon: 'person_off',
-      tone: 'text-error bg-error/10',
+      tone: 'error' as const,
       note: todayNote(t(`${LIST}.cards.reportedByParents`, { count: todayStats.reported })),
-      noteTone: 'text-on-surface-variant',
       selected: todayFilter === 'absent',
       onSelect: () => setTodayFilter(todayFilter === 'absent' ? 'all' : 'absent'),
     },
@@ -777,7 +710,7 @@ export function AdminChildrenListPage() {
       label: t(`${LIST}.cards.newThisMonth`),
       value: stats.newThisMonth,
       icon: 'person_add',
-      tone: 'text-primary bg-primary/10',
+      tone: 'primary' as const,
       selected: filter === 'new',
       onSelect: () => setFilter(filter === 'new' ? 'all' : 'new'),
     },
@@ -786,7 +719,7 @@ export function AdminChildrenListPage() {
       label: t(`${LIST}.cards.absenceRisk`),
       value: stats.absenceRisk,
       icon: 'event_busy',
-      tone: 'text-warning bg-warning/10',
+      tone: 'warning' as const,
       selected: filter === 'absence_risk',
       onSelect: () => {
         const next = filter === 'absence_risk' ? 'all' : 'absence_risk';
@@ -799,290 +732,215 @@ export function AdminChildrenListPage() {
       label: t(`${LIST}.cards.unpaid`),
       value: stats.withUnpaid,
       icon: 'receipt_long',
-      tone: 'text-error bg-error/10',
+      tone: 'error' as const,
       note: money(stats.unpaidTotal),
-      noteTone: 'text-error',
       selected: filter === 'unpaid',
       onSelect: () => setFilter(filter === 'unpaid' ? 'all' : 'unpaid'),
     },
   ];
 
   return (
-    <div className="w-full space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold text-on-surface">{t('admin.children.title')}</h1>
-          <p className="mt-1 text-sm text-on-surface-variant">{t(`${LIST}.subtitle`)}</p>
-        </div>
-        {enrollButton}
-      </header>
-
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 2xl:grid-cols-6">
-        {cards.map((card) => (
-          <button
-            key={card.key}
-            type="button"
-            onClick={card.onSelect}
-            aria-pressed={card.selected}
-            className={cn(
-              'flex min-w-0 items-center gap-3 rounded-2xl border p-3.5 text-start shadow-sm transition sm:p-4',
-              card.selected
-                ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                : 'border-outline-variant bg-surface-container-lowest hover:border-primary/40 hover:bg-surface-container',
-            )}
-          >
-            <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl', card.tone)}>
-              <MaterialSymbol name={card.icon} size="text-xl" />
-            </span>
-            <span className="min-w-0">
-              <span className="block truncate text-xs font-semibold text-on-surface-variant">{card.label}</span>
-              <span className="block text-2xl font-bold leading-tight tabular-nums text-on-surface">{card.value}</span>
-              {card.note ? <span className={cn('line-clamp-2 block text-xs font-medium', card.noteTone)}>{card.note}</span> : null}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      <section className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-3 shadow-sm sm:p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="relative min-w-0 flex-[2_1_16rem]">
-            <MaterialSymbol
-              name="search"
-              size="text-xl"
-              className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-on-surface-variant"
+    <div className="w-full space-y-5 pb-8">
+      <PageHeader icon="groups" title={t('admin.children.title')} description={t(`${LIST}.subtitle`)} actions={enrollButton}>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 2xl:grid-cols-6">
+          {cards.map((card) => (
+            <StatTile
+              key={card.key}
+              icon={card.icon}
+              label={card.label}
+              value={card.value}
+              tone={card.tone}
+              helper={card.note}
+              onClick={card.onSelect}
+              active={card.selected}
             />
-            <Input
-              placeholder={t('admin.children.searchPlaceholder')}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-11 rounded-xl bg-surface pe-10 ps-10"
-              aria-label={t('admin.children.searchPlaceholder')}
-            />
-            {search ? (
-              <button
-                type="button"
-                onClick={() => setSearch('')}
-                aria-label={t(`${LIST}.clearSearch`)}
-                className="absolute end-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container"
-              >
-                <MaterialSymbol name="close" size="text-lg" />
-              </button>
-            ) : null}
-          </label>
-          <ModernFilterSelect
-            label={t(`${LIST}.filters.today`)}
-            value={todayFilter}
-            options={todayOptions}
-            onChange={(value) => setTodayFilter(value as TodayFilter)}
-            className="flex-[1_1_10rem]"
-          />
-          <ModernFilterSelect
-            label={t(`${LIST}.filters.class`)}
-            value={classFilter}
-            options={classSelectOptions}
-            onChange={setClassFilter}
-            className="flex-[1_1_10rem]"
-          />
-          <ModernFilterSelect
-            label={t(`${LIST}.filters.status`)}
-            value={statusFilter}
-            options={statusSelectOptions}
-            onChange={setStatusFilter}
-            className="flex-[1_1_10rem]"
-          />
-          <ModernFilterSelect
-            label={t(`${LIST}.filters.sort`)}
-            value={sort}
-            options={sortOptions}
-            onChange={(value) => setSort(value as SortKey)}
-            className="flex-[1_1_10rem]"
-          />
-          <Button
-            type="button"
-            variant="outline"
-            className={cn('h-11 gap-1.5 rounded-xl px-3', showMoreFilters && 'border-primary text-primary')}
-            onClick={() => setShowMoreFilters((open) => !open)}
-            aria-expanded={showMoreFilters}
-          >
-            <MaterialSymbol name="tune" size="text-lg" />
-            {t(showMoreFilters ? `${LIST}.filters.less` : `${LIST}.filters.more`)}
-            {moreFiltersCount ? (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[0.7rem] font-bold text-white">
-                {moreFiltersCount}
-              </span>
-            ) : null}
-          </Button>
-        </div>
-
-        {showMoreFilters ? (
-          <div className="mt-3 grid gap-3 border-t border-outline-variant pt-3 md:grid-cols-2 xl:grid-cols-4">
-            <div className="min-w-0">
-              <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant">
-                <MaterialSymbol name="payments" size="text-base" />
-                {t(`${LIST}.filters.payment`)}
-              </p>
-              <ModernFilterSelect
-                label={t(`${LIST}.filters.payment`)}
-                value={paymentFilter}
-                options={paymentOptions}
-                onChange={(value) => setPaymentFilter(value as PaymentFilter)}
-                className="w-full"
-              />
-            </div>
-            <div className="min-w-0">
-              <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant">
-                <MaterialSymbol name="event_note" size="text-base" />
-                {t(`${LIST}.filters.absence`)}
-              </p>
-              <ModernFilterSelect
-                label={t(`${LIST}.filters.absence`)}
-                value={absenceStatusFilter}
-                options={absenceOptions}
-                onChange={(value) => {
-                  const next = value as AbsenceStatusFilter;
-                  setAbsenceStatusFilter(next);
-                  if (next === 'three_plus') setFilter('absence_risk');
-                  if (next !== 'three_plus' && filter === 'absence_risk') setFilter('all');
-                }}
-                className="w-full"
-              />
-            </div>
-            <DateRangeField
-              label={t(`${LIST}.filters.enrolledRange`)}
-              icon="how_to_reg"
-              from={enrolledFrom}
-              to={enrolledTo}
-              onFrom={setEnrolledFrom}
-              onTo={setEnrolledTo}
-            />
-            <DateRangeField
-              label={t(`${LIST}.filters.absenceRange`)}
-              icon="event_busy"
-              from={absentFromDate}
-              to={absentToDate}
-              onFrom={setAbsentFromDate}
-              onTo={setAbsentToDate}
-            />
-          </div>
-        ) : null}
-
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="text-sm font-semibold text-on-surface">
-            {t(`${LIST}.filters.shown`, { count: filteredChildren.length, total: children.length })}
-          </span>
-          {activeFilters.map((item) => (
-            <button
-              key={item.label}
-              type="button"
-              onClick={item.onClear}
-              className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary transition hover:bg-primary/15"
-            >
-              {item.label}
-              <MaterialSymbol name="close" size="text-sm" />
-            </button>
           ))}
-          {anyFilterActive ? (
-            <button type="button" onClick={resetFilters} className="text-xs font-semibold text-on-surface-variant underline-offset-2 hover:text-primary hover:underline">
-              {t(`${LIST}.filters.clearAll`)}
-            </button>
-          ) : null}
         </div>
-      </section>
+      </PageHeader>
 
-      {!filteredChildren.length ? (
-        <EmptyState
-          icon="search_off"
-          title={t('admin.children.searchEmptyTitle')}
-          description={t(`${LIST}.emptyFiltered`)}
-          action={
-            anyFilterActive ? (
-              <Button type="button" variant="outline" onClick={resetFilters}>
-                {t(`${LIST}.filters.clearAll`)}
+      <TableCard
+        title={t('admin.children.title')}
+        count={t(`${LIST}.filters.shown`, { count: filteredChildren.length, total: children.length })}
+        filters={
+          <div className="space-y-3">
+            <FilterBar onClear={resetFilters} canClear={anyFilterActive}>
+              <FilterField label={t('common.search')} className="sm:flex-[2]">
+                <SearchInput value={search} onChange={setSearch} placeholder={t('admin.children.searchPlaceholder')} />
+              </FilterField>
+              <FilterField label={t(`${LIST}.filters.today`)}>
+                <Select value={todayFilter} onChange={(e) => setTodayFilter(e.target.value as TodayFilter)}>
+                  {todayOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </Select>
+              </FilterField>
+              <FilterField label={t(`${LIST}.filters.class`)}>
+                <Select value={classFilter} onChange={(e) => setClassFilter(e.target.value)}>
+                  {classSelectOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </Select>
+              </FilterField>
+              <FilterField label={t(`${LIST}.filters.status`)}>
+                <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                  {statusSelectOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </Select>
+              </FilterField>
+              <FilterField label={t(`${LIST}.filters.sort`)}>
+                <Select value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
+                  {sortOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </Select>
+              </FilterField>
+              <Button
+                type="button"
+                variant="outline"
+                className={cn('h-12 shrink-0 gap-1.5', showMoreFilters && 'border-primary text-primary')}
+                onClick={() => setShowMoreFilters((open) => !open)}
+                aria-expanded={showMoreFilters}
+              >
+                <MaterialSymbol name="tune" size="text-lg" />
+                {t(showMoreFilters ? `${LIST}.filters.less` : `${LIST}.filters.more`)}
+                {moreFiltersCount ? (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[0.7rem] font-bold text-primary-foreground">
+                    {moreFiltersCount}
+                  </span>
+                ) : null}
               </Button>
-            ) : null
-          }
-        />
-      ) : (
-        <>
-          {/* Phones: one card per child. */}
-          <ul className="space-y-3 md:hidden">
-            {pager.pageItems.map((child) => {
-              const name = displayShortName(child);
-              const hasUnpaid = child.unpaidBalance > 0;
-              return (
-                <li key={child.id}>
-                  <Link
-                    to={child.id}
-                    className={cn(
-                      'block rounded-2xl border bg-surface-container-lowest p-4 shadow-sm transition hover:border-primary/40',
-                      hasUnpaid ? 'border-error/40' : 'border-outline-variant',
-                    )}
-                  >
-                    <div className="flex items-start gap-3">
-                      <ChildAvatar name={name} url={child.avatar_url} className="h-12 w-12" />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="truncate font-semibold text-on-surface">{name}</p>
-                          <Badge variant={STATUS_BADGE[child.status] ?? 'secondary'} className="shrink-0">
-                            {statusLabel(child.status)}
-                          </Badge>
-                        </div>
-                        <p className="truncate text-xs text-on-surface-variant">
-                          {child.class_id ? child.className : t(`${LIST}.noClass`)}
-                          {child.parentNames.length ? ` · ${child.parentNames.map(firstAndLastName).join(listSeparator)}` : ''}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="mt-3 flex items-end justify-between gap-3 border-t border-outline-variant pt-3">
-                      <TodayStatusCell day={todayDays.get(child.id)} loading={todayLoading && child.status === 'active'} locale={locale} />
-                      <div className="shrink-0 text-end text-xs">
-                        <p className={cn(child.absentMonthCount >= 3 ? 'font-semibold text-error' : 'text-on-surface-variant')}>
-                          {t(`${LIST}.absentDays`, { count: child.absentMonthCount })}
-                        </p>
-                        {hasUnpaid ? <p className="font-semibold text-error">{money(child.unpaidBalance)}</p> : null}
-                      </div>
-                    </div>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+            </FilterBar>
 
-          {/* Tablets and up: the project's standard table. */}
-          <section className="hidden overflow-hidden rounded-2xl border border-outline-variant bg-surface shadow-sm md:block">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[1080px] text-sm">
-                <thead className="bg-surface-container-lowest text-xs uppercase text-on-surface-variant">
-                  <tr>
-                    <th className="px-4 py-3 text-start font-semibold">{t(`${LIST}.columns.child`)}</th>
-                    <th className="px-4 py-3 text-start font-semibold">{t(`${LIST}.columns.parent`)}</th>
-                    <th className="px-4 py-3 text-start font-semibold">{t(`${LIST}.columns.status`)}</th>
-                    <th className="px-4 py-3 text-start font-semibold">{t(`${LIST}.columns.today`)}</th>
-                    <th
-                      className="px-4 py-3 text-start font-semibold"
-                      title={t(`${LIST}.columns.absentDaysHint`, { from: absenceStart, to: absenceEnd })}
+            {showMoreFilters ? (
+              <div className="grid gap-3 border-t border-outline-variant pt-3 md:grid-cols-2 xl:grid-cols-4">
+                <FilterField label={t(`${LIST}.filters.payment`)}>
+                  <Select value={paymentFilter} onChange={(e) => setPaymentFilter(e.target.value as PaymentFilter)}>
+                    {paymentOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  </Select>
+                </FilterField>
+                <FilterField label={t(`${LIST}.filters.absence`)}>
+                  <Select
+                    value={absenceStatusFilter}
+                    onChange={(e) => {
+                      const next = e.target.value as AbsenceStatusFilter;
+                      setAbsenceStatusFilter(next);
+                      if (next === 'three_plus') setFilter('absence_risk');
+                      if (next !== 'three_plus' && filter === 'absence_risk') setFilter('all');
+                    }}
+                  >
+                    {absenceOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  </Select>
+                </FilterField>
+                <DateRangeField
+                  label={t(`${LIST}.filters.enrolledRange`)}
+                  from={enrolledFrom}
+                  to={enrolledTo}
+                  onFrom={setEnrolledFrom}
+                  onTo={setEnrolledTo}
+                />
+                <DateRangeField
+                  label={t(`${LIST}.filters.absenceRange`)}
+                  from={absentFromDate}
+                  to={absentToDate}
+                  onFrom={setAbsentFromDate}
+                  onTo={setAbsentToDate}
+                />
+              </div>
+            ) : null}
+
+            {activeFilters.length ? (
+              <div className="flex flex-wrap items-center gap-2">
+                {activeFilters.map((item) => (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={item.onClear}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary transition hover:bg-primary/15"
+                  >
+                    {item.label}
+                    <MaterialSymbol name="close" size="text-sm" />
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        }
+        pagination={filteredChildren.length ? <TablePagination pager={pager} pageSizeOptions={[15, 30, 60]} /> : null}
+      >
+        {!filteredChildren.length ? (
+          <TableEmpty
+            icon="search_off"
+            title={t('admin.children.searchEmptyTitle')}
+            description={t(`${LIST}.emptyFiltered`)}
+            action={
+              anyFilterActive ? (
+                <Button type="button" variant="outline" onClick={resetFilters}>
+                  {t(`${LIST}.filters.clearAll`)}
+                </Button>
+              ) : null
+            }
+          />
+        ) : (
+          <>
+            {/* Phones: one card per child. */}
+            <ul className="divide-y divide-outline-variant md:hidden">
+              {pager.pageItems.map((child) => {
+                const name = displayShortName(child);
+                const hasUnpaid = child.unpaidBalance > 0;
+                return (
+                  <li key={child.id}>
+                    <Link
+                      to={child.id}
+                      className={cn('block border-s-4 p-4 transition hover:bg-surface-container-lowest', hasUnpaid ? 'border-s-error' : 'border-s-transparent')}
                     >
-                      {t(`${LIST}.columns.absentDays`)}
-                    </th>
-                    <th className="px-4 py-3 text-start font-semibold">{t(`${LIST}.columns.balance`)}</th>
-                    <th className="px-4 py-3 text-start font-semibold">{t(`${LIST}.columns.enrolled`)}</th>
-                    <th className="px-4 py-3">
-                      <span className="sr-only">{t(`${LIST}.columns.open`)}</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-outline-variant">
+                      <div className="flex items-start gap-3">
+                        <ChildAvatar name={name} url={child.avatar_url} className="h-12 w-12" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="truncate font-semibold text-on-surface">{name}</p>
+                            <StatusPill tone={STATUS_TONE[child.status] ?? 'neutral'} className="shrink-0">
+                              {statusLabel(child.status)}
+                            </StatusPill>
+                          </div>
+                          <p className="truncate text-xs text-on-surface-variant">
+                            {child.class_id ? child.className : t(`${LIST}.noClass`)}
+                            {child.parentNames.length ? ` · ${child.parentNames.map(firstAndLastName).join(listSeparator)}` : ''}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex items-end justify-between gap-3 border-t border-outline-variant pt-3">
+                        <TodayStatusCell day={todayDays.get(child.id)} loading={todayLoading && child.status === 'active'} locale={locale} />
+                        <div className="shrink-0 text-end text-xs">
+                          <p className={cn(child.absentMonthCount >= 3 ? 'font-semibold text-error' : 'text-on-surface-variant')}>
+                            {t(`${LIST}.absentDays`, { count: child.absentMonthCount })}
+                          </p>
+                          {hasUnpaid ? <p className="font-semibold text-error">{money(child.unpaidBalance)}</p> : null}
+                        </div>
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+
+            {/* Tablets and up: the standard table. */}
+            <div className="hidden md:block">
+              <DataTable minWidth={1080}>
+                <THead>
+                  <Th>{t(`${LIST}.columns.child`)}</Th>
+                  <Th>{t(`${LIST}.columns.parent`)}</Th>
+                  <Th>{t(`${LIST}.columns.status`)}</Th>
+                  <Th>{t(`${LIST}.columns.today`)}</Th>
+                  <Th>
+                    <span title={t(`${LIST}.columns.absentDaysHint`, { from: absenceStart, to: absenceEnd })}>{t(`${LIST}.columns.absentDays`)}</span>
+                  </Th>
+                  <Th>{t(`${LIST}.columns.balance`)}</Th>
+                  <Th>{t(`${LIST}.columns.enrolled`)}</Th>
+                  <Th>
+                    <span className="sr-only">{t(`${LIST}.columns.open`)}</span>
+                  </Th>
+                </THead>
+                <TBody>
                   {pager.pageItems.map((child) => {
                     const fullName = displayName(child);
                     const name = displayShortName(child);
                     const hasUnpaid = child.unpaidBalance > 0;
                     return (
-                      <tr
-                        key={child.id}
-                        onClick={(event) => openFromRow(event, child.id)}
-                        className="group cursor-pointer bg-surface transition hover:bg-surface-container-lowest"
-                      >
-                        <td className={cn('border-s-4 px-4 py-3', hasUnpaid ? 'border-s-error' : 'border-s-transparent')}>
+                      <Tr key={child.id} onClick={() => navigate(child.id)} className="group">
+                        <Td className={cn('border-s-4', hasUnpaid ? 'border-s-error' : 'border-s-transparent')}>
                           <div className="flex items-center gap-3">
                             <ChildAvatar name={name} url={child.avatar_url} />
                             <div className="min-w-0">
@@ -1094,10 +952,10 @@ export function AdminChildrenListPage() {
                               </p>
                             </div>
                           </div>
-                        </td>
-                        <td className="px-4 py-3 text-on-surface" title={child.parentNames.join(', ')}>
+                        </Td>
+                        <Td className="text-on-surface">
                           {child.parentNames.length ? (
-                            <div className="max-w-[12rem] space-y-0.5">
+                            <div className="max-w-[12rem] space-y-0.5" title={child.parentNames.join(', ')}>
                               {child.parentNames.map((parentName, index) => (
                                 <p key={`${parentName}-${index}`} className="truncate">
                                   {firstAndLastName(parentName)}
@@ -1107,14 +965,14 @@ export function AdminChildrenListPage() {
                           ) : (
                             <span className="text-xs text-on-surface-variant">{t(`${LIST}.noParent`)}</span>
                           )}
-                        </td>
-                        <td className="px-4 py-3">
-                          <Badge variant={STATUS_BADGE[child.status] ?? 'secondary'}>{statusLabel(child.status)}</Badge>
-                        </td>
-                        <td className="max-w-[13rem] px-4 py-3">
+                        </Td>
+                        <Td>
+                          <StatusPill tone={STATUS_TONE[child.status] ?? 'neutral'}>{statusLabel(child.status)}</StatusPill>
+                        </Td>
+                        <Td className="max-w-[13rem]">
                           <TodayStatusCell day={todayDays.get(child.id)} loading={todayLoading && child.status === 'active'} locale={locale} />
-                        </td>
-                        <td className="px-4 py-3">
+                        </Td>
+                        <Td>
                           <span
                             className={cn(
                               'inline-flex min-w-8 justify-center rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums',
@@ -1122,13 +980,13 @@ export function AdminChildrenListPage() {
                                 ? 'bg-error/10 text-error'
                                 : child.absentMonthCount > 0
                                   ? 'bg-warning/10 text-warning'
-                                  : 'bg-surface-container text-on-surface-variant',
+                                  : 'bg-surface-high text-on-surface-variant',
                             )}
                           >
                             {child.absentMonthCount}
                           </span>
-                        </td>
-                        <td className="px-4 py-3">
+                        </Td>
+                        <Td>
                           {hasUnpaid ? (
                             <div>
                               <p className="font-semibold tabular-nums text-error">{money(child.unpaidBalance)}</p>
@@ -1144,38 +1002,24 @@ export function AdminChildrenListPage() {
                               {t(`${LIST}.paid`)}
                             </span>
                           )}
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-on-surface-variant">
-                          {formatDate(child.enrollment_date ?? child.created_at)}
-                        </td>
-                        <td className="px-4 py-3 text-end">
+                        </Td>
+                        <Td className="whitespace-nowrap text-on-surface-variant">{formatDate(child.enrollment_date ?? child.created_at)}</Td>
+                        <Td align="end">
                           <MaterialSymbol
                             name="chevron_right"
                             size="text-xl"
                             className="text-on-surface-variant transition group-hover:text-primary rtl:rotate-180"
                           />
-                        </td>
-                      </tr>
+                        </Td>
+                      </Tr>
                     );
                   })}
-                </tbody>
-              </table>
+                </TBody>
+              </DataTable>
             </div>
-          </section>
-        </>
-      )}
-
-      <Pagination
-        page={pager.page}
-        pageCount={pager.pageCount}
-        total={pager.total}
-        startIndex={pager.startIndex}
-        endIndex={pager.endIndex}
-        hasPrev={pager.hasPrev}
-        hasNext={pager.hasNext}
-        onPrev={pager.prev}
-        onNext={pager.next}
-      />
+          </>
+        )}
+      </TableCard>
     </div>
   );
 }

@@ -1,22 +1,39 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { confirm } from '@/components/ui/confirm';
 
 import { Button } from '@/components/ui/button';
+import {
+  DataTable,
+  IconAction,
+  StatusPill,
+  TableCard,
+  TableEmpty,
+  TableLoading,
+  TablePagination,
+  TBody,
+  THead,
+  Td,
+  Th,
+  Tr,
+} from '@/components/ui/DataTable';
+import { FilterBar, SearchInput } from '@/components/ui/FilterBar';
+import { FilterField } from '@/components/ui/FilterField';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { useAuthSession } from '@/hooks/useAuthSession';
+import { usePagination } from '@/hooks/usePagination';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { usePositions, useCreatePosition, useDeletePosition } from '@/hooks/usePositions';
 import { useRoles } from '@/hooks/useRoles';
 
 export function AdminPositionsPage() {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const lang = i18n.language === 'ar' ? 'ar' : 'en';
   const { user } = useAuthSession();
   const { data: profile } = useUserProfile(user?.id);
@@ -36,6 +53,28 @@ export function AdminPositionsPage() {
   const [scope, setScope] = useState<'nursery' | 'platform'>('nursery');
 
   const isXo = profile?.role === 'xo_super_admin';
+
+  const [search, setSearch] = useState('');
+  const [scopeFilter, setScopeFilter] = useState<'all' | 'nursery' | 'platform'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'seed' | 'custom'>('all');
+  const allPositions = useMemo(() => positions.data ?? [], [positions.data]);
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return allPositions.filter((p) => {
+      if (scopeFilter === 'nursery' && !p.nursery_id) return false;
+      if (scopeFilter === 'platform' && p.nursery_id) return false;
+      if (typeFilter === 'seed' && !p.is_seed) return false;
+      if (typeFilter === 'custom' && p.is_seed) return false;
+      return !q || `${p.name_en} ${p.name_ar} ${p.key}`.toLowerCase().includes(q);
+    });
+  }, [allPositions, search, scopeFilter, typeFilter]);
+  const filtersActive = scopeFilter !== 'all' || typeFilter !== 'all' || Boolean(search.trim());
+  const clearFilters = () => {
+    setSearch('');
+    setScopeFilter('all');
+    setTypeFilter('all');
+  };
+  const pager = usePagination(filtered, 10, `${search}|${scopeFilter}|${typeFilter}`);
 
   const handleCreate = async () => {
     if (!keyVal || !nameEn || !nameAr || !roleId) {
@@ -90,20 +129,15 @@ export function AdminPositionsPage() {
   }
 
   return (
-    <div className="space-y-6 pb-8">
-      <div>
-        <h1 className="flex items-center gap-2 text-lg font-semibold text-on-surface">
-          <MaterialSymbol name="work" className="text-primary" size="text-2xl" />
-          Positions
-        </h1>
-        <p className="text-sm text-on-surface-variant">
-          Define staff positions. Each position links to one role, which determines the
-          features that staff in that position can access.
-        </p>
-      </div>
+    <div className="space-y-5 pb-8">
+      <PageHeader
+        icon="work"
+        title="Positions"
+        description="Define staff positions. Each position links to one role, which determines the features that staff in that position can access."
+      />
 
-      <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 space-y-3">
-        <h2 className="text-sm font-semibold">Create new position</h2>
+      <section className="space-y-3 rounded-xl border border-outline-variant bg-surface p-4 shadow-sm sm:p-5">
+        <h2 className="text-base font-semibold text-on-surface">Create new position</h2>
         <div className="grid gap-3 md:grid-cols-2">
           <div>
             <Label htmlFor="pos-key">Key (machine name, e.g. lead_teacher)</Label>
@@ -151,73 +185,89 @@ export function AdminPositionsPage() {
         <Button onClick={handleCreate} disabled={createPos.isPending}>
           {createPos.isPending ? 'Creating…' : 'Create position'}
         </Button>
-      </div>
+      </section>
 
-      <div>
-        <h2 className="mb-3 text-sm font-semibold">Existing positions ({positions.data?.length ?? 0})</h2>
+      <TableCard
+        title="Existing positions"
+        count={positions.isLoading ? undefined : `${filtered.length} / ${allPositions.length}`}
+        filters={
+          <FilterBar onClear={clearFilters} canClear={filtersActive}>
+            <FilterField label={t('common.search')} className="sm:flex-[2]">
+              <SearchInput value={search} onChange={setSearch} placeholder="Name or key" />
+            </FilterField>
+            <FilterField label="Scope">
+              <Select value={scopeFilter} onChange={(e) => setScopeFilter(e.target.value as typeof scopeFilter)}>
+                <option value="all">{t('common.all')}</option>
+                <option value="nursery">Nursery</option>
+                <option value="platform">Platform</option>
+              </Select>
+            </FilterField>
+            <FilterField label="Type">
+              <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}>
+                <option value="all">{t('common.all')}</option>
+                <option value="seed">Seed</option>
+                <option value="custom">Custom</option>
+              </Select>
+            </FilterField>
+          </FilterBar>
+        }
+        pagination={positions.isLoading || !filtered.length ? null : <TablePagination pager={pager} />}
+      >
         {positions.isLoading ? (
-          <Skeleton className="h-48 w-full" />
+          <TableLoading />
+        ) : !filtered.length ? (
+          <TableEmpty icon="work" title={allPositions.length ? 'No positions match these filters.' : 'No positions yet.'} />
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-outline-variant">
-            <table className="w-full text-sm">
-              <thead className="bg-surface-container">
-                <tr className="text-left">
-                  <th className="px-3 py-2">Name</th>
-                  <th className="px-3 py-2">Key</th>
-                  <th className="px-3 py-2">Role</th>
-                  <th className="px-3 py-2">Scope</th>
-                  <th className="px-3 py-2">Type</th>
-                  <th className="px-3 py-2"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {(positions.data ?? []).map((p) => (
-                  <tr key={p.id} className="border-t border-outline-variant">
-                    <td className="px-3 py-2 font-medium">
-                      {lang === 'ar' ? p.name_ar : p.name_en}
-                    </td>
-                    <td className="px-3 py-2 text-on-surface-variant font-mono text-xs">{p.key}</td>
-                    <td className="px-3 py-2">
-                      {p.role ? (
-                        <span>
-                          {lang === 'ar' ? p.role.name_ar : p.role.name_en}
-                          <span className="ml-1 text-xs text-on-surface-variant">
-                            ({p.role.base_role}
-                            {p.role.base_department ? ` / ${p.role.base_department}` : ''})
-                          </span>
+          <DataTable minWidth={760}>
+            <THead>
+              <Th>Name</Th>
+              <Th>Key</Th>
+              <Th>Role</Th>
+              <Th>Scope</Th>
+              <Th>Type</Th>
+              <Th align="end">{t('common.actions')}</Th>
+            </THead>
+            <TBody>
+              {pager.pageItems.map((p) => (
+                <Tr key={p.id}>
+                  <Td className="font-semibold text-on-surface">{lang === 'ar' ? p.name_ar : p.name_en}</Td>
+                  <Td>
+                    <span className="rounded-md bg-surface-high px-2 py-1 font-mono text-xs text-on-surface-variant">{p.key}</span>
+                  </Td>
+                  <Td>
+                    {p.role ? (
+                      <span>
+                        {lang === 'ar' ? p.role.name_ar : p.role.name_en}
+                        <span className="ms-1 text-xs text-on-surface-variant">
+                          ({p.role.base_role}
+                          {p.role.base_department ? ` / ${p.role.base_department}` : ''})
                         </span>
-                      ) : (
-                        <span className="text-on-surface-variant">—</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-on-surface-variant">
-                      {p.nursery_id ? 'Nursery' : 'Platform'}
-                    </td>
-                    <td className="px-3 py-2">
-                      {p.is_seed ? (
-                        <span className="rounded bg-info/10 px-2 py-0.5 text-xs text-info">Seed</span>
-                      ) : (
-                        <span className="rounded bg-success/10 px-2 py-0.5 text-xs text-success">Custom</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2">
-                      {!p.is_seed || isXo ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => void handleDelete(p.id, p.is_seed)}
-                        >
-                          <MaterialSymbol name="delete" size="text-base" />
-                        </Button>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      </span>
+                    ) : (
+                      <span className="text-on-surface-variant">—</span>
+                    )}
+                  </Td>
+                  <Td className="text-on-surface-variant">{p.nursery_id ? 'Nursery' : 'Platform'}</Td>
+                  <Td>
+                    <StatusPill tone={p.is_seed ? 'primary' : 'success'}>{p.is_seed ? 'Seed' : 'Custom'}</StatusPill>
+                  </Td>
+                  <Td align="end">
+                    {!p.is_seed || isXo ? (
+                      <IconAction
+                        icon="delete"
+                        label={`${t('common.delete')}: ${lang === 'ar' ? p.name_ar : p.name_en}`}
+                        onClick={() => void handleDelete(p.id, p.is_seed)}
+                        disabled={deletePos.isPending}
+                        danger
+                      />
+                    ) : null}
+                  </Td>
+                </Tr>
+              ))}
+            </TBody>
+          </DataTable>
         )}
-      </div>
+      </TableCard>
     </div>
   );
 }

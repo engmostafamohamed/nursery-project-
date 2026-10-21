@@ -36,7 +36,7 @@ export function ParentChildProfilePage() {
       if (childId) {
         const { data, error } = await supabase
           .from('children')
-          .select('id, nursery_id, full_name_ar, full_name_en')
+          .select('id, nursery_id, full_name_ar, full_name_en, avatar_url')
           .eq('id', childId)
           .maybeSingle();
         if (error) throw error;
@@ -45,7 +45,7 @@ export function ParentChildProfilePage() {
 
       const { data, error } = await supabase
         .from('parent_children')
-        .select('child:children(id, nursery_id, full_name_ar, full_name_en)')
+        .select('child:children(id, nursery_id, full_name_ar, full_name_en, avatar_url)')
         .eq('parent_id', user.id)
         .limit(1)
         .maybeSingle();

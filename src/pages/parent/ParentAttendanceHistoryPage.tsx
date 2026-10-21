@@ -22,14 +22,28 @@ import { ReportAbsencePanel } from '@/components/parent/ReportAbsencePanel';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FilterMenu, type FilterMenuOption } from '@/components/ui/FilterMenu';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
-import { Pagination } from '@/components/ui/Pagination';
+import {
+  DataTable,
+  TableCard,
+  TableEmpty,
+  TableLoading,
+  TablePagination,
+  TBody,
+  THead,
+  Td,
+  Th,
+  Tr,
+} from '@/components/ui/DataTable';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ChartLegend } from '@/components/ui/ChartLegend';
+import { StatStrip, StatTile } from '@/components/ui/StatTile';
 import { useAllChildrenAttendanceSummary } from '@/hooks/useAllChildrenAttendanceSummary';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useChildAttendanceHistory, type DayAttendanceRow } from '@/hooks/useChildAttendanceHistory';
 import { usePagination } from '@/hooks/usePagination';
 import { averageMinutesToTimeLabel, minutesFromMidnight } from '@/lib/attendanceAnalytics';
 import { staffName } from '@/lib/attendanceApi';
+import { CHART_CURSOR, CHART_GRID_STROKE, CHART_TOOLTIP_STYLE, chartColor, chartDirection } from '@/lib/chartTheme';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -46,42 +60,11 @@ function formatDate(iso: string, locale: string): string {
   });
 }
 
-function formatChartDate(iso: string, locale: string): string {
-  return new Date(`${iso}T12:00:00`).toLocaleDateString(locale, {
-    weekday: 'short',
-  });
-}
-
-function AttendanceStatCard({
-  icon,
-  label,
-  value,
-  tone = 'primary',
-}: {
-  icon: string;
-  label: string;
-  value: string | number;
-  tone?: 'primary' | 'success' | 'warning' | 'error';
-}) {
-  const toneClass = {
-    primary: 'bg-primary/10 text-primary',
-    success: 'bg-success/10 text-success',
-    warning: 'bg-warning/10 text-warning',
-    error: 'bg-error/10 text-error',
-  }[tone];
-
-  return (
-    <div className="rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
-      <div className="flex items-start gap-3">
-        <span className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-lg', toneClass)}>
-          <MaterialSymbol name={icon} size="text-xl" />
-        </span>
-        <div className="min-w-0">
-          <p className="text-xs font-medium text-on-surface-variant">{label}</p>
-          <p className="mt-1 break-words text-2xl font-bold text-on-surface">{value}</p>
-        </div>
-      </div>
-    </div>
+/** Weekday names repeat beyond a week, so longer ranges label bars with the date. */
+function formatChartDate(iso: string, locale: string, rangeDays: number): string {
+  return new Date(`${iso}T12:00:00`).toLocaleDateString(
+    locale,
+    rangeDays > 7 ? { day: 'numeric', month: 'short' } : { weekday: 'short' },
   );
 }
 
@@ -173,6 +156,8 @@ export function ParentAttendanceHistoryPage() {
     { value: '14', label: t('parent.attendanceHistory.last14', { defaultValue: 'Last 14 days' }), icon: 'calendar_month' },
     { value: '30', label: t('parent.attendanceHistory.last30', { defaultValue: 'Last 30 days' }), icon: 'calendar_today' },
   ], [t]);
+
+  const periodLabel = rangeOptions.find((option) => option.value === rangeFilter)?.label;
 
   const childName = useMemo(() => {
     if (isAllMode) return t('parent.childSelector.allChildren');
@@ -268,22 +253,27 @@ export function ParentAttendanceHistoryPage() {
         const rows = isAllMode ? childRowsForDate : [row];
         return {
           date: row.date,
-          label: formatChartDate(row.date, locale),
+          label: formatChartDate(row.date, locale, Number(rangeFilter)),
           present: rows.filter((item) => item.checkIn && item.status !== 'partial').length,
           absent: rows.filter((item) => item.status === 'absent').length,
           partial: rows.filter((item) => item.status === 'partial').length,
         };
       }),
-    [isAllMode, locale, rangeRows, rangeTableRows],
+    [isAllMode, locale, rangeFilter, rangeRows, rangeTableRows],
   );
+
+  const chart = chartDirection(i18n.dir() === 'rtl');
+  const presentLabel = t('parent.dashboard.analytics.present', { defaultValue: 'Present' });
+  const partialLabel = t('parent.attendanceHistory.partial', { defaultValue: 'Partial' });
+  const absentLabel = t('parent.dashboard.analytics.absent', { defaultValue: 'Absent' });
 
   const pieRows = useMemo(
     () =>
       [
-        { name: t('parent.dashboard.analytics.present', { defaultValue: 'Present' }), value: metrics.present, color: 'rgb(var(--success))' },
-        { name: t('parent.attendanceHistory.partial', { defaultValue: 'Partial' }), value: metrics.partial, color: 'rgb(var(--primary))' },
-        { name: t('parent.dashboard.analytics.absent', { defaultValue: 'Absent' }), value: metrics.absent, color: 'rgb(var(--error))' },
-        { name: t('attendance.status.excused'), value: metrics.excused, color: 'rgb(var(--warning))' },
+        { name: t('parent.dashboard.analytics.present', { defaultValue: 'Present' }), value: metrics.present, color: chartColor('success') },
+        { name: t('parent.attendanceHistory.partial', { defaultValue: 'Partial' }), value: metrics.partial, color: chartColor('primary') },
+        { name: t('parent.dashboard.analytics.absent', { defaultValue: 'Absent' }), value: metrics.absent, color: chartColor('error') },
+        { name: t('attendance.status.excused'), value: metrics.excused, color: chartColor('warning') },
       ].filter((row) => row.value > 0),
     [metrics.absent, metrics.excused, metrics.partial, metrics.present, t],
   );
@@ -327,112 +317,109 @@ export function ParentAttendanceHistoryPage() {
   return (
     <div className="w-full max-w-none space-y-5 pb-28">
       <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
-        <div
-          className={cn(
-            'flex flex-col gap-4 bg-surface-container-lowest p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between',
-            isAllMode && 'border-b border-outline-variant',
-          )}
-        >
+        <div className="flex items-center gap-3 bg-surface-container-lowest p-4 sm:gap-4 sm:p-5">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-md">
+            <MaterialSymbol name="history" size="text-2xl" />
+          </span>
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase text-primary">
               {t('parent.nav.attendanceHistory', { defaultValue: 'Attendance' })}
             </p>
-            <h1 className="mt-1 text-2xl font-bold text-on-surface sm:text-3xl">
+            <h1 className="text-2xl font-bold leading-tight text-on-surface sm:text-3xl">
               {t('parent.attendanceHistory.title')}
             </h1>
-            <p className="mt-2 text-sm text-on-surface-variant">
-              {childName || t('parent.childSelector.allChildren')}
+            <p className="mt-1 text-sm text-on-surface-variant">
+              {[childName || t('parent.childSelector.allChildren'), isAllMode ? periodLabel : null].filter(Boolean).join(' · ')}
             </p>
           </div>
-          {isMultiChild ? (
-            <div className={cn('grid gap-3', isAllMode ? 'sm:grid-cols-3 lg:min-w-[680px]' : 'sm:min-w-[280px]')}>
-              {isMultiChild ? (
-                <ChildSelector
-                  value={childId}
-                  onChange={setChildId}
-                  children={children}
-                  showAllOption={true}
-                />
-              ) : null}
-              {isAllMode ? (
-                <>
-                  <FilterMenu
-                    value={statusFilter}
-                    options={statusOptions}
-                    onChange={setStatusFilter}
-                    label={t('common.status', { defaultValue: 'Status' })}
-                  />
-                  <FilterMenu
-                    value={rangeFilter}
-                    options={rangeOptions}
-                    onChange={setRangeFilter}
-                    label={t('parent.attendanceHistory.period', { defaultValue: 'Period' })}
-                  />
-                </>
-              ) : null}
-            </div>
-          ) : null}
         </div>
 
+        {isMultiChild ? (
+          <div className={cn('grid gap-3 border-t border-outline-variant p-4 sm:p-5', isAllMode ? 'sm:grid-cols-3' : 'sm:max-w-sm')}>
+            <ChildSelector value={childId} onChange={setChildId} children={children} showAllOption inline />
+            {isAllMode ? (
+              <>
+                <FilterMenu
+                  value={statusFilter}
+                  options={statusOptions}
+                  onChange={setStatusFilter}
+                  label={t('common.status', { defaultValue: 'Status' })}
+                />
+                <FilterMenu
+                  value={rangeFilter}
+                  options={rangeOptions}
+                  onChange={setRangeFilter}
+                  label={t('parent.attendanceHistory.period', { defaultValue: 'Period' })}
+                />
+              </>
+            ) : null}
+          </div>
+        ) : null}
+
         {!isAllMode ? null : loading ? (
-          <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4 sm:p-5">
+          <div className="grid grid-cols-2 gap-3 border-t border-outline-variant p-4 sm:p-5 xl:grid-cols-4">
             <Skeleton className="h-24 rounded-xl" />
             <Skeleton className="h-24 rounded-xl" />
             <Skeleton className="h-24 rounded-xl" />
             <Skeleton className="h-24 rounded-xl" />
           </div>
         ) : (
-          <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7 sm:p-5">
-            <AttendanceStatCard
-              icon="monitoring"
-              label={t('parent.attendanceHistory.attendanceRate', { defaultValue: 'Attendance rate' })}
-              value={`${metrics.rate}%`}
-              tone={metrics.rate >= 80 ? 'success' : 'warning'}
-            />
-            <AttendanceStatCard
-              icon="event_available"
-              label={t('parent.dashboard.analytics.present', { defaultValue: 'Present' })}
-              value={metrics.present}
-              tone="success"
-            />
-            <AttendanceStatCard
-              icon="event_busy"
-              label={t('parent.dashboard.analytics.absent', { defaultValue: 'Absent' })}
-              value={metrics.absent}
-              tone="error"
-            />
-            <AttendanceStatCard
-              icon="schedule"
-              label={t('parent.attendanceHistory.avgCheckInShort', { defaultValue: 'Avg check-in' })}
-              value={metrics.avgIn}
-              tone="primary"
-            />
-            <AttendanceStatCard
-              icon="warning"
-              label={t('parent.attendanceHistory.latePickupCount', { defaultValue: 'Late pickup' })}
-              value={metrics.late}
-              tone={metrics.late > 0 ? 'warning' : 'success'}
-            />
-            <AttendanceStatCard
-              icon="more_time"
-              label={t('attendance.parent.extraHoursPeriod')}
-              value={metrics.extraHours > 0
-                ? t('attendance.parent.extraHoursValue', {
-                    hours: metrics.extraHours,
-                    covered: metrics.extraHoursCovered,
-                    fee: metrics.extraFee.toFixed(2),
-                  })
-                : '0'}
-              tone={metrics.extraHours > 0 ? 'warning' : 'success'}
-            />
-            <Link to="/parent/invoices" className="block">
-              <AttendanceStatCard
-                icon="receipt_long"
-                label={t('attendance.parent.extraHoursDue', { count: extraHoursDue.count })}
-                value={extraHoursDue.total.toFixed(2)}
-                tone={extraHoursDue.total > 0 ? 'error' : 'success'}
+          <div className="space-y-3 border-t border-outline-variant p-4 sm:p-5">
+            <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+              <StatTile
+                icon="monitoring"
+                label={t('parent.attendanceHistory.attendanceRate', { defaultValue: 'Attendance rate' })}
+                value={`${metrics.rate}%`}
+                tone={metrics.rate >= 80 ? 'success' : 'warning'}
               />
-            </Link>
+              <StatTile
+                icon="event_available"
+                label={t('parent.dashboard.analytics.present', { defaultValue: 'Present' })}
+                value={metrics.present}
+                tone="success"
+              />
+              <StatTile
+                icon="event_busy"
+                label={t('parent.dashboard.analytics.absent', { defaultValue: 'Absent' })}
+                value={metrics.absent}
+                tone="error"
+              />
+              <StatTile
+                icon="schedule"
+                label={t('parent.attendanceHistory.avgCheckInShort', { defaultValue: 'Avg check-in' })}
+                value={metrics.avgIn}
+                tone="primary"
+              />
+            </div>
+            <StatStrip
+              items={[
+                {
+                  icon: 'warning',
+                  label: t('parent.attendanceHistory.latePickupCount', { defaultValue: 'Late pickup' }),
+                  value: metrics.late,
+                  tone: metrics.late > 0 ? 'warning' : 'success',
+                },
+                {
+                  icon: 'more_time',
+                  label: t('attendance.parent.extraHoursPeriod'),
+                  value: metrics.extraHours > 0
+                    ? t('attendance.parent.extraHoursValue', {
+                        hours: metrics.extraHours,
+                        covered: metrics.extraHoursCovered,
+                        fee: metrics.extraFee.toFixed(2),
+                      })
+                    : '0',
+                  tone: metrics.extraHours > 0 ? 'warning' : 'success',
+                },
+                {
+                  icon: 'receipt_long',
+                  label: t('attendance.parent.extraHoursDue', { count: extraHoursDue.count }),
+                  value: t('invoice.egpAmount', { amount: extraHoursDue.total.toFixed(2) }),
+                  tone: extraHoursDue.total > 0 ? 'error' : 'success',
+                  to: '/parent/invoices',
+                },
+              ]}
+            />
           </div>
         )}
       </section>
@@ -460,8 +447,8 @@ export function ParentAttendanceHistoryPage() {
             <Skeleton className="h-96 w-full rounded-xl" />
           ) : (
             <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-              <div className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
-                <div className="flex items-center justify-between gap-3 border-b border-outline-variant bg-surface-container-lowest p-4">
+              <div className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
+                <div className="flex flex-col gap-3 border-b border-outline-variant bg-surface-container-lowest p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h2 className="text-base font-semibold text-on-surface">
                       {t('parent.attendanceHistory.chartTitle', { defaultValue: 'Attendance trend' })}
@@ -473,25 +460,24 @@ export function ParentAttendanceHistoryPage() {
                       })}
                     </p>
                   </div>
+                  <ChartLegend
+                    items={[
+                      { label: presentLabel, color: chartColor('success') },
+                      { label: partialLabel, color: chartColor('primary') },
+                      { label: absentLabel, color: chartColor('error') },
+                    ]}
+                  />
                 </div>
-                <div className="h-80 p-4">
+                <div className="h-80 p-4 xl:h-auto xl:min-h-80 xl:flex-1">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartRows} margin={{ left: -24, right: 8, top: 12, bottom: 0 }}>
-                      <CartesianGrid stroke="rgb(var(--border-default))" strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={12} />
-                      <YAxis allowDecimals={false} tickLine={false} axisLine={false} fontSize={12} />
-                      <Tooltip
-                        cursor={{ fill: 'rgb(var(--surface-high))' }}
-                        contentStyle={{
-                          border: '1px solid rgb(var(--border-default))',
-                          borderRadius: 8,
-                          background: 'rgb(var(--surface))',
-                          color: 'rgb(var(--foreground))',
-                        }}
-                      />
-                      <Bar dataKey="present" stackId="attendance" fill="rgb(var(--success))" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="partial" stackId="attendance" fill="rgb(var(--primary))" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="absent" stackId="attendance" fill="rgb(var(--error))" radius={[4, 4, 0, 0]} />
+                    <BarChart data={chartRows} margin={chart.margin}>
+                      <CartesianGrid stroke={CHART_GRID_STROKE} strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={12} minTickGap={8} {...chart.xAxis} />
+                      <YAxis allowDecimals={false} tickLine={false} axisLine={false} fontSize={12} {...chart.yAxis} />
+                      <Tooltip cursor={CHART_CURSOR} contentStyle={CHART_TOOLTIP_STYLE} />
+                      <Bar dataKey="present" name={presentLabel} stackId="attendance" fill={chartColor('success')} radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="partial" name={partialLabel} stackId="attendance" fill={chartColor('primary')} radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="absent" name={absentLabel} stackId="attendance" fill={chartColor('error')} radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -510,18 +496,26 @@ export function ParentAttendanceHistoryPage() {
                   </p>
                 </div>
                 <div className="grid gap-4 p-4">
-                  <div className="h-52">
+                  <div className="relative h-52">
                     {pieRows.length ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie data={pieRows} dataKey="value" nameKey="name" innerRadius={52} outerRadius={82} paddingAngle={3}>
-                            {pieRows.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
-                          </Pie>
-                          <Tooltip />
-                        </PieChart>
-                      </ResponsiveContainer>
+                      <>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie data={pieRows} dataKey="value" nameKey="name" innerRadius={58} outerRadius={82} paddingAngle={pieRows.length > 1 ? 3 : 0} stroke="none">
+                              {pieRows.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
+                            </Pie>
+                            <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <span className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                          <span className="text-2xl font-bold tabular-nums text-on-surface">{metrics.rate}%</span>
+                          <span className="text-xs text-on-surface-variant">
+                            {t('parent.attendanceHistory.attendanceRate', { defaultValue: 'Attendance rate' })}
+                          </span>
+                        </span>
+                      </>
                     ) : (
-                      <div className="flex h-full items-center justify-center rounded-lg border border-outline-variant text-sm text-on-surface-variant">
+                      <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-outline-variant text-sm text-on-surface-variant">
                         {t('parent.attendanceHistory.noChartData', { defaultValue: 'No records yet' })}
                       </div>
                     )}
@@ -542,170 +536,128 @@ export function ParentAttendanceHistoryPage() {
             </section>
           )}
 
-          <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
-            <div className="flex flex-col gap-3 border-b border-outline-variant bg-surface-container-lowest p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="text-base font-semibold text-on-surface">
-                  {t('parent.attendanceHistory.recordsTitle', { defaultValue: 'Attendance records' })}
-                </h2>
-                <p className="mt-1 text-xs text-on-surface-variant">
-                  {t('parent.attendanceHistory.filteredCount', {
-                    count: filteredRows.length,
-                    defaultValue: '{{count}} records after filters',
-                  })}
-                </p>
-              </div>
-            </div>
-
+          <TableCard
+            title={t('parent.attendanceHistory.recordsTitle', { defaultValue: 'Attendance records' })}
+            count={loading ? undefined : t('parent.attendanceHistory.filteredCount', { count: filteredRows.length, defaultValue: '{{count}} records after filters' })}
+            pagination={loading || !filteredRows.length ? null : <TablePagination pager={pager} />}
+          >
             {loading ? (
-              <div className="p-4">
-                <Skeleton className="h-80 rounded-xl" />
-              </div>
+              <TableLoading rows={6} />
+            ) : !filteredRows.length ? (
+              <TableEmpty
+                icon="event_busy"
+                title={t('parent.attendanceHistory.noFilteredRecords', { defaultValue: 'No attendance records match these filters.' })}
+              />
             ) : (
-              <>
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[1040px] text-sm">
-                    <thead className="bg-surface-container-lowest text-xs uppercase text-on-surface-variant">
-                      <tr>
-                        {isAllMode ? (
-                          <th className="px-4 py-3 text-start font-semibold">
-                            {t('admin.children.childColumn', { defaultValue: 'Child' })}
-                          </th>
-                        ) : null}
-                        <th className="px-4 py-3 text-start font-semibold">{t('parent.attendanceHistory.colDate')}</th>
-                        <th className="px-4 py-3 text-start font-semibold">{t('common.status', { defaultValue: 'Status' })}</th>
-                        <th className="px-4 py-3 text-start font-semibold">{t('parent.attendanceHistory.colCheckIn')}</th>
-                        <th className="px-4 py-3 text-start font-semibold">{t('parent.attendanceHistory.colCheckOut')}</th>
-                        <th className="px-4 py-3 text-start font-semibold">{t('attendance.columns.extraTime')}</th>
-                        <th className="px-4 py-3 text-start font-semibold">{t('attendance.columns.amount')}</th>
-                        <th className="px-4 py-3 text-start font-semibold">
-                          {t('parent.attendanceHistory.colPickup')}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-outline-variant">
-                      {pager.pageItems.map((row) => (
-                        <tr key={`${row.childId ?? 'child'}-${row.date}`} className="transition hover:bg-surface-container-lowest">
-                          {isAllMode ? (
-                            <td className="px-4 py-3 align-top font-semibold text-on-surface">
-                              {row.childId ? childNameById[row.childId] ?? '-' : '-'}
-                            </td>
-                          ) : null}
-                          <td className="px-4 py-3 align-top font-medium text-on-surface">{formatDate(row.date, locale)}</td>
-                          <td className="px-4 py-3 align-top">
-                            <StatusBadge row={row} />
-                            {row.status === 'excused' && row.detail?.absenceReason ? (
-                              <p className="mt-1 text-xs text-on-surface-variant">
-                                {t(`attendance.absence.reasons.${row.detail.absenceReason}`)}
-                              </p>
-                            ) : null}
-                          </td>
-                          <td className="px-4 py-3 align-top text-on-surface-variant">
-                            {formatTime(row.checkIn)}
-                            {row.detail?.checkIn ? (
-                              <p className="text-xs">
-                                {t('attendance.byStaff', { name: staffName(row.detail.checkedInBy, i18n.language) ?? '—' })}
-                                {row.detail.checkInMethod ? ` · ${t(`attendance.method.${row.detail.checkInMethod}`)}` : ''}
-                              </p>
-                            ) : null}
-                          </td>
-                          <td className="px-4 py-3 align-top text-on-surface-variant">
-                            {formatTime(row.checkOut)}
-                            {row.detail?.checkOut ? (
-                              <p className="text-xs">
-                                {t('attendance.byStaff', { name: staffName(row.detail.checkedOutBy, i18n.language) ?? '—' })}
-                                {row.detail.checkOutMethod ? ` · ${t(`attendance.method.${row.detail.checkOutMethod}`)}` : ''}
-                              </p>
-                            ) : null}
-                          </td>
-                          <td className="px-4 py-3 align-top">
-                            {row.detail?.extraHours ? (
-                              <div className="text-xs">
-                                <p className="font-semibold text-warning">
-                                  {t('attendance.extraHoursShort', { hours: row.detail.extraHours })}
-                                </p>
-                                <p className="text-on-surface-variant">
-                                  {t('attendance.lateMinutes', { minutes: row.detail.lateMinutes })}
-                                  {row.detail.extraHoursCovered > 0
-                                    ? ` · ${t('attendance.coveredByPackage', { hours: row.detail.extraHoursCovered })}`
-                                    : ''}
-                                </p>
-                              </div>
-                            ) : (
-                              <span className="text-on-surface-variant">-</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 align-top">
-                            {row.detail?.lateChargeWaived ? (
-                              <span className="text-xs font-semibold text-success">{t('attendance.waived')}</span>
-                            ) : row.detail && row.detail.extraFee > 0 ? (
-                              <div className="text-xs">
-                                <p className="font-semibold text-on-surface">{row.detail.extraFee.toFixed(2)}</p>
-                                {row.detail.invoiceStatus ? (
-                                  <Link to="/parent/invoices" className="text-primary underline-offset-2 hover:underline">
-                                    {t(`attendance.invoiceStatus.${row.detail.invoiceStatus}`, { defaultValue: row.detail.invoiceStatus })}
-                                  </Link>
-                                ) : null}
-                              </div>
-                            ) : (
-                              <span className="text-on-surface-variant">-</span>
-                            )}
-                          </td>
-                            <td className="px-4 py-3 align-top">
-                              {row.pickup?.personName || row.pickup?.photoUrl ? (
-                                <div className="flex items-center gap-2">
-                                  {row.pickup.photoUrl ? (
-                                    <img
-                                      src={row.pickup.photoUrl}
-                                      alt=""
-                                      className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-outline-variant"
-                                      loading="lazy"
-                                      decoding="async"
-                                    />
-                                  ) : (
-                                    <span
-                                      className="material-symbols-outlined shrink-0 text-base text-on-surface-variant"
-                                      aria-hidden
-                                    >
-                                      person
-                                    </span>
-                                  )}
-                                  <span className="truncate text-on-surface">
-                                    {row.pickup.personName ?? t('parent.attendanceHistory.unknownPickup')}
-                                  </span>
-                                </div>
-                              ) : (
-                                <span className="text-on-surface-variant">-</span>
-                              )}
-                            </td>
-                        </tr>
-                      ))}
-                      {pager.pageItems.length === 0 ? (
-                        <tr>
-                          <td className="px-4 py-10 text-center text-sm text-on-surface-variant" colSpan={isAllMode ? 8 : 7}>
-                            {t('parent.attendanceHistory.noFilteredRecords', { defaultValue: 'No attendance records match these filters.' })}
-                          </td>
-                        </tr>
+              <DataTable minWidth={1040}>
+                <THead>
+                  {isAllMode ? <Th>{t('admin.children.childColumn', { defaultValue: 'Child' })}</Th> : null}
+                  <Th>{t('parent.attendanceHistory.colDate')}</Th>
+                  <Th>{t('common.status', { defaultValue: 'Status' })}</Th>
+                  <Th>{t('parent.attendanceHistory.colCheckIn')}</Th>
+                  <Th>{t('parent.attendanceHistory.colCheckOut')}</Th>
+                  <Th>{t('attendance.columns.extraTime')}</Th>
+                  <Th>{t('attendance.columns.amount')}</Th>
+                  <Th>{t('parent.attendanceHistory.colPickup')}</Th>
+                </THead>
+                <TBody>
+                  {pager.pageItems.map((row) => (
+                    <Tr key={`${row.childId ?? 'child'}-${row.date}`}>
+                      {isAllMode ? (
+                        <Td className="align-top font-semibold text-on-surface">
+                          {row.childId ? childNameById[row.childId] ?? '-' : '-'}
+                        </Td>
                       ) : null}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="p-4">
-                  <Pagination
-                    page={pager.page}
-                    pageCount={pager.pageCount}
-                    total={pager.total}
-                    startIndex={pager.startIndex}
-                    endIndex={pager.endIndex}
-                    hasPrev={pager.hasPrev}
-                    hasNext={pager.hasNext}
-                    onPrev={pager.prev}
-                    onNext={pager.next}
-                  />
-                </div>
-              </>
+                      <Td className="whitespace-nowrap align-top font-medium text-on-surface">{formatDate(row.date, locale)}</Td>
+                      <Td className="align-top">
+                        <StatusBadge row={row} />
+                        {row.status === 'excused' && row.detail?.absenceReason ? (
+                          <p className="mt-1 text-xs text-on-surface-variant">
+                            {t(`attendance.absence.reasons.${row.detail.absenceReason}`)}
+                          </p>
+                        ) : null}
+                      </Td>
+                      <Td className="align-top text-on-surface-variant">
+                        {formatTime(row.checkIn)}
+                        {row.detail?.checkIn ? (
+                          <p className="text-xs">
+                            {t('attendance.byStaff', { name: staffName(row.detail.checkedInBy, i18n.language) ?? '—' })}
+                            {row.detail.checkInMethod ? ` · ${t(`attendance.method.${row.detail.checkInMethod}`)}` : ''}
+                          </p>
+                        ) : null}
+                      </Td>
+                      <Td className="align-top text-on-surface-variant">
+                        {formatTime(row.checkOut)}
+                        {row.detail?.checkOut ? (
+                          <p className="text-xs">
+                            {t('attendance.byStaff', { name: staffName(row.detail.checkedOutBy, i18n.language) ?? '—' })}
+                            {row.detail.checkOutMethod ? ` · ${t(`attendance.method.${row.detail.checkOutMethod}`)}` : ''}
+                          </p>
+                        ) : null}
+                      </Td>
+                      <Td className="align-top">
+                        {row.detail?.extraHours ? (
+                          <div className="text-xs">
+                            <p className="font-semibold text-warning">
+                              {t('attendance.extraHoursShort', { hours: row.detail.extraHours })}
+                            </p>
+                            <p className="text-on-surface-variant">
+                              {t('attendance.lateMinutes', { minutes: row.detail.lateMinutes })}
+                              {row.detail.extraHoursCovered > 0
+                                ? ` · ${t('attendance.coveredByPackage', { hours: row.detail.extraHoursCovered })}`
+                                : ''}
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-on-surface-variant">-</span>
+                        )}
+                      </Td>
+                      <Td className="align-top">
+                        {row.detail?.lateChargeWaived ? (
+                          <span className="text-xs font-semibold text-success">{t('attendance.waived')}</span>
+                        ) : row.detail && row.detail.extraFee > 0 ? (
+                          <div className="text-xs">
+                            <p className="font-semibold tabular-nums text-on-surface">{row.detail.extraFee.toFixed(2)}</p>
+                            {row.detail.invoiceStatus ? (
+                              <Link to="/parent/invoices" className="text-primary underline-offset-2 hover:underline">
+                                {t(`attendance.invoiceStatus.${row.detail.invoiceStatus}`, { defaultValue: row.detail.invoiceStatus })}
+                              </Link>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <span className="text-on-surface-variant">-</span>
+                        )}
+                      </Td>
+                      <Td className="align-top">
+                        {row.pickup?.personName || row.pickup?.photoUrl ? (
+                          <div className="flex items-center gap-2">
+                            {row.pickup.photoUrl ? (
+                              <img
+                                src={row.pickup.photoUrl}
+                                alt=""
+                                className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-outline-variant"
+                                loading="lazy"
+                                decoding="async"
+                              />
+                            ) : (
+                              <span className="material-symbols-outlined shrink-0 text-base text-on-surface-variant" aria-hidden>
+                                person
+                              </span>
+                            )}
+                            <span className="truncate text-on-surface">
+                              {row.pickup.personName ?? t('parent.attendanceHistory.unknownPickup')}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-on-surface-variant">-</span>
+                        )}
+                      </Td>
+                    </Tr>
+                  ))}
+                </TBody>
+              </DataTable>
             )}
-          </section>
+          </TableCard>
         </>
       ) : selectedChildId ? (
         <ChildAttendanceHistory childId={selectedChildId} nurseryId={nurseryId} audience="parent" />

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { IconAction } from '@/components/ui/DataTable';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,6 +28,8 @@ interface Props {
   onView: () => void;
   onMarkPaid: (payload: { paymentMethod: PaymentMethod; paidAt: string; notes: string; idempotencyKey: string }) => Promise<void>;
   onCancel: () => Promise<void>;
+  /** Icon-only buttons, for a table row. */
+  compact?: boolean;
 }
 
 const PAYMENT_METHODS: PaymentMethod[] = [
@@ -40,7 +43,7 @@ const PAYMENT_METHODS: PaymentMethod[] = [
   'orange_cash',
 ];
 
-export function InvoiceActionsMenu({ disabled, amountLabel, onView, onMarkPaid, onCancel }: Props) {
+export function InvoiceActionsMenu({ disabled, amountLabel, onView, onMarkPaid, onCancel, compact = false }: Props) {
   const { t } = useTranslation();
   const [markPaidOpen, setMarkPaidOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -81,17 +84,25 @@ export function InvoiceActionsMenu({ disabled, amountLabel, onView, onMarkPaid, 
 
   return (
     <>
-      <div className="flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" onClick={onView}>
-          {t('invoice.actions.viewDetails')}
-        </Button>
-        <Button variant="outline" size="sm" disabled={disabled} onClick={openMarkPaid}>
-          {t('invoice.actions.markPaid')}
-        </Button>
-        <Button variant="outline" size="sm" disabled={disabled} onClick={() => setCancelOpen(true)}>
-          {t('invoice.actions.cancel')}
-        </Button>
-      </div>
+      {compact ? (
+        <div className="flex items-center justify-end gap-1">
+          <IconAction icon="visibility" label={t('invoice.actions.viewDetails')} onClick={onView} />
+          <IconAction icon="task_alt" label={t('invoice.actions.markPaid')} onClick={openMarkPaid} disabled={disabled} />
+          <IconAction icon="block" label={t('invoice.actions.cancel')} onClick={() => setCancelOpen(true)} disabled={disabled} danger />
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={onView}>
+            {t('invoice.actions.viewDetails')}
+          </Button>
+          <Button variant="outline" size="sm" disabled={disabled} onClick={openMarkPaid}>
+            {t('invoice.actions.markPaid')}
+          </Button>
+          <Button variant="outline" size="sm" disabled={disabled} onClick={() => setCancelOpen(true)}>
+            {t('invoice.actions.cancel')}
+          </Button>
+        </div>
+      )}
 
       <Dialog open={markPaidOpen} onOpenChange={setMarkPaidOpen}>
         <DialogContent>

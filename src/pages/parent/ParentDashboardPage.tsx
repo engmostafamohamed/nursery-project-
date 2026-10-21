@@ -15,6 +15,7 @@ import {
 } from 'recharts';
 import { toast } from 'sonner';
 
+import { ApplicationStatusBadge } from '@/components/applications/ApplicationStatusBadge';
 import { ChatPanel } from '@/components/chat/ChatPanel';
 import { PaymentHistoryTable } from '@/components/financial/PaymentHistoryTable';
 import { FinancialSummaryCard } from '@/components/parent/FinancialSummaryCard';
@@ -26,6 +27,9 @@ import { ParentDashboardQuickActions } from '@/components/parent/ParentDashboard
 import { ParentDashboardScheduleSection } from '@/components/parent/ParentDashboardScheduleSection';
 import { ParentPasswordResetCard } from '@/components/parent/ParentPasswordResetCard';
 import { Button } from '@/components/ui/button';
+import { ChartLegend } from '@/components/ui/ChartLegend';
+import { Skeleton } from '@/components/ui/skeleton';
+import { StatStrip, StatTile } from '@/components/ui/StatTile';
 import { useApplicationPackagePayment } from '@/hooks/useApplicationPackagePayment';
 import { useAllChildrenAttendanceSummary } from '@/hooks/useAllChildrenAttendanceSummary';
 import { useApplications } from '@/hooks/useApplications';
@@ -43,6 +47,8 @@ import { usePaymentHistory, type PaymentHistoryRow } from '@/hooks/usePaymentHis
 import { parentNurseryLabel, useParentNursery } from '@/hooks/useParentNursery';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { STEP_DATE_TIME } from '@/lib/admissionTimeline';
+import { applicationStatusUi } from '@/lib/applicationStatus';
+import { CHART_CURSOR, CHART_GRID_STROKE, CHART_TOOLTIP_STYLE, chartColor, chartDirection } from '@/lib/chartTheme';
 import { formatDateTime } from '@/lib/datetime';
 import { cn } from '@/lib/utils';
 
@@ -54,51 +60,6 @@ function SectionHeading({ icon, children }: { icon: string; children: React.Reac
       </span>
       <h2 className="text-sm font-semibold text-on-surface sm:text-base">{children}</h2>
     </div>
-  );
-}
-
-type DashboardStatCardProps = {
-  icon: string;
-  label: string;
-  value: string | number;
-  tone: 'primary' | 'success' | 'warning' | 'error';
-  to?: string;
-  className?: string;
-};
-
-function DashboardStatCard({ icon, label, value, tone, to, className }: DashboardStatCardProps) {
-  const toneClasses = {
-    primary: 'bg-primary text-primary-foreground',
-    success: 'bg-success text-white',
-    warning: 'bg-warning text-white',
-    error: 'bg-error text-white',
-  }[tone];
-
-  const content = (
-    <>
-      <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-lg shadow-sm sm:size-11 sm:rounded-xl', toneClasses)}>
-        <span className="material-symbols-outlined text-lg sm:text-xl" aria-hidden>
-          {icon}
-        </span>
-      </span>
-      <span className="min-w-0">
-        <span className="block truncate text-[11px] font-medium leading-4 text-on-surface-variant sm:text-xs">{label}</span>
-        <span className="mt-0.5 block truncate text-lg font-extrabold leading-6 text-on-surface sm:mt-1 sm:text-xl">{value}</span>
-      </span>
-    </>
-  );
-
-  const cardClassName = cn(
-    'group flex min-h-[76px] items-center gap-2 rounded-xl border border-outline-variant bg-surface p-3 shadow-sm transition-all hover:border-primary/50 hover:shadow-md sm:min-h-[92px] sm:gap-3 sm:p-4',
-    className,
-  );
-
-  return to ? (
-    <Link to={to} className={cardClassName}>
-      {content}
-    </Link>
-  ) : (
-    <div className={cardClassName}>{content}</div>
   );
 }
 
@@ -129,6 +90,14 @@ function formatShortDay(iso: string, locale: string): string {
   }).format(d);
 }
 
+/** A week's attendance rate as a tone: no school days yet stays neutral. */
+function weekRateTone(rate: number, schoolDays: number) {
+  if (schoolDays === 0) return { text: 'text-on-surface-variant', bar: 'bg-outline' };
+  if (rate >= 80) return { text: 'text-success', bar: 'bg-success' };
+  if (rate >= 50) return { text: 'text-warning', bar: 'bg-warning' };
+  return { text: 'text-error', bar: 'bg-error' };
+}
+
 function ParentDashboardAnalyticsPanel({
   children,
   childInsights,
@@ -136,8 +105,6 @@ function ParentDashboardAnalyticsPanel({
   attendanceRate,
   presentDays,
   schoolDays,
-  unreadTotal,
-  totalOutstandingLabel,
 }: {
   children: ParentDashboardChildCard[];
   childInsights: Record<string, ChildDashboardInsight>;
@@ -145,8 +112,6 @@ function ParentDashboardAnalyticsPanel({
   attendanceRate: number;
   presentDays: number;
   schoolDays: number;
-  unreadTotal: number;
-  totalOutstandingLabel: string;
 }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
@@ -166,11 +131,16 @@ function ParentDashboardAnalyticsPanel({
       .map((row) => ({ ...row, label: formatShortDay(row.date, locale) }));
   }, [childInsights, children, locale]);
 
+  const chart = chartDirection(i18n.dir() === 'rtl', -28);
+  const presentLabel = t('parent.dashboard.analytics.present', { defaultValue: 'Present' });
+  const absentLabel = t('parent.dashboard.analytics.absent', { defaultValue: 'Absent' });
   const weeklyPresent = dayData.reduce((sum, row) => sum + row.present, 0);
   const weeklyAbsent = dayData.reduce((sum, row) => sum + row.absent, 0);
+  const weeklyTotal = weeklyPresent + weeklyAbsent;
+  const weeklyRate = weeklyTotal > 0 ? Math.round((weeklyPresent / weeklyTotal) * 100) : 0;
   const pieData = [
-    { name: t('parent.dashboard.analytics.present', { defaultValue: 'Present' }), value: weeklyPresent, color: 'rgb(var(--success))' },
-    { name: t('parent.dashboard.analytics.absent', { defaultValue: 'Absent' }), value: weeklyAbsent, color: 'rgb(var(--error))' },
+    { name: presentLabel, value: weeklyPresent, color: chartColor('success') },
+    { name: absentLabel, value: weeklyAbsent, color: chartColor('error') },
   ].filter((row) => row.value > 0);
 
   const childRows = children.map((child) => {
@@ -182,16 +152,17 @@ function ParentDashboardAnalyticsPanel({
     const rate = total > 0 ? Math.round((present / total) * 100) : 0;
     return {
       id: child.id,
-      name: locale === 'ar' ? child.nameAr : child.nameEn,
+      name: locale === 'ar' ? child.nameAr || child.nameEn : child.nameEn || child.nameAr,
       present,
       absent,
       rate,
+      tone: weekRateTone(rate, total),
     };
   });
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-outline-variant bg-surface shadow-sm sm:rounded-xl">
-      <div className="flex flex-col gap-3 border-b border-outline-variant bg-surface-container-lowest p-3 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+    <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
+      <div className="flex flex-col gap-3 border-b border-outline-variant bg-surface-container-lowest p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
         <SectionHeading icon="monitoring">
           {t('parent.dashboard.analytics.title', { defaultValue: 'Weekly family overview' })}
         </SectionHeading>
@@ -211,154 +182,135 @@ function ParentDashboardAnalyticsPanel({
         </div>
       </div>
 
-      <div className="grid gap-0 xl:grid-cols-[minmax(0,1.3fr)_360px]">
-        <div className="p-3 sm:p-5">
-          <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
-            <DashboardStatCard
-              icon="how_to_reg"
-              label={t('parent.dashboard.analytics.monthRate', { defaultValue: '30-day attendance' })}
-              value={`${attendanceRate}%`}
-              tone={attendanceRate >= 80 ? 'success' : 'warning'}
-              to="/parent/attendance"
-            />
-            <DashboardStatCard
-              icon="event_available"
-              label={t('parent.dashboard.analytics.presentDays', { defaultValue: 'Present' })}
-              value={presentDays}
-              tone="success"
-              to="/parent/attendance"
-            />
-            <DashboardStatCard
-              icon="event_busy"
-              label={t('parent.dashboard.analytics.absentDays', { defaultValue: 'Absent' })}
-              value={Math.max(0, schoolDays - presentDays)}
-              tone="error"
-              to="/parent/attendance"
-            />
-            <DashboardStatCard
-              icon="account_balance_wallet"
-              label={t('parent.dashboard.analytics.outstanding', { defaultValue: 'Outstanding' })}
-              value={totalOutstandingLabel}
-              tone="primary"
-              to="/parent/invoices"
-            />
-          </div>
+      <div className="grid xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0 space-y-4 p-4 sm:p-5">
+          <StatStrip
+            items={[
+              {
+                icon: 'how_to_reg',
+                label: t('parent.dashboard.analytics.monthRate', { defaultValue: '30-day attendance' }),
+                value: `${attendanceRate}%`,
+                tone: attendanceRate >= 80 ? 'success' : 'warning',
+                to: '/parent/attendance',
+              },
+              {
+                icon: 'event_available',
+                label: t('parent.dashboard.analytics.presentDays', { defaultValue: 'Present' }),
+                value: presentDays,
+                tone: 'success',
+                to: '/parent/attendance',
+              },
+              {
+                icon: 'event_busy',
+                label: t('parent.dashboard.analytics.absentDays', { defaultValue: 'Absent' }),
+                value: Math.max(0, schoolDays - presentDays),
+                tone: 'error',
+                to: '/parent/attendance',
+              },
+            ]}
+          />
 
-          <div className="mt-3 h-48 rounded-xl border border-outline-variant bg-surface-container-lowest p-2 sm:mt-4 sm:h-72 sm:p-3">
-            {isLoading ? (
-              <div className="flex h-full items-center justify-center text-sm text-on-surface-variant">{t('common.loading')}</div>
-            ) : dayData.length ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dayData} margin={{ left: -28, right: 4, top: 8, bottom: 0 }}>
-                  <CartesianGrid stroke="rgb(var(--border-default))" strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={12} />
-                  <YAxis allowDecimals={false} tickLine={false} axisLine={false} fontSize={12} />
-                  <Tooltip
-                    cursor={{ fill: 'rgb(var(--surface-high))' }}
-                    contentStyle={{
-                      border: '1px solid rgb(var(--border-default))',
-                      borderRadius: 8,
-                      background: 'rgb(var(--surface))',
-                      color: 'rgb(var(--foreground))',
-                    }}
-                  />
-                  <Bar dataKey="present" stackId="attendance" fill="rgb(var(--success))" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="absent" stackId="attendance" fill="rgb(var(--error))" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex h-full items-center justify-center text-center text-sm text-on-surface-variant">
-                {t('parent.dashboard.analytics.emptyChart', { defaultValue: 'Attendance chart will appear after the first check-in.' })}
-              </div>
-            )}
+          <div className="rounded-lg border border-outline-variant bg-surface-container-lowest p-3 sm:p-4">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-semibold text-on-surface">{t('parent.reports.last7Days')}</p>
+              <ChartLegend items={[{ label: presentLabel, color: chartColor('success') }, { label: absentLabel, color: chartColor('error') }]} />
+            </div>
+            <div className="h-48 sm:h-64">
+              {isLoading ? (
+                <Skeleton className="h-full w-full" />
+              ) : dayData.length ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dayData} margin={chart.margin}>
+                    <CartesianGrid stroke={CHART_GRID_STROKE} strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={12} {...chart.xAxis} />
+                    <YAxis allowDecimals={false} tickLine={false} axisLine={false} fontSize={12} {...chart.yAxis} />
+                    <Tooltip cursor={CHART_CURSOR} contentStyle={CHART_TOOLTIP_STYLE} />
+                    <Bar dataKey="present" name={presentLabel} stackId="attendance" fill={chartColor('success')} radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="absent" name={absentLabel} stackId="attendance" fill={chartColor('error')} radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-full items-center justify-center px-4 text-center text-sm text-on-surface-variant">
+                  {t('parent.dashboard.analytics.emptyChart', { defaultValue: 'Attendance chart will appear after the first check-in.' })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        <aside className="border-t border-outline-variant bg-surface-container-lowest p-3 sm:p-5 xl:border-l xl:border-t-0">
-          <div className="grid gap-4">
-            <div className="rounded-lg border border-outline-variant bg-surface p-4">
-              <p className="text-sm font-semibold text-on-surface">
-                {t('parent.dashboard.analytics.weekTitle', { defaultValue: 'This week' })}
-              </p>
-              <div className="mt-3 grid grid-cols-[110px_minmax(0,1fr)] items-center gap-3 sm:grid-cols-[140px_minmax(0,1fr)] sm:gap-4">
-                <div className="h-28 sm:h-32">
-                  {pieData.length ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={36} outerRadius={58} paddingAngle={3}>
-                          {pieData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="flex h-full items-center justify-center rounded-full border border-outline-variant text-xs text-on-surface-variant">
-                      0
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-on-surface-variant">{t('parent.dashboard.analytics.present', { defaultValue: 'Present' })}</span>
-                    <span className="font-semibold text-success">{weeklyPresent}</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-on-surface-variant">{t('parent.dashboard.analytics.absent', { defaultValue: 'Absent' })}</span>
-                    <span className="font-semibold text-error">{weeklyAbsent}</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-3 border-t border-outline-variant pt-2">
-                    <span className="text-on-surface-variant">{t('parent.dashboard.analytics.unread', { defaultValue: 'Unread' })}</span>
-                    <span className="font-semibold text-on-surface">{unreadTotal}</span>
-                  </div>
-                </div>
+        <aside className="space-y-4 border-t border-outline-variant bg-surface-container-lowest p-4 sm:p-5 xl:border-s xl:border-t-0">
+          <div className="rounded-lg border border-outline-variant bg-surface p-4">
+            <p className="text-sm font-semibold text-on-surface">
+              {t('parent.dashboard.analytics.weekTitle', { defaultValue: 'This week' })}
+            </p>
+            <div className="mt-3 flex items-center gap-4">
+              <div className="relative h-28 w-28 shrink-0">
+                {pieData.length ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={40} outerRadius={56} paddingAngle={pieData.length > 1 ? 3 : 0} stroke="none">
+                        {pieData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
+                      </Pie>
+                      <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full w-full rounded-full border-[14px] border-surface-high" />
+                )}
+                <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-lg font-bold tabular-nums text-on-surface">
+                  {weeklyRate}%
+                </span>
               </div>
-            </div>
-
-            <div className="max-h-72 space-y-2 overflow-y-auto pe-1">
-              {childRows.map((child) => (
-                <Link
-                  key={child.id}
-                  to={`/parent/attendance?child=${child.id}`}
-                  className="block rounded-lg border border-outline-variant bg-surface p-3 transition hover:border-primary/60"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="min-w-0 truncate text-sm font-semibold text-on-surface">{child.name}</p>
-                    <span className="shrink-0 text-sm font-semibold text-primary">{child.rate}%</span>
-                  </div>
-                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-high">
-                    <div className="h-full rounded-full bg-success" style={{ width: `${child.rate}%` }} />
-                  </div>
-                  <p className="mt-2 text-xs text-on-surface-variant">
-                    {t('parent.dashboard.analytics.childWeek', {
-                      present: child.present,
-                      absent: child.absent,
-                      defaultValue: '{{present}} present, {{absent}} absent this week',
-                    })}
-                  </p>
-                </Link>
-              ))}
+              <dl className="min-w-0 flex-1 space-y-2 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="inline-flex items-center gap-2 text-on-surface-variant">
+                    <span className="h-2.5 w-2.5 rounded-full bg-success" aria-hidden />
+                    {presentLabel}
+                  </dt>
+                  <dd className="font-semibold tabular-nums text-on-surface">{weeklyPresent}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="inline-flex items-center gap-2 text-on-surface-variant">
+                    <span className="h-2.5 w-2.5 rounded-full bg-error" aria-hidden />
+                    {absentLabel}
+                  </dt>
+                  <dd className="font-semibold tabular-nums text-on-surface">{weeklyAbsent}</dd>
+                </div>
+              </dl>
             </div>
           </div>
+
+          {childRows.length ? (
+            <ul className="divide-y divide-outline-variant overflow-hidden rounded-lg border border-outline-variant bg-surface">
+              {childRows.map((child) => (
+                <li key={child.id}>
+                  <Link
+                    to={`/parent/attendance?child=${child.id}`}
+                    className="block px-4 py-3 outline-none transition hover:bg-surface-container-lowest focus-visible:bg-surface-container-lowest"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="min-w-0 truncate text-sm font-semibold text-on-surface" title={child.name}>{child.name}</p>
+                      <span className={cn('shrink-0 text-sm font-semibold tabular-nums', child.tone.text)}>{child.rate}%</span>
+                    </div>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-high">
+                      <div className={cn('h-full rounded-full', child.tone.bar)} style={{ width: `${child.rate}%` }} />
+                    </div>
+                    <p className="mt-1.5 text-xs text-on-surface-variant">
+                      {t('parent.dashboard.analytics.childWeek', {
+                        present: child.present,
+                        absent: child.absent,
+                        defaultValue: '{{present}} present, {{absent}} absent this week',
+                      })}
+                    </p>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </aside>
       </div>
     </section>
   );
-}
-
-function admissionStatusUi(status: string) {
-  if (status === 'approved') {
-    return { icon: 'verified', tone: 'success' as const, className: 'bg-success/10 text-success border-success/30' };
-  }
-  if (status === 'rejected') {
-    return { icon: 'cancel', tone: 'error' as const, className: 'bg-error/10 text-error border-error/30' };
-  }
-  if (status === 'documents_pending') {
-    return { icon: 'upload_file', tone: 'warning' as const, className: 'bg-warning/10 text-warning border-warning/30' };
-  }
-  if (status === 'submitted' || status === 'under_review') {
-    return { icon: 'manage_search', tone: 'primary' as const, className: 'bg-primary/10 text-primary border-primary/30' };
-  }
-  return { icon: 'edit_document', tone: 'primary' as const, className: 'bg-primary/10 text-primary border-primary/30' };
 }
 
 function ParentDashboardApplicationsCard({
@@ -395,9 +347,7 @@ function ParentDashboardApplicationsCard({
                     <p className="truncate text-sm font-semibold text-on-surface">{applicationChildName(row)}</p>
                     <p className="mt-1 text-xs text-on-surface-variant">{t('applications.submittedAt')}: {submittedAt}</p>
                   </div>
-                  <span className="shrink-0 rounded-full bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary">
-                    {t(`applications.statuses.${status}`, { defaultValue: status })}
-                  </span>
+                  <ApplicationStatusBadge status={status} className="shrink-0" />
                 </div>
               </Link>
             );
@@ -458,7 +408,7 @@ function ParentAdmissionCyclePanel({
 
   const id = String(application.id);
   const status = String(application.status ?? 'draft');
-  const statusUi = admissionStatusUi(status);
+  const statusUi = applicationStatusUi(status);
   const balanceDue = invoice?.balanceDue ?? 0;
   const paidAmount = invoice?.paidAmount ?? 0;
   const pendingAmount = invoice?.pendingAmount ?? 0;
@@ -768,33 +718,33 @@ export function ParentDashboardPage() {
               {t('applications.createApplication', { defaultValue: 'Add child' })}
             </Button>
           </div>
-          <div className="grid grid-cols-2 gap-2 p-3 sm:gap-3 sm:p-4 xl:grid-cols-4">
-            <DashboardStatCard
+          <div className="grid grid-cols-2 gap-3 p-3 sm:p-4 xl:grid-cols-4">
+            <StatTile
               icon="child_care"
               label={t('parent.dashboard.stats.children', { defaultValue: 'Children' })}
               value={activeChildrenCount}
               tone="primary"
               to="/parent/children"
             />
-            <DashboardStatCard
+            <StatTile
               icon="assignment"
               label={t('parent.dashboard.stats.applications', { defaultValue: 'Applications' })}
               value={pendingApplicationsCount}
               tone={pendingApplicationsCount > 0 ? 'warning' : 'success'}
               to="/parent/applications"
             />
-            <DashboardStatCard
+            <StatTile
               icon="payments"
               label={t('parent.dashboard.stats.outstanding', { defaultValue: 'Outstanding' })}
               value={moneyFormatter.format(totalOutstanding)}
               tone={totalOutstanding > 0 ? 'error' : 'success'}
               to="/parent/invoices"
             />
-            <DashboardStatCard
+            <StatTile
               icon="notifications"
               label={t('parent.dashboard.stats.unread', { defaultValue: 'Unread' })}
               value={unreadTotal}
-              tone={unreadTotal > 0 ? 'warning' : 'primary'}
+              tone={unreadTotal > 0 ? 'warning' : 'neutral'}
               to="/parent/notifications"
             />
           </div>
@@ -808,8 +758,6 @@ export function ParentDashboardPage() {
         attendanceRate={attendanceSummary.summary.ratePct}
         presentDays={attendanceSummary.summary.presentDays}
         schoolDays={attendanceSummary.summary.schoolDaysCount}
-        unreadTotal={unreadTotal}
-        totalOutstandingLabel={moneyFormatter.format(totalOutstanding)}
       />
 
       <ParentAdmissionCyclePanel
@@ -826,13 +774,13 @@ export function ParentDashboardPage() {
       <section className="grid items-stretch gap-3 sm:gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))]">
         <ParentAdminInboxSection />
         <ParentPasswordResetCard profile={profile} />
-        <DashboardStatCard
+        <StatTile
           icon="hourglass_top"
           label={t('parent.dashboard.stats.paymentsInReview', { defaultValue: 'Payments in review' })}
           value={inReviewInvoicesCount}
           tone={inReviewInvoicesCount > 0 ? 'warning' : 'success'}
           to="/parent/invoices"
-          className="h-full min-h-[116px] sm:min-h-[150px]"
+          className="h-full"
         />
       </section>
 

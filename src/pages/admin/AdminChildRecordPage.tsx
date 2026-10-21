@@ -881,11 +881,9 @@ export function AdminChildRecordPage() {
       ) : null}
 
       {tab === 'tools' ? (
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
+        <div className="grid items-start gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
           <ChildAvatarUpload childId={child.id} nurseryId={child.nursery_id} fullNameForPlaceholder={childName} avatarUrl={child.avatar_url} />
-          <div className="self-start">
-            <ChildQrCodeCard child={child} languagePref={languagePref} qrSize={180} />
-          </div>
+          <ChildQrCodeCard child={child} languagePref={languagePref} qrSize={200} />
         </div>
       ) : null}
     </div>

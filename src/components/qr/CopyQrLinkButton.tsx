@@ -8,13 +8,15 @@ type Props = {
   url: string;
   size?: ButtonProps['size'];
   className?: string;
+  /** Icon above the label, for a row of action tiles. */
+  stacked?: boolean;
 };
 
 /**
  * Copies the link inside a QR code. Staff who open it are taken to the scanner, which
  * checks the code exactly as if it had been scanned (see QrVerifyLinkPage).
  */
-export function CopyQrLinkButton({ url, size, className }: Props) {
+export function CopyQrLinkButton({ url, size, className, stacked = false }: Props) {
   const { t } = useTranslation();
 
   const copy = async () => {
@@ -29,7 +31,7 @@ export function CopyQrLinkButton({ url, size, className }: Props) {
 
   return (
     <Button type="button" variant="outline" size={size} className={className} disabled={!url} onClick={() => void copy()}>
-      <span className="material-symbols-outlined me-1 text-base" aria-hidden>
+      <span className={stacked ? 'material-symbols-outlined text-xl' : 'material-symbols-outlined me-1 text-base'} aria-hidden>
         link
       </span>
       {t('qr.copyLink')}

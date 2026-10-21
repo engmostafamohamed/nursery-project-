@@ -1,5 +1,14 @@
 {
   "common": {
+    "paginationRange": "عرض {{start}}–{{end}}",
+    "rowsPerPage": "عدد الصفوف",
+    "pagination": "الصفحات",
+    "pageNumber": "صفحة {{page}}",
+    "child": "الطفل",
+    "fromDate": "من تاريخ",
+    "toDate": "إلى تاريخ",
+    "sort": "الترتيب",
+    "viewAll": "عرض الكل",
     "status": "الحالة",
     "created": "تاريخ الإنشاء",
     "appName": "XO حضانة",
@@ -684,6 +693,7 @@
       }
     },
     "payments": {
+      "searchPlaceholder": "الحضانة أو ولي الأمر أو رقم الفاتورة",
       "title": "المدفوعات",
       "subtitle": "كل مدفوعات أولياء الأمور عبر جميع الحضانات — من دفع، ومن قبِل الدفعة، ومتى.",
       "emptyTitle": "لا توجد مدفوعات بعد",
@@ -892,7 +902,7 @@
       "saveError": "تعذر حفظ الملف الشخصي. حاول مرة أخرى.",
       "loadError": "تعذر تحميل الملف الشخصي."
     },
-    "nav": {
+    "nav": {
 
       "inbox": "صندوق الوارد",
       "scanner": "ماسح QR",
@@ -951,6 +961,21 @@
     },
     "classes": {
       "list": {
+        "showLabel": "عرض",
+        "showAll": "كل الفصول",
+        "stats": {
+          "classes": "الفصول",
+          "capacityHelper": "من {{capacity}} مقعدًا",
+          "overCapacity": "فوق السعة",
+          "noLead": "بدون معلم رئيسي"
+        },
+        "resultsCount_zero": "لا توجد فصول",
+        "resultsCount_one": "فصل واحد",
+        "resultsCount_two": "فصلان",
+        "resultsCount_few": "{{count}} فصول",
+        "resultsCount_many": "{{count}} فصلًا",
+        "resultsCount_other": "{{count}} فصل",
+        "overBy": "زيادة {{count}}",
         "title": "الفصول",
         "subtitle": "أنشئ الفصول، عيّن الطاقم، وأدر القوائم.",
         "searchPlaceholder": "ابحث بالاسم أو الفئة العمرية أو رقم الغرفة",
@@ -1156,6 +1181,8 @@
       "statPendingApprovalsHint": "طلبات تسجيل {{applications}} · مدفوعات {{payments}} · وسائط {{media}}"
     },
     "attendance": {
+      "dayLabel": "اليوم",
+      "classLabel": "الفصل",
       "title": "الحضور اليوم",
       "titlePast": "الحضور",
       "description": "الأطفال الذين سجّلوا حضورًا في روضتك.",
@@ -1560,6 +1587,8 @@
       "avatarSaved": "تم تحديث الصورة."
     },
     "invoices": {
+      "subtitle": "كل الفواتير والمدفوعات والمبالغ المستحقة في حضانتك.",
+      "dateFieldLabel": "التاريخ حسب",
       "title": "الفواتير",
       "emptyTitle": "لا توجد فواتير بعد",
       "emptyDescription": "تُنشأ الفواتير تلقائيًا للفعاليات، أو يمكنك إنشاء فواتير يدوية."
@@ -2196,6 +2225,12 @@
     "noMatch": "لا توجد باقات مطابقة لهذه الفلاتر."
   },
   "deals": {
+    "resultsCount_zero": "لا توجد عروض",
+    "resultsCount_one": "عرض واحد",
+    "resultsCount_two": "عرضان",
+    "resultsCount_few": "{{count}} عروض",
+    "resultsCount_many": "{{count}} عرضًا",
+    "resultsCount_other": "{{count}} عرض",
     "title": "العروض والخصومات",
     "subtitle": "أنشئ عروضًا لفترة محددة، ثم اربط العرض بباقة رسوم دراسية أو باقة ساعات إضافية من شاشة تعديلها.",
     "newDeal": "عرض جديد",
@@ -3230,11 +3265,33 @@
     "atNursery": "داخل الحضانة",
     "homeTitle": "الرئيسية",
     "dashboard": {
+      "unread": "غير مقروء",
+      "admissionCycle": {
+        "title": "دورة القبول",
+        "empty": "ابدأ طلبًا لمتابعة حالة المراجعة واختيار الباقة ودفع رسوم التسجيل.",
+        "contact": "تواصل مع الحضانة",
+        "reviewInvoice": "مراجعة الفاتورة",
+        "choosePackage": "اختر الباقة",
+        "openApplication": "فتح الطلب",
+        "status": "الطلب"
+      },
       "stats": {
+        "outstanding": "المستحق",
+        "unread": "غير مقروء",
+        "paymentsInReview": "مدفوعات قيد المراجعة",
         "children": "الأطفال",
         "applications": "الطلبات"
       },
       "analytics": {
+        "title": "نظرة أسبوعية على العائلة",
+        "openReports": "فتح التقارير",
+        "openAttendance": "تفاصيل الحضور",
+        "monthRate": "الحضور خلال 30 يومًا",
+        "presentDays": "أيام الحضور",
+        "absentDays": "أيام الغياب",
+        "emptyChart": "سيظهر مخطط الحضور بعد أول تسجيل حضور.",
+        "weekTitle": "هذا الأسبوع",
+        "childWeek": "{{present}} حضور، {{absent}} غياب هذا الأسبوع",
         "present": "حاضر",
         "absent": "غائب"
       },
@@ -3694,6 +3751,7 @@
       "emptyDescription": "لا توجد فواتير بعد."
     },
     "financial": {
+      "nextDueLabel": "الدفعة القادمة",
       "title": "الملخص المالي",
       "overdueAlert": "متأخر",
       "totalOutstanding": "إجمالي المستحق: {{amount}} جنيه",
@@ -3704,6 +3762,32 @@
       "generalInvoices": "عامة / عائلية"
     },
     "attendanceHistory": {
+      "partial": "حضور جزئي",
+      "last7": "آخر 7 أيام",
+      "last14": "آخر 14 يومًا",
+      "last30": "آخر 30 يومًا",
+      "period": "الفترة",
+      "attendanceRate": "نسبة الحضور",
+      "avgCheckInShort": "متوسط وقت الحضور",
+      "latePickupCount": "استلام متأخر",
+      "chartTitle": "اتجاه الحضور",
+      "chartSubtitle": "أيام الحضور والحضور الجزئي والغياب خلال آخر {{days}} يومًا.",
+      "breakdownTitle": "التوزيع",
+      "schoolDaysCount_zero": "لا توجد أيام دراسية",
+      "schoolDaysCount_one": "يوم دراسي واحد",
+      "schoolDaysCount_two": "يومان دراسيان",
+      "schoolDaysCount_few": "{{count}} أيام دراسية",
+      "schoolDaysCount_many": "{{count}} يومًا دراسيًا",
+      "schoolDaysCount_other": "{{count}} يوم دراسي",
+      "noChartData": "لا توجد سجلات بعد",
+      "recordsTitle": "سجلات الحضور",
+      "filteredCount_zero": "لا توجد سجلات بعد التصفية",
+      "filteredCount_one": "سجل واحد بعد التصفية",
+      "filteredCount_two": "سجلان بعد التصفية",
+      "filteredCount_few": "{{count}} سجلات بعد التصفية",
+      "filteredCount_many": "{{count}} سجلًا بعد التصفية",
+      "filteredCount_other": "{{count}} سجل بعد التصفية",
+      "noFilteredRecords": "لا توجد سجلات حضور تطابق عوامل التصفية هذه.",
       "title": "سجل الحضور",
       "filterChild": "الطفل",
       "monthlySummary": "{{month}}: {{rate}}٪ حضور ({{present}} / {{total}} أيام دراسية بتسجيل دخول)",
@@ -3747,6 +3831,20 @@
       }
     },
     "reports": {
+      "eyebrow": "التحديثات اليومية",
+      "subtitle": "الوجبات والقيلولة والمزاج والأنشطة وملاحظات المعلمة في مكان واحد.",
+      "last7Days": "آخر 7 أيام",
+      "currentMonth": "الشهر الحالي",
+      "newUpdates": "تقارير جديدة منشورة",
+      "childrenCovered": "الأطفال المشمولون",
+      "trendTitle": "نشاط التقارير",
+      "trendSubtitle": "التقارير اليومية المنشورة خلال الأسبوع الماضي.",
+      "noWeekReports": "لم تُنشر أي تقارير خلال آخر 7 أيام.",
+      "moodBreakdown": "توزيع المزاج",
+      "moodBreakdownSubtitle": "حالات المزاج من التقارير المنشورة.",
+      "noMoodData": "يظهر مخطط المزاج بعد نشر التقارير.",
+      "listTitle": "سجل التقارير",
+      "latestFrom": "الأحدث من {{teacher}}",
       "title": "التقارير اليومية",
       "allChildren": "كل الأطفال",
       "sortNewest": "الأحدث أولاً",
@@ -4328,6 +4426,16 @@
     "filterStatus": "الحالة",
     "filterStatusAll": "كل الحالات",
     "directory": {
+      "stats": {
+        "inactive": "موظفون غير نشطين",
+        "teaching": "الهيئة التعليمية"
+      },
+      "resultsCount_zero": "لا يوجد موظفون",
+      "resultsCount_one": "موظف واحد",
+      "resultsCount_two": "موظفان",
+      "resultsCount_few": "{{count}} موظفين",
+      "resultsCount_many": "{{count}} موظفًا",
+      "resultsCount_other": "{{count}} موظف",
       "title": "دليل الموظفين",
       "subtitle": "المعلمون والإداريون والتشغيل في حضانتك.",
       "exportCsv": "تصدير CSV",
@@ -4337,6 +4445,7 @@
       "exportError": "تعذر تصدير الملف.",
       "exportErrorAr": "Could not export CSV.",
       "col": {
+        "nursery": "الحضانة",
         "photo": "صورة",
         "name": "الاسم",
         "position": "الوظيفة",
@@ -4461,6 +4570,17 @@
     }
   },
   "admissions": {
+    "inquiriesSubtitle": "الأسر التي استفسرت عن الحضانة، من أول تواصل حتى التسجيل.",
+    "resultsCount_zero": "لا توجد استفسارات",
+    "resultsCount_one": "استفسار واحد",
+    "resultsCount_two": "استفساران",
+    "resultsCount_few": "{{count}} استفسارات",
+    "resultsCount_many": "{{count}} استفسارًا",
+    "resultsCount_other": "{{count}} استفسار",
+    "viewLabel": "طريقة العرض",
+    "assignedLabel": "مسند إلى",
+    "anyone": "أي شخص",
+    "receivedAt": "تاريخ الاستلام",
     "inquiriesTitle": "استفسارات القبول",
     "waitlistTitle": "إدارة قائمة الانتظار",
     "kanban": "كانبان",
@@ -4531,6 +4651,17 @@
     }
   },
   "applications": {
+    "adminListSubtitle": "راجع طلبات الأسر وتحقق من المستندات ووافق على التسجيل.",
+    "openApplications": "الطلبات المفتوحة",
+    "allApplications": "كل الطلبات",
+    "avgReviewHoursValue": "{{hours}} ساعة",
+    "notSubmitted": "لم يُرسل بعد",
+    "resultsCount_zero": "لا توجد طلبات",
+    "resultsCount_one": "طلب واحد",
+    "resultsCount_two": "طلبان",
+    "resultsCount_few": "{{count}} طلبات",
+    "resultsCount_many": "{{count}} طلبًا",
+    "resultsCount_other": "{{count}} طلب",
     "createApplication": "إضافة طفل",
     "parentFormTitle": "نموذج التقديم",
     "adminListTitle": "طلبات التسجيل",
@@ -5431,6 +5562,12 @@
       "doneManualRefund": "تم الإعفاء من الرسوم. الفاتورة كانت مدفوعة، لذا يرجى رد المبلغ لولي الأمر يدويًا."
     },
     "logs": {
+      "resultsCount_zero": "لا توجد سجلات",
+      "resultsCount_one": "سجل واحد",
+      "resultsCount_two": "سجلان",
+      "resultsCount_few": "{{count}} سجلات",
+      "resultsCount_many": "{{count}} سجلًا",
+      "resultsCount_other": "{{count}} سجل",
       "open": "سجلات الحضور",
       "title": "سجلات الحضور",
       "subtitle": "كل حضور واستلام: من قام بالمسح، وبأي طريقة، ومن استلم الطفل، ورسوم الساعات الإضافية.",
@@ -5755,9 +5892,17 @@
       "description": "سيتوقف رمز QR الحالي والرمز الاحتياطي المكوّن من 6 أرقام، بما في ذلك أي نسخ منسوخة أو مطبوعة، عن العمل فورًا. تابع فقط إذا كنت تستطيع مشاركة الرموز الجديدة.",
       "confirm": "تحديث وإلغاء الرمز القديم"
     },
-    "showToken": "إظهار الرمز المكوّن من 6 أرقام",
-    "hideToken": "إخفاء الرمز المكوّن من 6 أرقام",
-    "copyToken": "نسخ الرمز المكوّن من 6 أرقام",
+    "card": {
+      "scanHint": "اعرض هذا الرمز عند البوابة عند التسليم والاستلام.",
+      "backupTitle": "الرمز الاحتياطي المكوّن من 6 أرقام",
+      "backupHint": "أدخله يدويًا في ماسح الحضانة إذا تعذر على الكاميرا قراءة رمز QR.",
+      "showCode": "إظهار الرمز",
+      "hideCode": "إخفاء الرمز",
+      "copyCode": "نسخ الرمز",
+      "codeHidden": "الرمز مخفي",
+      "revokeHint": "فقدت هاتفًا أو شاركت نسخة قديمة؟ التحديث يلغي كل نسخ رمز QR هذا ورمزه الاحتياطي.",
+      "printTitle": "رمز QR للاستلام"
+    },
     "tokenCopied": "تم نسخ الرمز المكوّن من 6 أرقام. أدخله يدويًا في ماسح الحضانة إذا تعذر على الكاميرا قراءته.",
     "copyTokenFailed": "تعذر نسخ الرمز. أظهره هنا وحدده لنسخه.",
     "refreshManualCode": "إنشاء رمز جديد",
@@ -5792,8 +5937,6 @@
       "subtitle": "اعرض هذا الكود عند التسليم والاستلام.",
       "expiresInDaysFull": "تنتهي صلاحية رمز QR خلال {{count}} يوم/أيام.",
       "alwaysAvailable": "متاح دائمًا",
-      "alwaysAvailableHint": "اعرض هذا الرمز عند البوابة. حدّثه إذا فقدت هاتفك أو أردت إلغاء نسخة قديمة.",
-      "manualHint": "إذا تعذرت قراءة QR بالكاميرا، انسخ هذا الرمز المكوّن من 6 أرقام أو أظهره وأدخله يدويًا في ماسح الحضانة. يتجدد كل 5 دقائق.",
       "tabLive": "الحالي",
       "tabHistory": "السجل",
       "loadErrorTitle": "تعذر تحميل الأطفال",

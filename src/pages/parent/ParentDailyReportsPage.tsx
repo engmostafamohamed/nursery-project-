@@ -15,12 +15,14 @@ import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { ParentReportDetailModal } from '@/components/parent/ParentReportDetailModal';
+import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Input } from '@/components/ui/input';
 import { Pagination } from '@/components/ui/Pagination';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { StatTile } from '@/components/ui/StatTile';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { usePagination } from '@/hooks/usePagination';
 import { useParentReports, type ParentReportItem } from '@/hooks/useParentReports';
@@ -31,11 +33,9 @@ import {
   formatMoodLabel,
   formatNapQuality,
 } from '@/lib/dailyReportDisplay';
+import { CHART_CURSOR, CHART_GRID_STROKE, CHART_SERIES, CHART_TOOLTIP_STYLE, chartColor, chartDirection } from '@/lib/chartTheme';
 import { formatDateTime } from '@/lib/datetime';
 import { supabase } from '@/lib/supabase';
-import { cn } from '@/lib/utils';
-
-const MOOD_COLORS = ['#5b5fd6', '#22a879', '#d98613', '#df477f', '#64748b'];
 
 function formatDateLabel(value: string, locale: string, options?: Intl.DateTimeFormatOptions) {
   if (!value) return '-';
@@ -62,36 +62,14 @@ function reportSummary(t: ReturnType<typeof useTranslation>['t'], report: Parent
   return parts.join(' • ');
 }
 
-function StatCard({
-  icon,
-  label,
-  value,
-  tone = 'primary',
-  helper,
-}: {
-  icon: string;
-  label: string;
-  value: string | number;
-  tone?: 'primary' | 'green' | 'amber' | 'pink';
-  helper?: string;
-}) {
-  const toneClass = {
-    primary: 'bg-primary text-on-primary',
-    green: 'bg-[#22a879] text-white',
-    amber: 'bg-[#d98613] text-white',
-    pink: 'bg-[#df477f] text-white',
-  }[tone];
-
+function ReportFact({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
-    <div className="flex min-h-[104px] items-center gap-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 shadow-sm">
-      <span className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-xl shadow-sm', toneClass)}>
-        <MaterialSymbol name={icon} size="text-xl" />
-      </span>
-      <div className="min-w-0">
-        <p className="text-xs font-semibold uppercase text-on-surface-variant">{label}</p>
-        <p className="mt-1 text-2xl font-bold text-on-surface">{value}</p>
-        {helper ? <p className="mt-1 truncate text-xs text-on-surface-variant">{helper}</p> : null}
-      </div>
+    <div className="min-w-0 rounded-lg bg-surface-container-lowest px-3 py-2">
+      <p className="flex items-center gap-1 text-[11px] font-semibold text-on-surface-variant">
+        <MaterialSymbol name={icon} size="text-sm" className="text-primary" />
+        {label}
+      </p>
+      <p className="mt-1 truncate text-sm font-semibold text-on-surface" title={value}>{value}</p>
     </div>
   );
 }
@@ -109,67 +87,58 @@ function ReportCard({
   const mood = formatMoodLabel(t, report.mood.mood);
   const summary = reportSummary(t, report);
   const notes = report.specialNotes?.trim();
+  const napMinutes = Number(report.nap.duration_minutes ?? 0);
+  const firstActivity = (
+    (report.activities.tags as string[] | undefined) ??
+    (report.activities.participated_in as string[] | undefined) ??
+    []
+  )
+    .slice(0, 1)
+    .map((tag) => formatActivityTag(t, tag))
+    .join(', ');
 
   return (
-    <article className="group overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md">
-      <button type="button" className="block w-full p-4 text-left" onClick={() => onOpen(report)}>
-        <div className="flex items-start justify-between gap-4">
+    <article className="group flex overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm transition hover:border-primary/40 hover:shadow-md">
+      <button type="button" className="flex w-full flex-col p-4 text-start outline-none focus-visible:bg-surface-container-lowest" onClick={() => onOpen(report)}>
+        <div className="flex w-full items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-container text-primary">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
               <MaterialSymbol name="assignment" size="text-xl" />
             </span>
             <div className="min-w-0">
-              <p className="truncate text-base font-semibold text-on-surface">{report.childName}</p>
-              <p className="mt-1 text-xs text-on-surface-variant">
-                {formatDateLabel(report.reportDate, locale)} • {report.teacherName}
+              <p className="truncate text-base font-semibold text-on-surface" title={report.childName}>{report.childName}</p>
+              <p className="mt-0.5 text-xs text-on-surface-variant">
+                {formatDateLabel(report.reportDate, locale)} · {report.teacherName}
               </p>
             </div>
           </div>
-          <span className="rounded-full bg-secondary-container px-3 py-1 text-xs font-semibold text-secondary">
-            {mood}
-          </span>
+          {mood ? (
+            <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">{mood}</span>
+          ) : null}
         </div>
 
-        <div className="mt-4 grid gap-2 sm:grid-cols-3">
-          <div className="rounded-xl bg-surface-container px-3 py-2">
-            <p className="text-[11px] font-semibold uppercase text-on-surface-variant">{t('parent.reports.sections.meals')}</p>
-            <p className="mt-1 truncate text-sm font-semibold text-on-surface">
-              {formatMealSlot(t, report.meals.lunch as Record<string, unknown> | undefined)}
-            </p>
-          </div>
-          <div className="rounded-xl bg-surface-container px-3 py-2">
-            <p className="text-[11px] font-semibold uppercase text-on-surface-variant">{t('parent.reports.sections.nap')}</p>
-            <p className="mt-1 truncate text-sm font-semibold text-on-surface">
-              {Number(report.nap.duration_minutes ?? 0)
-                ? `${Number(report.nap.duration_minutes)} ${t('parent.reports.minutes')}`
-                : formatNapQuality(t, report.nap.quality)}
-            </p>
-          </div>
-          <div className="rounded-xl bg-surface-container px-3 py-2">
-            <p className="text-[11px] font-semibold uppercase text-on-surface-variant">
-              {t('parent.reports.sections.activities')}
-            </p>
-            <p className="mt-1 truncate text-sm font-semibold text-on-surface">
-              {(
-                (report.activities.tags as string[] | undefined) ??
-                (report.activities.participated_in as string[] | undefined) ??
-                []
-              )
-                .slice(0, 1)
-                .map((tag) => formatActivityTag(t, tag))
-                .join(', ') || '-'}
-            </p>
-          </div>
+        <div className="mt-4 grid w-full grid-cols-3 gap-2">
+          <ReportFact
+            icon="restaurant"
+            label={t('parent.reports.sections.meals')}
+            value={formatMealSlot(t, report.meals.lunch as Record<string, unknown> | undefined) || '-'}
+          />
+          <ReportFact
+            icon="bedtime"
+            label={t('parent.reports.sections.nap')}
+            value={(napMinutes ? `${napMinutes} ${t('parent.reports.minutes')}` : formatNapQuality(t, report.nap.quality)) || '-'}
+          />
+          <ReportFact icon="toys" label={t('parent.reports.sections.activities')} value={firstActivity || '-'} />
         </div>
 
-        <p className="mt-4 line-clamp-2 text-sm text-on-surface-variant">{notes || summary}</p>
-        <div className="mt-4 flex items-center justify-between border-t border-outline-variant pt-3">
+        <p className="mt-3 line-clamp-2 w-full flex-1 text-sm text-on-surface-variant">{notes || summary}</p>
+        <div className="mt-3 flex w-full items-center justify-between gap-3 border-t border-outline-variant pt-3">
           <p className="text-xs text-on-surface-variant">
             {report.publishedAt ? formatDateTime(report.publishedAt) : formatDateLabel(report.reportDate, locale)}
           </p>
-          <span className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
+          <span className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-primary">
             {t('parent.reports.viewFull')}
-            <MaterialSymbol name="chevron_right" size="text-base" className="transition group-hover:translate-x-0.5" />
+            <MaterialSymbol name="chevron_right" size="text-base" className="transition group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5" />
           </span>
         </div>
       </button>
@@ -265,23 +234,34 @@ export function ParentDailyReportsPage() {
     return [...counts.entries()].map(([name, value]) => ({ name, value }));
   }, [reports.reports, t]);
 
+  const chart = chartDirection(i18n.dir() === 'rtl', -20);
+  const weekReportCount = chartRows.reduce((sum, day) => sum + day.reports, 0);
+  const moodTotal = moodRows.reduce((sum, row) => sum + row.value, 0);
+  const filtersActive = Boolean(childId || fromDate || toDate || sort !== 'newest');
+  const clearFilters = () => {
+    setChildId('');
+    setFromDate('');
+    setToDate('');
+    setSort('newest');
+  };
+
   const latestReport = reports.reports[0];
   const uniqueChildrenWithReports = new Set(reports.reports.map((report) => report.childId)).size;
   const pager = usePagination(reports.reports, 6, `${childId}|${fromDate}|${toDate}|${sort}|${reports.reports.length}`);
 
   return (
-    <div className="w-full max-w-none space-y-6 pb-28">
-      <section className="overflow-hidden rounded-3xl border border-outline-variant bg-surface-container-lowest shadow-sm">
-        <div className="flex flex-col gap-4 border-b border-outline-variant bg-surface-container-low p-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-center gap-4">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-on-primary shadow-lg shadow-primary/20">
+    <div className="w-full max-w-none space-y-5 pb-28">
+      <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
+        <div className="flex flex-col gap-4 bg-surface-container-lowest p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-md">
               <MaterialSymbol name="assignment" size="text-2xl" />
             </span>
             <div className="min-w-0">
-              <p className="text-xs font-bold uppercase tracking-wide text-primary">
+              <p className="text-xs font-semibold uppercase text-primary">
                 {t('parent.reports.eyebrow', { defaultValue: 'Daily updates' })}
               </p>
-              <h1 className="truncate text-2xl font-bold text-on-surface">{t('parent.reports.title')}</h1>
+              <h1 className="text-2xl font-bold leading-tight text-on-surface sm:text-3xl">{t('parent.reports.title')}</h1>
               <p className="mt-1 text-sm text-on-surface-variant">
                 {t('parent.reports.subtitle', {
                   defaultValue: 'Meals, naps, mood, activities, and teacher notes in one place.',
@@ -289,53 +269,51 @@ export function ParentDailyReportsPage() {
               </p>
             </div>
           </div>
-          <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest px-4 py-3">
-            <p className="text-xs font-semibold uppercase text-on-surface-variant">
-              {t('parent.reports.stats.lastReport')}
-            </p>
-            <p className="mt-1 text-sm font-bold text-on-surface">
-              {latestReport ? formatDateLabel(latestReport.reportDate, i18n.language) : '-'}
-            </p>
+          <div className="flex w-fit shrink-0 items-center gap-2 rounded-lg border border-outline-variant bg-surface px-3 py-2">
+            <MaterialSymbol name="event" size="text-lg" className="text-primary" />
+            <div>
+              <p className="text-[11px] font-semibold text-on-surface-variant">{t('parent.reports.stats.lastReport')}</p>
+              <p className="text-sm font-bold text-on-surface">
+                {latestReport ? formatDateLabel(latestReport.reportDate, i18n.language) : '-'}
+              </p>
+            </div>
           </div>
         </div>
 
-        <div className="grid gap-3 p-5 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard
+        <div className="grid grid-cols-2 gap-3 border-t border-outline-variant p-4 sm:p-5 xl:grid-cols-4">
+          <StatTile
             icon="calendar_month"
             label={t('parent.reports.stats.thisWeek')}
             value={reports.stats.thisWeek}
             helper={t('parent.reports.last7Days', { defaultValue: 'Last 7 days' })}
           />
-          <StatCard
+          <StatTile
             icon="event_note"
             label={t('parent.reports.stats.thisMonth')}
             value={reports.stats.thisMonth}
-            tone="green"
+            tone="success"
             helper={t('parent.reports.currentMonth', { defaultValue: 'Current month' })}
           />
-          <StatCard
+          <StatTile
             icon="notifications"
             label={t('parent.dashboard.unread', { defaultValue: 'Unread' })}
             value={reports.unreadCount}
-            tone="amber"
+            tone={reports.unreadCount > 0 ? 'warning' : 'neutral'}
             helper={t('parent.reports.newUpdates', { defaultValue: 'New published reports' })}
           />
-          <StatCard
+          <StatTile
             icon="child_care"
             label={t('parent.reports.childrenCovered', { defaultValue: 'Children covered' })}
             value={uniqueChildrenWithReports || reports.children.length}
-            tone="pink"
             helper={latestReport?.childName ?? t('parent.reports.allChildren')}
           />
         </div>
       </section>
 
-      <section className="rounded-3xl border border-outline-variant bg-surface-container-lowest p-4 shadow-sm">
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(180px,0.75fr)]">
-          <label className="space-y-1">
-            <span className="text-xs font-semibold uppercase text-on-surface-variant">
-              {t('common.child', { defaultValue: 'Child' })}
-            </span>
+      <section className="rounded-xl border border-outline-variant bg-surface p-4 shadow-sm sm:p-5">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)_auto] lg:items-end">
+          <label className="min-w-0 space-y-1">
+            <span className="block text-xs font-semibold text-on-surface-variant">{t('common.child', { defaultValue: 'Child' })}</span>
             <Select value={childId} onChange={(event) => setChildId(event.target.value)}>
               <option value="">{t('parent.reports.allChildren')}</option>
               {reports.children.map((child) => (
@@ -345,104 +323,112 @@ export function ParentDailyReportsPage() {
               ))}
             </Select>
           </label>
-          <label className="space-y-1">
-            <span className="text-xs font-semibold uppercase text-on-surface-variant">
-              {t('common.fromDate', { defaultValue: 'From date' })}
-            </span>
-            <Input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} />
+          <label className="min-w-0 space-y-1">
+            <span className="block text-xs font-semibold text-on-surface-variant">{t('common.fromDate', { defaultValue: 'From date' })}</span>
+            <Input type="date" value={fromDate} max={toDate || undefined} onChange={(event) => setFromDate(event.target.value)} />
           </label>
-          <label className="space-y-1">
-            <span className="text-xs font-semibold uppercase text-on-surface-variant">
-              {t('common.toDate', { defaultValue: 'To date' })}
-            </span>
-            <Input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} />
+          <label className="min-w-0 space-y-1">
+            <span className="block text-xs font-semibold text-on-surface-variant">{t('common.toDate', { defaultValue: 'To date' })}</span>
+            <Input type="date" value={toDate} min={fromDate || undefined} onChange={(event) => setToDate(event.target.value)} />
           </label>
-          <label className="space-y-1">
-            <span className="text-xs font-semibold uppercase text-on-surface-variant">{t('common.sort', { defaultValue: 'Sort' })}</span>
+          <label className="min-w-0 space-y-1">
+            <span className="block text-xs font-semibold text-on-surface-variant">{t('common.sort', { defaultValue: 'Sort' })}</span>
             <Select value={sort} onChange={(event) => setSort(event.target.value as 'newest' | 'oldest')}>
               <option value="newest">{t('parent.reports.sortNewest')}</option>
               <option value="oldest">{t('parent.reports.sortOldest')}</option>
             </Select>
           </label>
+          <Button type="button" variant="ghost" className="w-fit" onClick={clearFilters} disabled={!filtersActive}>
+            <MaterialSymbol name="filter_alt_off" size="text-base" className="me-1" />
+            {t('common.clearFilters')}
+          </Button>
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(360px,0.8fr)]">
-        <div className="rounded-3xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-bold text-on-surface">
-                {t('parent.reports.trendTitle', { defaultValue: 'Report activity' })}
-              </h2>
-              <p className="text-sm text-on-surface-variant">
-                {t('parent.reports.trendSubtitle', { defaultValue: 'Published daily reports across the last week.' })}
-              </p>
-            </div>
-          </div>
-          <div className="h-64 min-w-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartRows} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--outline-variant))" />
-                <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={12} />
-                <YAxis allowDecimals={false} tickLine={false} axisLine={false} fontSize={12} />
-                <Tooltip
-                  cursor={{ fill: 'hsl(var(--surface-container))' }}
-                  contentStyle={{ borderRadius: 12, border: '1px solid hsl(var(--outline-variant))' }}
-                />
-                <Bar dataKey="reports" fill="#5b5fd6" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="flex min-w-0 flex-col rounded-xl border border-outline-variant bg-surface p-4 shadow-sm sm:p-5">
+          <h2 className="text-base font-semibold text-on-surface">
+            {t('parent.reports.trendTitle', { defaultValue: 'Report activity' })}
+          </h2>
+          <p className="mt-0.5 text-xs text-on-surface-variant">
+            {t('parent.reports.trendSubtitle', { defaultValue: 'Published daily reports across the last week.' })}
+          </p>
+          <div className="mt-4 h-64 min-w-0 xl:h-auto xl:min-h-64 xl:flex-1">
+            {reports.isLoading ? (
+              <Skeleton className="h-full w-full" />
+            ) : weekReportCount === 0 ? (
+              <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-outline-variant px-4 text-center text-sm text-on-surface-variant">
+                {t('parent.reports.noWeekReports')}
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartRows} margin={chart.margin}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_GRID_STROKE} />
+                  <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={12} {...chart.xAxis} />
+                  <YAxis allowDecimals={false} tickLine={false} axisLine={false} fontSize={12} {...chart.yAxis} />
+                  <Tooltip cursor={CHART_CURSOR} contentStyle={CHART_TOOLTIP_STYLE} />
+                  <Bar dataKey="reports" name={t('parent.reports.title')} fill={chartColor('primary')} radius={[6, 6, 0, 0]} maxBarSize={48} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
 
-        <div className="rounded-3xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm">
-          <h2 className="text-lg font-bold text-on-surface">
+        <div className="rounded-xl border border-outline-variant bg-surface p-4 shadow-sm sm:p-5">
+          <h2 className="text-base font-semibold text-on-surface">
             {t('parent.reports.moodBreakdown', { defaultValue: 'Mood breakdown' })}
           </h2>
-          <p className="text-sm text-on-surface-variant">
+          <p className="mt-0.5 text-xs text-on-surface-variant">
             {t('parent.reports.moodBreakdownSubtitle', { defaultValue: 'Mood labels from published reports.' })}
           </p>
           {moodRows.length ? (
-            <div className="mt-4 grid gap-4 sm:grid-cols-[180px_minmax(0,1fr)] xl:grid-cols-1">
-              <div className="h-44">
+            <div className="mt-4 grid gap-4 sm:grid-cols-[176px_minmax(0,1fr)] sm:items-center xl:grid-cols-1">
+              <div className="relative mx-auto h-44 w-44">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={moodRows} dataKey="value" nameKey="name" innerRadius={44} outerRadius={70} paddingAngle={3}>
+                    <Pie data={moodRows} dataKey="value" nameKey="name" innerRadius={56} outerRadius={80} paddingAngle={moodRows.length > 1 ? 3 : 0} stroke="none">
                       {moodRows.map((row, index) => (
-                        <Cell key={row.name} fill={MOOD_COLORS[index % MOOD_COLORS.length]} />
+                        <Cell key={row.name} fill={CHART_SERIES[index % CHART_SERIES.length]} />
                       ))}
                     </Pie>
-                    <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid hsl(var(--outline-variant))' }} />
+                    <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
                   </PieChart>
                 </ResponsiveContainer>
+                <span className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-2xl font-bold tabular-nums text-on-surface">{moodTotal}</span>
+                  <span className="text-xs text-on-surface-variant">{t('parent.reports.title')}</span>
+                </span>
               </div>
-              <div className="space-y-2">
+              <ul className="space-y-2">
                 {moodRows.map((row, index) => (
-                  <div key={row.name} className="flex items-center justify-between gap-3 rounded-xl bg-surface-container px-3 py-2">
+                  <li key={row.name} className="flex items-center justify-between gap-3 rounded-lg bg-surface-container-lowest px-3 py-2">
                     <span className="flex min-w-0 items-center gap-2 text-sm font-medium text-on-surface">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: MOOD_COLORS[index % MOOD_COLORS.length] }} />
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: CHART_SERIES[index % CHART_SERIES.length] }} aria-hidden />
                       <span className="truncate">{row.name}</span>
                     </span>
-                    <span className="text-sm font-bold text-on-surface">{row.value}</span>
-                  </div>
+                    <span className="shrink-0 text-sm font-bold tabular-nums text-on-surface">
+                      {row.value}
+                      <span className="ms-1 text-xs font-medium text-on-surface-variant">({Math.round((row.value / moodTotal) * 100)}%)</span>
+                    </span>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
           ) : (
-            <div className="mt-4 flex h-44 items-center justify-center rounded-2xl bg-surface-container text-sm text-on-surface-variant">
+            <div className="mt-4 flex h-44 items-center justify-center rounded-lg border border-dashed border-outline-variant px-4 text-center text-sm text-on-surface-variant">
               {t('parent.reports.noMoodData', { defaultValue: 'Mood chart appears after reports are published.' })}
             </div>
           )}
         </div>
       </section>
 
-      <section className="rounded-3xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm">
+      <section className="rounded-xl border border-outline-variant bg-surface p-4 shadow-sm sm:p-5">
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-lg font-bold text-on-surface">
+            <h2 className="text-base font-semibold text-on-surface">
               {t('parent.reports.listTitle', { defaultValue: 'Report timeline' })}
             </h2>
-            <p className="text-sm text-on-surface-variant">
+            <p className="mt-0.5 text-xs text-on-surface-variant">
               {t('common.paginationSummary', {
                 start: pager.startIndex,
                 end: pager.endIndex,
@@ -451,7 +437,7 @@ export function ParentDailyReportsPage() {
             </p>
           </div>
           {latestReport ? (
-            <p className="rounded-full bg-primary-container px-3 py-1 text-xs font-semibold text-primary">
+            <p className="w-fit rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
               {t('parent.reports.latestFrom', {
                 defaultValue: 'Latest from {{teacher}}',
                 teacher: latestReport.teacherName,
@@ -463,7 +449,7 @@ export function ParentDailyReportsPage() {
         {reports.isLoading ? (
           <div className="grid gap-3 lg:grid-cols-2">
             {Array.from({ length: 4 }, (_, index) => (
-              <Skeleton key={index} className="h-56 rounded-2xl" />
+              <Skeleton key={index} className="h-56 rounded-xl" />
             ))}
           </div>
         ) : !reports.reports.length ? (

@@ -6,9 +6,22 @@ import { toast } from 'sonner';
 
 import { dealDiscountLabel, localizedName } from '@/components/admin/settings/dealLabels';
 import { FormSection } from '@/components/admin/settings/FormSection';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  DataTable,
+  IconAction,
+  StatusPill,
+  TableCard,
+  TableEmpty,
+  TableLoading,
+  TablePagination,
+  TBody,
+  THead,
+  Td,
+  Th,
+  Tr,
+} from '@/components/ui/DataTable';
 import {
   Dialog,
   DialogContent,
@@ -17,15 +30,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { EmptyState } from '@/components/ui/EmptyState';
 import { FieldError, invalidFieldClass } from '@/components/ui/FieldError';
+import { FilterBar, SearchInput } from '@/components/ui/FilterBar';
+import { FilterField } from '@/components/ui/FilterField';
 import { FilterMenu } from '@/components/ui/FilterMenu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Select } from '@/components/ui/select';
+import { StatTile } from '@/components/ui/StatTile';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuthSession } from '@/hooks/useAuthSession';
+import { usePagination } from '@/hooks/usePagination';
 import { useTouchedFields } from '@/hooks/useTouchedFields';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import {
@@ -127,6 +145,7 @@ export function AdminDealsPage() {
   }, [rows, search, statusFilter, typeFilter, endsFrom, endsTo]);
 
   const hasActiveFilters = Boolean(search || statusFilter !== 'all' || typeFilter !== 'all' || endsFrom || endsTo);
+  const pager = usePagination(filteredRows, 10, `${search}|${statusFilter}|${typeFilter}|${endsFrom}|${endsTo}`);
   const clearFilters = () => {
     setSearch('');
     setStatusFilter('all');
@@ -197,211 +216,205 @@ export function AdminDealsPage() {
   const valueError = errorFor('discountValue');
   const endsError = errorFor('endsAt');
 
+  const liveCount = rows.filter((deal) => isDealCurrentlyActive(deal)).length;
+  const childrenUsing = rows.reduce((sum, deal) => sum + deal.children_count, 0);
+  const toggleStatus = (value: StatusFilter) => setStatusFilter((current) => (current === value ? 'all' : value));
+
   return (
-    <div className="space-y-6 p-4">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-on-surface">{t('deals.title')}</h1>
-          <p className="mt-1 max-w-2xl text-sm text-on-surface-variant">{t('deals.subtitle')}</p>
+    <div className="space-y-5 pb-8">
+      <PageHeader
+        icon="sell"
+        title={t('deals.title')}
+        description={t('deals.subtitle')}
+        actions={
+          <Button type="button" onClick={openCreate}>
+            <MaterialSymbol name="add" size="text-base" className="me-1" />
+            {t('deals.newDeal')}
+          </Button>
+        }
+      >
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <StatTile icon="sell" label={t('deals.title')} value={rows.length} onClick={clearFilters} active={!hasActiveFilters} />
+          <StatTile
+            icon="bolt"
+            label={t('deals.filters.liveOnly')}
+            value={liveCount}
+            tone="success"
+            onClick={() => toggleStatus('live')}
+            active={statusFilter === 'live'}
+          />
+          <StatTile
+            icon="pause_circle"
+            label={t('deals.filters.inactiveOrExpired')}
+            value={rows.length - liveCount}
+            tone="neutral"
+            onClick={() => toggleStatus('inactive')}
+            active={statusFilter === 'inactive'}
+          />
+          <StatTile icon="groups" label={t('deals.columns.children')} value={childrenUsing} />
         </div>
-        <Button type="button" onClick={openCreate}>
-          <MaterialSymbol name="sell" size="text-base" />
-          {t('deals.newDeal')}
-        </Button>
-      </header>
+      </PageHeader>
 
-      {query.isLoading ? (
-        <LoadingSkeleton />
-      ) : rows.length === 0 ? (
-        <EmptyState
-          icon="sell"
-          title={t('deals.emptyTitle')}
-          description={t('deals.emptyDescription')}
-          action={
-            <Button type="button" onClick={openCreate}>
-              <MaterialSymbol name="add" size="text-base" />
-              {t('deals.newDeal')}
-            </Button>
-          }
-        />
-      ) : (
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-end gap-3 rounded-xl border border-outline-variant bg-surface p-3 shadow-sm">
-            <div className="min-w-[180px] flex-1 space-y-1">
-              <Label className="text-xs font-semibold text-on-surface-variant">{t('packageFilters.search')}</Label>
-              <Input
-                className="h-11"
-                placeholder={t('deals.filters.searchPlaceholder')}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <FilterMenu<StatusFilter>
-              className="w-48"
-              label={t('packageFilters.status')}
-              icon="toggle_on"
-              value={statusFilter}
-              onChange={setStatusFilter}
-              options={[
-                { value: 'all', label: t('packageFilters.allStatuses') },
-                { value: 'live', label: t('deals.filters.liveOnly') },
-                { value: 'inactive', label: t('deals.filters.inactiveOrExpired') },
-              ]}
-            />
-            <FilterMenu<TypeFilter>
-              className="w-52"
-              label={t('deals.filters.type')}
-              icon="sell"
-              value={typeFilter}
-              onChange={setTypeFilter}
-              options={[
-                { value: 'all', label: t('packageFilters.allTypes') },
-                { value: 'percentage', label: t('deals.types.percentage') },
-                { value: 'fixed_amount', label: t('deals.types.fixed_amount') },
-              ]}
-            />
-            <div className="w-40 space-y-1">
-              <Label className="text-xs font-semibold text-on-surface-variant">{t('deals.filters.endsAfter')}</Label>
-              <Input className="h-11" type="date" value={endsFrom} onChange={(e) => setEndsFrom(e.target.value)} />
-            </div>
-            <div className="w-40 space-y-1">
-              <Label className="text-xs font-semibold text-on-surface-variant">{t('deals.filters.endsBefore')}</Label>
-              <Input className="h-11" type="date" value={endsTo} onChange={(e) => setEndsTo(e.target.value)} />
-            </div>
-            {hasActiveFilters ? (
-              <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
-                <MaterialSymbol name="close" size="text-base" />
-                {t('packageFilters.clear')}
+      <TableCard
+        title={t('deals.title')}
+        count={query.isLoading ? undefined : t('deals.resultsCount', { count: filteredRows.length })}
+        filters={
+          rows.length ? (
+            <FilterBar onClear={clearFilters} canClear={hasActiveFilters}>
+              <FilterField label={t('packageFilters.search')} className="sm:flex-[2]">
+                <SearchInput value={search} onChange={setSearch} placeholder={t('deals.filters.searchPlaceholder')} />
+              </FilterField>
+              <FilterField label={t('packageFilters.status')}>
+                <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}>
+                  <option value="all">{t('packageFilters.allStatuses')}</option>
+                  <option value="live">{t('deals.filters.liveOnly')}</option>
+                  <option value="inactive">{t('deals.filters.inactiveOrExpired')}</option>
+                </Select>
+              </FilterField>
+              <FilterField label={t('deals.filters.type')}>
+                <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as TypeFilter)}>
+                  <option value="all">{t('packageFilters.allTypes')}</option>
+                  <option value="percentage">{t('deals.types.percentage')}</option>
+                  <option value="fixed_amount">{t('deals.types.fixed_amount')}</option>
+                </Select>
+              </FilterField>
+              <FilterField label={t('deals.filters.endsAfter')}>
+                <Input type="date" value={endsFrom} max={endsTo || undefined} onChange={(e) => setEndsFrom(e.target.value)} />
+              </FilterField>
+              <FilterField label={t('deals.filters.endsBefore')}>
+                <Input type="date" value={endsTo} min={endsFrom || undefined} onChange={(e) => setEndsTo(e.target.value)} />
+              </FilterField>
+            </FilterBar>
+          ) : null
+        }
+        pagination={query.isLoading || !filteredRows.length ? null : <TablePagination pager={pager} />}
+      >
+        {query.isLoading ? (
+          <TableLoading />
+        ) : rows.length === 0 ? (
+          <TableEmpty
+            icon="sell"
+            title={t('deals.emptyTitle')}
+            description={t('deals.emptyDescription')}
+            action={
+              <Button type="button" onClick={openCreate}>
+                <MaterialSymbol name="add" size="text-base" className="me-1" />
+                {t('deals.newDeal')}
               </Button>
-            ) : null}
-          </div>
-
-          {filteredRows.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-outline-variant p-6 text-center text-sm text-on-surface-variant">
-              {t('deals.filters.noMatch')}
-            </p>
-          ) : (
-            <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[920px] text-sm">
-                  <thead className="bg-surface-container-lowest text-xs uppercase text-on-surface-variant">
-                    <tr>
-                      <th className="px-4 py-3 text-start font-semibold">{t('deals.columns.deal')}</th>
-                      <th className="px-4 py-3 text-start font-semibold">{t('deals.columns.discount')}</th>
-                      <th className="px-4 py-3 text-start font-semibold">{t('deals.columns.status')}</th>
-                      <th className="px-4 py-3 text-start font-semibold">{t('deals.columns.window')}</th>
-                      <th className="px-4 py-3 text-start font-semibold">{t('deals.columns.packages')}</th>
-                      <th className="px-4 py-3 text-start font-semibold">{t('deals.columns.children')}</th>
-                      <th className="px-4 py-3 text-end font-semibold">{t('deals.columns.actions')}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-outline-variant">
-                    {filteredRows.map((deal) => {
-                      const live = isDealCurrentlyActive(deal);
-                      const expanded = expandedIds.has(deal.id);
-                      const description = isAr ? deal.description_ar || deal.description_en : deal.description_en || deal.description_ar;
-                      return (
-                        <Fragment key={deal.id}>
-                          <tr className="bg-surface transition hover:bg-surface-container-lowest">
-                            <td className="max-w-[220px] px-4 py-4 align-top">
-                              <p className="truncate font-semibold text-on-surface">{localizedName(deal, isAr)}</p>
-                              {description ? <p className="mt-0.5 truncate text-xs text-on-surface-variant">{description}</p> : null}
-                            </td>
-                            <td className="px-4 py-4 align-top font-medium text-on-surface">{dealDiscountLabel(t, deal)}</td>
-                            <td className="px-4 py-4 align-top">
-                              <Badge variant={live ? 'success' : 'secondary'}>{live ? t('deals.state.live') : dealStateLabel(t, deal)}</Badge>
-                            </td>
-                            <td className="px-4 py-4 align-top text-xs text-on-surface-variant">
-                              {deal.starts_at ? (
-                                <>
-                                  {t('deals.windowFrom', { date: formatDateTime(deal.starts_at) })}
-                                  <br />
-                                </>
-                              ) : null}
-                              {deal.ends_at ? t('deals.windowUntil', { date: formatDateTime(deal.ends_at) }) : t('deals.state.noExpiry')}
-                            </td>
-                            <td className="px-4 py-4 align-top">
-                              {deal.assigned_packages.length === 0 ? (
-                                <span className="text-xs text-on-surface-variant">{t('deals.notAssigned')}</span>
-                              ) : (
-                                <div className="flex max-w-[220px] flex-wrap gap-1">
-                                  {deal.assigned_packages.map((p) => (
-                                    <Link
-                                      key={p.id}
-                                      to="/admin/packages"
-                                      title={t('deals.openPackages')}
-                                      className="inline-flex items-center gap-1 rounded-full border border-outline-variant bg-surface-container-lowest px-2 py-0.5 text-xs text-on-surface hover:border-primary hover:text-primary"
-                                    >
-                                      <MaterialSymbol name={p.kind === 'tuition' ? 'payments' : 'schedule'} size="text-xs" />
-                                      {isAr ? p.nameAr || p.nameEn : p.nameEn || p.nameAr}
-                                    </Link>
-                                  ))}
-                                </div>
-                              )}
-                            </td>
-                            <td className="px-4 py-4 align-top">
-                              {deal.children_count === 0 ? (
-                                <span className="text-xs text-on-surface-variant">0</span>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => toggleExpanded(deal.id)}
-                                  aria-expanded={expanded}
-                                  className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-xs font-medium text-primary hover:bg-primary/10"
+            }
+          />
+        ) : filteredRows.length === 0 ? (
+          <TableEmpty icon="search_off" title={t('deals.filters.noMatch')} />
+        ) : (
+          <DataTable minWidth={920}>
+            <THead>
+              <Th>{t('deals.columns.deal')}</Th>
+              <Th>{t('deals.columns.discount')}</Th>
+              <Th>{t('deals.columns.status')}</Th>
+              <Th>{t('deals.columns.window')}</Th>
+              <Th>{t('deals.columns.packages')}</Th>
+              <Th>{t('deals.columns.children')}</Th>
+              <Th align="end">{t('deals.columns.actions')}</Th>
+            </THead>
+            <TBody>
+              {pager.pageItems.map((deal) => {
+                const live = isDealCurrentlyActive(deal);
+                const expanded = expandedIds.has(deal.id);
+                const description = isAr ? deal.description_ar || deal.description_en : deal.description_en || deal.description_ar;
+                return (
+                  <Fragment key={deal.id}>
+                    <Tr>
+                      <Td className="max-w-[220px] align-top">
+                        <p className="truncate font-semibold text-on-surface">{localizedName(deal, isAr)}</p>
+                        {description ? <p className="mt-0.5 truncate text-xs text-on-surface-variant">{description}</p> : null}
+                      </Td>
+                      <Td className="align-top font-medium text-on-surface">{dealDiscountLabel(t, deal)}</Td>
+                      <Td className="align-top">
+                        <StatusPill tone={live ? 'success' : 'neutral'}>{live ? t('deals.state.live') : dealStateLabel(t, deal)}</StatusPill>
+                      </Td>
+                      <Td className="align-top text-xs text-on-surface-variant">
+                        {deal.starts_at ? (
+                          <>
+                            {t('deals.windowFrom', { date: formatDateTime(deal.starts_at) })}
+                            <br />
+                          </>
+                        ) : null}
+                        {deal.ends_at ? t('deals.windowUntil', { date: formatDateTime(deal.ends_at) }) : t('deals.state.noExpiry')}
+                      </Td>
+                      <Td className="align-top">
+                        {deal.assigned_packages.length === 0 ? (
+                          <span className="text-xs text-on-surface-variant">{t('deals.notAssigned')}</span>
+                        ) : (
+                          <div className="flex max-w-[220px] flex-wrap gap-1">
+                            {deal.assigned_packages.map((p) => (
+                              <Link
+                                key={p.id}
+                                to="/admin/packages"
+                                title={t('deals.openPackages')}
+                                className="inline-flex items-center gap-1 rounded-full border border-outline-variant bg-surface-container-lowest px-2 py-0.5 text-xs text-on-surface hover:border-primary hover:text-primary"
+                              >
+                                <MaterialSymbol name={p.kind === 'tuition' ? 'payments' : 'schedule'} size="text-xs" />
+                                {isAr ? p.nameAr || p.nameEn : p.nameEn || p.nameAr}
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+                      </Td>
+                      <Td className="align-top">
+                        {deal.children_count === 0 ? (
+                          <span className="text-xs text-on-surface-variant">0</span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => toggleExpanded(deal.id)}
+                            aria-expanded={expanded}
+                            className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-xs font-medium text-primary hover:bg-primary/10"
+                          >
+                            <MaterialSymbol name="groups" size="text-xs" />
+                            {deal.children_count}
+                            <MaterialSymbol name={expanded ? 'expand_less' : 'expand_more'} size="text-xs" />
+                          </button>
+                        )}
+                      </Td>
+                      <Td align="end" className="align-top">
+                        <div className="flex items-center justify-end gap-1">
+                          <IconAction icon="edit" label={`${t('common.edit')}: ${localizedName(deal, isAr)}`} onClick={() => openEdit(deal)} />
+                          <IconAction
+                            icon={deal.active ? 'toggle_on' : 'toggle_off'}
+                            label={`${deal.active ? t('packages.deactivate') : t('packages.activate')}: ${localizedName(deal, isAr)}`}
+                            onClick={() => void handleToggleActive(deal)}
+                            disabled={toggleActive.isPending}
+                          />
+                        </div>
+                      </Td>
+                    </Tr>
+                    {expanded ? (
+                      <tr className="bg-surface-container-lowest">
+                        <td colSpan={7} className="px-4 py-3">
+                          <p className="mb-1.5 text-xs font-semibold text-on-surface-variant">{t('deals.childrenUsing')}</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {deal.assigned_packages.flatMap((p) =>
+                              p.children.map((c) => (
+                                <span
+                                  key={`${p.id}-${c.id}`}
+                                  className="inline-flex items-center gap-1 rounded-full border border-outline-variant bg-surface px-2 py-0.5 text-xs text-on-surface"
                                 >
-                                  <MaterialSymbol name="groups" size="text-xs" />
-                                  {deal.children_count}
-                                  <MaterialSymbol name={expanded ? 'expand_less' : 'expand_more'} size="text-xs" />
-                                </button>
-                              )}
-                            </td>
-                            <td className="px-4 py-4 align-top">
-                              <div className="flex justify-end gap-2">
-                                <Button type="button" variant="outline" size="sm" onClick={() => openEdit(deal)}>
-                                  {t('common.edit')}
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  disabled={toggleActive.isPending}
-                                  onClick={() => void handleToggleActive(deal)}
-                                >
-                                  {deal.active ? t('packages.deactivate') : t('packages.activate')}
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                          {expanded ? (
-                            <tr className="bg-surface-container-lowest">
-                              <td colSpan={7} className="px-4 py-3">
-                                <p className="mb-1.5 text-xs font-semibold uppercase text-on-surface-variant">{t('deals.childrenUsing')}</p>
-                                <div className="flex flex-wrap gap-1.5">
-                                  {deal.assigned_packages.flatMap((p) =>
-                                    p.children.map((c) => (
-                                      <span
-                                        key={`${p.id}-${c.id}`}
-                                        className="inline-flex items-center gap-1 rounded-full border border-outline-variant bg-surface px-2 py-0.5 text-xs text-on-surface"
-                                      >
-                                        {isAr ? c.nameAr || c.nameEn : c.nameEn || c.nameAr}
-                                        <span className="text-on-surface-variant">· {isAr ? p.nameAr || p.nameEn : p.nameEn || p.nameAr}</span>
-                                      </span>
-                                    )),
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          ) : null}
-                        </Fragment>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
-        </div>
-      )}
+                                  {isAr ? c.nameAr || c.nameEn : c.nameEn || c.nameAr}
+                                  <span className="text-on-surface-variant">· {isAr ? p.nameAr || p.nameEn : p.nameEn || p.nameAr}</span>
+                                </span>
+                              )),
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ) : null}
+                  </Fragment>
+                );
+              })}
+            </TBody>
+          </DataTable>
+        )}
+      </TableCard>
 
       <Dialog open={dialogOpen} onOpenChange={(open) => !busy && setDialogOpen(open)}>
         <DialogContent className="max-w-2xl">

@@ -1,14 +1,37 @@
 import { useMemo, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
+import { ApplicationStatusBadge } from '@/components/applications/ApplicationStatusBadge';
 import { Button } from '@/components/ui/button';
-import { EmptyState } from '@/components/ui/EmptyState';
+import {
+  DataTable,
+  IconAction,
+  TableCard,
+  TableEmpty,
+  TableLoading,
+  TablePagination,
+  TBody,
+  THead,
+  Td,
+  Th,
+  Tr,
+} from '@/components/ui/DataTable';
+import { FilterBar, SearchInput } from '@/components/ui/FilterBar';
+import { FilterField } from '@/components/ui/FilterField';
 import { Input } from '@/components/ui/input';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Select } from '@/components/ui/select';
+import { StatTile } from '@/components/ui/StatTile';
 import { useActiveNurseryId } from '@/hooks/useActiveNurseryId';
 import { useApplications } from '@/hooks/useApplications';
+import { usePagination } from '@/hooks/usePagination';
 import { STEP_DATE_TIME } from '@/lib/admissionTimeline';
 import { formatDateTime } from '@/lib/datetime';
+
+const STATUSES = ['draft', 'submitted', 'under_review', 'documents_pending', 'approved', 'rejected'] as const;
+/** Decided applications leave the default "open" list. */
+const DECIDED = new Set(['approved', 'rejected']);
 
 /**
  * Two flows write applications with different shapes: the inquiry flow stores a flat
@@ -42,9 +65,10 @@ function shortApplicationId(id: unknown): string {
 export function AdminApplicationsPage() {
   const { t } = useTranslation();
   const location = useLocation();
+  const navigate = useNavigate();
   const { activeNurseryId } = useActiveNurseryId();
   const apps = useApplications({ nurseryId: activeNurseryId ?? undefined });
-  const [status, setStatus] = useState('all');
+  const [status, setStatus] = useState('open');
   const [search, setSearch] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
@@ -53,8 +77,9 @@ export function AdminApplicationsPage() {
     : '/admin/admissions';
 
   const rows = useMemo(() => apps.adminApplications.filter((r) => {
-    if (status === 'all' && ['approved', 'rejected'].includes(String(r.status))) return false;
-    if (status !== 'all' && String(r.status) !== status) return false;
+    const rowStatus = String(r.status);
+    if (status === 'open' && DECIDED.has(rowStatus)) return false;
+    if (status !== 'open' && status !== 'all' && rowStatus !== status) return false;
     if (from && String(r.created_at) < `${from}T00:00:00`) return false;
     if (to && String(r.created_at) > `${to}T23:59:59`) return false;
     const q = search.trim().toLowerCase();
@@ -69,62 +94,145 @@ export function AdminApplicationsPage() {
     ].join(' ').toLowerCase().includes(q);
   }), [apps.adminApplications, status, search, from, to]);
 
+  const openCount = useMemo(
+    () => apps.adminApplications.filter((r) => !DECIDED.has(String(r.status))).length,
+    [apps.adminApplications],
+  );
+  const filtersActive = status !== 'open' || Boolean(search.trim() || from || to);
+  const clearFilters = () => {
+    setStatus('open');
+    setSearch('');
+    setFrom('');
+    setTo('');
+  };
+
+  const pager = usePagination(rows, 10, `${status}|${from}|${to}|${search.trim().toLowerCase()}`);
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-lg font-semibold text-on-surface">{t('applications.adminListTitle')}</h1>
-        <Button asChild variant="outline" size="sm">
-          <Link to={`${admissionsBasePath}/inquiries`}>{t('admissions.inquiriesTitle')}</Link>
-        </Button>
-      </div>
-      <div className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3"><p className="text-xs">{t('applications.pendingReview')}</p><p className="text-lg font-bold">{apps.stats.pendingReview}</p></div>
-        <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3"><p className="text-xs">{t('applications.approvedThisMonth')}</p><p className="text-lg font-bold">{apps.stats.approvedThisMonth}</p></div>
-        <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3"><p className="text-xs">{t('applications.avgReviewTime')}</p><p className="text-lg font-bold">{apps.stats.avgReviewHours.toFixed(1)}h</p></div>
-      </div>
-      <div className="grid gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest p-3 md:grid-cols-4">
-        <select className="h-11 rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="all">{t('common.all')}</option>
-          {(['draft', 'submitted', 'under_review', 'documents_pending', 'approved', 'rejected'] as const).map((s) => <option key={s} value={s}>{t(`applications.statuses.${s}`)}</option>)}
-        </select>
-        <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-        <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('applications.search')} />
-      </div>
-      {!rows.length ? (
-        <EmptyState icon="assignment" title={t('applications.emptyTitle')} description={t('applications.emptyDescription')} />
-      ) : (
-        <div className="overflow-x-auto rounded-xl border border-outline-variant bg-surface-container-lowest">
-          <table className="w-full min-w-[900px] text-sm">
-            <thead><tr className="bg-surface-container text-on-surface-variant"><th className="px-3 py-2 text-start">{t('applications.applicationId')}</th><th className="px-3 py-2 text-start">{t('applications.parentName')}</th><th className="px-3 py-2 text-start">{t('applications.childName')}</th><th className="px-3 py-2 text-start">{t('applications.submittedAt')}</th><th className="px-3 py-2 text-start">{t('applications.status')}</th><th className="px-3 py-2 text-start">{t('applications.documentsCount')}</th><th className="px-3 py-2 text-start">{t('common.actions')}</th></tr></thead>
-            <tbody>
-              {rows.map((r) => {
+    <div className="space-y-5 pb-8">
+      <PageHeader
+        icon="assignment"
+        title={t('applications.adminListTitle')}
+        description={t('applications.adminListSubtitle')}
+        actions={
+          <Button asChild variant="outline">
+            <Link to={`${admissionsBasePath}/inquiries`}>
+              <span className="material-symbols-outlined me-1 text-base" aria-hidden>contact_support</span>
+              {t('admissions.inquiriesTitle')}
+            </Link>
+          </Button>
+        }
+      >
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <StatTile
+            icon="inbox"
+            label={t('applications.openApplications')}
+            value={openCount}
+            onClick={() => setStatus('open')}
+            active={status === 'open'}
+          />
+          <StatTile
+            icon="pending_actions"
+            label={t('applications.pendingReview')}
+            value={apps.stats.pendingReview}
+            tone={apps.stats.pendingReview > 0 ? 'warning' : 'success'}
+          />
+          <StatTile icon="verified" label={t('applications.approvedThisMonth')} value={apps.stats.approvedThisMonth} tone="success" />
+          <StatTile
+            icon="timer"
+            label={t('applications.avgReviewTime')}
+            value={t('applications.avgReviewHoursValue', { hours: apps.stats.avgReviewHours.toFixed(1) })}
+            tone="neutral"
+          />
+        </div>
+      </PageHeader>
+
+      <TableCard
+        title={t('applications.adminListTitle')}
+        count={apps.isLoading ? undefined : t('applications.resultsCount', { count: rows.length })}
+        filters={
+          <FilterBar onClear={clearFilters} canClear={filtersActive}>
+            <FilterField label={t('applications.status')}>
+              <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+                <option value="open">{t('applications.openApplications')}</option>
+                <option value="all">{t('applications.allApplications')}</option>
+                {STATUSES.map((s) => (
+                  <option key={s} value={s}>{t(`applications.statuses.${s}`)}</option>
+                ))}
+              </Select>
+            </FilterField>
+            <FilterField label={t('common.fromDate')}>
+              <Input type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} />
+            </FilterField>
+            <FilterField label={t('common.toDate')}>
+              <Input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} />
+            </FilterField>
+            <FilterField label={t('common.search')} className="sm:flex-[2]">
+              <SearchInput value={search} onChange={setSearch} placeholder={t('applications.search')} />
+            </FilterField>
+          </FilterBar>
+        }
+        pagination={apps.isLoading || !rows.length ? null : <TablePagination pager={pager} />}
+      >
+        {apps.isLoading ? (
+          <TableLoading />
+        ) : !rows.length ? (
+          <TableEmpty icon="assignment" title={t('applications.emptyTitle')} description={t('applications.emptyDescription')} />
+        ) : (
+          <DataTable minWidth={880}>
+            <THead>
+              <Th>{t('applications.applicationId')}</Th>
+              <Th>{t('applications.parentName')}</Th>
+              <Th>{t('applications.childName')}</Th>
+              <Th>{t('applications.submittedAt')}</Th>
+              <Th>{t('applications.status')}</Th>
+              <Th>{t('applications.documentsCount')}</Th>
+              <Th align="end">{t('common.actions')}</Th>
+            </THead>
+            <TBody>
+              {pager.pageItems.map((r) => {
                 const parent = (r.parent_info_json as Record<string, unknown> | undefined) ?? {};
                 const child = (r.child_info_json as Record<string, unknown> | undefined) ?? {};
+                const parentName = applicantParentName(parent);
+                const childName = applicantChildName(child);
+                const detailPath = `${admissionsBasePath}/applications/${String(r.id)}`;
                 return (
-                  <tr key={String(r.id)} className="border-t border-outline-variant">
-                    <td className="px-3 py-2 font-mono text-xs text-on-surface-variant" title={String(r.id)}>
-                      {shortApplicationId(r.id)}
-                    </td>
-                    <td className="px-3 py-2">{applicantParentName(parent) || '-'}</td>
-                    <td className="px-3 py-2">{applicantChildName(child) || '-'}</td>
-                    <td className="px-3 py-2">{r.submitted_at ? formatDateTime(String(r.submitted_at), STEP_DATE_TIME) : '-'}</td>
-                    <td className="px-3 py-2">{t(`applications.statuses.${String(r.status)}`)}</td>
-                    <td className="px-3 py-2">{Number(r.documents_count ?? 0)}</td>
-                    <td className="px-3 py-2">
-                      <Button asChild size="sm" variant="outline">
-                        <Link to={`${admissionsBasePath}/applications/${String(r.id)}`}>
-                          {t('invoice.actions.viewDetails')}
-                        </Link>
-                      </Button>
-                    </td>
-                  </tr>
+                  <Tr key={String(r.id)} onClick={() => navigate(detailPath)}>
+                    <Td>
+                      <span className="rounded-md bg-surface-high px-2 py-1 font-mono text-xs text-on-surface-variant" title={String(r.id)}>
+                        {shortApplicationId(r.id)}
+                      </span>
+                    </Td>
+                    <Td className="font-medium text-on-surface">{parentName || '—'}</Td>
+                    <Td>
+                      {childName ? <span className="text-on-surface">{childName}</span> : <span className="text-on-surface-variant">—</span>}
+                    </Td>
+                    <Td>
+                      {r.submitted_at ? (
+                        <span className="text-on-surface">{formatDateTime(String(r.submitted_at), STEP_DATE_TIME)}</span>
+                      ) : (
+                        <span className="text-xs text-on-surface-variant">{t('applications.notSubmitted')}</span>
+                      )}
+                    </Td>
+                    <Td>
+                      <ApplicationStatusBadge status={String(r.status)} />
+                    </Td>
+                    <Td>
+                      <span className="inline-flex items-center gap-1 text-on-surface">
+                        <span className="material-symbols-outlined text-base text-on-surface-variant" aria-hidden>description</span>
+                        {Number(r.documents_count ?? 0)}
+                      </span>
+                    </Td>
+                    <Td align="end">
+                      <IconAction icon="visibility" label={`${t('invoice.actions.viewDetails')}: ${parentName || shortApplicationId(r.id)}`} to={detailPath} />
+                    </Td>
+                  </Tr>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
-      )}
+            </TBody>
+          </DataTable>
+        )}
+      </TableCard>
     </div>
   );
 }

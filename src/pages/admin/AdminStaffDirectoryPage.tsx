@@ -8,12 +8,15 @@ import { toast } from 'sonner';
 import { StaffDirectoryTable } from '@/components/admin/staff/StaffDirectoryTable';
 import { StaffImportDialog } from '@/components/admin/staff/StaffImportDialog';
 import { Button } from '@/components/ui/button';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { Input } from '@/components/ui/input';
+import { TableCard, TableEmpty, TableLoading, TablePagination } from '@/components/ui/DataTable';
+import { FilterBar, SearchInput } from '@/components/ui/FilterBar';
+import { FilterField } from '@/components/ui/FilterField';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
+import { StatTile } from '@/components/ui/StatTile';
 import { useAuthSession } from '@/hooks/useAuthSession';
+import { usePagination } from '@/hooks/usePagination';
 import { useAllStaff, useStaff, type StaffProfileView } from '@/hooks/useStaff';
 import { useCanAction } from '@/hooks/usePermissions';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -33,7 +36,6 @@ export function AdminStaffDirectoryPage() {
   const staff = isCrossNursery ? allStaff : scopedStaff;
   const showNurseryColumn = isCrossNursery;
   const canEdit = useCanAction('staff', 'update');
-  const canDelete = useCanAction('staff', 'delete');
   const [dept, setDept] = useState('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [search, setSearch] = useState('');
@@ -46,11 +48,19 @@ export function AdminStaffDirectoryPage() {
   const viewerHidesHighRoles = profile?.role === 'manager';
   const HIGH_ROLES = new Set(['branch_admin', 'chain_super_admin', 'xo_super_admin']);
 
+  const visibleStaff = useMemo(
+    () =>
+      staff.staff.filter((s) => {
+        const userRole = String(((s.user as Record<string, unknown> | null) ?? {}).role ?? '');
+        return !(viewerHidesHighRoles && HIGH_ROLES.has(userRole));
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [staff.staff, viewerHidesHighRoles],
+  );
+
   const rows = useMemo(() => {
-    return staff.staff.filter((s) => {
+    return visibleStaff.filter((s) => {
       const u = (s.user as Record<string, unknown> | null) ?? {};
-      const userRole = String(u.role ?? '');
-      if (viewerHidesHighRoles && HIGH_ROLES.has(userRole)) return false;
       const department = String(s.department ?? '');
       const name = String(u.name_ar ?? u.name_en ?? u.full_name_ar ?? u.full_name_en ?? '');
       const employeeId = String(s.employee_id ?? '');
@@ -61,8 +71,7 @@ export function AdminStaffDirectoryPage() {
       if (search && !(`${name} ${employeeId}`.toLowerCase().includes(search.toLowerCase()))) return false;
       return true;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [staff.staff, dept, statusFilter, search, viewerHidesHighRoles]);
+  }, [visibleStaff, dept, statusFilter, search]);
 
   const exportCsv = () => {
     try {
@@ -98,93 +107,121 @@ export function AdminStaffDirectoryPage() {
   };
 
   const stats = useMemo(() => {
-    const total = staff.staff.length;
-    const active = staff.staff.filter((s) => String((s.user as Record<string, unknown> | null)?.status ?? 'active') === 'active').length;
-    return { total, active };
-  }, [staff.staff]);
+    const total = visibleStaff.length;
+    const active = visibleStaff.filter((s) => String((s.user as Record<string, unknown> | null)?.status ?? 'active') === 'active').length;
+    const teaching = visibleStaff.filter((s) => String(s.department ?? '') === 'teaching').length;
+    return { total, active, inactive: total - active, teaching };
+  }, [visibleStaff]);
+
+  const filtersActive = dept !== 'all' || statusFilter !== 'all' || Boolean(search.trim());
+  const clearFilters = () => {
+    setDept('all');
+    setStatusFilter('all');
+    setSearch('');
+  };
+  const toggleStatus = (value: 'active' | 'inactive') => setStatusFilter((current) => (current === value ? 'all' : value));
 
   const loading = (isCrossNursery || Boolean(nurseryId)) && staff.isLoading;
+  const pager = usePagination(rows, 10, `${dept}|${statusFilter}|${search.trim().toLowerCase()}`);
 
   return (
-    <div className="space-y-6 pb-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2 text-lg font-semibold text-on-surface">
-            <MaterialSymbol name="groups" className="text-primary" size="text-2xl" />
-            {t('staff.directory.title')}
-          </h1>
-          <p className="text-sm text-on-surface-variant">{t('staff.directory.subtitle')}</p>
+    <div className="space-y-5 pb-8">
+      <PageHeader
+        icon="groups"
+        title={t('staff.directory.title')}
+        description={t('staff.directory.subtitle')}
+        actions={
+          <>
+            <Button type="button" variant="outline" className="gap-1" onClick={exportCsv} disabled={!rows.length}>
+              <MaterialSymbol name="download" size="text-lg" />
+              {t('staff.directory.exportCsv')}
+            </Button>
+            <Button type="button" variant="outline" className="gap-1" onClick={() => setImportOpen(true)}>
+              <MaterialSymbol name="upload_file" size="text-lg" />
+              {t('staff.directory.importCsv')}
+            </Button>
+            <Button asChild>
+              <Link to="/admin/staff/onboarding" className="gap-1">
+                <MaterialSymbol name="person_add" size="text-lg" />
+                {t('staff.addNew')}
+              </Link>
+            </Button>
+          </>
+        }
+      >
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <StatTile icon="groups" label={t('staff.totalStaff')} value={stats.total} onClick={clearFilters} active={!filtersActive} />
+          <StatTile
+            icon="how_to_reg"
+            label={t('staff.activeStaff')}
+            value={stats.active}
+            tone="success"
+            onClick={() => toggleStatus('active')}
+            active={statusFilter === 'active'}
+          />
+          <StatTile
+            icon="person_off"
+            label={t('staff.directory.stats.inactive')}
+            value={stats.inactive}
+            tone={stats.inactive > 0 ? 'warning' : 'neutral'}
+            onClick={() => toggleStatus('inactive')}
+            active={statusFilter === 'inactive'}
+          />
+          <StatTile
+            icon="school"
+            label={t('staff.directory.stats.teaching')}
+            value={stats.teaching}
+            onClick={() => setDept((current) => (current === 'teaching' ? 'all' : 'teaching'))}
+            active={dept === 'teaching'}
+          />
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" className="gap-1" onClick={exportCsv} disabled={!rows.length}>
-            <MaterialSymbol name="download" size="text-lg" />
-            {t('staff.directory.exportCsv')}
-          </Button>
-          <Button type="button" variant="outline" className="gap-1" onClick={() => setImportOpen(true)}>
-            <MaterialSymbol name="upload_file" size="text-lg" />
-            {t('staff.directory.importCsv')}
-          </Button>
-          <Button asChild>
-            <Link to="/admin/staff/onboarding" className="gap-1">
-              <MaterialSymbol name="person_add" size="text-lg" />
-              {t('staff.addNew')}
-            </Link>
-          </Button>
-        </div>
-      </div>
+      </PageHeader>
 
-      <div className="grid gap-3 md:grid-cols-2">
-        <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-3">
-          <p className="text-xs text-on-surface-variant">{t('staff.totalStaff')}</p>
-          <p className="text-lg font-bold">{stats.total}</p>
-        </div>
-        <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-3">
-          <p className="text-xs text-on-surface-variant">{t('staff.activeStaff')}</p>
-          <p className="text-lg font-bold">{stats.active}</p>
-        </div>
-      </div>
-
-      <div className="grid gap-2 rounded-2xl border border-outline-variant bg-surface-container-lowest p-3 md:grid-cols-4">
-        <Select value={dept} onChange={(e) => setDept(e.target.value)}>
-          <option value="all">{t('staff.allDepartments')}</option>
-          {(['teaching', 'admin', 'kitchen', 'maintenance', 'security', 'driver'] as const).map((d) => (
-            <option key={d} value={d}>
-              {t(`staff.departments.${d}`)}
-            </option>
-          ))}
-        </Select>
-        <Select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
-        >
-          <option value="all">{t('staff.filterStatusAll')}</option>
-          <option value="active">{t('staff.status.active')}</option>
-          <option value="inactive">{t('staff.status.inactive')}</option>
-        </Select>
-        <Input
-          className="md:col-span-2"
-          placeholder={t('staff.searchPlaceholder')}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-
-      {loading ? (
-        <div className="space-y-2">
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-48 w-full" />
-        </div>
-      ) : !rows.length ? (
-        <EmptyState icon="badge" title={t('staff.emptyTitle')} description={t('staff.emptyDescription')} />
-      ) : (
-        <StaffDirectoryTable
-          rows={rows as StaffProfileView[]}
-          language={i18n.language}
-          showNurseryColumn={showNurseryColumn}
-          canEdit={canEdit}
-          canDelete={canDelete}
-        />
-      )}
+      <TableCard
+        title={t('staff.directory.title')}
+        count={loading ? undefined : t('staff.directory.resultsCount', { count: rows.length })}
+        filters={
+          <FilterBar onClear={clearFilters} canClear={filtersActive}>
+            <FilterField label={t('staff.department')}>
+              <Select value={dept} onChange={(e) => setDept(e.target.value)}>
+                <option value="all">{t('staff.allDepartments')}</option>
+                {(['teaching', 'admin', 'kitchen', 'maintenance', 'security', 'driver'] as const).map((d) => (
+                  <option key={d} value={d}>
+                    {t(`staff.departments.${d}`)}
+                  </option>
+                ))}
+              </Select>
+            </FilterField>
+            <FilterField label={t('staff.filterStatus')}>
+              <Select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
+              >
+                <option value="all">{t('staff.filterStatusAll')}</option>
+                <option value="active">{t('staff.status.active')}</option>
+                <option value="inactive">{t('staff.status.inactive')}</option>
+              </Select>
+            </FilterField>
+            <FilterField label={t('common.search')} className="sm:flex-[2]">
+              <SearchInput value={search} onChange={setSearch} placeholder={t('staff.searchPlaceholder')} />
+            </FilterField>
+          </FilterBar>
+        }
+        pagination={loading || !rows.length ? null : <TablePagination pager={pager} />}
+      >
+        {loading ? (
+          <TableLoading />
+        ) : !rows.length ? (
+          <TableEmpty icon="badge" title={t('staff.emptyTitle')} description={t('staff.emptyDescription')} />
+        ) : (
+          <StaffDirectoryTable
+            rows={pager.pageItems as StaffProfileView[]}
+            language={i18n.language}
+            showNurseryColumn={showNurseryColumn}
+            canEdit={canEdit}
+          />
+        )}
+      </TableCard>
 
       {nurseryId ? (
         <StaffImportDialog

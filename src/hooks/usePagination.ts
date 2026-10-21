@@ -18,6 +18,10 @@ export type Pagination<T> = {
   prev: () => void;
   hasNext: boolean;
   hasPrev: boolean;
+  /** Rows per page; starts at the `pageSize` argument. */
+  pageSize: number;
+  /** Changes the rows per page and goes back to page 1. */
+  setPageSize: (size: number) => void;
 };
 
 /**
@@ -29,8 +33,9 @@ export type Pagination<T> = {
  * Pass `resetKey` (e.g. a serialized set of active filters) to jump back to
  * page 1 whenever the filter criteria change.
  */
-export function usePagination<T>(items: T[], pageSize = 20, resetKey?: unknown): Pagination<T> {
+export function usePagination<T>(items: T[], initialPageSize = 20, resetKey?: unknown): Pagination<T> {
   const [page, setPageState] = useState(1);
+  const [pageSize, setPageSizeState] = useState(initialPageSize);
   const total = items.length;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
@@ -70,5 +75,10 @@ export function usePagination<T>(items: T[], pageSize = 20, resetKey?: unknown):
     prev: () => setPage(safePage - 1),
     hasNext: safePage < pageCount,
     hasPrev: safePage > 1,
+    pageSize,
+    setPageSize: (size: number) => {
+      setPageSizeState(size);
+      setPageState(1);
+    },
   };
 }

@@ -42,9 +42,11 @@ function staticKeys(code: string): string[] {
 
 describe('admin package and deal screens', () => {
   it.each(SCREENS)('%s: every translation key exists in English and Arabic', (file) => {
+    // A plural key lives as key_one / key_other (and Arabic's other forms).
+    const exists = (dict: unknown, key: string) => typeof lookup(dict, key) === 'string' || typeof lookup(dict, `${key}_other`) === 'string';
     const missing = staticKeys(source(file)).flatMap((key) => [
-      ...(typeof lookup(en, key) === 'string' ? [] : [`en: ${key}`]),
-      ...(typeof lookup(ar, key) === 'string' ? [] : [`ar: ${key}`]),
+      ...(exists(en, key) ? [] : [`en: ${key}`]),
+      ...(exists(ar, key) ? [] : [`ar: ${key}`]),
     ]);
     expect(missing).toEqual([]);
   });
