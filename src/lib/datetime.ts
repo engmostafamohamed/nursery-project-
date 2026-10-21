@@ -13,6 +13,14 @@ export function activeLocale(): string {
   return i18n.language?.startsWith('ar') ? 'ar-EG' : 'en-GB';
 }
 
+/** Local YYYY-MM-DD for date inputs; unlike toISOString(), this does not shift across time zones. */
+export function localDateInputValue(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 /** Locale-aware date (no time). Returns '—' for nullish/invalid input. */
 export function formatDate(value: DateInput | null | undefined, options?: Intl.DateTimeFormatOptions): string {
   if (value == null) return '—';

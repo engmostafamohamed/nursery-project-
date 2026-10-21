@@ -302,7 +302,7 @@ export function useApplications(params: { nurseryId?: string; applicationId?: st
   });
 
   const submitApplication = useMutation({
-    mutationFn: async (payload: { id: string; nurseryId: string; parentName: string }) => {
+    mutationFn: async (payload: { id: string; nurseryId: string }) => {
       const currentAppRes = await supabase
         .from('applications')
         .select('id, parent_id, status, reviewed_at')
@@ -357,27 +357,8 @@ export function useApplications(params: { nurseryId?: string; applicationId?: st
           .eq('read', false)
           .eq('action_link', `/parent/applications/${payload.id}`);
       }
-
-      const adminsRes = await supabase
-        .from('users')
-        .select('id')
-        .eq('nursery_id', payload.nurseryId)
-        .in('role', ['branch_admin', 'chain_super_admin']);
-      if (!adminsRes.error) {
-        const adminIds = ((adminsRes.data ?? []) as Array<{ id: string }>).map((a) => a.id);
-        if (adminIds.length) {
-          await supabase.from('notifications').insert(adminIds.map((id) =>
-            templateNotificationRow({
-              nurseryId: payload.nurseryId,
-              userId: id,
-              type: 'application_submitted',
-              params: { parent: payload.parentName },
-              actionLink: `/admin/admissions/applications/${payload.id}`,
-              channel: 'push',
-            }),
-          ) as never);
-        }
-      }
+      // The database tells the nursery's admins (trg_notify_admins_application_resubmitted): a parent
+      // may not look the admins up, so the browser could not.
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['application-detail'] });

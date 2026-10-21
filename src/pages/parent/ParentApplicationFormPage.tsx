@@ -1666,14 +1666,11 @@ export function ParentApplicationFormPage() {
       if (canEditApplication) {
         await apps.saveApplicationDraft({ id, updates: draftUpdates() });
       }
-      await apps.submitApplication({
-        id,
-        nurseryId: String(app.nursery_id),
-        parentName: parentRequiredValue(parentForm, 'full_name') || t('common.parent'),
-      });
+      await apps.submitApplication({ id, nurseryId: String(app.nursery_id) });
       toast.success(t('applications.submittedSuccess'));
     } catch (error) {
-      const message = error instanceof Error ? error.message : '';
+      // From this page's own checks, or the same rules on the server (a Supabase error object).
+      const message = error && typeof error === 'object' && 'message' in error ? String((error as { message: unknown }).message) : '';
       if (message === 'missing_required_documents') {
         toast.error(t('applications.submitValidation'));
         setStep(DOCUMENTS_STEP);
@@ -1682,6 +1679,11 @@ export function ParentApplicationFormPage() {
           defaultValue: 'Please upload or replace at least one requested document before submitting again.',
         }));
         setStep(DOCUMENTS_STEP);
+      } else if (message === 'application_payment_required') {
+        toast.error(t('applications.paymentPackage.payBeforeSubmit'));
+        setStep(PAYMENT_STEP);
+      } else if (message === 'application_terms_required') {
+        toast.error(t('applications.submitTermsValidation', { defaultValue: 'Please accept the terms before submitting.' }));
       } else {
         toast.error(t('payment.errors.actionFailed'));
       }

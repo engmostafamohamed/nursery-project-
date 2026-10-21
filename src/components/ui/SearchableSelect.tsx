@@ -95,7 +95,8 @@ export function SearchableSelect({
               placeholder={searchPlaceholder ?? t('common.search', { defaultValue: 'Search' })}
             />
           </div>
-          <div className="max-h-56 overflow-y-auto pb-1">
+          {/* A list of options to assistive technology, as the button announces. */}
+          <div role="listbox" aria-label={placeholder ?? t('common.select')} className="max-h-56 overflow-y-auto pb-1">
             {filtered.length === 0 ? (
               <p className="px-3 py-2 text-xs text-on-surface-variant">
                 {emptyLabel ?? t('common.noResults', { defaultValue: 'No results' })}
@@ -105,6 +106,8 @@ export function SearchableSelect({
                 <button
                   key={option.value}
                   type="button"
+                  role="option"
+                  aria-selected={option.value === value}
                   onClick={() => {
                     onChange(option.value);
                     setOpen(false);

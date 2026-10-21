@@ -5662,6 +5662,7 @@
         "reason": " ({{reason}})"
       },
       "reasons": {
+        "documents_resubmitted": "تم تحديث المستندات",
         "payment_submitted": "تم إرسال الدفع"
       }
     },

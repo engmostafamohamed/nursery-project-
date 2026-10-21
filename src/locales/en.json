@@ -5643,6 +5643,7 @@
         "reason": " ({{reason}})"
       },
       "reasons": {
+        "documents_resubmitted": "documents updated",
         "payment_submitted": "payment submitted"
       }
     },

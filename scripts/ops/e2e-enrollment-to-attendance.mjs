@@ -5,6 +5,11 @@
  *   confirms the payment → the child is accepted and the profile created → the child is placed in a
  *   class → drop-off and pickup with the QR / 6-digit code → statistics and notifications
  *
+ * and then the other paths: the nursery asks for a document again, rejects an application, the parent
+ * reports an absence; and the scheduled jobs: pickup reminder, late-pickup sweep, end-of-day close.
+ * The jobs cover every nursery, so by default each is run once directly, only after checking it would
+ * touch nothing outside the test nursery; with --wait-for-cron the test waits for the real scheduler.
+ *
  * Every step calls what the app calls (tables, RPCs, Storage, Edge Functions) signed in as the person
  * who does it in the app (parent, admin, teacher), so row-level security and the server's own rules
  * are part of the test. Direct SQL is used only to set up, to move the clock for the late-pickup
@@ -72,6 +77,8 @@ async function serviceRoleKey() {
 }
 
 const RUN = `e2e${Date.now().toString(36)}`;
+/** --wait-for-cron: do not run the scheduled jobs; wait for the real scheduler to do it (up to ~25 min). */
+const WAIT_FOR_CRON = process.argv.includes('--wait-for-cron');
 const PASSWORD = `E2e!${crypto.randomUUID()}`;
 const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
@@ -80,6 +87,9 @@ const PNG = Buffer.from(
 
 let passed = 0;
 const failed = [];
+const skipped = [];
+/** Thrown by a step that chose not to run (e.g. it would touch other nurseries' data). */
+class Skip extends Error {}
 const section = (title) => console.log(`\n■ ${title}`);
 const check = (condition, message) => {
   if (!condition) throw new Error(message);
@@ -98,6 +108,12 @@ async function step(name, fn) {
     if (detail !== undefined) console.log(`      ${typeof detail === 'string' ? detail : JSON.stringify(detail)}`);
     return true;
   } catch (error) {
+    if (error instanceof Skip) {
+      skipped.push(name);
+      console.log(`  – ${name}`);
+      console.log(`      skipped: ${error.message}`);
+      return false;
+    }
     failed.push(name);
     console.log(`  ✗ ${name}`);
     console.log(`      ${error instanceof Error ? error.message : String(error)}`);
@@ -314,6 +330,16 @@ const CHILDREN = {
     first_name: 'Laila', last_name: 'E2E', full_name_en: 'E2E Laila', full_name_ar: 'ليلى الاختبار', dob: '2022-11-02', gender: 'female',
     extraHours: false, classAtApproval: false, payBeforeDocuments: true,
   },
+  C: {
+    label: 'Child C',
+    first_name: 'Omar', last_name: 'E2E', full_name_en: 'E2E Omar', full_name_ar: 'عمر الاختبار', dob: '2023-01-15', gender: 'male',
+    extraHours: false, classAtApproval: true,
+  },
+  D: {
+    label: 'Child D',
+    first_name: 'Mariam', last_name: 'E2E', full_name_en: 'E2E Mariam', full_name_ar: 'مريم الاختبار', dob: '2022-08-20', gender: 'female',
+    extraHours: false, classAtApproval: false,
+  },
 };
 
 async function uploadDocuments(child) {
@@ -464,7 +490,7 @@ async function applyAndPay(key) {
       await uploadDocuments(child);
       return 'server check application_has_required_documents = true';
     });
-  } else {
+  } else if (key === 'A') {
     await step('a partial payment is refused (an admission invoice is paid in one go)', async () => {
       const res = await parent.client.rpc('submit_invoice_payment', {
         p_invoice_id: child.invoiceId,
@@ -541,6 +567,26 @@ async function applyAndPay(key) {
     });
   }
 
+}
+
+/** What the admin's application page does when it opens a submitted application. */
+async function markUnderReview(child) {
+  ok(
+    await admin.client
+      .from('applications')
+      .update({ status: 'under_review', reviewed_by: admin.id, reviewed_at: new Date().toISOString() })
+      .eq('id', child.applicationId),
+    'start review',
+  );
+  const app = ok(await parent.client.from('applications').select('status').eq('id', child.applicationId).single(), 'parent read');
+  check(app.status === 'under_review', `parent sees ${app.status}`);
+  return `parent now sees: ${app.status}`;
+}
+
+async function reviewAndConfirm(key) {
+  const spec = CHILDREN[key];
+  const child = S.children[key];
+
   section(`${spec.label} — 2. the nursery reviews and confirms the payment`);
 
   if (key === 'A') {
@@ -555,18 +601,7 @@ async function applyAndPay(key) {
     });
   }
 
-  await step('admin opens the application → "under review" (what the page does on open)', async () => {
-    ok(
-      await admin.client
-        .from('applications')
-        .update({ status: 'under_review', reviewed_by: admin.id, reviewed_at: new Date().toISOString() })
-        .eq('id', child.applicationId),
-      'start review',
-    );
-    const app = ok(await parent.client.from('applications').select('status').eq('id', child.applicationId).single(), 'parent read');
-    check(app.status === 'under_review', `parent sees ${app.status}`);
-    return `parent now sees: ${app.status}`;
-  });
+  await step('admin opens the application → "under review" (what the page does on open)', () => markUnderReview(child));
 
   await step('admin confirms the payment arrived → invoice paid, parent and admins told', async () => {
     const attempts = ok(
@@ -600,6 +635,13 @@ async function applyAndPay(key) {
       return res.error ? `refused (${res.error.message}); still 1 payment` : 'still 1 payment';
     });
   }
+
+}
+
+async function approveChild(key) {
+  const spec = CHILDREN[key];
+  const child = S.children[key];
+  const teacherNotesBefore = (await notificationsOf(teacher)).filter((n) => n.type === 'class_child_added').length;
 
   section(`${spec.label} — 3. the child is accepted and the profile is created`);
 
@@ -682,8 +724,8 @@ async function applyAndPay(key) {
   if (spec.classAtApproval) {
     await step('the class\'s lead teacher is told a child joined her class', async () => {
       const notes = (await notificationsOf(teacher)).filter((n) => n.type === 'class_child_added');
-      check(notes.length === 1, `${notes.length} class_child_added`);
-      return notes[0].template_params;
+      check(notes.length === teacherNotesBefore + 1, `${notes.length - teacherNotesBefore} new class_child_added`);
+      return notes.find((n) => n.template_params?.child?.en === spec.full_name_en)?.template_params ?? notes.at(-1)?.template_params;
     });
   }
 
@@ -695,8 +737,11 @@ async function applyAndPay(key) {
   });
 }
 
-await applyAndPay('A');
-await applyAndPay('B');
+for (const key of ['A', 'B']) {
+  await applyAndPay(key);
+  await reviewAndConfirm(key);
+  await approveChild(key);
+}
 const A = S.children.A;
 const B = S.children.B;
 
@@ -1026,6 +1071,461 @@ await step("parent's home data: children, their class, invoices, next tuition in
 });
 
 // ---------------------------------------------------------------------------------------------
+section('7. the nursery asks for a document again → the parent uploads it → accepted (Child C)');
+
+await step('a parent cannot skip the payment by marking a draft "submitted" (documents uploaded, nothing paid)', async () => {
+  const draft = ok(
+    await parent.client
+      .from('applications')
+      .insert({ nursery_id: S.nurseryId, parent_id: parent.id, status: 'draft', parent_info_json: {}, child_info_json: { first_name: 'Unpaid' }, terms_accepted: true })
+      .select('id')
+      .single(),
+    'draft',
+  );
+  await uploadDocuments({ applicationId: draft.id });
+  const res = await parent.client.from('applications').update({ status: 'submitted', submitted_at: new Date().toISOString() }).eq('id', draft.id);
+  const app = ok(await service.from('applications').select('status').eq('id', draft.id).single(), 'read');
+  check(app.status === 'draft', `the unpaid draft is now "${app.status}" and reached the nursery`);
+  return res.error ? `refused: ${res.error.message}` : 'no effect';
+});
+
+await applyAndPay('C');
+const C = S.children.C;
+
+section('Child C — 2. the nursery asks for a document again');
+
+await step('admin opens the application → "under review"', () => markUnderReview(C));
+
+const DOCS_REASON = 'The vaccination card photo is blurry, please upload it again';
+await step('admin asks for the document with a message → "documents needed"; the parent is told the message', async () => {
+  ok(
+    await admin.client
+      .from('applications')
+      .update({ status: 'documents_pending', reviewed_by: admin.id, reviewed_at: new Date().toISOString() })
+      .eq('id', C.applicationId),
+    'request documents',
+  );
+  // What the app sends with the request: the notification with the message, and the email.
+  ok(
+    await admin.client.from('notifications').insert({
+      nursery_id: S.nurseryId,
+      user_id: parent.id,
+      type: 'application_documents_pending',
+      template_key: 'application_documents_pending',
+      template_params: { reason: DOCS_REASON, segments: ['reason'] },
+      read: false,
+      channel: 'in_app',
+      sent_at: new Date().toISOString(),
+      action_link: `/parent/applications/${C.applicationId}`,
+      urgency: 'high',
+    }),
+    'notification',
+  );
+  const email = await callFunction(admin, 'email-dispatch', {
+    trigger_type: 'application_documents_pending',
+    recipient_email: parent.email,
+    language: 'ar',
+    nursery_id: S.nurseryId,
+    data: { reason: DOCS_REASON },
+  });
+  check(email.status === 200, `email ${email.status} ${JSON.stringify(email.body)}`);
+  const app = ok(await parent.client.from('applications').select('status').eq('id', C.applicationId).single(), 'parent read');
+  const note = (await notificationsOf(parent)).find((n) => n.type === 'application_documents_pending');
+  check(app.status === 'documents_pending', `parent sees ${app.status}`);
+  check(note?.template_params?.reason === DOCS_REASON, 'the parent did not get the message');
+  return { parentSees: app.status, message: note.template_params.reason, email: email.body.mode };
+});
+
+await step('while documents are requested, the application data stays locked (server)', async () => {
+  const res = await parent.client.from('applications').update({ child_info_json: { first_name: 'Changed' } }).eq('id', C.applicationId);
+  const app = ok(await service.from('applications').select('child_info_json').eq('id', C.applicationId).single(), 'read');
+  check(app.child_info_json?.first_name === CHILDREN.C.first_name, 'the data changed');
+  return res.error ? `refused: ${res.error.message}` : 'no effect';
+});
+
+await step('sending it back without uploading anything new is refused', async () => {
+  const res = await parent.client.from('applications').update({ status: 'submitted', submitted_at: new Date().toISOString() }).eq('id', C.applicationId);
+  const app = ok(await service.from('applications').select('status').eq('id', C.applicationId).single(), 'read');
+  if (app.status !== 'documents_pending') {
+    // Put it back so the rest of the path can still be checked.
+    await sql(`update public.applications set status = 'documents_pending' where id = '${C.applicationId}'`);
+  }
+  check(app.status === 'documents_pending', `accepted without a new document (status became "${app.status}")`);
+  return res.error ? `refused: ${res.error.message}` : 'no effect';
+});
+
+await step('parent uploads the document again and sends the application back; the admin is told', async () => {
+  const path = `${S.nurseryId}/${C.applicationId}/vaccination_card_${Date.now()}.png`;
+  ok(await parent.client.storage.from('application-documents').upload(path, PNG, { contentType: 'image/png', upsert: true }), 'upload');
+  ok(await parent.client.from('application_documents').insert({ application_id: C.applicationId, document_type: 'vaccination_card', file_url: path }), 'document');
+  const [{ now: since }] = await sql('select now()::text as now');
+  // What the app does on "Submit": the status, and the parent's own reminders marked read. The database
+  // tells the admins.
+  ok(await parent.client.from('applications').update({ status: 'submitted', submitted_at: new Date().toISOString() }).eq('id', C.applicationId), 'resubmit');
+  ok(
+    await parent.client.from('notifications').update({ read: true }).eq('user_id', parent.id).eq('read', false).eq('action_link', `/parent/applications/${C.applicationId}`),
+    'own reminders',
+  );
+  const app = ok(await service.from('applications').select('status').eq('id', C.applicationId).single(), 'read');
+  const told = ok(
+    await service.from('notifications').select('template_params').eq('user_id', admin.id).eq('type', 'application_submitted').gt('created_at', since),
+    'admin told',
+  );
+  check(app.status === 'submitted', `status ${app.status}`);
+  check(told.length === 1, `${told.length} notifications to the admin`);
+  return { application: app.status, adminTold: `application_submitted (${told[0].template_params?.reason?.i18n?.split('.').pop()})` };
+});
+
+await reviewAndConfirm('C');
+await approveChild('C');
+
+// ---------------------------------------------------------------------------------------------
+section('8. the nursery rejects an application (Child D)');
+
+await applyAndPay('D');
+const D = S.children.D;
+
+section('Child D — 2. the nursery rejects it');
+
+await step('admin opens the application → "under review"', () => markUnderReview(D));
+
+const REJECT_REASON = 'No place left in this age group this year';
+await step('admin rejects it with a reason; the parent is told the reason', async () => {
+  ok(
+    await admin.client
+      .from('applications')
+      .update({ status: 'rejected', rejection_reason: REJECT_REASON, reviewed_by: admin.id, reviewed_at: new Date().toISOString() })
+      .eq('id', D.applicationId),
+    'reject',
+  );
+  ok(
+    await admin.client.from('notifications').insert({
+      nursery_id: S.nurseryId,
+      user_id: parent.id,
+      type: 'application_rejected',
+      template_key: 'application_rejected',
+      template_params: { reason: REJECT_REASON, segments: ['reason'] },
+      read: false,
+      channel: 'in_app',
+      sent_at: new Date().toISOString(),
+      action_link: `/parent/applications/${D.applicationId}`,
+      urgency: 'high',
+    }),
+    'notification',
+  );
+  const email = await callFunction(admin, 'email-dispatch', {
+    trigger_type: 'application_rejected',
+    recipient_email: parent.email,
+    language: 'ar',
+    nursery_id: S.nurseryId,
+    data: { reason: REJECT_REASON },
+  });
+  check(email.status === 200, `email ${email.status} ${JSON.stringify(email.body)}`);
+  const app = ok(await parent.client.from('applications').select('status, rejection_reason').eq('id', D.applicationId).single(), 'parent read');
+  const note = (await notificationsOf(parent)).find((n) => n.type === 'application_rejected');
+  check(app.status === 'rejected' && app.rejection_reason === REJECT_REASON, JSON.stringify(app));
+  check(note?.template_params?.reason === REJECT_REASON, 'the parent did not get the reason');
+  return { parentSees: app.status, reason: app.rejection_reason, email: email.body.mode };
+});
+
+await step('the parent cannot edit or send back a rejected application', async () => {
+  const edit = await parent.client.from('applications').update({ child_info_json: { first_name: 'Changed' } }).eq('id', D.applicationId);
+  const resubmit = await parent.client.from('applications').update({ status: 'submitted' }).eq('id', D.applicationId);
+  const app = ok(await service.from('applications').select('status, child_info_json').eq('id', D.applicationId).single(), 'read');
+  check(app.status === 'rejected' && app.child_info_json?.first_name === CHILDREN.D.first_name, JSON.stringify(app));
+  return { edit: edit.error ? 'refused' : 'no effect', resubmit: resubmit.error ? 'refused' : 'no effect' };
+});
+
+await step('finance cancels the payment that was waiting; the parent is told', async () => {
+  const attempts = ok(await admin.client.from('payment_attempts').select('id, status').eq('invoice_id', D.invoiceId), 'attempts');
+  check(attempts.length === 1 && attempts[0].status === 'pending_confirmation', JSON.stringify(attempts));
+  const [{ now: since }] = await sql('select now()::text as now');
+  const result = ok(await admin.client.rpc('reject_invoice_payment_attempt', { p_attempt_id: attempts[0].id, p_reason: REJECT_REASON }), 'cancel');
+  const told = ok(await service.from('notifications').select('type').eq('user_id', parent.id).gt('created_at', since), 'told');
+  check(result.status === 'cancelled', JSON.stringify(result));
+  check(told.length === 1, `${told.length} new notifications for the parent`);
+  return { attempt: result.status, parentTold: told[0].type };
+});
+
+await step('a rejected application with no confirmed payment cannot be approved', async () => {
+  const res = await admin.client.rpc('approve_application_enrollment', {
+    p_application_id: D.applicationId,
+    p_nursery_id: S.nurseryId,
+    p_auto_generate_first_invoice: true,
+  });
+  check(Boolean(res.error), 'it was approved');
+  const kids = ok(await service.from('children').select('id').eq('nursery_id', S.nurseryId).eq('full_name_en', CHILDREN.D.full_name_en), 'children');
+  check(kids.length === 0, 'a child profile was created');
+  return res.error.message;
+});
+
+// ---------------------------------------------------------------------------------------------
+section('9. the parent reports an absence (Child B)');
+
+const [{ today: TODAY, tomorrow: TOMORROW, yesterday: YESTERDAY }] = await sql(`
+  select (now() at time zone '${S.timezone}')::date::text as today,
+         ((now() at time zone '${S.timezone}')::date + 1)::text as tomorrow,
+         ((now() at time zone '${S.timezone}')::date - 1)::text as yesterday`);
+
+async function reportAbsence(childId, day, reason, note) {
+  return parent.client.from('attendance_absence_reports').insert({ child_id: childId, absence_date: day, reason, note });
+}
+
+await step('parent reports tomorrow in advance (reason + note); the server fills in the nursery and who sent it', async () => {
+  ok(await reportAbsence(B.childId, TOMORROW, 'sick', 'Fever since last night'), 'report');
+  const row = ok(
+    await service.from('attendance_absence_reports').select('nursery_id, reported_by, reason, note').eq('child_id', B.childId).eq('absence_date', TOMORROW).single(),
+    'row',
+  );
+  check(row.nursery_id === S.nurseryId && row.reported_by === parent.id, JSON.stringify(row));
+  return { date: TOMORROW, reason: row.reason, note: row.note, reportedBy: 'the parent', nursery: 'filled by the server' };
+});
+
+await step('the nursery\'s admins are told', async () => {
+  const told = (await notificationsOf(admin)).filter((n) => n.type === 'absence_reported');
+  const teacherTold = (await notificationsOf(teacher)).filter((n) => n.type === 'absence_reported');
+  check(told.length === 1, `${told.length} absence_reported to the admin`);
+  return { admin: 'absence_reported', classTeacher: teacherTold.length ? 'absence_reported' : 'not told (admins and managers only)' };
+});
+
+await step('the same day twice is refused', async () => {
+  const res = await reportAbsence(B.childId, TOMORROW, 'sick', null);
+  check(Boolean(res.error), 'a second report for the same day was saved');
+  return `${res.error.code}: ${res.error.message}`;
+});
+
+await step('the attendance history shows tomorrow with the reason, the note and who sent it', async () => {
+  const days = ok(await parent.client.rpc('get_attendance_days', { p_child_ids: [B.childId], p_from: TOMORROW, p_to: TOMORROW }), 'days');
+  const day = days[0];
+  check(day?.absence_reason === 'sick' && day?.absence_note === 'Fever since last night', JSON.stringify(day));
+  return { status: day.day_status, reason: day.absence_reason, note: day.absence_note, reportedBy: day.absence_reported_by_en };
+});
+
+await step('the parent can cancel a future report and send it again', async () => {
+  ok(await parent.client.from('attendance_absence_reports').delete().eq('child_id', B.childId).eq('absence_date', TOMORROW), 'cancel');
+  const gone = ok(await service.from('attendance_absence_reports').select('id').eq('child_id', B.childId).eq('absence_date', TOMORROW), 'read');
+  check(gone.length === 0, 'not cancelled');
+  ok(await reportAbsence(B.childId, TOMORROW, 'travel', null), 'report again');
+  return 'cancelled, then reported again';
+});
+
+await step('a day that has already passed cannot be reported (the form offers today onward)', async () => {
+  const res = await reportAbsence(B.childId, YESTERDAY, 'sick', 'late excuse');
+  const rows = ok(await service.from('attendance_absence_reports').select('id').eq('child_id', B.childId).eq('absence_date', YESTERDAY), 'read');
+  if (rows.length) await service.from('attendance_absence_reports').delete().eq('id', rows[0].id);
+  check(rows.length === 0, `a report for ${YESTERDAY} (yesterday) was saved`);
+  return res.error ? `refused: ${res.error.message}` : 'no effect';
+});
+
+await step('reporting today: the child shows "absent with notice", and the dashboard counts it', async () => {
+  ok(await reportAbsence(B.childId, TODAY, 'family', null), 'report today');
+  const days = ok(await parent.client.rpc('get_attendance_days', { p_child_ids: [B.childId], p_from: TODAY, p_to: TODAY }), 'days');
+  const kpis = ok(await admin.client.rpc('get_attendance_kpis', { p_nursery_id: S.nurseryId, p_month: null }), 'kpis');
+  check(days[0]?.day_status === 'excused', `Child B is ${days[0]?.day_status}`);
+  check(Number(kpis.today?.excused) === 1, `dashboard: ${JSON.stringify(kpis.today)}`);
+  return { childB: days[0].day_status, dashboard: { excused: kpis.today.excused, absent: kpis.today.absent } };
+});
+
+// ---------------------------------------------------------------------------------------------
+section(`10. scheduled jobs (${WAIT_FOR_CRON ? 'waiting for the real scheduler' : 'each job run once directly; the scheduler log checked at the end'})`);
+
+/** Records each job would pick up right now outside this test's nursery (they cover every nursery). */
+async function othersAffected(job) {
+  const notTest = `c.nursery_id <> '${S.nurseryId}'`;
+  const queries = {
+    reminders: `
+      select count(*)::int as n
+        from public.attendance_records ar
+        join public.children c on c.id = ar.child_id
+        join public.nursery_settings ns on ns.nursery_id = c.nursery_id
+       where ${notTest} and ar.check_in is not null and ar.check_out is null and ar.pickup_reminder_sent_at is null
+         and coalesce(ns.pickup_reminder_minutes_before, 0) > 0
+         and ar.attendance_date = (now() at time zone coalesce(ns.timezone, 'Africa/Cairo'))::date
+         and public.attendance_billing_start(ar, ns) is not null
+         and now() >= public.attendance_billing_start(ar, ns) - make_interval(mins => ns.pickup_reminder_minutes_before)
+         and now() <= public.attendance_billing_start(ar, ns)`,
+    sweep: `
+      select count(*)::int as n
+        from public.attendance_records ar
+        join public.children c on c.id = ar.child_id
+        join public.nursery_settings ns on ns.nursery_id = c.nursery_id
+       where ${notTest} and ar.check_out is null and ar.check_in is not null and ar.late_charge_status <> 'final'
+         and not ar.late_charge_waived and coalesce(ns.auto_late_pickup_billing_enabled, true)
+         and ar.attendance_date = (now() at time zone coalesce(ns.timezone, 'Africa/Cairo'))::date
+         and now() > public.attendance_billing_start(ar, ns) + make_interval(mins => coalesce(ns.late_pickup_grace_minutes, 0))`,
+    close: `
+      select (select count(*)::int
+                from public.attendance_records ar
+                join public.children c on c.id = ar.child_id
+                left join public.nursery_settings ns on ns.nursery_id = c.nursery_id
+               where ${notTest} and ar.check_in is not null and ar.check_out is null and not ar.needs_review
+                 and ar.attendance_date < (now() at time zone coalesce(ns.timezone, 'Africa/Cairo'))::date
+                 and ar.attendance_date >= (now() at time zone coalesce(ns.timezone, 'Africa/Cairo'))::date - 7)
+           + (select count(*)::int from public.attendance_events
+               where event_type = 'review_flagged' and created_at > now() - interval '5 minutes'
+                 and nursery_id <> '${S.nurseryId}') as n`,
+  };
+  const [row] = await sql(queries[job]);
+  return row.n;
+}
+
+/** Runs a scheduled job's function once, only when it would touch nothing outside this nursery. */
+async function runJobDirectly(job, fn) {
+  const others = await othersAffected(job);
+  if (others > 0) throw new Skip(`${others} record(s) of other nurseries are due right now; run with --wait-for-cron instead`);
+  const [row] = await sql(`select public.${fn}() as n`);
+  return row.n;
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+async function waitFor(what, probe, timeoutMs) {
+  const started = Date.now();
+  for (;;) {
+    const value = await probe();
+    if (value) return { value, waitedSeconds: Math.round((Date.now() - started) / 1000) };
+    if (Date.now() - started > timeoutMs) throw new Error(`${what}: nothing after ${Math.round(timeoutMs / 60000)} min`);
+    await sleep(15_000);
+  }
+}
+
+const attendanceOf = async (childId, day) =>
+  ok(await service.from('attendance_records').select('*').eq('child_id', childId).eq('attendance_date', day).maybeSingle(), 'attendance');
+
+await step('setup: each child billed after their own 8 hours; C and B checked in by hand (B was reported absent: a child reported absent can still come)', async () => {
+  ok(
+    await service.from('nursery_settings').update({ late_billing_base: 'stay_duration', pickup_reminder_minutes_before: 15 }).eq('nursery_id', S.nurseryId),
+    'settings',
+  );
+  for (const child of [C, B]) {
+    const res = ok(
+      await teacher.client.rpc('record_attendance_check_in', { p_child_id: child.childId, p_method: 'manual', p_qr_token_id: null }),
+      `check in ${child.label}`,
+    );
+    check(res.status === 'checked_in', `${child.label}: ${JSON.stringify(res)}`);
+    child.todayAttendanceId = res.attendance_id;
+  }
+  // C: billing starts in 10 minutes (inside the 15-minute reminder window). B is set before the sweep.
+  await sql(`update public.attendance_records set check_in = now() - interval '8 hours' + interval '10 minutes' where id = '${C.todayAttendanceId}'`);
+  return { childC: 'billing starts in 10 min', childB: 'checked in now (billing in 8 h)' };
+});
+
+await step('pickup reminder (every 5 min): C\'s parent is told before billing starts — once', async () => {
+  let ran;
+  if (WAIT_FOR_CRON) {
+    ran = await waitFor('reminder', async () => (await attendanceOf(C.childId, TODAY))?.pickup_reminder_sent_at, 7 * 60_000);
+  } else {
+    ran = { processed: await runJobDirectly('reminders', 'run_pickup_reminders') };
+  }
+  const reminders = (await notificationsOf(parent)).filter((n) => n.type === 'pickup_reminder');
+  check(reminders.length === 1, `${reminders.length} pickup reminders`);
+  check(reminders[0].template_params?.child?.en === CHILDREN.C.full_name_en, JSON.stringify(reminders[0].template_params));
+  const b = await attendanceOf(B.childId, TODAY);
+  check(!b.pickup_reminder_sent_at, 'B was reminded after its billing had already started');
+  if (!WAIT_FOR_CRON) {
+    await runJobDirectly('reminders', 'run_pickup_reminders');
+    const again = (await notificationsOf(parent)).filter((n) => n.type === 'pickup_reminder');
+    check(again.length === 1, 'reminded twice');
+  }
+  return { ...ran, child: reminders[0].template_params.child.en, billingFrom: reminders[0].template_params.end_time, sentOnce: true };
+});
+
+await step('late-pickup sweep (every 15 min): B, 20 min past billing, is charged 1 h at EGP 50 on an invoice; the parent is told', async () => {
+  // B: billing started 20 minutes ago: past the 15-minute grace, so 1 hour to bill (still 1 hour
+  // after waiting up to 17 minutes for the scheduler).
+  await sql(`update public.attendance_records set check_in = now() - interval '8 hours 20 minutes' where id = '${B.todayAttendanceId}'`);
+  let ran;
+  if (WAIT_FOR_CRON) {
+    ran = await waitFor('sweep', async () => (await attendanceOf(B.childId, TODAY))?.late_charge_status === 'provisional', 17 * 60_000);
+  } else {
+    ran = { processed: await runJobDirectly('sweep', 'run_late_pickup_sweep') };
+  }
+  const b = await attendanceOf(B.childId, TODAY);
+  check(b.late_charge_status === 'provisional', `charge ${b.late_charge_status}`);
+  check(Number(b.extra_hours) === 1 && Number(b.extra_hours_billed) === 1 && Number(b.extra_fee) === 50, JSON.stringify({ hours: b.extra_hours, billed: b.extra_hours_billed, fee: b.extra_fee }));
+  const invoice = ok(await service.from('invoices').select('amount, status, invoice_type').eq('id', b.late_charge_invoice_id).single(), 'invoice');
+  const told = (await notificationsOf(parent)).filter((n) => n.type === 'extra_hours_accruing');
+  check(told.length === 1, `${told.length} extra_hours_accruing`);
+  if (!WAIT_FOR_CRON) {
+    await runJobDirectly('sweep', 'run_late_pickup_sweep');
+    const again = await attendanceOf(B.childId, TODAY);
+    check(Number(again.extra_fee) === 50, `charged again: ${again.extra_fee}`);
+  }
+  return { ...ran, lateMinutes: b.late_minutes, hours: Number(b.extra_hours), fee: Number(b.extra_fee), invoice: `${invoice.invoice_type} ${Number(invoice.amount)} ${invoice.status}`, parentTold: 'extra_hours_accruing' };
+});
+
+await step('the teacher checks B out: the charge becomes final; the parent is told the amount', async () => {
+  const before = (await notificationsOf(parent)).filter((n) => n.type === 'attendance_checkout').length;
+  const res = ok(
+    await teacher.client.rpc('record_attendance_check_out', {
+      p_attendance_id: B.todayAttendanceId,
+      p_method: 'manual',
+      p_qr_token_id: null,
+      p_pickup: { pickup_person_name: parent.name_en, pickup_relationship: 'Mother' },
+      p_force: false,
+    }),
+    'check out',
+  );
+  check(res.status === 'checked_out', JSON.stringify(res));
+  const b = await attendanceOf(B.childId, TODAY);
+  check(b.late_charge_status === 'final' && Number(b.extra_fee) === 50, JSON.stringify({ status: b.late_charge_status, fee: b.extra_fee }));
+  const after = (await notificationsOf(parent)).filter((n) => n.type === 'attendance_checkout').length;
+  check(after === before + 1, 'the parent was not told');
+  // C leaves before its billing starts: nothing to pay.
+  const c = ok(
+    await teacher.client.rpc('record_attendance_check_out', { p_attendance_id: C.todayAttendanceId, p_method: 'manual', p_qr_token_id: null, p_pickup: {}, p_force: false }),
+    'check out C',
+  );
+  check(c.status === 'checked_out' && Number(c.extra_fee) === 0, JSON.stringify(c));
+  return { childB: `${b.late_charge_status}: ${Number(b.extra_hours)} h, EGP ${Number(b.extra_fee)}`, childC: 'left on time, nothing to pay' };
+});
+
+await step('end-of-day close (hourly): a day from yesterday left open is flagged; the admin is told', async () => {
+  const [row] = await sql(`
+    insert into public.attendance_records (child_id, attendance_date, check_in, check_in_method, check_in_by)
+    values ('${C.childId}', '${YESTERDAY}', ('${YESTERDAY} 09:00')::timestamp at time zone '${S.timezone}', 'manual', '${teacher.id}')
+    returning id`);
+  C.yesterdayAttendanceId = row.id;
+  // The close runs once an hour: run it directly (the scheduler itself is checked below).
+  const processed = await runJobDirectly('close', 'run_attendance_daily_close');
+  const att = ok(await service.from('attendance_records').select('needs_review, review_reason').eq('id', C.yesterdayAttendanceId).single(), 'record');
+  check(att.needs_review === true && att.review_reason === 'missing_checkout', JSON.stringify(att));
+  const told = (await notificationsOf(admin)).filter((n) => n.type === 'attendance_needs_review');
+  check(told.length === 1, `${told.length} attendance_needs_review`);
+  return { processed, flagged: att.review_reason, adminTold: told[0].template_params };
+});
+
+await step('the admin resolves the flagged day', async () => {
+  const res = ok(await admin.client.rpc('admin_resolve_attendance_review', { p_attendance_id: C.yesterdayAttendanceId, p_note: 'Picked up by the father, scan missed' }), 'resolve');
+  const att = ok(await service.from('attendance_records').select('needs_review').eq('id', C.yesterdayAttendanceId).single(), 'record');
+  check(res.status === 'resolved' && att.needs_review === false, JSON.stringify({ res, att }));
+  return 'resolved; no longer flagged';
+});
+
+await step('the scheduler really runs these jobs, on time and without errors (its run log)', async () => {
+  const rows = await sql(`
+    select j.jobname, j.schedule,
+           count(d.runid) filter (where d.start_time > now() - interval '2 hours')::int as runs_2h,
+           count(d.runid) filter (where d.start_time > now() - interval '2 hours' and d.status <> 'succeeded')::int as failed_2h,
+           round(extract(epoch from now() - max(d.start_time)) / 60)::int as minutes_since_last
+      from cron.job j
+      left join cron.job_run_details d on d.jobid = j.jobid
+     where j.jobname in ('attendance-pickup-reminders', 'late-pickup-sweep', 'attendance-daily-close')
+     group by j.jobname, j.schedule
+     order by j.jobname`);
+  const expected = {
+    'attendance-pickup-reminders': { minRuns: 20, maxGap: 6 },
+    'late-pickup-sweep': { minRuns: 6, maxGap: 16 },
+    'attendance-daily-close': { minRuns: 1, maxGap: 61 },
+  };
+  for (const row of rows) {
+    const e = expected[row.jobname];
+    check(row.runs_2h >= e.minRuns && row.failed_2h === 0 && row.minutes_since_last <= e.maxGap, JSON.stringify(row));
+  }
+  check(rows.length === 3, `${rows.length} jobs found`);
+  return rows.map((r) => `${r.jobname} (${r.schedule}): ${r.runs_2h} runs in 2 h, ${r.failed_2h} failed, last ${r.minutes_since_last} min ago`);
+});
+
+// ---------------------------------------------------------------------------------------------
 section('Cleanup — delete everything this run created');
 
 const userIds = Object.values(people).map((p) => p.id).filter((id) => UUID.test(String(id)));
@@ -1114,6 +1614,6 @@ await step('verified: no rows, accounts or files left', async () => {
   return left;
 });
 
-const total = passed + failed.length;
-console.log(`\n== ${passed}/${total} steps passed${failed.length ? `; failed: ${failed.join(' | ')}` : ''}`);
+const total = passed + failed.length + skipped.length;
+console.log(`\n== ${passed}/${total} steps passed${skipped.length ? `; skipped: ${skipped.join(' | ')}` : ''}${failed.length ? `; failed: ${failed.join(' | ')}` : ''}`);
 process.exit(failed.length ? 1 : 0);

@@ -14,6 +14,7 @@ import { useAuthSession } from '@/hooks/useAuthSession';
 import { useMediaUpload } from '@/hooks/useMediaUpload';
 import { MAX_FILES_PER_BATCH, validateMediaFile } from '@/lib/mediaStorage';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { localDateInputValue } from '@/lib/datetime';
 
 export function TeacherMediaUploadPage() {
   const { t, i18n } = useTranslation();
@@ -26,7 +27,7 @@ export function TeacherMediaUploadPage() {
   const upload = useMediaUpload({ userId: user?.id, nurseryId: profile?.nursery_id ?? undefined });
 
   const [files, setFiles] = useState<File[]>([]);
-  const [capturedAt, setCapturedAt] = useState(new Date().toISOString().slice(0, 10));
+  const [capturedAt, setCapturedAt] = useState(localDateInputValue(new Date()));
   const [classId, setClassId] = useState('');
   const [childIds, setChildIds] = useState<string[]>([]);
   const [activityType, setActivityType] = useState<string>('');

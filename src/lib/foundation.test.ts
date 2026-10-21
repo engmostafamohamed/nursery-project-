@@ -8,7 +8,7 @@ import i18n from '@/lib/i18n';
 import { fakeDb } from '@/test/fakeSupabase';
 
 import { isAuthSessionError } from './authErrors';
-import { formatDate, formatTime } from './datetime';
+import { formatDate, formatTime, localDateInputValue } from './datetime';
 import { formatMobileDisplayForInput, stripMobileInputDisplay } from './mobileDisplayFormat';
 import {
   enqueueOfflineRetry,
@@ -96,6 +96,10 @@ describe('shared formatting', () => {
     expect(formatTime('2026-10-14T05:30:00Z')).toMatch(/^08:30\sam$/);
     expect(formatDate(null)).toBe('—');
     expect(formatDate('not a date')).toBe('—');
+  });
+
+  it('uses the local calendar date for date inputs around midnight', () => {
+    expect(localDateInputValue(new Date(2026, 9, 17, 1, 0))).toBe('2026-10-17');
   });
 
   it('switches to Arabic formatting with the language', async () => {
