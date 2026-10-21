@@ -32,6 +32,10 @@
     --warning: 196 130 36;
     --error: 224 78 132;
     --info: 92 99 214;
+    /* Attendance charts: attended / absent with notice / absent without notice. Checked for colour-blind separation on this theme surface. */
+    --chart-attended: 92 99 214;
+    --chart-excused: 196 130 36;
+    --chart-absent: 224 78 132;
 
     --shadow-sm: 0 1px 2px 0 rgb(60 50 120 / 0.05);
     --shadow-md: 0 6px 16px -2px rgb(60 50 120 / 0.10);
@@ -63,6 +67,10 @@
     --warning: 213 162 69;
     --error: 239 102 102;
     --info: 86 150 242;
+    /* Attendance charts: attended / absent with notice / absent without notice. Checked for colour-blind separation on this theme surface. */
+    --chart-attended: 79 141 230;
+    --chart-excused: 181 131 42;
+    --chart-absent: 224 87 122;
 
     --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.4);
     --shadow-md: 0 6px 14px 0 rgb(0 0 0 / 0.5);
@@ -94,6 +102,10 @@
     --warning: 217 119 6;
     --error: 220 38 38;
     --info: 82 122 98;
+    /* Attendance charts: attended / absent with notice / absent without notice. Checked for colour-blind separation on this theme surface. */
+    --chart-attended: 63 127 184;
+    --chart-excused: 194 122 18;
+    --chart-absent: 208 70 110;
 
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     --shadow-md: 0 4px 12px 0 rgb(0 0 0 / 0.07);

@@ -1486,6 +1486,8 @@
         "eyebrow": "Child record",
         "tabOverview": "Overview",
         "tabHealth": "Health",
+        "tabAttendance": "Attendance",
+        "tabBilling": "Billing",
         "tabDocuments": "Documents",
         "tabTools": "Photo & QR",
         "attendanceReport": "Attendance report",
@@ -5141,6 +5143,72 @@
     "goBack": "Go back",
     "goHome": "Home",
     "pushSubscriptionSave": "Could not save notification settings. Try again when you are online."
+  },
+  "attendanceHistory": {
+    "introStaff": "Every day the child was expected: who brought and picked them up, who received and handed them over, and the family’s notice for each absence.",
+    "introParent": "Every school day: when your child arrived and left, who brought and picked them up, and the absence notices you sent.",
+    "loadError": "The attendance history could not be loaded.",
+    "unavailable": "This child’s attendance history is not available.",
+    "range": {
+      "label": "Period",
+      "days30": "30 days",
+      "days90": "3 months",
+      "days180": "6 months"
+    },
+    "stats": {
+      "rate": "Attendance rate",
+      "rateHint": "{{attended}} of {{expected}} expected days",
+      "attended": "Days attended",
+      "usualHours": "Usual arrival",
+      "usualDeparture": "Leaves around {{time}}",
+      "latePickups": "Late pickups"
+    },
+    "series": {
+      "attended": "Attended",
+      "withNotice": "Absent with notice",
+      "withoutNotice": "Absent without notice"
+    },
+    "charts": {
+      "weeklyTitle": "Attendance by week",
+      "weeklySubtitle": "Expected days each week: attended, or missed with or without a notice.",
+      "weekOf": "Week of {{date}}",
+      "timesTitle": "Arrival and departure",
+      "timesSubtitle": "The time spent at the nursery each day, from check-in to check-out.",
+      "atNursery": "At the nursery",
+      "arrivedOnly": "Arrived, not checked out",
+      "noDays": "No school days in this period yet.",
+      "noTimes": "No check-ins in this period yet."
+    },
+    "absences": {
+      "title": "Absences ({{count}})",
+      "subtitle": "Days the child was expected but did not come.",
+      "none": "No absences in this period.",
+      "noNoticeText": "No absence notice was sent for this day.",
+      "reason": "Reason",
+      "reportedBy": "Notice from {{name}} · {{when}}"
+    },
+    "log": {
+      "title": "Daily log",
+      "subtitle": "Who brought and picked up the child, and which staff member received and handed them over.",
+      "filterLabel": "Show",
+      "filterAll": "All days",
+      "filterAbsent": "Absences",
+      "filterLate": "Late pickups",
+      "arrival": "Arrival",
+      "departure": "Departure",
+      "broughtBy": "Brought by",
+      "pickedUpBy": "Picked up by",
+      "receivedBy": "Received by",
+      "handedOverBy": "Handed over by",
+      "notRecorded": "Not recorded",
+      "notCheckedOut": "Not checked out",
+      "duration": "{{time}} at the nursery",
+      "latePickup": "Picked up {{time}} after closing time",
+      "lateNotCheckedOut": "{{time}} after closing time, not checked out",
+      "hoursMinutes": "{{hours}} h {{minutes}} min",
+      "minutesOnly": "{{minutes}} min",
+      "empty": "No days match this filter in the period."
+    }
   },
   "attendance": {
     "loadErrorTitle": "Couldn't load attendance records",

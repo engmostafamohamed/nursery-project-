@@ -15,6 +15,7 @@ import {
   YAxis,
 } from 'recharts';
 
+import { ChildAttendanceHistory } from '@/components/attendance/ChildAttendanceHistory';
 import { ChildSelector } from '@/components/parent/ChildSelector';
 import { useParentChildren } from '@/hooks/useParentChildren';
 import { ReportAbsencePanel } from '@/components/parent/ReportAbsencePanel';
@@ -326,7 +327,12 @@ export function ParentAttendanceHistoryPage() {
   return (
     <div className="w-full max-w-none space-y-5 pb-28">
       <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
-        <div className="flex flex-col gap-4 border-b border-outline-variant bg-surface-container-lowest p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
+        <div
+          className={cn(
+            'flex flex-col gap-4 bg-surface-container-lowest p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between',
+            isAllMode && 'border-b border-outline-variant',
+          )}
+        >
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase text-primary">
               {t('parent.nav.attendanceHistory', { defaultValue: 'Attendance' })}
@@ -338,31 +344,37 @@ export function ParentAttendanceHistoryPage() {
               {childName || t('parent.childSelector.allChildren')}
             </p>
           </div>
-          <div className={cn('grid gap-3', isMultiChild ? 'sm:grid-cols-3 lg:min-w-[680px]' : 'sm:grid-cols-2 lg:min-w-[460px]')}>
-            {isMultiChild ? (
-              <ChildSelector
-                value={childId}
-                onChange={setChildId}
-                children={children}
-                showAllOption={true}
-              />
-            ) : null}
-            <FilterMenu
-              value={statusFilter}
-              options={statusOptions}
-              onChange={setStatusFilter}
-              label={t('common.status', { defaultValue: 'Status' })}
-            />
-            <FilterMenu
-              value={rangeFilter}
-              options={rangeOptions}
-              onChange={setRangeFilter}
-              label={t('parent.attendanceHistory.period', { defaultValue: 'Period' })}
-            />
-          </div>
+          {isMultiChild ? (
+            <div className={cn('grid gap-3', isAllMode ? 'sm:grid-cols-3 lg:min-w-[680px]' : 'sm:min-w-[280px]')}>
+              {isMultiChild ? (
+                <ChildSelector
+                  value={childId}
+                  onChange={setChildId}
+                  children={children}
+                  showAllOption={true}
+                />
+              ) : null}
+              {isAllMode ? (
+                <>
+                  <FilterMenu
+                    value={statusFilter}
+                    options={statusOptions}
+                    onChange={setStatusFilter}
+                    label={t('common.status', { defaultValue: 'Status' })}
+                  />
+                  <FilterMenu
+                    value={rangeFilter}
+                    options={rangeOptions}
+                    onChange={setRangeFilter}
+                    label={t('parent.attendanceHistory.period', { defaultValue: 'Period' })}
+                  />
+                </>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
-        {loading ? (
+        {!isAllMode ? null : loading ? (
           <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4 sm:p-5">
             <Skeleton className="h-24 rounded-xl" />
             <Skeleton className="h-24 rounded-xl" />
@@ -425,260 +437,279 @@ export function ParentAttendanceHistoryPage() {
         )}
       </section>
 
+      {!isAllMode && extraHoursDue.count > 0 ? (
+        <Link
+          to="/parent/invoices"
+          className="flex items-center justify-between gap-3 rounded-xl border border-error/30 bg-error/5 p-4 text-sm text-on-surface transition-colors hover:bg-error/10"
+        >
+          <span className="flex items-center gap-2">
+            <MaterialSymbol name="receipt_long" className="text-error" />
+            {t('attendance.parent.extraHoursDue', { count: extraHoursDue.count })}
+          </span>
+          <span className="font-semibold tabular-nums">{extraHoursDue.total.toFixed(2)}</span>
+        </Link>
+      ) : null}
+
       {children.length ? (
         <ReportAbsencePanel children={children} defaultChildId={selectedChildId || undefined} />
       ) : null}
 
-      {loading ? (
-        <Skeleton className="h-96 w-full rounded-xl" />
-      ) : (
-        <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
-            <div className="flex items-center justify-between gap-3 border-b border-outline-variant bg-surface-container-lowest p-4">
+      {isAllMode ? (
+        <>
+          {loading ? (
+            <Skeleton className="h-96 w-full rounded-xl" />
+          ) : (
+            <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+              <div className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
+                <div className="flex items-center justify-between gap-3 border-b border-outline-variant bg-surface-container-lowest p-4">
+                  <div>
+                    <h2 className="text-base font-semibold text-on-surface">
+                      {t('parent.attendanceHistory.chartTitle', { defaultValue: 'Attendance trend' })}
+                    </h2>
+                    <p className="mt-1 text-xs text-on-surface-variant">
+                      {t('parent.attendanceHistory.chartSubtitle', {
+                        days: rangeFilter,
+                        defaultValue: 'Present, partial, and absent days for the last {{days}} days.',
+                      })}
+                    </p>
+                  </div>
+                </div>
+                <div className="h-80 p-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartRows} margin={{ left: -24, right: 8, top: 12, bottom: 0 }}>
+                      <CartesianGrid stroke="rgb(var(--border-default))" strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={12} />
+                      <YAxis allowDecimals={false} tickLine={false} axisLine={false} fontSize={12} />
+                      <Tooltip
+                        cursor={{ fill: 'rgb(var(--surface-high))' }}
+                        contentStyle={{
+                          border: '1px solid rgb(var(--border-default))',
+                          borderRadius: 8,
+                          background: 'rgb(var(--surface))',
+                          color: 'rgb(var(--foreground))',
+                        }}
+                      />
+                      <Bar dataKey="present" stackId="attendance" fill="rgb(var(--success))" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="partial" stackId="attendance" fill="rgb(var(--primary))" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="absent" stackId="attendance" fill="rgb(var(--error))" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <aside className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
+                <div className="border-b border-outline-variant bg-surface-container-lowest p-4">
+                  <h2 className="text-base font-semibold text-on-surface">
+                    {t('parent.attendanceHistory.breakdownTitle', { defaultValue: 'Breakdown' })}
+                  </h2>
+                  <p className="mt-1 text-xs text-on-surface-variant">
+                    {t('parent.attendanceHistory.schoolDaysCount', {
+                      count: metrics.totalSchoolDays,
+                      defaultValue: '{{count}} school days',
+                    })}
+                  </p>
+                </div>
+                <div className="grid gap-4 p-4">
+                  <div className="h-52">
+                    {pieRows.length ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie data={pieRows} dataKey="value" nameKey="name" innerRadius={52} outerRadius={82} paddingAngle={3}>
+                            {pieRows.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex h-full items-center justify-center rounded-lg border border-outline-variant text-sm text-on-surface-variant">
+                        {t('parent.attendanceHistory.noChartData', { defaultValue: 'No records yet' })}
+                      </div>
+                    )}
+                  </div>
+                  <div className="grid gap-2 text-sm">
+                    {pieRows.map((row) => (
+                      <div key={row.name} className="flex items-center justify-between gap-3 rounded-lg bg-surface-container-lowest px-3 py-2">
+                        <span className="inline-flex items-center gap-2 text-on-surface-variant">
+                          <span className="h-2.5 w-2.5 rounded-full" style={{ background: row.color }} />
+                          {row.name}
+                        </span>
+                        <span className="font-semibold text-on-surface">{row.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </aside>
+            </section>
+          )}
+
+          <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
+            <div className="flex flex-col gap-3 border-b border-outline-variant bg-surface-container-lowest p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-base font-semibold text-on-surface">
-                  {t('parent.attendanceHistory.chartTitle', { defaultValue: 'Attendance trend' })}
+                  {t('parent.attendanceHistory.recordsTitle', { defaultValue: 'Attendance records' })}
                 </h2>
                 <p className="mt-1 text-xs text-on-surface-variant">
-                  {t('parent.attendanceHistory.chartSubtitle', {
-                    days: rangeFilter,
-                    defaultValue: 'Present, partial, and absent days for the last {{days}} days.',
+                  {t('parent.attendanceHistory.filteredCount', {
+                    count: filteredRows.length,
+                    defaultValue: '{{count}} records after filters',
                   })}
                 </p>
               </div>
             </div>
-            <div className="h-80 p-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartRows} margin={{ left: -24, right: 8, top: 12, bottom: 0 }}>
-                  <CartesianGrid stroke="rgb(var(--border-default))" strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={12} />
-                  <YAxis allowDecimals={false} tickLine={false} axisLine={false} fontSize={12} />
-                  <Tooltip
-                    cursor={{ fill: 'rgb(var(--surface-high))' }}
-                    contentStyle={{
-                      border: '1px solid rgb(var(--border-default))',
-                      borderRadius: 8,
-                      background: 'rgb(var(--surface))',
-                      color: 'rgb(var(--foreground))',
-                    }}
-                  />
-                  <Bar dataKey="present" stackId="attendance" fill="rgb(var(--success))" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="partial" stackId="attendance" fill="rgb(var(--primary))" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="absent" stackId="attendance" fill="rgb(var(--error))" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
 
-          <aside className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
-            <div className="border-b border-outline-variant bg-surface-container-lowest p-4">
-              <h2 className="text-base font-semibold text-on-surface">
-                {t('parent.attendanceHistory.breakdownTitle', { defaultValue: 'Breakdown' })}
-              </h2>
-              <p className="mt-1 text-xs text-on-surface-variant">
-                {t('parent.attendanceHistory.schoolDaysCount', {
-                  count: metrics.totalSchoolDays,
-                  defaultValue: '{{count}} school days',
-                })}
-              </p>
-            </div>
-            <div className="grid gap-4 p-4">
-              <div className="h-52">
-                {pieRows.length ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={pieRows} dataKey="value" nameKey="name" innerRadius={52} outerRadius={82} paddingAngle={3}>
-                        {pieRows.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="flex h-full items-center justify-center rounded-lg border border-outline-variant text-sm text-on-surface-variant">
-                    {t('parent.attendanceHistory.noChartData', { defaultValue: 'No records yet' })}
-                  </div>
-                )}
+            {loading ? (
+              <div className="p-4">
+                <Skeleton className="h-80 rounded-xl" />
               </div>
-              <div className="grid gap-2 text-sm">
-                {pieRows.map((row) => (
-                  <div key={row.name} className="flex items-center justify-between gap-3 rounded-lg bg-surface-container-lowest px-3 py-2">
-                    <span className="inline-flex items-center gap-2 text-on-surface-variant">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ background: row.color }} />
-                      {row.name}
-                    </span>
-                    <span className="font-semibold text-on-surface">{row.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </aside>
-        </section>
-      )}
-
-      <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
-        <div className="flex flex-col gap-3 border-b border-outline-variant bg-surface-container-lowest p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-base font-semibold text-on-surface">
-              {t('parent.attendanceHistory.recordsTitle', { defaultValue: 'Attendance records' })}
-            </h2>
-            <p className="mt-1 text-xs text-on-surface-variant">
-              {t('parent.attendanceHistory.filteredCount', {
-                count: filteredRows.length,
-                defaultValue: '{{count}} records after filters',
-              })}
-            </p>
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="p-4">
-            <Skeleton className="h-80 rounded-xl" />
-          </div>
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[1040px] text-sm">
-                <thead className="bg-surface-container-lowest text-xs uppercase text-on-surface-variant">
-                  <tr>
-                    {isAllMode ? (
-                      <th className="px-4 py-3 text-start font-semibold">
-                        {t('admin.children.childColumn', { defaultValue: 'Child' })}
-                      </th>
-                    ) : null}
-                    <th className="px-4 py-3 text-start font-semibold">{t('parent.attendanceHistory.colDate')}</th>
-                    <th className="px-4 py-3 text-start font-semibold">{t('common.status', { defaultValue: 'Status' })}</th>
-                    <th className="px-4 py-3 text-start font-semibold">{t('parent.attendanceHistory.colCheckIn')}</th>
-                    <th className="px-4 py-3 text-start font-semibold">{t('parent.attendanceHistory.colCheckOut')}</th>
-                    <th className="px-4 py-3 text-start font-semibold">{t('attendance.columns.extraTime')}</th>
-                    <th className="px-4 py-3 text-start font-semibold">{t('attendance.columns.amount')}</th>
-                    <th className="px-4 py-3 text-start font-semibold">
-                      {t('parent.attendanceHistory.colPickup')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-outline-variant">
-                  {pager.pageItems.map((row) => (
-                    <tr key={`${row.childId ?? 'child'}-${row.date}`} className="transition hover:bg-surface-container-lowest">
-                      {isAllMode ? (
-                        <td className="px-4 py-3 align-top font-semibold text-on-surface">
-                          {row.childId ? childNameById[row.childId] ?? '-' : '-'}
-                        </td>
-                      ) : null}
-                      <td className="px-4 py-3 align-top font-medium text-on-surface">{formatDate(row.date, locale)}</td>
-                      <td className="px-4 py-3 align-top">
-                        <StatusBadge row={row} />
-                        {row.status === 'excused' && row.detail?.absenceReason ? (
-                          <p className="mt-1 text-xs text-on-surface-variant">
-                            {t(`attendance.absence.reasons.${row.detail.absenceReason}`)}
-                          </p>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[1040px] text-sm">
+                    <thead className="bg-surface-container-lowest text-xs uppercase text-on-surface-variant">
+                      <tr>
+                        {isAllMode ? (
+                          <th className="px-4 py-3 text-start font-semibold">
+                            {t('admin.children.childColumn', { defaultValue: 'Child' })}
+                          </th>
                         ) : null}
-                      </td>
-                      <td className="px-4 py-3 align-top text-on-surface-variant">
-                        {formatTime(row.checkIn)}
-                        {row.detail?.checkIn ? (
-                          <p className="text-xs">
-                            {t('attendance.byStaff', { name: staffName(row.detail.checkedInBy, i18n.language) ?? '—' })}
-                            {row.detail.checkInMethod ? ` · ${t(`attendance.method.${row.detail.checkInMethod}`)}` : ''}
-                          </p>
-                        ) : null}
-                      </td>
-                      <td className="px-4 py-3 align-top text-on-surface-variant">
-                        {formatTime(row.checkOut)}
-                        {row.detail?.checkOut ? (
-                          <p className="text-xs">
-                            {t('attendance.byStaff', { name: staffName(row.detail.checkedOutBy, i18n.language) ?? '—' })}
-                            {row.detail.checkOutMethod ? ` · ${t(`attendance.method.${row.detail.checkOutMethod}`)}` : ''}
-                          </p>
-                        ) : null}
-                      </td>
-                      <td className="px-4 py-3 align-top">
-                        {row.detail?.extraHours ? (
-                          <div className="text-xs">
-                            <p className="font-semibold text-warning">
-                              {t('attendance.extraHoursShort', { hours: row.detail.extraHours })}
-                            </p>
-                            <p className="text-on-surface-variant">
-                              {t('attendance.lateMinutes', { minutes: row.detail.lateMinutes })}
-                              {row.detail.extraHoursCovered > 0
-                                ? ` · ${t('attendance.coveredByPackage', { hours: row.detail.extraHoursCovered })}`
-                                : ''}
-                            </p>
-                          </div>
-                        ) : (
-                          <span className="text-on-surface-variant">-</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 align-top">
-                        {row.detail?.lateChargeWaived ? (
-                          <span className="text-xs font-semibold text-success">{t('attendance.waived')}</span>
-                        ) : row.detail && row.detail.extraFee > 0 ? (
-                          <div className="text-xs">
-                            <p className="font-semibold text-on-surface">{row.detail.extraFee.toFixed(2)}</p>
-                            {row.detail.invoiceStatus ? (
-                              <Link to="/parent/invoices" className="text-primary underline-offset-2 hover:underline">
-                                {t(`attendance.invoiceStatus.${row.detail.invoiceStatus}`, { defaultValue: row.detail.invoiceStatus })}
-                              </Link>
+                        <th className="px-4 py-3 text-start font-semibold">{t('parent.attendanceHistory.colDate')}</th>
+                        <th className="px-4 py-3 text-start font-semibold">{t('common.status', { defaultValue: 'Status' })}</th>
+                        <th className="px-4 py-3 text-start font-semibold">{t('parent.attendanceHistory.colCheckIn')}</th>
+                        <th className="px-4 py-3 text-start font-semibold">{t('parent.attendanceHistory.colCheckOut')}</th>
+                        <th className="px-4 py-3 text-start font-semibold">{t('attendance.columns.extraTime')}</th>
+                        <th className="px-4 py-3 text-start font-semibold">{t('attendance.columns.amount')}</th>
+                        <th className="px-4 py-3 text-start font-semibold">
+                          {t('parent.attendanceHistory.colPickup')}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-outline-variant">
+                      {pager.pageItems.map((row) => (
+                        <tr key={`${row.childId ?? 'child'}-${row.date}`} className="transition hover:bg-surface-container-lowest">
+                          {isAllMode ? (
+                            <td className="px-4 py-3 align-top font-semibold text-on-surface">
+                              {row.childId ? childNameById[row.childId] ?? '-' : '-'}
+                            </td>
+                          ) : null}
+                          <td className="px-4 py-3 align-top font-medium text-on-surface">{formatDate(row.date, locale)}</td>
+                          <td className="px-4 py-3 align-top">
+                            <StatusBadge row={row} />
+                            {row.status === 'excused' && row.detail?.absenceReason ? (
+                              <p className="mt-1 text-xs text-on-surface-variant">
+                                {t(`attendance.absence.reasons.${row.detail.absenceReason}`)}
+                              </p>
                             ) : null}
-                          </div>
-                        ) : (
-                          <span className="text-on-surface-variant">-</span>
-                        )}
-                      </td>
-                        <td className="px-4 py-3 align-top">
-                          {row.pickup?.personName || row.pickup?.photoUrl ? (
-                            <div className="flex items-center gap-2">
-                              {row.pickup.photoUrl ? (
-                                <img
-                                  src={row.pickup.photoUrl}
-                                  alt=""
-                                  className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-outline-variant"
-                                  loading="lazy"
-                                  decoding="async"
-                                />
+                          </td>
+                          <td className="px-4 py-3 align-top text-on-surface-variant">
+                            {formatTime(row.checkIn)}
+                            {row.detail?.checkIn ? (
+                              <p className="text-xs">
+                                {t('attendance.byStaff', { name: staffName(row.detail.checkedInBy, i18n.language) ?? '—' })}
+                                {row.detail.checkInMethod ? ` · ${t(`attendance.method.${row.detail.checkInMethod}`)}` : ''}
+                              </p>
+                            ) : null}
+                          </td>
+                          <td className="px-4 py-3 align-top text-on-surface-variant">
+                            {formatTime(row.checkOut)}
+                            {row.detail?.checkOut ? (
+                              <p className="text-xs">
+                                {t('attendance.byStaff', { name: staffName(row.detail.checkedOutBy, i18n.language) ?? '—' })}
+                                {row.detail.checkOutMethod ? ` · ${t(`attendance.method.${row.detail.checkOutMethod}`)}` : ''}
+                              </p>
+                            ) : null}
+                          </td>
+                          <td className="px-4 py-3 align-top">
+                            {row.detail?.extraHours ? (
+                              <div className="text-xs">
+                                <p className="font-semibold text-warning">
+                                  {t('attendance.extraHoursShort', { hours: row.detail.extraHours })}
+                                </p>
+                                <p className="text-on-surface-variant">
+                                  {t('attendance.lateMinutes', { minutes: row.detail.lateMinutes })}
+                                  {row.detail.extraHoursCovered > 0
+                                    ? ` · ${t('attendance.coveredByPackage', { hours: row.detail.extraHoursCovered })}`
+                                    : ''}
+                                </p>
+                              </div>
+                            ) : (
+                              <span className="text-on-surface-variant">-</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 align-top">
+                            {row.detail?.lateChargeWaived ? (
+                              <span className="text-xs font-semibold text-success">{t('attendance.waived')}</span>
+                            ) : row.detail && row.detail.extraFee > 0 ? (
+                              <div className="text-xs">
+                                <p className="font-semibold text-on-surface">{row.detail.extraFee.toFixed(2)}</p>
+                                {row.detail.invoiceStatus ? (
+                                  <Link to="/parent/invoices" className="text-primary underline-offset-2 hover:underline">
+                                    {t(`attendance.invoiceStatus.${row.detail.invoiceStatus}`, { defaultValue: row.detail.invoiceStatus })}
+                                  </Link>
+                                ) : null}
+                              </div>
+                            ) : (
+                              <span className="text-on-surface-variant">-</span>
+                            )}
+                          </td>
+                            <td className="px-4 py-3 align-top">
+                              {row.pickup?.personName || row.pickup?.photoUrl ? (
+                                <div className="flex items-center gap-2">
+                                  {row.pickup.photoUrl ? (
+                                    <img
+                                      src={row.pickup.photoUrl}
+                                      alt=""
+                                      className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-outline-variant"
+                                      loading="lazy"
+                                      decoding="async"
+                                    />
+                                  ) : (
+                                    <span
+                                      className="material-symbols-outlined shrink-0 text-base text-on-surface-variant"
+                                      aria-hidden
+                                    >
+                                      person
+                                    </span>
+                                  )}
+                                  <span className="truncate text-on-surface">
+                                    {row.pickup.personName ?? t('parent.attendanceHistory.unknownPickup')}
+                                  </span>
+                                </div>
                               ) : (
-                                <span
-                                  className="material-symbols-outlined shrink-0 text-base text-on-surface-variant"
-                                  aria-hidden
-                                >
-                                  person
-                                </span>
+                                <span className="text-on-surface-variant">-</span>
                               )}
-                              <span className="truncate text-on-surface">
-                                {row.pickup.personName ?? t('parent.attendanceHistory.unknownPickup')}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-on-surface-variant">-</span>
-                          )}
-                        </td>
-                    </tr>
-                  ))}
-                  {pager.pageItems.length === 0 ? (
-                    <tr>
-                      <td className="px-4 py-10 text-center text-sm text-on-surface-variant" colSpan={isAllMode ? 8 : 7}>
-                        {t('parent.attendanceHistory.noFilteredRecords', { defaultValue: 'No attendance records match these filters.' })}
-                      </td>
-                    </tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
-            <div className="p-4">
-              <Pagination
-                page={pager.page}
-                pageCount={pager.pageCount}
-                total={pager.total}
-                startIndex={pager.startIndex}
-                endIndex={pager.endIndex}
-                hasPrev={pager.hasPrev}
-                hasNext={pager.hasNext}
-                onPrev={pager.prev}
-                onNext={pager.next}
-              />
-            </div>
-          </>
-        )}
-      </section>
+                            </td>
+                        </tr>
+                      ))}
+                      {pager.pageItems.length === 0 ? (
+                        <tr>
+                          <td className="px-4 py-10 text-center text-sm text-on-surface-variant" colSpan={isAllMode ? 8 : 7}>
+                            {t('parent.attendanceHistory.noFilteredRecords', { defaultValue: 'No attendance records match these filters.' })}
+                          </td>
+                        </tr>
+                      ) : null}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="p-4">
+                  <Pagination
+                    page={pager.page}
+                    pageCount={pager.pageCount}
+                    total={pager.total}
+                    startIndex={pager.startIndex}
+                    endIndex={pager.endIndex}
+                    hasPrev={pager.hasPrev}
+                    hasNext={pager.hasNext}
+                    onPrev={pager.prev}
+                    onNext={pager.next}
+                  />
+                </div>
+              </>
+            )}
+          </section>
+        </>
+      ) : selectedChildId ? (
+        <ChildAttendanceHistory childId={selectedChildId} nurseryId={nurseryId} audience="parent" />
+      ) : null}
     </div>
   );
 }

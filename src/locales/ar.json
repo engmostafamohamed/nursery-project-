@@ -1486,6 +1486,8 @@
         "eyebrow": "ملف الطفل",
         "tabOverview": "نظرة عامة",
         "tabHealth": "الصحة",
+        "tabAttendance": "الحضور",
+        "tabBilling": "الفواتير",
         "tabDocuments": "المستندات",
         "tabTools": "الصورة ورمز QR",
         "attendanceReport": "تقرير الحضور",
@@ -5156,6 +5158,72 @@
     "goBack": "رجوع",
     "goHome": "الرئيسية",
     "pushSubscriptionSave": "تعذّر حفظ إعدادات الإشعارات. أعد المحاولة عند الاتصال بالإنترنت."
+  },
+  "attendanceHistory": {
+    "introStaff": "كل يوم كان متوقعًا حضور الطفل فيه: من أحضره ومن استلمه، ومن استقبله ومن سلّمه من الفريق، وإشعار الأسرة عن كل غياب.",
+    "introParent": "كل يوم دراسي: متى وصل طفلك ومتى غادر، ومن أحضره ومن استلمه، وإشعارات الغياب التي أرسلتها.",
+    "loadError": "تعذّر تحميل سجل الحضور.",
+    "unavailable": "سجل حضور هذا الطفل غير متاح.",
+    "range": {
+      "label": "المدة",
+      "days30": "30 يومًا",
+      "days90": "3 شهور",
+      "days180": "6 شهور"
+    },
+    "stats": {
+      "rate": "نسبة الحضور",
+      "rateHint": "{{attended}} من {{expected}} يومًا متوقعًا",
+      "attended": "أيام الحضور",
+      "usualHours": "موعد الوصول المعتاد",
+      "usualDeparture": "يغادر حوالي {{time}}",
+      "latePickups": "استلام متأخر"
+    },
+    "series": {
+      "attended": "حضر",
+      "withNotice": "غياب بإشعار",
+      "withoutNotice": "غياب بدون إشعار"
+    },
+    "charts": {
+      "weeklyTitle": "الحضور أسبوعيًا",
+      "weeklySubtitle": "الأيام المتوقعة كل أسبوع: حضر، أو غاب بإشعار أو بدون إشعار.",
+      "weekOf": "أسبوع {{date}}",
+      "timesTitle": "الوصول والمغادرة",
+      "timesSubtitle": "الوقت الذي قضاه الطفل في الحضانة كل يوم، من تسجيل الدخول إلى الخروج.",
+      "atNursery": "في الحضانة",
+      "arrivedOnly": "وصل ولم يُسجَّل خروجه",
+      "noDays": "لا توجد أيام دراسية في هذه المدة بعد.",
+      "noTimes": "لا يوجد تسجيل دخول في هذه المدة بعد."
+    },
+    "absences": {
+      "title": "أيام الغياب ({{count}})",
+      "subtitle": "الأيام التي كان متوقعًا حضور الطفل فيها ولم يحضر.",
+      "none": "لا يوجد غياب في هذه المدة.",
+      "noNoticeText": "لم يُرسَل إشعار غياب لهذا اليوم.",
+      "reason": "السبب",
+      "reportedBy": "إشعار من {{name}} · {{when}}"
+    },
+    "log": {
+      "title": "السجل اليومي",
+      "subtitle": "من أحضر الطفل ومن استلمه، ومن استقبله ومن سلّمه من الفريق.",
+      "filterLabel": "عرض",
+      "filterAll": "كل الأيام",
+      "filterAbsent": "الغياب",
+      "filterLate": "الاستلام المتأخر",
+      "arrival": "الوصول",
+      "departure": "المغادرة",
+      "broughtBy": "أحضره",
+      "pickedUpBy": "استلمه",
+      "receivedBy": "استقبله",
+      "handedOverBy": "سلّمه",
+      "notRecorded": "غير مسجّل",
+      "notCheckedOut": "لم يُسجَّل الخروج",
+      "duration": "{{time}} في الحضانة",
+      "latePickup": "استُلم بعد موعد الانصراف بـ {{time}}",
+      "lateNotCheckedOut": "{{time}} بعد موعد الانصراف ولم يُسجَّل خروجه",
+      "hoursMinutes": "{{hours}} س {{minutes}} د",
+      "minutesOnly": "{{minutes}} د",
+      "empty": "لا توجد أيام تطابق هذا الاختيار في هذه المدة."
+    }
   },
   "attendance": {
     "loadErrorTitle": "تعذر تحميل سجلات الحضور",

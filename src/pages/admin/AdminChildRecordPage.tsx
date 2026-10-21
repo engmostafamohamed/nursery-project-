@@ -6,6 +6,7 @@ import { Link, useParams } from 'react-router-dom';
 import { ChildAvatarUpload } from '@/components/admin/ChildAvatarUpload';
 import { ChildBillingTab } from '@/components/admin/children/ChildBillingTab';
 import { ApplicationDocumentPreview } from '@/components/applications/ApplicationDocumentPreview';
+import { ChildAttendanceHistory } from '@/components/attendance/ChildAttendanceHistory';
 import { ChildQrCodeCard, type ChildQrInput } from '@/components/qr/ChildQrCodeCard';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -134,7 +135,7 @@ type ChildRecordPayload = {
   extraHoursPackage: NameSummary | null;
 };
 
-type ChildRecordTab = 'overview' | 'parents' | 'care' | 'health' | 'emergency' | 'billing' | 'documents' | 'tools';
+type ChildRecordTab = 'overview' | 'parents' | 'care' | 'health' | 'emergency' | 'attendance' | 'billing' | 'documents' | 'tools';
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -441,6 +442,7 @@ export function AdminChildRecordPage() {
     { id: 'care', icon: 'restaurant', label: tk('tabCare', 'Daily care') },
     { id: 'health', icon: 'health_and_safety', label: tk('tabHealth', 'Health') },
     { id: 'emergency', icon: 'emergency', label: tk('tabEmergency', 'Emergency & Pickup'), count: emergencyContacts.length + applicationPickups.length + pickups.length },
+    { id: 'attendance', icon: 'event_available', label: tk('tabAttendance', 'Attendance') },
     { id: 'billing', icon: 'payments', label: tk('tabBilling', 'Billing') },
     { id: 'documents', icon: 'folder_open', label: tk('tabDocuments', 'Documents'), count: documents.length },
     { id: 'tools', icon: 'qr_code_2', label: tk('tabTools', 'Photo & QR') },
@@ -484,11 +486,16 @@ export function AdminChildRecordPage() {
                 {t('health.pageTitle')}
               </Link>
             </Button>
-            <Button variant="outline" asChild className="h-10 rounded-md">
-              <Link to={`/admin/attendance/child/${child.id}`}>
-                <span className="material-symbols-outlined me-2 text-base" aria-hidden>history</span>
-                {tk('attendanceReport', 'Attendance report')}
-              </Link>
+            <Button
+              variant="outline"
+              className="h-10 rounded-md"
+              onClick={() => {
+                setTab('attendance');
+                document.getElementById('child-record-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+            >
+              <span className="material-symbols-outlined me-2 text-base" aria-hidden>history</span>
+              {tk('attendanceReport', 'Attendance report')}
             </Button>
             {sourceApplication ? (
               <Button variant="outline" asChild className="h-10 rounded-md">
@@ -514,7 +521,7 @@ export function AdminChildRecordPage() {
       </section>
 
       {/* Tabs */}
-      <section className="rounded-xl border border-outline-variant bg-surface p-2 shadow-sm">
+      <section id="child-record-tabs" className="scroll-mt-24 rounded-xl border border-outline-variant bg-surface p-2 shadow-sm">
         <div className="flex gap-2 overflow-x-auto">
           {tabs.map((item) => {
             const active = tab === item.id;
@@ -827,6 +834,8 @@ export function AdminChildRecordPage() {
           </Section>
         </div>
       ) : null}
+
+      {tab === 'attendance' ? <ChildAttendanceHistory childId={child.id} nurseryId={child.nursery_id} audience="staff" /> : null}
 
       {tab === 'billing' ? (
         <ChildBillingTab childId={child.id} nurseryId={child.nursery_id} />

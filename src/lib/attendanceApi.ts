@@ -47,6 +47,12 @@ export type AttendanceDay = {
   reviewReason: string | null;
   absenceReason: string | null;
   absenceNote: string | null;
+  /** Who brought the child, from the QR shown at check-in; empty for a manual check-in. */
+  dropoffPersonName: { ar: string | null; en: string | null };
+  dropoffRelationship: string | null;
+  /** Who sent the day's absence notice, and when. */
+  absenceReportedBy: { ar: string | null; en: string | null };
+  absenceReportedAt: string | null;
 };
 
 /** Statuses that count as a day the child was expected (present, partly present, absent or excused). */
@@ -82,6 +88,13 @@ type AttendanceDayRow = {
   review_reason: string | null;
   absence_reason: string | null;
   absence_note: string | null;
+  // Added later; missing from an older server.
+  dropoff_name_ar?: string | null;
+  dropoff_name_en?: string | null;
+  dropoff_relationship?: string | null;
+  absence_reported_by_ar?: string | null;
+  absence_reported_by_en?: string | null;
+  absence_reported_at?: string | null;
 };
 
 const num = (value: number | string | null | undefined) => {
@@ -153,6 +166,10 @@ export async function fetchAttendanceDays(childIds: string[], from: string, to: 
     reviewReason: row.review_reason,
     absenceReason: row.absence_reason,
     absenceNote: row.absence_note,
+    dropoffPersonName: { ar: row.dropoff_name_ar ?? null, en: row.dropoff_name_en ?? null },
+    dropoffRelationship: row.dropoff_relationship ?? null,
+    absenceReportedBy: { ar: row.absence_reported_by_ar ?? null, en: row.absence_reported_by_en ?? null },
+    absenceReportedAt: row.absence_reported_at ?? null,
   }));
 }
 
