@@ -22,7 +22,8 @@
     "ops:trigger-export": "node scripts/ops/trigger-tenant-export.mjs",
     "ops:seed-export": "node scripts/ops/seed-tenant-export-service.mjs",
     "ops:seed-parent-application": "node scripts/ops/seed-parent-application.mjs",
-    "ops:usage": "node scripts/ops/check-supabase-usage.mjs"
+    "ops:usage": "node scripts/ops/check-supabase-usage.mjs",
+    "ops:e2e-flow": "node scripts/ops/e2e-enrollment-to-attendance.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
