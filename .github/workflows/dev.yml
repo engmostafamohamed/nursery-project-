@@ -1,0 +1,35 @@
+name: Dev database
+
+# The project is in development. Its Supabase project (hlhlpjecinkqqsqrjpcj, "xo-platfrom") has
+# no real data, and the app is deployed by Vercel's Git integration on every push to main.
+# This workflow keeps the dev database in step with supabase/migrations:
+#   pull request that changes migrations -> preview them on dev (dry run, nothing applied)
+#   push to main that changes migrations -> apply them to dev
+# Secrets: GitHub environment "dev" -> SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "supabase/migrations/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dev-database
+  cancel-in-progress: false
+
+jobs:
+  migrations:
+    # Pull requests from forks never get the dev secrets.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
+    uses: ./.github/workflows/supabase-migrate.yml
+    with:
+      environment: dev
+      project-ref: hlhlpjecinkqqsqrjpcj
+      apply: ${{ github.event_name != 'pull_request' }}

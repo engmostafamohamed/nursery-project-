@@ -1,0 +1,92 @@
+name: Production release (not live yet)
+
+# For the day XO goes live. Production will be its own Supabase project and its own Vercel
+# project, separate from dev. Until it is set up this workflow is never triggered: it only
+# runs by hand (Actions -> Production release -> Run workflow) and asks for a confirmation.
+#
+# Setup when going live (GitHub -> Settings):
+#   Environments -> "production" (add Required reviewers so every release waits for approval):
+#     secrets  SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD, VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
+#   Secrets and variables -> Actions -> Variables (repository):
+#     SUPABASE_PRODUCTION_PROJECT_REF   ref of the production Supabase project
+#   In the production Vercel project, turn off automatic Git deployments: this workflow deploys it.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type "release production" to confirm
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-release
+  cancel-in-progress: false
+
+env:
+  # The dev project. Production must never point at it.
+  DEV_PROJECT_REF: hlhlpjecinkqqsqrjpcj
+
+jobs:
+  check:
+    name: Check the release can run
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      CONFIRM: ${{ inputs.confirm }}
+      PRODUCTION_PROJECT_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Confirmation and settings
+        shell: bash
+        run: |
+          test "$CONFIRM" = "release production" || { echo "::error::Type exactly: release production"; exit 1; }
+          test -n "$PRODUCTION_PROJECT_REF" || { echo "::error::Set the repository variable SUPABASE_PRODUCTION_PROJECT_REF"; exit 1; }
+          test "$PRODUCTION_PROJECT_REF" != "$DEV_PROJECT_REF" || { echo "::error::SUPABASE_PRODUCTION_PROJECT_REF points at the dev project"; exit 1; }
+          test -n "$VERCEL_TOKEN" || { echo "::error::Missing secret VERCEL_TOKEN in the 'production' GitHub environment"; exit 1; }
+          test -n "$VERCEL_ORG_ID" || { echo "::error::Missing secret VERCEL_ORG_ID in the 'production' GitHub environment"; exit 1; }
+          test -n "$VERCEL_PROJECT_ID" || { echo "::error::Missing secret VERCEL_PROJECT_ID in the 'production' GitHub environment"; exit 1; }
+
+  migrations:
+    needs: check
+    uses: ./.github/workflows/supabase-migrate.yml
+    with:
+      environment: production
+      project-ref: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+      apply: true
+
+  deploy:
+    name: Test, build and deploy the app
+    needs: migrations
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Pull production Vercel settings
+        run: npx --yes vercel@59.5.0 pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Build
+        run: npx --yes vercel@59.5.0 build --prod --token="$VERCEL_TOKEN"
+
+      - name: Deploy
+        run: npx --yes vercel@59.5.0 deploy --prebuilt --prod --token="$VERCEL_TOKEN"

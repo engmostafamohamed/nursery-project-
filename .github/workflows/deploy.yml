@@ -19,9 +19,9 @@ jobs:
     name: Verify
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -29,15 +29,16 @@ jobs:
       - name: Install
         run: npm ci
 
-      # Reported, not enforced yet: main currently carries existing type/lint debt.
-      # Build remains the deploy gate for Vercel's Git integration.
+      # All four are enforced: a red check on the commit as soon as one fails. Vercel's Git
+      # integration only runs the build, so this is where type, lint and test errors are caught.
       - name: Typecheck
         run: npm run typecheck
-        continue-on-error: true
 
       - name: Lint
         run: npm run lint
-        continue-on-error: true
+
+      - name: Unit tests
+        run: npm test
 
       - name: Build
         run: npm run build

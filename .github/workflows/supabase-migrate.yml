@@ -1,0 +1,59 @@
+name: Supabase migrations (shared)
+
+# One set of migration steps for every environment. Called by dev.yml and production.yml;
+# never triggered on its own. Each caller names a GitHub environment (dev, production) that
+# holds that environment's secrets under the same names:
+#   SUPABASE_ACCESS_TOKEN   personal access token of the Supabase account
+#   SUPABASE_DB_PASSWORD    database password of that environment's project
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: GitHub environment that holds the secrets (dev or production)
+        type: string
+        required: true
+      project-ref:
+        description: Supabase project ref of that environment
+        type: string
+        required: true
+      apply:
+        description: false previews the pending migrations only (dry run)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: ${{ inputs.apply && 'Apply' || 'Preview' }} migrations (${{ inputs.environment }})
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ inputs.project-ref }}
+      TARGET_ENVIRONMENT: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.120.0
+
+      - name: Check credentials
+        shell: bash
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN" || { echo "::error::Missing secret SUPABASE_ACCESS_TOKEN in the '$TARGET_ENVIRONMENT' GitHub environment"; exit 1; }
+          test -n "$SUPABASE_DB_PASSWORD" || { echo "::error::Missing secret SUPABASE_DB_PASSWORD in the '$TARGET_ENVIRONMENT' GitHub environment"; exit 1; }
+          [[ "$SUPABASE_PROJECT_REF" =~ ^[a-z]{20}$ ]] || { echo "::error::'$SUPABASE_PROJECT_REF' is not a Supabase project ref"; exit 1; }
+
+      - name: Link the project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Preview pending migrations
+        run: supabase db push --linked --dry-run
+
+      - name: Apply pending migrations
+        if: inputs.apply
+        run: supabase db push --linked

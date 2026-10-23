@@ -184,29 +184,32 @@ switch the pages to it, delete the old hooks, add tests for the moved logic.
 | Environment | Supabase | Frontend | Deployed when |
 |---|---|---|---|
 | Local | `supabase start` (Docker) + `seed.sql` | `npm run dev` | — |
-| Staging | separate Supabase project | Vercel preview / `staging` branch | migration PR validation |
-| Production | `hlhlpjecinkqqsqrjpcj` | Vercel production | push to `main`, after migrations |
+| Dev (current) | `hlhlpjecinkqqsqrjpcj`, no real data | Vercel project `nursery-project` | app: every push to `main` (Vercel Git integration); migrations: `dev.yml` |
+| Production (not live yet) | a new, separate Supabase project | a new, separate Vercel project | by hand only: `production.yml` |
 
-Trunk-based: short-lived branches → PR (staging migration validation and CI) → verify staging → merge to `main`
-→ production migrations → production Vercel build/deploy. No direct pushes to `main`, no manual changes in production.
+The project is in development, so there is no staging: the dev project has no real data and plays that role
+(pull requests that change migrations are previewed on it as a dry run). Trunk-based: short-lived branches → PR (CI,
+migration preview on dev) → merge to `main` → migrations applied to dev, app deployed to dev. Production is released by
+hand, after a reviewer approves, from a commit already verified on dev.
 
 ### 4.3 Database migrations
 
 - The timestamped files in `supabase/migrations/` **are** the schema's version history. Never edit an applied migration;
   add a new one.
 - Apply with `supabase db push` from CI only. **Never apply migrations by hand to production.**
-- Pull requests to `main` that modify migrations automatically preview and apply pending migrations to staging.
-  Verify the changes against staging before merging; configure the `staging` GitHub environment with
-  `SUPABASE_ACCESS_TOKEN`, `SUPABASE_STAGING_PROJECT_REF`, and `SUPABASE_STAGING_DB_PASSWORD`.
-- A push to `main` first previews and applies pending migrations to the fixed production project, then builds and
-  deploys the application to Vercel. Configure the `production` GitHub environment with
-  `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PRODUCTION_DB_PASSWORD`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and
-  `VERCEL_PROJECT_ID`. Disable Vercel's automatic Git-based **production** deployments so they cannot deploy ahead
-  of the migration workflow; preview deployments may remain enabled. Protect `main` so changes can only enter through
-  reviewed pull requests after staging checks.
+- Every environment runs the same steps from `.github/workflows/supabase-migrate.yml` (link, dry run, push). Each
+  environment is a GitHub environment holding the same secret names: `SUPABASE_ACCESS_TOKEN` and `SUPABASE_DB_PASSWORD`.
+- **Dev** (`dev.yml`): a pull request to `main` that changes `supabase/migrations/**` previews the pending migrations on
+  `hlhlpjecinkqqsqrjpcj` (dry run, nothing applied); the push to `main` applies them.
+- **Production** (`production.yml`, not live yet): run by hand and confirmed by typing `release production`. It checks
+  that the repository variable `SUPABASE_PRODUCTION_PROJECT_REF` is set and is not the dev project, applies the
+  migrations, runs the unit tests, then builds and deploys the production Vercel project. The `production` GitHub
+  environment needs Required reviewers plus `VERCEL_TOKEN`, `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`. Disable automatic
+  Git deployments in that Vercel project so the app can never deploy ahead of its migrations. Protect `main` so changes
+  only enter through reviewed pull requests.
 - **Expand → migrate → contract:** add new columns/functions first, ship code that uses them, remove the old ones in a later
   release. A migration must never break the app version currently in users' browsers (the PWA may run old code for days).
-- Every migration runs in a transaction and is tested on staging with production-like data; run `supabase db diff` in CI
+- Every migration runs in a transaction and is tested on dev (later staging) with production-like data; run `supabase db diff` in CI
   to catch drift between the files and the real schema.
 
 ### 4.4 RPCs, edge functions and locale keys
@@ -283,7 +286,7 @@ The rollback test scripts used on 2026-10-06/07 for attendance and payments are 
 
 - Tests never touch production. Database tests run on `supabase start` with `supabase/seed.sql` fixtures.
 - New finance or attendance code ships with tests; coverage gate ≥ 80% for `features/payments`, `invoices`, `payroll`, `attendance`.
-- CI runs unit + db tests on every PR, E2E on merge to `main` (against staging).
+- CI runs unit + db tests on every PR, E2E on merge to `main` (against dev until a staging project exists).
 
 ### 6.3 Setup
 
@@ -303,9 +306,9 @@ npm i -D vitest @vitest/coverage-v8 jsdom @testing-library/react @testing-librar
 - [ ] `audit_log` trigger on money and HR tables.
 - [ ] Nightly reconciliation job + `finance_alerts` + cron health alert.
 - [ ] Sentry (frontend + edge functions) with releases.
-- [ ] Staging Supabase project; migrations through `supabase db push` in CI only.
+- [~] Migrations through `supabase db push` in CI only: `dev.yml` applies them to dev (needs the `dev` environment secrets); `production.yml` is ready for a separate production project.
 - [ ] Vitest + pgTAP set up; first suites for payments and attendance.
-- [ ] Fix the 115 TS errors, then make typecheck and lint blocking in CI.
+- [x] Fix the TS errors, then make typecheck and lint blocking in CI (done 2026-10-24; CI also runs the unit tests).
 - [ ] release-please + `CHANGELOG.md`; first tag.
 
 ### Phase 2 — correct money model

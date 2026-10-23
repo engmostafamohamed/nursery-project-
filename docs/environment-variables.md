@@ -1,6 +1,6 @@
 # متغيرات البيئة: ديمو دلوقتي، وproduction بتغيير المتغيرات بس
 
-> آخر تحديث: 21 أكتوبر 2026 · مشروع التطوير: `hlhlpjecinkqqsqrjpcj`
+> آخر تحديث: 24 أكتوبر 2026 · مشروع التطوير (dev): `hlhlpjecinkqqsqrjpcj` · production: لسه (شوف القسم 4)
 
 المشروع كله شغال دلوقتي **كديمو** على مشروع Supabase بتاع التطوير. أي جزء محتاج خدمة خارجية (دفع، إيميل، SMS، واتساب، ذكاء اصطناعي) بيشتغل في **وضع تجريبي** لوحده لحد ما مفاتيحه تتحط. يوم الإطلاق مش محتاج تغيير كود: بتحط المتغيرات اللي تحت، وكل جزء بيتحول **live** لوحده.
 
@@ -54,6 +54,8 @@ npx supabase secrets set --env-file supabase/functions/.env.production.local --p
 
 ## 2. متغيرات الواجهة (Vercel أو `.env`)
 
+دلوقتي `.env` ومشروع Vercel `nursery-project` شايلين قيم dev. يوم الإطلاق القيم دي بتتحط في مشروع Vercel بتاع production، والنموذج بتاعها [`.env.production.example`](../.env.production.example).
+
 | المتغير | production |
 |---|---|
 | `VITE_SUPABASE_URL` | رابط مشروع Supabase بتاع production |
@@ -67,17 +69,29 @@ npx supabase secrets set --env-file supabase/functions/.env.production.local --p
 - **Authentication ← URL Configuration:** الـ Site URL دلوقتي `http://localhost:3000`. غيّره لعنوان الموقع، وضيف نفس العنوان في Redirect URLs. ده بيأثر على لينكات تأكيد الحساب واستعادة كلمة السر.
 - **Authentication ← SMTP:** إيميلات Supabase نفسها (تأكيد الحساب، واستعادة كلمة السر) عليها حد إرسال صغير من غير SMTP خاص. ممكن تستخدم نفس حساب Resend.
 
-## 4. متغيرات GitHub Actions (البيئة `production`)
+## 4. البيئات: dev دلوقتي، وproduction بعدين
 
-الـ job اللي بيطبّق الـ migrations وبينشر الواجهة واقف من 12 أكتوبر علشان دول ناقصين:
+| | dev (دلوقتي) | production (لسه، يوم الإطلاق) |
+|---|---|---|
+| Supabase | `hlhlpjecinkqqsqrjpcj` ("xo-platfrom")، مافيهوش بيانات حقيقية | مشروع **جديد منفصل** |
+| الواجهة | مشروع Vercel `nursery-project`، بيتنشر لوحده مع كل push على `main` | مشروع Vercel **منفصل**، بيتنشر من الـ workflow بس |
+| متغيرات الواجهة | `.env` على جهازك، ونفس القيم في Vercel | النموذج [`.env.production.example`](../.env.production.example)، والقيم في مشروع Vercel بتاع production |
+| الـ migrations | [`dev.yml`](../.github/workflows/dev.yml): PR فيه migrations ← معاينة (dry run)، push على `main` ← تطبيق | [`production.yml`](../.github/workflows/production.yml): يدوي بس، وبيطلب تكتب `release production` |
 
-- `SUPABASE_ACCESS_TOKEN`
-- `SUPABASE_PRODUCTION_DB_PASSWORD`
-- `VERCEL_TOKEN`
-- `VERCEL_ORG_ID`
-- `VERCEL_PROJECT_ID`
+الاتنين بيستخدموا نفس خطوات الـ migrations في [`supabase-migrate.yml`](../.github/workflows/supabase-migrate.yml)، وكل بيئة ليها secrets بنفس الأسماء جوه GitHub environment باسمها.
 
-لحد ما يتحطوا، الـ migrations بتتطبق يدوي. كلها متطبقة لحد `20261021030000`.
+**dev (مطلوب دلوقتي):** GitHub ← Settings ← Environments ← `dev`:
+
+- `SUPABASE_ACCESS_TOKEN`: من Supabase Dashboard ← Account ← Access Tokens.
+- `SUPABASE_DB_PASSWORD`: كلمة سر قاعدة بيانات `hlhlpjecinkqqsqrjpcj` (نفس اللي في `.env` عندك).
+
+**production (يوم الإطلاق):**
+
+- GitHub environment `production` فيه **Required reviewers** (كل إطلاق يستنى موافقة)، والـ secrets: `SUPABASE_ACCESS_TOKEN`، و`SUPABASE_DB_PASSWORD` (بتاع مشروع production)، و`VERCEL_TOKEN`، و`VERCEL_ORG_ID`، و`VERCEL_PROJECT_ID` (بتوع مشروع Vercel الجديد).
+- Repository variable اسمه `SUPABASE_PRODUCTION_PROJECT_REF`. الـ workflow بيرفض يشتغل لو مش موجود أو لو بيشاور على مشروع dev.
+- في مشروع Vercel بتاع production: اقفل النشر التلقائي من Git، علشان الواجهة ماتتنشرش قبل الـ migrations.
+
+كل الـ migrations متطبقة على dev لحد `20261021040000` (اتأكدت بـ `supabase migration list` يوم 24 أكتوبر).
 
 الـ CI **مابينشرش** دوال السيرفر. بعد أي تعديل في `supabase/functions`:
 
@@ -120,10 +134,12 @@ npx supabase functions deploy <name> --project-ref <project-ref> --use-api
 
 ## قائمة يوم الإطلاق
 
-1. Supabase Secrets: Paymob و`APP_BASE_URL`، و`SIGNUP_PAYMENT_TEST_MODE=false`، وResend، وSMS Misr، و360dialog، وAnthropic.
-2. Supabase Auth: الـ Site URL والـ Redirect URLs، وSMTP.
-3. Vercel: متغيرات `VITE_*`، و`VITE_SHOW_DEMO_ACCOUNTS=false`.
-4. GitHub: الـ secrets الخمسة بتوع البيئة `production`.
-5. لوحة الأدمن لكل حضانة: InstaPay، وأرقام المحافظ، والتحويل البنكي.
-6. Paymob: الـ webhook يشاور على `https://<project-ref>.supabase.co/functions/v1/paymob-webhook`.
-7. تجربة: دفعة كارت صغيرة، وإيميل، وSMS، وواتساب لرقمك. كل واحدة لازم تظهر في `message_deliveries` بـ `mode = live` و`status = sent`.
+1. مشروع Supabase جديد لـ production، ومشروع Vercel جديد (النشر التلقائي من Git مقفول).
+2. Supabase Secrets: Paymob و`APP_BASE_URL`، و`SIGNUP_PAYMENT_TEST_MODE=false`، وResend، وSMS Misr، و360dialog، وAnthropic.
+3. Supabase Auth: الـ Site URL والـ Redirect URLs، وSMTP.
+4. Vercel (مشروع production): متغيرات `VITE_*` من `.env.production.example`، و`VITE_SHOW_DEMO_ACCOUNTS=false`.
+5. GitHub: البيئة `production` (Required reviewers والـ secrets الخمسة)، والمتغير `SUPABASE_PRODUCTION_PROJECT_REF`. وبعدها Actions ← Production release ← Run workflow (بيطبق الـ migrations وبينشر الواجهة).
+6. دوال السيرفر على المشروع الجديد (الـ workflow مابينشرهاش): `npx supabase functions deploy --project-ref <production-ref> --use-api`.
+7. لوحة الأدمن لكل حضانة: InstaPay، وأرقام المحافظ، والتحويل البنكي.
+8. Paymob: الـ webhook يشاور على `https://<project-ref>.supabase.co/functions/v1/paymob-webhook`.
+9. تجربة: دفعة كارت صغيرة، وإيميل، وSMS، وواتساب لرقمك. كل واحدة لازم تظهر في `message_deliveries` بـ `mode = live` و`status = sent`.
