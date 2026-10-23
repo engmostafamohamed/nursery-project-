@@ -12,90 +12,86 @@ type Props = {
   isLoading: boolean;
 };
 
+/** 'HH:MM[:SS]' as a clock time in the current language ("6:00 pm" / "٦:٠٠ م"). */
+function clockLabel(time: string): string {
+  const [h, m] = time.split(':').map(Number);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return time;
+  return formatTime(new Date(2000, 0, 1, h, m), { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
 export function ParentDashboardScheduleSection({ todayEvents, upcoming, pickup, isLoading }: Props) {
   const { t, i18n } = useTranslation();
-  const locale = i18n.language;
+  const isAr = i18n.language === 'ar';
+  const locale = isAr ? 'ar-EG' : 'en-GB';
 
   if (isLoading) {
     return (
-      <section className="rounded-3xl bg-surface-container-lowest p-5 shadow-sm">
+      <section className="rounded-xl border border-outline-variant bg-surface p-5 shadow-sm">
         <Skeleton className="mb-4 h-6 w-48" />
         <Skeleton className="h-24 w-full" />
       </section>
     );
   }
 
-  const pickupLine =
-    pickup.standardEndTime || pickup.nurseryClosesAt
-      ? t('parent.dashboard.schedule.pickupLine', {
-          time: pickup.standardEndTime ?? pickup.nurseryClosesAt ?? '',
-        })
-      : t('parent.dashboard.schedule.pickupFallback');
+  const pickupTime = pickup.standardEndTime ?? pickup.nurseryClosesAt;
+  const pickupLine = pickupTime ? t('parent.dashboard.schedule.pickupLine', { time: clockLabel(pickupTime) }) : t('parent.dashboard.schedule.pickupFallback');
+
+  const eventRow = (id: string, title: string, startsAt: string, showDay: boolean) => {
+    const date = new Date(startsAt);
+    return (
+      <li key={id}>
+        <Link
+          to={`/parent/events/${id}`}
+          className="group flex items-center gap-3 rounded-lg border border-outline-variant bg-surface px-3 py-2.5 transition hover:border-primary/40 hover:bg-primary/5"
+        >
+          <span className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-md bg-primary/10 text-primary">
+            <span className="text-[10px] font-semibold uppercase leading-none">{date.toLocaleDateString(locale, { month: 'short' })}</span>
+            <span className="text-base font-bold leading-tight tabular-nums">{date.toLocaleDateString(locale, { day: 'numeric' })}</span>
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-semibold text-on-surface">{title}</span>
+            <span className="block text-xs text-on-surface-variant">
+              {showDay
+                ? date.toLocaleString(locale, { weekday: 'long', hour: 'numeric', minute: '2-digit', hour12: true })
+                : formatTime(startsAt, { hour: 'numeric', minute: '2-digit', hour12: true })}
+            </span>
+          </span>
+          <span className="material-symbols-outlined shrink-0 text-on-surface-variant transition group-hover:text-primary rtl:rotate-180" aria-hidden>
+            chevron_right
+          </span>
+        </Link>
+      </li>
+    );
+  };
 
   return (
-    <section className="space-y-4 rounded-3xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm">
-      <div className="rounded-2xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning">
-        <span className="material-symbols-outlined align-middle text-base text-warning" aria-hidden>
+    <section className="space-y-4 rounded-xl border border-outline-variant bg-surface p-4 shadow-sm sm:p-5">
+      <div className="flex items-start gap-3 rounded-lg border-s-4 border-primary/40 bg-primary/5 px-3 py-2.5 text-sm text-on-surface">
+        <span className="material-symbols-outlined shrink-0 text-lg text-primary" aria-hidden>
           schedule
-        </span>{' '}
+        </span>
         {pickupLine}
       </div>
 
       <div>
-        <h3 className="mb-2 text-sm font-medium text-on-surface-variant">{t('parent.dashboard.schedule.today')}</h3>
+        <h3 className="mb-2 text-xs font-semibold uppercase text-on-surface-variant">{t('parent.dashboard.schedule.today')}</h3>
         {todayEvents.length === 0 ? (
-          <p className="text-sm text-on-surface-variant">{t('parent.dashboard.schedule.noToday')}</p>
+          <p className="rounded-lg border border-dashed border-outline-variant px-3 py-3 text-sm text-on-surface-variant">{t('parent.dashboard.schedule.noToday')}</p>
         ) : (
-          <ul className="space-y-2">
-            {todayEvents.map((e) => (
-              <li key={e.id}>
-                <Link
-                  to={`/parent/events/${e.id}`}
-                  className="flex items-start justify-between gap-2 rounded-xl border border-outline-variant bg-surface text-foreground px-3 py-2 text-sm hover:bg-surface-container"
-                >
-                  <span className="font-medium text-on-surface">
-                    {locale === 'ar' ? e.titleAr : e.titleEn}
-                  </span>
-                  <span className="shrink-0 text-on-surface-variant">{formatTime(e.startsAt, { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <ul className="space-y-2">{todayEvents.map((e) => eventRow(e.id, isAr ? e.titleAr : e.titleEn, e.startsAt, false))}</ul>
         )}
       </div>
 
       <div>
-        <h3 className="mb-2 text-sm font-medium text-on-surface-variant">{t('parent.dashboard.schedule.upcoming')}</h3>
+        <h3 className="mb-2 text-xs font-semibold uppercase text-on-surface-variant">{t('parent.dashboard.schedule.upcoming')}</h3>
         {upcoming.length === 0 ? (
-          <p className="text-sm text-on-surface-variant">{t('parent.dashboard.schedule.noUpcoming')}</p>
+          <p className="rounded-lg border border-dashed border-outline-variant px-3 py-3 text-sm text-on-surface-variant">{t('parent.dashboard.schedule.noUpcoming')}</p>
         ) : (
-          <ul className="space-y-2">
-            {upcoming.map((e) => (
-              <li key={e.id}>
-                <Link
-                  to={`/parent/events/${e.id}`}
-                  className="flex flex-wrap items-baseline justify-between gap-2 rounded-xl border border-outline-variant bg-surface text-foreground px-3 py-2 text-sm hover:bg-surface-container"
-                >
-                  <span className="font-medium text-on-surface">
-                    {locale === 'ar' ? e.titleAr : e.titleEn}
-                  </span>
-                  <span className="text-xs text-on-surface-variant">
-                    {new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-GB', {
-                      weekday: 'short',
-                      month: 'short',
-                      day: 'numeric',
-                      hour: 'numeric',
-                      minute: '2-digit', hour12: true,
-                    }).format(new Date(e.startsAt))}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <ul className="space-y-2">{upcoming.map((e) => eventRow(e.id, isAr ? e.titleAr : e.titleEn, e.startsAt, true))}</ul>
         )}
       </div>
 
-      <Link to="/parent/events" className="inline-flex items-center gap-1 text-sm font-medium text-primary">
+      <Link to="/parent/events" className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
         {t('parent.dashboard.schedule.allEvents')}
         <span className="material-symbols-outlined text-base rtl:rotate-180" aria-hidden>
           arrow_forward

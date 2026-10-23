@@ -1,5 +1,7 @@
 {
   "common": {
+    "today": "Today",
+    "yesterday": "Yesterday",
     "paginationRange": "Showing {{start}}–{{end}}",
     "rowsPerPage": "Rows per page",
     "pagination": "Pages",
@@ -1101,6 +1103,10 @@
       }
     },
     "dashboard": {
+      "subtitle": "What needs you today, how attendance is going, and the nursery's latest activity.",
+      "attendanceTodayAction": "Attendance today",
+      "activityCount_one": "{{count}} update",
+      "activityCount_other": "{{count}} updates",
       "greeting": "Good Morning, {{name}}",
       "totalChildren": "Total Children",
       "totalStaff": "Total Staff",
@@ -1146,6 +1152,11 @@
         "reportDesc": "Open revenue and invoice analytics"
       },
       "charts": {
+        "averageRate": "{{rate}}% average",
+        "rateLabel": "Attendance",
+        "revenueLabel": "Revenue",
+        "childrenCount_one": "{{count}} child",
+        "childrenCount_other": "{{count}} children",
         "sectionTitle": "Trends",
         "attendanceTitle": "Attendance (7 days)",
         "attendanceHint": "Share of active children with a check-in each day",
@@ -2377,6 +2388,10 @@
     "updateFailed": "Could not update the package."
   },
   "tuitionBulkAssign": {
+    "assign_one": "Assign to {{count}} child",
+    "assign_other": "Assign to {{count}} children",
+    "summary": "{{package}} · {{period}}",
+    "summaryEmpty": "Choose a package and a billing period, then the children.",
     "title": "Assign a package to children",
     "description": "Children with a package are billed automatically by the daily billing job. Use this for children enrolled before packages existed, or added by import or the enrollment wizard.",
     "sections": {
@@ -2385,6 +2400,8 @@
       "childrenHint": "{{unassigned}} of {{total}} active children have no package yet."
     },
     "fields": {
+      "class": "Class",
+      "allClasses": "All classes",
       "package": "Package",
       "choosePackage": "Choose a package",
       "loading": "Loading…",
@@ -3249,8 +3266,32 @@
     "atNursery": "At Nursery",
     "homeTitle": "Parent Home",
     "dashboard": {
+      "billing": {
+        "due": "{{amount}} due",
+        "upToDate": "Up to date",
+        "tuition": "Tuition",
+        "nextInvoice": "Next invoice: {{date}}",
+        "noTuition": "No tuition plan set up yet.",
+        "extraHours": "Extra hours",
+        "unlimited": "Unlimited extra hours",
+        "hoursUsed": "{{used}} / {{total}} hours used",
+        "expires": "Expires: {{date}}",
+        "noExtraHours": "No extra-hours package.",
+        "viewInvoices": "View invoices"
+      },
       "unread": "Unread",
       "admissionCycle": {
+        "newApplication": "New application",
+        "notSubmitted": "Not submitted yet",
+        "steps": {
+          "application": "Application",
+          "package": "Package",
+          "payment": "Payment",
+          "decision": "Nursery decision",
+          "notYet": "Not yet",
+          "due": "{{amount}} due",
+          "waiting": "Waiting for review"
+        },
         "title": "Admission cycle",
         "empty": "Start an application to track review status, choose a package, and pay registration fees.",
         "contact": "Contact nursery",
@@ -3320,6 +3361,8 @@
       },
       "noChildren": "No linked children yet. Contact your nursery if you expect access.",
       "child": {
+        "paymentDue": "Payment due",
+        "messageNursery": "Message nursery",
         "attendanceAbsent": "Not checked in today yet",
         "attendanceIn": "Checked in at {{time}}",
         "attendanceOut": "In {{in}} · Out {{out}}",
@@ -3425,6 +3468,9 @@
       "pending": "Awaiting approval"
     },
     "inbox": {
+      "unreadLabel": "Unread",
+      "resultsCount_one": "{{count}} message",
+      "resultsCount_other": "{{count}} messages",
       "title": "Inbox",
       "subtitle": "Everything from the nursery in one place — chats, announcements, permissions, and surveys.",
       "filters": {
@@ -3478,6 +3524,9 @@
       "nurseryHint": "Set when you registered. Packages, invoices, and applications belong to this nursery."
     },
     "events": {
+      "pageSubtitle": "Trips, activities and services at the nursery, and the permissions they need from you.",
+      "pendingPermissionsLabel": "Waiting for your permission",
+      "moreOnDay": "+{{count}} more",
       "emptyTitle": "No event permissions right now",
       "emptyDescription": "Permission requests will appear here when needed.",
       "actionRequired": "Action Required",
@@ -3728,6 +3777,22 @@
       "allChildren": "All Children"
     },
     "invoices": {
+      "subtitle": "Pay what is due, follow payments under review, and open any invoice for its details.",
+      "allInvoices": "All invoices",
+      "overdueCount_one": "{{count}} overdue invoice",
+      "overdueCount_other": "{{count}} overdue invoices",
+      "openCount_one": "{{count}} invoice to pay",
+      "openCount_other": "{{count}} invoices to pay",
+      "nothingDue": "Nothing due",
+      "resultsCount_one": "{{count}} invoice",
+      "resultsCount_other": "{{count}} invoices",
+      "searchPlaceholder": "Search invoices",
+      "childFilter": "Child",
+      "allChildren": "All children",
+      "sortLabel": "Sort by",
+      "emptyHint": "Invoices from the nursery will appear here.",
+      "emptyFiltered": "No invoices match these filters.",
+      "remaining": "Remaining: {{amount}}",
       "title": "My Invoices",
       "totalDue": "Total Due",
       "nextDue": "Next Payment Due",
@@ -3807,6 +3872,9 @@
       }
     },
     "reports": {
+      "publishedAtTime": "Published {{time}}",
+      "resultsCount_one": "{{count}} report",
+      "resultsCount_other": "{{count}} reports",
       "eyebrow": "Daily updates",
       "subtitle": "Meals, naps, mood, activities, and teacher notes in one place.",
       "last7Days": "Last 7 days",
@@ -5566,6 +5634,7 @@
       "absence_reported": "Absence reported"
     },
     "kpis": {
+      "live": "Live",
       "today": "Today",
       "month": "This month ({{month}})",
       "inNursery": "In the nursery now",
@@ -5833,6 +5902,20 @@
     }
   },
   "qr": {
+    "childPage": {
+      "eyebrow": "Pickup QR settings",
+      "subtitle": "Use the parent QR for regular pickup, or create a temporary custom QR for another authorized person.",
+      "parentQrTitle": "Parent QR",
+      "parentQrHint": "Always available until rotated.",
+      "identityTitle": "Identity required",
+      "identityHint": "A custom QR needs the person's ID or passport details.",
+      "deadlineTitle": "Expiry deadline",
+      "deadlineHint": "A custom QR expires at the end of the day you choose.",
+      "tabs": {
+        "parent": "Parent QR",
+        "custom": "Custom QR"
+      }
+    },
     "refresh": "Refresh token",
     "rotate": "Refresh QR",
     "rotated": "QR code rotated. Old code no longer works.",
@@ -5892,6 +5975,10 @@
       "tabHistory": "History"
     },
     "history": {
+      "title": "QR codes issued",
+      "count_one": "{{count}} code",
+      "count_other": "{{count}} codes",
+      "all": "All",
       "emptyTitle": "No QR activity yet",
       "emptyDescription": "Codes you generate for yourself or for delegates will be listed here.",
       "sections": {
@@ -6051,6 +6138,18 @@
     }
   },
   "packages": {
+    "removeChild": "Remove from this package",
+    "overview": {
+      "activeCount_one": "{{count}} active",
+      "activeCount_other": "{{count}} active",
+      "withoutPackage": "Children without a package",
+      "ofActiveChildren_one": "of {{count}} active child",
+      "ofActiveChildren_other": "of {{count}} active children",
+      "onDiscount": "Packages on discount",
+      "onDiscountHint": "With a deal running today",
+      "count_one": "{{count}} package",
+      "count_other": "{{count}} packages"
+    },
     "columns": {
       "validity": "Validity",
       "assigned": "Assigned",

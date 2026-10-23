@@ -11,12 +11,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { FilterMenu } from '@/components/ui/FilterMenu';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { IconAction, TableCard, TableEmpty, TableLoading, TablePagination } from '@/components/ui/DataTable';
+import { FilterBar, SearchInput } from '@/components/ui/FilterBar';
+import { FilterField } from '@/components/ui/FilterField';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Select } from '@/components/ui/select';
+import { StatTile } from '@/components/ui/StatTile';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AdminPackageCard } from '@/components/admin/settings/AdminPackageCard';
 import { dealDiscountLabel, localizedName } from '@/components/admin/settings/dealLabels';
@@ -27,8 +29,11 @@ import { PackageSectionTextsCard } from '@/components/admin/settings/PackageSect
 import { TuitionPackagesEditor } from '@/components/admin/settings/TuitionPackagesEditor';
 import { FieldError, invalidFieldClass } from '@/components/ui/FieldError';
 import { useAdminDeals, isDealCurrentlyActive, applyDealToPrice, useInlineDealCleanup } from '@/hooks/useAdminDeals';
+import { useAdminTuitionPackages } from '@/hooks/useAdminTuitionPackages';
 import { useAuthSession } from '@/hooks/useAuthSession';
+import { useBulkTuitionAssignment } from '@/hooks/useBulkTuitionAssignment';
 import { useNurseryChildrenPicker } from '@/hooks/useNurseryChildrenPicker';
+import { usePagination } from '@/hooks/usePagination';
 import { useTouchedFields } from '@/hooks/useTouchedFields';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { formatMoneyAmount } from '@/lib/money';
@@ -93,20 +98,17 @@ function ManageChildrenDialog({
         </DialogHeader>
 
         <div className="mt-4 flex gap-2">
-          <select
-            value={pick}
-            onChange={(e) => setPick(e.target.value)}
-            className="h-10 flex-1 rounded-xl border border-outline-variant bg-surface px-3 text-sm outline-none focus:ring-1 focus:ring-primary"
-          >
+          <Select className="flex-1" aria-label={t('packages.selectChild')} value={pick} onChange={(e) => setPick(e.target.value)}>
             <option value="">{t('packages.selectChild')}</option>
             {available.map((c) => (
               <option key={c.id} value={c.id}>
                 {isAr ? c.full_name_ar || c.full_name_en : c.full_name_en || c.full_name_ar}
               </option>
             ))}
-          </select>
+          </Select>
           <Button
             type="button"
+            className="h-12"
             disabled={!pick || assign.isPending}
             onClick={async () => {
               try {
@@ -118,54 +120,72 @@ function ManageChildrenDialog({
               }
             }}
           >
+            <MaterialSymbol name="person_add" size="text-base" />
             {t('packages.assign')}
           </Button>
         </div>
 
-        <div className="mt-4 max-h-[50vh] space-y-2 overflow-y-auto">
+        <div className="mt-4 max-h-[50vh] overflow-y-auto rounded-lg border border-outline-variant">
           {query.isPending ? (
-            <LoadingSkeleton />
+            <div className="p-3">
+              <LoadingSkeleton />
+            </div>
           ) : assigned.length === 0 ? (
-            <p className="py-6 text-center text-sm text-on-surface-variant">
+            <p className="flex flex-col items-center gap-2 py-8 text-center text-sm text-on-surface-variant">
+              <MaterialSymbol name="group_off" size="text-3xl" />
               {t('packages.noChildren')}
             </p>
           ) : (
-            assigned.map((a) => (
-              <div
-                key={a.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-outline-variant px-3 py-2"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm text-on-surface">
-                    {isAr ? a.childNameAr || a.childNameEn : a.childNameEn || a.childNameAr}
-                  </p>
-                  {pkg.coverage_type === 'hours_quota' ? (
-                    <p className="text-xs text-on-surface-variant">
-                      {t('packages.hoursUsed', {
-                        used: a.hours_used,
-                        total: pkg.included_hours ?? 0,
-                      })}
-                    </p>
-                  ) : null}
-                </div>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  disabled={unassign.isPending}
-                  onClick={async () => {
-                    try {
-                      await unassign.mutateAsync(a.id);
-                      toast.success(t('packages.childRemoved'));
-                    } catch {
-                      toast.error(t('packages.saveFailed'));
-                    }
-                  }}
-                >
-                  {t('common.delete')}
-                </Button>
-              </div>
-            ))
+            <ul className="divide-y divide-outline-variant">
+              {assigned.map((a) => {
+                const childName = (isAr ? a.childNameAr || a.childNameEn : a.childNameEn || a.childNameAr) || '-';
+                const total = pkg.included_hours ?? 0;
+                const usedPct = total > 0 ? Math.min(100, Math.round((a.hours_used / total) * 100)) : 0;
+                return (
+                  <li key={a.id} className="flex items-center gap-3 px-3 py-2.5">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary" aria-hidden>
+                      {childName
+                        .split(/\s+/)
+                        .filter(Boolean)
+                        .slice(0, 2)
+                        .map((part) => part[0])
+                        .join('')
+                        .toUpperCase()}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-on-surface">{childName}</p>
+                      {pkg.coverage_type === 'hours_quota' ? (
+                        <div className="mt-1 flex items-center gap-2">
+                          <span className="h-1.5 w-24 overflow-hidden rounded-full bg-surface-high">
+                            <span
+                              className={cn('block h-full rounded-full', usedPct >= 90 ? 'bg-error' : usedPct >= 60 ? 'bg-warning' : 'bg-success')}
+                              style={{ width: `${usedPct}%` }}
+                            />
+                          </span>
+                          <span className="text-xs tabular-nums text-on-surface-variant">
+                            {t('packages.hoursUsed', { used: a.hours_used, total })}
+                          </span>
+                        </div>
+                      ) : null}
+                    </div>
+                    <IconAction
+                      icon="person_remove"
+                      label={t('packages.removeChild')}
+                      danger
+                      disabled={unassign.isPending}
+                      onClick={async () => {
+                        try {
+                          await unassign.mutateAsync(a.id);
+                          toast.success(t('packages.childRemoved'));
+                        } catch {
+                          toast.error(t('packages.saveFailed'));
+                        }
+                      }}
+                    />
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </div>
 
@@ -220,6 +240,23 @@ export function AdminPackagesPage() {
       return true;
     });
   }, [rows, search, statusFilter, coverageFilter, dealFilter]);
+
+  const hoursPager = usePagination(filteredRows, 9, `${search}|${statusFilter}|${coverageFilter}|${dealFilter}`);
+
+  // The header tiles: both kinds of package, the children still without a tuition package, and
+  // the packages with a live discount.
+  const [tab, setTab] = useState<'fixed' | 'hours'>('fixed');
+  const [assignOpen, setAssignOpen] = useState(false);
+  const { query: tuitionQuery } = useAdminTuitionPackages(nurseryId);
+  const { childrenQuery: billingChildrenQuery } = useBulkTuitionAssignment(nurseryId);
+  const tuitionRows = useMemo(() => tuitionQuery.data ?? [], [tuitionQuery.data]);
+  const billingChildren = billingChildrenQuery.data ?? [];
+  const childrenWithoutPackage = billingChildren.filter((c) => !c.currentPackageEn && !c.currentPackageAr).length;
+  const liveDiscounts = useMemo(() => {
+    const live = new Set((dealsQuery.data ?? []).filter((deal) => isDealCurrentlyActive(deal)).map((deal) => deal.id));
+    return [...tuitionRows, ...rows].filter((p) => p.deal_id && live.has(p.deal_id)).length;
+  }, [dealsQuery.data, tuitionRows, rows]);
+  const activeTuition = tuitionRows.filter((p) => p.active).length;
 
   const hasActiveFilters = Boolean(search || statusFilter !== 'all' || coverageFilter !== 'all' || dealFilter !== 'all');
   const clearFilters = () => {
@@ -320,158 +357,193 @@ export function AdminPackagesPage() {
   const validityUnitError = errorFor('validityUnit');
 
   return (
-    <div className="space-y-6 p-4">
-      <div>
-        <h1 className="text-xl font-semibold text-on-surface">{t('packages.pageTitle')}</h1>
-        <p className="mt-1 max-w-2xl text-sm text-on-surface-variant">{t('packages.pageSubtitle')}</p>
-      </div>
+    <div className="space-y-5 p-4">
+      <PageHeader icon="package_2" title={t('packages.pageTitle')} description={t('packages.pageSubtitle')}>
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <StatTile
+            icon="school"
+            label={t('tuitionPackages.title')}
+            value={tuitionRows.length}
+            helper={t('packages.overview.activeCount', { count: activeTuition })}
+            onClick={() => setTab('fixed')}
+            active={tab === 'fixed'}
+          />
+          <StatTile
+            icon="group_add"
+            label={t('packages.overview.withoutPackage')}
+            value={billingChildrenQuery.isLoading ? '—' : childrenWithoutPackage}
+            helper={t('packages.overview.ofActiveChildren', { count: billingChildren.length })}
+            tone={childrenWithoutPackage > 0 ? 'warning' : 'success'}
+            onClick={
+              activeTuition > 0 && childrenWithoutPackage > 0
+                ? () => {
+                    setTab('fixed');
+                    setAssignOpen(true);
+                  }
+                : undefined
+            }
+          />
+          <StatTile
+            icon="more_time"
+            label={t('packages.tabHours')}
+            value={rows.length}
+            helper={t('packages.overview.activeCount', { count: rows.filter((p) => p.active).length })}
+            onClick={() => setTab('hours')}
+            active={tab === 'hours'}
+          />
+          <StatTile
+            icon="sell"
+            label={t('packages.overview.onDiscount')}
+            value={liveDiscounts}
+            helper={t('packages.overview.onDiscountHint')}
+            tone={liveDiscounts > 0 ? 'warning' : 'neutral'}
+          />
+        </div>
+      </PageHeader>
 
-      <Tabs defaultValue="fixed">
+      <Tabs value={tab} onValueChange={(value: string) => setTab(value as 'fixed' | 'hours')}>
         <TabsList>
-          <TabsTrigger value="fixed">{t('packages.tabFixed')}</TabsTrigger>
-          <TabsTrigger value="hours">{t('packages.tabHours')}</TabsTrigger>
+          <TabsTrigger value="fixed">
+            <MaterialSymbol name="school" size="text-base" className="me-1" />
+            {t('packages.tabFixed')}
+          </TabsTrigger>
+          <TabsTrigger value="hours">
+            <MaterialSymbol name="more_time" size="text-base" className="me-1" />
+            {t('packages.tabHours')}
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="fixed" className="space-y-6">
+        <TabsContent value="fixed" className="space-y-5">
           <PackageSectionTextsCard nurseryId={nurseryId} section="tuition" />
-          <TuitionPackagesEditor nurseryId={nurseryId} />
+          <TuitionPackagesEditor nurseryId={nurseryId} assignOpen={assignOpen} onAssignOpenChange={setAssignOpen} />
         </TabsContent>
 
-        <TabsContent value="hours" className="space-y-6">
+        <TabsContent value="hours" className="space-y-5">
           <ExtraHoursHourlyRateCard nurseryId={nurseryId} />
           <PackageSectionTextsCard nurseryId={nurseryId} section="extraHours" />
 
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="text-base font-semibold text-on-surface">{t('packages.title')}</h2>
-              <p className="mt-0.5 text-xs text-on-surface-variant">{t('packages.subtitle')}</p>
-            </div>
-            <Button type="button" onClick={openCreate}>
-              <MaterialSymbol name="add" size="text-base" />
-              {t('packages.addButton')}
-            </Button>
-          </div>
-
-          {query.isPending ? (
-            <LoadingSkeleton />
-          ) : rows.length === 0 ? (
-            <EmptyState
-              icon="package_2"
-              title={t('packages.emptyTitle')}
-              description={t('packages.emptyDescription')}
-            />
-          ) : (
-            <div className="space-y-3">
-            <div className="flex flex-wrap items-end gap-3 rounded-xl border border-outline-variant bg-surface p-3 shadow-sm">
-              <div className="min-w-[180px] flex-1 space-y-1">
-                <Label className="text-xs font-semibold text-on-surface-variant">{t('packageFilters.search')}</Label>
-                <Input
-                  className="h-11"
-                  placeholder={t('packageFilters.searchPlaceholder')}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
-              <FilterMenu<typeof statusFilter>
-                className="w-48"
-                label={t('packageFilters.status')}
-                icon="toggle_on"
-                value={statusFilter}
-                onChange={setStatusFilter}
-                options={[
-                  { value: 'all', label: t('packageFilters.allStatuses') },
-                  { value: 'active', label: t('packages.active') },
-                  { value: 'inactive', label: t('packages.inactive') },
-                ]}
+          <TableCard
+            title={t('packages.tabHours')}
+            description={t('packages.subtitle')}
+            count={rows.length ? t('packages.overview.count', { count: filteredRows.length }) : undefined}
+            actions={
+              <Button type="button" onClick={openCreate}>
+                <MaterialSymbol name="add" size="text-base" />
+                {t('packages.addButton')}
+              </Button>
+            }
+            filters={
+              rows.length ? (
+                <FilterBar onClear={clearFilters} canClear={hasActiveFilters}>
+                  <FilterField label={t('packageFilters.search')} className="sm:flex-[2]">
+                    <SearchInput value={search} onChange={setSearch} placeholder={t('packageFilters.searchPlaceholder')} />
+                  </FilterField>
+                  <FilterField label={t('packageFilters.status')}>
+                    <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}>
+                      <option value="all">{t('packageFilters.allStatuses')}</option>
+                      <option value="active">{t('packages.active')}</option>
+                      <option value="inactive">{t('packages.inactive')}</option>
+                    </Select>
+                  </FilterField>
+                  <FilterField label={t('packages.fieldType')}>
+                    <Select value={coverageFilter} onChange={(e) => setCoverageFilter(e.target.value as typeof coverageFilter)}>
+                      <option value="all">{t('packageFilters.allTypes')}</option>
+                      <option value="unlimited">{t('packages.optUnlimited')}</option>
+                      <option value="hours_quota">{t('packages.optQuota')}</option>
+                    </Select>
+                  </FilterField>
+                  <FilterField label={t('packageFilters.discount')}>
+                    <Select value={dealFilter} onChange={(e) => setDealFilter(e.target.value as typeof dealFilter)}>
+                      <option value="all">{t('packageFilters.allPackages')}</option>
+                      <option value="with">{t('packageFilters.withDiscount')}</option>
+                      <option value="without">{t('packageFilters.withoutDiscount')}</option>
+                    </Select>
+                  </FilterField>
+                </FilterBar>
+              ) : null
+            }
+            pagination={filteredRows.length ? <TablePagination pager={hoursPager} pageSizeOptions={[9, 18, 36]} /> : null}
+          >
+            {query.isPending ? (
+              <TableLoading />
+            ) : rows.length === 0 ? (
+              <TableEmpty
+                icon="package_2"
+                title={t('packages.emptyTitle')}
+                description={t('packages.emptyDescription')}
+                action={
+                  <Button type="button" onClick={openCreate}>
+                    <MaterialSymbol name="add" size="text-base" />
+                    {t('packages.addButton')}
+                  </Button>
+                }
               />
-              <FilterMenu<typeof coverageFilter>
-                className="w-52"
-                label={t('packages.fieldType')}
-                icon="schedule"
-                value={coverageFilter}
-                onChange={setCoverageFilter}
-                options={[
-                  { value: 'all', label: t('packageFilters.allTypes') },
-                  { value: 'unlimited', label: t('packages.optUnlimited') },
-                  { value: 'hours_quota', label: t('packages.optQuota') },
-                ]}
+            ) : filteredRows.length === 0 ? (
+              <TableEmpty
+                icon="filter_alt_off"
+                title={t('packageFilters.noMatch')}
+                action={
+                  <Button type="button" variant="outline" onClick={clearFilters}>
+                    {t('packageFilters.clear')}
+                  </Button>
+                }
               />
-              <FilterMenu<typeof dealFilter>
-                className="w-52"
-                label={t('packageFilters.discount')}
-                icon="sell"
-                value={dealFilter}
-                onChange={setDealFilter}
-                options={[
-                  { value: 'all', label: t('packageFilters.allPackages') },
-                  { value: 'with', label: t('packageFilters.withDiscount') },
-                  { value: 'without', label: t('packageFilters.withoutDiscount') },
-                ]}
-              />
-              {hasActiveFilters ? (
-                <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
-                  <MaterialSymbol name="close" size="text-base" />
-                  {t('packageFilters.clear')}
-                </Button>
-              ) : null}
-            </div>
-
-            {filteredRows.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-outline-variant p-6 text-center text-sm text-on-surface-variant">
-                {t('packageFilters.noMatch')}
-              </p>
             ) : (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {filteredRows.map((p) => {
-                const deal = (dealsQuery.data ?? []).find((d) => d.id === p.deal_id);
-                const live = deal ? isDealCurrentlyActive(deal) : false;
-                const dealLabel = deal ? `${localizedName(deal, isAr)} · ${dealDiscountLabel(t, deal)}` : '';
-                return (
-                  <AdminPackageCard
-                    key={p.id}
-                    name={name(p)}
-                    active={p.active}
-                    price={money(p.price)}
-                    discountedPrice={deal && live ? money(applyDealToPrice(p.price, deal)) : null}
-                    deal={deal ? { label: live ? dealLabel : t('deals.inactiveSuffix', { label: dealLabel }), live } : null}
-                    description={isAr ? p.description_ar || p.description_en : p.description_en || p.description_ar}
-                    emptyHint={t('packageCard.noDescription')}
-                    facts={[
-                      {
-                        icon: 'more_time',
-                        label: p.coverage_type === 'unlimited' ? t('packages.typeUnlimited') : t('packages.typeQuota', { hours: p.included_hours ?? 0 }),
-                      },
-                      {
-                        icon: 'event_available',
-                        label:
-                          p.validity_value && p.validity_unit
-                            ? t('packages.validityLabel', { value: p.validity_value, unit: t(`packages.validityUnit.${p.validity_unit}`) })
-                            : t('packages.validityNever'),
-                      },
-                      { icon: 'groups', label: t('packages.assignedCount', { count: p.assigned_count }) },
-                    ]}
-                    actions={
-                      <>
-                        <Button type="button" variant="outline" size="sm" onClick={() => setManagePkg(p)}>
-                          <MaterialSymbol name="group" size="text-base" />
-                          {t('packages.manageChildren')}
-                        </Button>
-                        <Button type="button" variant="outline" size="sm" onClick={() => openEdit(p)}>
-                          <MaterialSymbol name="edit" size="text-base" />
-                          {t('common.edit')}
-                        </Button>
-                        <Button type="button" variant="outline" size="sm" disabled={update.isPending} onClick={() => void toggleActive(p)}>
-                          {p.active ? t('packages.deactivate') : t('packages.activate')}
-                        </Button>
-                      </>
-                    }
-                  />
-                );
-              })}
-            </div>
+              <div className="grid gap-4 p-4 sm:p-5 md:grid-cols-2 xl:grid-cols-3">
+                {hoursPager.pageItems.map((p) => {
+                  const deal = (dealsQuery.data ?? []).find((d) => d.id === p.deal_id);
+                  const live = deal ? isDealCurrentlyActive(deal) : false;
+                  const dealLabel = deal ? `${localizedName(deal, isAr)} · ${dealDiscountLabel(t, deal)}` : '';
+                  return (
+                    <AdminPackageCard
+                      key={p.id}
+                      icon="more_time"
+                      name={name(p)}
+                      active={p.active}
+                      price={money(p.price)}
+                      discountedPrice={deal && live ? money(applyDealToPrice(p.price, deal)) : null}
+                      deal={deal ? { label: live ? dealLabel : t('deals.inactiveSuffix', { label: dealLabel }), live } : null}
+                      description={isAr ? p.description_ar || p.description_en : p.description_en || p.description_ar}
+                      emptyHint={t('packageCard.noDescription')}
+                      facts={[
+                        {
+                          icon: 'more_time',
+                          label: p.coverage_type === 'unlimited' ? t('packages.typeUnlimited') : t('packages.typeQuota', { hours: p.included_hours ?? 0 }),
+                        },
+                        {
+                          icon: 'event_available',
+                          label:
+                            p.validity_value && p.validity_unit
+                              ? t('packages.validityLabel', { value: p.validity_value, unit: t(`packages.validityUnit.${p.validity_unit}`) })
+                              : t('packages.validityNever'),
+                        },
+                        { icon: 'groups', label: t('packages.assignedCount', { count: p.assigned_count }) },
+                      ]}
+                      actions={
+                        <>
+                          {/* The switch shows the package's state; clicking flips it. */}
+                          <IconAction
+                            icon={p.active ? 'toggle_on' : 'toggle_off'}
+                            label={p.active ? t('packages.deactivate') : t('packages.activate')}
+                            disabled={update.isPending}
+                            onClick={() => void toggleActive(p)}
+                          />
+                          <Button type="button" variant="outline" size="sm" onClick={() => setManagePkg(p)}>
+                            <MaterialSymbol name="group" size="text-base" />
+                            {t('packages.manageChildren')}
+                          </Button>
+                          <Button type="button" variant="outline" size="sm" onClick={() => openEdit(p)}>
+                            <MaterialSymbol name="edit" size="text-base" />
+                            {t('common.edit')}
+                          </Button>
+                        </>
+                      }
+                    />
+                  );
+                })}
+              </div>
             )}
-            </div>
-          )}
+          </TableCard>
         </TabsContent>
       </Tabs>
 

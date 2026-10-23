@@ -2,14 +2,16 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { EmptyState } from '@/components/ui/EmptyState';
+import { StatusPill, TableCard, TableEmpty, TableLoading, TablePagination, type PillTone } from '@/components/ui/DataTable';
+import { usePagination } from '@/hooks/usePagination';
 import {
   useParentIssuedQrTokens,
   type IssuedQrStatus,
   type IssuedQrToken,
 } from '@/hooks/useParentIssuedQrTokens';
+import { formatDateTime } from '@/lib/datetime';
+import { cn } from '@/lib/utils';
 
 type ChildLabel = { id: string; nursery_id: string; displayName: string };
 
@@ -17,34 +19,78 @@ type Props = {
   parentId: string | undefined;
   /** Used to render child names + pass nursery_id to the revoke call. */
   children: ChildLabel[];
+  /** On one child's QR page: list only that child's codes. */
+  childId?: string;
 };
 
-const STATUS_BADGE_CLASS: Record<IssuedQrStatus, string> = {
-  active: 'border-success bg-success/10 text-success',
-  used: 'border-outline-variant text-on-surface-variant',
-  expired: 'border-outline-variant text-on-surface-variant',
-  revoked: 'border-outline-variant text-on-surface-variant',
-};
+type StatusFilter = 'all' | IssuedQrStatus;
 
 const STATUS_ORDER: IssuedQrStatus[] = ['active', 'used', 'expired', 'revoked'];
+
+const STATUS_TONE: Record<IssuedQrStatus, PillTone> = {
+  active: 'success',
+  used: 'primary',
+  expired: 'neutral',
+  revoked: 'error',
+};
+
+const ICON_TILE: Record<PillTone, string> = {
+  primary: 'bg-primary/10 text-primary',
+  success: 'bg-success/10 text-success',
+  warning: 'bg-warning/10 text-warning',
+  error: 'bg-error/10 text-error',
+  neutral: 'bg-surface-high text-on-surface-variant',
+};
+
+const IDENTITY_TYPE_KEY: Record<string, string> = {
+  national_id: 'nationalId',
+  passport: 'passport',
+  other: 'other',
+};
+
+const DATE_TIME: Intl.DateTimeFormatOptions = { dateStyle: 'medium', timeStyle: 'short' };
 
 /**
  * Lifecycle log of QRs the parent has issued. Active delegate QRs can be
  * revoked one-tap. Persistent parent QRs render as "always available" with no
  * expiry date — see useParentIssuedQrTokens.isFarFutureExpiry.
  */
-export function ParentQrHistoryList({ parentId, children }: Props) {
-  const { t, i18n } = useTranslation();
-  const locale = i18n.language === 'ar' ? 'ar-EG' : 'en-GB';
-  const { groupedByStatus, isLoading, revoke, isRevoking, isFarFutureExpiry } =
-    useParentIssuedQrTokens(parentId);
+export function ParentQrHistoryList({ parentId, children, childId }: Props) {
+  const { t } = useTranslation();
+  const { tokens: allTokens, isLoading, revoke, isRevoking, isFarFutureExpiry } = useParentIssuedQrTokens(parentId);
   const [revokingId, setRevokingId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
   const childNames = useMemo(() => {
     const m = new Map<string, ChildLabel>();
     for (const c of children) m.set(c.id, c);
     return m;
   }, [children]);
+
+  const tokens = useMemo(
+    () => (childId ? allTokens.filter((token) => token.childId === childId) : allTokens),
+    [allTokens, childId],
+  );
+  const counts = useMemo(() => {
+    const c: Record<IssuedQrStatus, number> = { active: 0, used: 0, expired: 0, revoked: 0 };
+    for (const token of tokens) c[token.status] += 1;
+    return c;
+  }, [tokens]);
+  // Status by status (active first), newest first inside each.
+  const filtered = useMemo(
+    () =>
+      STATUS_ORDER.flatMap((status) =>
+        statusFilter === 'all' || statusFilter === status ? tokens.filter((token) => token.status === status) : [],
+      ),
+    [tokens, statusFilter],
+  );
+  const pager = usePagination(filtered, 10, `${statusFilter}|${childId ?? ''}`);
+  const pageGroups = STATUS_ORDER.map((status) => ({
+    status,
+    items: pager.pageItems.filter((token) => token.status === status),
+  })).filter((group) => group.items.length > 0);
+  // Name the child on each row only when the list covers several children.
+  const showChild = !childId && children.length > 1;
 
   const onRevoke = async (token: IssuedQrToken) => {
     const child = childNames.get(token.childId);
@@ -61,105 +107,160 @@ export function ParentQrHistoryList({ parentId, children }: Props) {
     }
   };
 
-  if (isLoading) {
-    return <p className="text-sm text-on-surface-variant">{t('common.loading')}</p>;
-  }
-
-  const total = STATUS_ORDER.reduce((n, s) => n + groupedByStatus[s].length, 0);
-  if (total === 0) {
-    return (
-      <EmptyState
-        icon="history"
-        title={t('qr.history.emptyTitle')}
-        description={t('qr.history.emptyDescription')}
-      />
-    );
-  }
-
-  const formatDateTime = (iso: string) => new Date(iso).toLocaleString(locale);
+  const identityLabel = (token: IssuedQrToken) => {
+    const key = token.pickupIdentityType ? IDENTITY_TYPE_KEY[token.pickupIdentityType] : undefined;
+    return key ? t(`qr.custom.identityTypes.${key}`) : token.pickupIdentityType ?? t('qr.custom.identityTypes.other');
+  };
 
   return (
-    <div className="space-y-6">
-      {STATUS_ORDER.map((status) => {
-        const list = groupedByStatus[status];
-        if (!list.length) return null;
-        return (
-          <section key={status} className="space-y-2">
-            <h3 className="text-sm font-semibold text-on-surface">
-              {t(`qr.history.sections.${status}`)} ({list.length})
-            </h3>
-            <ul className="space-y-2">
-              {list.map((token) => {
-                const child = childNames.get(token.childId);
-                const isPersistentParent = token.purpose === 'parent' && isFarFutureExpiry(token.expiresAt);
-                const canRevoke = token.status === 'active' && token.purpose === 'delegate';
-                return (
-                  <li
-                    key={token.id}
-                    className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-3"
-                  >
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm font-semibold text-on-surface">
-                          {token.purpose === 'delegate'
-                            ? token.pickupPersonFullName ?? token.delegateName ?? t('qr.history.unnamedDelegate')
-                            : t('qr.history.parentSelfPickup')}
-                        </p>
-                        <Badge className={`text-[10px] ${STATUS_BADGE_CLASS[token.status]}`}>
-                          {t(`qr.history.statuses.${token.status}`)}
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-on-surface-variant">
-                        {child ? `${t('qr.history.forChild')}: ${child.displayName} · ` : ''}
-                        {t('qr.history.issuedAt')}: {formatDateTime(token.createdAt)}
-                      </p>
-                      {token.purpose === 'delegate' ? (
-                        <div className="flex flex-wrap gap-2 text-xs text-on-surface-variant">
-                          {token.pickupRelationship ? (
-                            <span className="rounded-full bg-surface px-2 py-1">{token.pickupRelationship}</span>
-                          ) : null}
-                          {token.pickupIdentityType || token.pickupIdentityNumber ? (
-                            <span className="rounded-full bg-surface px-2 py-1">
-                              {token.pickupIdentityType ?? t('qr.custom.fields.identityType', { defaultValue: 'ID type' })}: {token.pickupIdentityNumber ?? '-'}
+    <TableCard
+      title={t('qr.history.title')}
+      count={t('qr.history.count', { count: tokens.length })}
+      filters={
+        tokens.length ? (
+          <div className="flex flex-wrap gap-1.5" role="tablist" aria-label={t('qr.history.title')}>
+            {(['all', ...STATUS_ORDER] as const).map((value) => {
+              const count = value === 'all' ? tokens.length : counts[value];
+              if (value !== 'all' && count === 0) return null;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  role="tab"
+                  aria-selected={statusFilter === value}
+                  onClick={() => setStatusFilter(value)}
+                  className={cn(
+                    'inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-xs font-semibold transition-colors',
+                    statusFilter === value
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : 'border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-high',
+                  )}
+                >
+                  {value === 'all' ? t('qr.history.all') : t(`qr.history.statuses.${value}`)}
+                  <span className={cn('rounded-full px-1.5 tabular-nums', statusFilter === value ? 'bg-primary-foreground/20' : 'bg-surface-high')}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+        ) : null
+      }
+      pagination={filtered.length ? <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} /> : null}
+    >
+      {isLoading ? (
+        <TableLoading />
+      ) : !tokens.length ? (
+        <TableEmpty icon="history" title={t('qr.history.emptyTitle')} description={t('qr.history.emptyDescription')} />
+      ) : (
+        <div>
+          {pageGroups.map((group) => (
+            <section key={group.status}>
+              <h3 className="flex items-center gap-2 border-b border-outline-variant bg-surface-container-lowest px-4 py-2 text-xs font-semibold text-on-surface-variant sm:px-5">
+                <span className={cn('h-2 w-2 rounded-full', group.status === 'active' ? 'bg-success' : group.status === 'used' ? 'bg-primary' : group.status === 'revoked' ? 'bg-error' : 'bg-outline')} aria-hidden />
+                {t(`qr.history.sections.${group.status}`)}
+                <span className="rounded-full bg-surface-high px-1.5 tabular-nums">{counts[group.status]}</span>
+              </h3>
+              <ul className="divide-y divide-outline-variant">
+                {group.items.map((token) => {
+                  const child = childNames.get(token.childId);
+                  const isDelegate = token.purpose === 'delegate';
+                  const isPersistentParent = !isDelegate && isFarFutureExpiry(token.expiresAt);
+                  const canRevoke = token.status === 'active' && isDelegate && Boolean(child);
+                  const tone = STATUS_TONE[token.status];
+                  return (
+                    <li key={token.id} className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:px-5">
+                      <div className="flex min-w-0 flex-1 gap-3">
+                        <span className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-lg', ICON_TILE[tone])} aria-hidden>
+                          <span className="material-symbols-outlined text-xl">{isDelegate ? 'badge' : 'qr_code_2'}</span>
+                        </span>
+                        <div className="min-w-0 flex-1 space-y-1.5">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="min-w-0 text-sm font-semibold text-on-surface">
+                              {isDelegate
+                                ? token.pickupPersonFullName ?? token.delegateName ?? t('qr.history.unnamedDelegate')
+                                : t('qr.history.parentSelfPickup')}
+                            </p>
+                            <StatusPill tone={tone}>{t(`qr.history.statuses.${token.status}`)}</StatusPill>
+                            <StatusPill tone="neutral" icon={isDelegate ? 'badge' : 'qr_code_2'}>
+                              {isDelegate ? t('qr.childPage.tabs.custom') : t('qr.childPage.tabs.parent')}
+                            </StatusPill>
+                          </div>
+
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-on-surface-variant">
+                            {showChild && child ? (
+                              <span className="inline-flex items-center gap-1">
+                                <span className="material-symbols-outlined text-sm" aria-hidden>child_care</span>
+                                {child.displayName}
+                              </span>
+                            ) : null}
+                            <span className="inline-flex items-center gap-1">
+                              <span className="material-symbols-outlined text-sm" aria-hidden>add_circle</span>
+                              {t('qr.history.issuedAt')}: {formatDateTime(token.createdAt, DATE_TIME)}
                             </span>
-                          ) : null}
-                          {token.pickupNotes ? (
-                            <span className="rounded-full bg-surface px-2 py-1">{token.pickupNotes}</span>
+                            {token.consumedAt ? (
+                              <span className="inline-flex items-center gap-1">
+                                <span className="material-symbols-outlined text-sm" aria-hidden>task_alt</span>
+                                {t('qr.history.usedAt')}: {formatDateTime(token.consumedAt, DATE_TIME)}
+                              </span>
+                            ) : isPersistentParent ? (
+                              <span className="inline-flex items-center gap-1">
+                                <span className="material-symbols-outlined text-sm" aria-hidden>all_inclusive</span>
+                                {t('qr.history.alwaysAvailable')}
+                              </span>
+                            ) : (
+                              <span className={cn('inline-flex items-center gap-1', token.status === 'active' && 'font-medium text-warning')}>
+                                <span className="material-symbols-outlined text-sm" aria-hidden>event_busy</span>
+                                {t('qr.history.expiresAt')}: {formatDateTime(token.expiresAt, DATE_TIME)}
+                              </span>
+                            )}
+                          </div>
+
+                          {isDelegate && (token.pickupRelationship || token.pickupIdentityType || token.pickupIdentityNumber || token.pickupNotes) ? (
+                            <div className="flex flex-wrap gap-1.5 text-xs">
+                              {token.pickupRelationship ? (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-surface-high px-2.5 py-1 text-on-surface">
+                                  <span className="material-symbols-outlined text-sm text-on-surface-variant" aria-hidden>family_restroom</span>
+                                  {token.pickupRelationship}
+                                </span>
+                              ) : null}
+                              {token.pickupIdentityType || token.pickupIdentityNumber ? (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-surface-high px-2.5 py-1 text-on-surface">
+                                  <span className="material-symbols-outlined text-sm text-on-surface-variant" aria-hidden>id_card</span>
+                                  {identityLabel(token)}
+                                  <span className="font-semibold tabular-nums" dir="ltr">{token.pickupIdentityNumber ?? '-'}</span>
+                                </span>
+                              ) : null}
+                              {token.pickupNotes ? (
+                                <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-surface-high px-2.5 py-1 text-on-surface">
+                                  <span className="material-symbols-outlined text-sm text-on-surface-variant" aria-hidden>sticky_note_2</span>
+                                  <span className="truncate">{token.pickupNotes}</span>
+                                </span>
+                              ) : null}
+                            </div>
                           ) : null}
                         </div>
+                      </div>
+
+                      {canRevoke ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="shrink-0 self-end border-error/40 text-error hover:bg-error/5 hover:text-error sm:self-start"
+                          onClick={() => void onRevoke(token)}
+                          disabled={isRevoking && revokingId === token.id}
+                        >
+                          <span className="material-symbols-outlined me-1 text-base" aria-hidden>block</span>
+                          {t('qr.history.revoke')}
+                        </Button>
                       ) : null}
-                      {token.consumedAt ? (
-                        <p className="text-xs text-on-surface-variant">
-                          {t('qr.history.usedAt')}: {formatDateTime(token.consumedAt)}
-                        </p>
-                      ) : isPersistentParent ? (
-                        <p className="text-xs text-on-surface-variant">
-                          {t('qr.history.alwaysAvailable')}
-                        </p>
-                      ) : (
-                        <p className="text-xs text-on-surface-variant">
-                          {t('qr.history.expiresAt')}: {formatDateTime(token.expiresAt)}
-                        </p>
-                      )}
-                    </div>
-                    {canRevoke ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => void onRevoke(token)}
-                        disabled={isRevoking && revokingId === token.id}
-                      >
-                        {t('qr.history.revoke')}
-                      </Button>
-                    ) : null}
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        );
-      })}
-    </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
+        </div>
+      )}
+    </TableCard>
   );
 }

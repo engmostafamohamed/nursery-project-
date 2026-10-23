@@ -12,12 +12,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { EmptyState } from '@/components/ui/EmptyState';
+import { IconAction, TableCard, TableEmpty, TableLoading, TablePagination } from '@/components/ui/DataTable';
 import { FieldError, invalidFieldClass } from '@/components/ui/FieldError';
+import { FilterBar, SearchInput } from '@/components/ui/FilterBar';
+import { FilterField } from '@/components/ui/FilterField';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { FilterMenu } from '@/components/ui/FilterMenu';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -35,6 +37,7 @@ import {
 } from '@/hooks/useAdminTuitionBillingPeriods';
 import { applyDealToPrice, isDealCurrentlyActive, useAdminDeals, useInlineDealCleanup } from '@/hooks/useAdminDeals';
 import { useNurserySettings } from '@/hooks/useNurserySettings';
+import { usePagination } from '@/hooks/usePagination';
 import { useTouchedFields } from '@/hooks/useTouchedFields';
 import { formatTime } from '@/lib/datetime';
 import { formatMoneyAmount } from '@/lib/money';
@@ -84,7 +87,16 @@ function computeHoursSpan(start: string | null | undefined, end: string | null |
   return Math.round((minutes / 60) * 10) / 10;
 }
 
-export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null }) {
+export function TuitionPackagesEditor({
+  nurseryId,
+  assignOpen,
+  onAssignOpenChange,
+}: {
+  nurseryId?: string | null;
+  /** Lets the page open the "assign to children" dialog too (e.g. from a stat tile). */
+  assignOpen?: boolean;
+  onAssignOpenChange?: (open: boolean) => void;
+}) {
   const { t, i18n } = useTranslation();
   const isAr = i18n.language.startsWith('ar');
   const money = (amount: number) => t('invoice.egpAmount', { amount: formatMoneyAmount(amount) });
@@ -102,7 +114,9 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
   const fields = useTouchedFields<PackageField>();
   const { query: periodsQuery, upsert: upsertPeriod } = useAdminTuitionBillingPeriods(editingId);
 
-  const [bulkOpen, setBulkOpen] = useState(false);
+  const [ownBulkOpen, setOwnBulkOpen] = useState(false);
+  const bulkOpen = assignOpen ?? ownBulkOpen;
+  const setBulkOpen = onAssignOpenChange ?? setOwnBulkOpen;
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [dealFilter, setDealFilter] = useState<'all' | 'with' | 'without'>('all');
@@ -127,6 +141,7 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
     });
   }, [rows, search, statusFilter, dealFilter]);
 
+  const pager = usePagination(filteredRows, 9, `${search}|${statusFilter}|${dealFilter}`);
   const hasActiveFilters = Boolean(search || statusFilter !== 'all' || dealFilter !== 'all');
   const clearFilters = () => {
     setSearch('');
@@ -287,132 +302,118 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
   const priceError = errorFor('price');
   const periodsError = errorFor('periods');
 
-  return (
-    <section className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-base font-semibold text-on-surface">{t('tuitionPackages.title')}</h2>
-          <p className="mt-0.5 text-xs text-on-surface-variant">{t('tuitionPackages.subtitle')}</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {rows.some((pkg) => pkg.active) ? (
-            <Button type="button" variant="outline" onClick={() => setBulkOpen(true)}>
-              <MaterialSymbol name="group_add" size="text-base" />
-              {t('tuitionPackages.assignToChildren')}
-            </Button>
-          ) : null}
-          <Button type="button" onClick={openCreate}>
-            <MaterialSymbol name="add" size="text-base" />
-            {t('tuitionPackages.newPackage')}
-          </Button>
-        </div>
-      </div>
+  const newPackageButton = (
+    <Button type="button" onClick={openCreate}>
+      <MaterialSymbol name="add" size="text-base" />
+      {t('tuitionPackages.newPackage')}
+    </Button>
+  );
 
-      {query.isLoading ? (
-        <div className="space-y-2">
-          <Skeleton className="h-20 w-full rounded-xl" />
-          <Skeleton className="h-20 w-full rounded-xl" />
-        </div>
-      ) : rows.length === 0 ? (
-        <EmptyState
-          icon="payments"
-          title={t('tuitionPackages.emptyTitle')}
-          description={t('tuitionPackages.emptyDescription')}
-          action={
-            <Button type="button" onClick={openCreate}>
-              <MaterialSymbol name="add" size="text-base" />
-              {t('tuitionPackages.newPackage')}
-            </Button>
-          }
-        />
-      ) : (
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-end gap-3 rounded-xl border border-outline-variant bg-surface p-3 shadow-sm">
-            <div className="min-w-[180px] flex-1 space-y-1">
-              <Label className="text-xs font-semibold text-on-surface-variant">{t('packageFilters.search')}</Label>
-              <Input
-                className="h-11"
-                placeholder={t('packageFilters.searchPlaceholder')}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <FilterMenu<typeof statusFilter>
-              className="w-48"
-              label={t('packageFilters.status')}
-              icon="toggle_on"
-              value={statusFilter}
-              onChange={setStatusFilter}
-              options={[
-                { value: 'all', label: t('packageFilters.allStatuses') },
-                { value: 'active', label: t('packageFilters.active') },
-                { value: 'inactive', label: t('packageFilters.inactive') },
-              ]}
-            />
-            <FilterMenu<typeof dealFilter>
-              className="w-52"
-              label={t('packageFilters.discount')}
-              icon="sell"
-              value={dealFilter}
-              onChange={setDealFilter}
-              options={[
-                { value: 'all', label: t('packageFilters.allPackages') },
-                { value: 'with', label: t('packageFilters.withDiscount') },
-                { value: 'without', label: t('packageFilters.withoutDiscount') },
-              ]}
-            />
-            {hasActiveFilters ? (
-              <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
-                <MaterialSymbol name="close" size="text-base" />
-                {t('packageFilters.clear')}
+  return (
+    <>
+      <TableCard
+        title={t('tuitionPackages.title')}
+        description={t('tuitionPackages.subtitle')}
+        count={rows.length ? t('packages.overview.count', { count: filteredRows.length }) : undefined}
+        actions={
+          <>
+            {rows.some((pkg) => pkg.active) ? (
+              <Button type="button" variant="outline" onClick={() => setBulkOpen(true)}>
+                <MaterialSymbol name="group_add" size="text-base" />
+                {t('tuitionPackages.assignToChildren')}
               </Button>
             ) : null}
+            {newPackageButton}
+          </>
+        }
+        filters={
+          rows.length ? (
+            <FilterBar onClear={clearFilters} canClear={hasActiveFilters}>
+              <FilterField label={t('packageFilters.search')} className="sm:flex-[2]">
+                <SearchInput value={search} onChange={setSearch} placeholder={t('packageFilters.searchPlaceholder')} />
+              </FilterField>
+              <FilterField label={t('packageFilters.status')}>
+                <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}>
+                  <option value="all">{t('packageFilters.allStatuses')}</option>
+                  <option value="active">{t('packageFilters.active')}</option>
+                  <option value="inactive">{t('packageFilters.inactive')}</option>
+                </Select>
+              </FilterField>
+              <FilterField label={t('packageFilters.discount')}>
+                <Select value={dealFilter} onChange={(e) => setDealFilter(e.target.value as typeof dealFilter)}>
+                  <option value="all">{t('packageFilters.allPackages')}</option>
+                  <option value="with">{t('packageFilters.withDiscount')}</option>
+                  <option value="without">{t('packageFilters.withoutDiscount')}</option>
+                </Select>
+              </FilterField>
+            </FilterBar>
+          ) : null
+        }
+        pagination={filteredRows.length ? <TablePagination pager={pager} pageSizeOptions={[9, 18, 36]} /> : null}
+      >
+        {query.isLoading ? (
+          <TableLoading />
+        ) : rows.length === 0 ? (
+          <TableEmpty
+            icon="payments"
+            title={t('tuitionPackages.emptyTitle')}
+            description={t('tuitionPackages.emptyDescription')}
+            action={newPackageButton}
+          />
+        ) : filteredRows.length === 0 ? (
+          <TableEmpty
+            icon="filter_alt_off"
+            title={t('packageFilters.noMatch')}
+            action={
+              <Button type="button" variant="outline" onClick={clearFilters}>
+                {t('packageFilters.clear')}
+              </Button>
+            }
+          />
+        ) : (
+          <div className="grid gap-4 p-4 sm:p-5 md:grid-cols-2 xl:grid-cols-3">
+            {pager.pageItems.map((pkg) => {
+              const deal = (dealsQuery.data ?? []).find((d) => d.id === pkg.deal_id);
+              const live = deal ? isDealCurrentlyActive(deal) : false;
+              const dealLabel = deal ? `${localizedName(deal, isAr)} · ${dealDiscountLabel(t, deal)}` : '';
+              return (
+                <AdminPackageCard
+                  key={pkg.id}
+                  icon="school"
+                  name={localizedName(pkg, isAr)}
+                  active={pkg.active}
+                  price={money(pkg.price)}
+                  discountedPrice={deal && live ? money(applyDealToPrice(pkg.price, deal)) : null}
+                  priceSuffix={t('applications.paymentPackage.perMonth')}
+                  deal={deal ? { label: live ? dealLabel : t('deals.inactiveSuffix', { label: dealLabel }), live } : null}
+                  description={isAr ? pkg.description_ar || pkg.description_en : pkg.description_en || pkg.description_ar}
+                  features={pkg.features_json.map((feature) => (isAr ? feature.ar || feature.en : feature.en || feature.ar)).filter(Boolean)}
+                  emptyHint={t('packageCard.noDetails')}
+                  facts={[
+                    ...(hoursRangeLabel ? [{ icon: 'schedule', label: hoursRangeLabel }] : []),
+                    { icon: 'groups', label: t('packages.assignedCount', { count: pkg.subscribed_count }) },
+                  ]}
+                  actions={
+                    <>
+                      {/* The switch shows the package's state; clicking flips it. */}
+                      <IconAction
+                        icon={pkg.active ? 'toggle_on' : 'toggle_off'}
+                        label={pkg.active ? t('packages.deactivate') : t('packages.activate')}
+                        disabled={update.isPending}
+                        onClick={() => void toggleActive(pkg)}
+                      />
+                      <Button type="button" variant="outline" size="sm" onClick={() => openEdit(pkg)}>
+                        <MaterialSymbol name="edit" size="text-base" />
+                        {t('common.edit')}
+                      </Button>
+                    </>
+                  }
+                />
+              );
+            })}
           </div>
-
-          {filteredRows.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-outline-variant p-6 text-center text-sm text-on-surface-variant">
-              {t('packageFilters.noMatch')}
-            </p>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {filteredRows.map((pkg) => {
-                const deal = (dealsQuery.data ?? []).find((d) => d.id === pkg.deal_id);
-                const live = deal ? isDealCurrentlyActive(deal) : false;
-                const dealLabel = deal ? `${localizedName(deal, isAr)} · ${dealDiscountLabel(t, deal)}` : '';
-                return (
-                  <AdminPackageCard
-                    key={pkg.id}
-                    name={localizedName(pkg, isAr)}
-                    active={pkg.active}
-                    price={money(pkg.price)}
-                    discountedPrice={deal && live ? money(applyDealToPrice(pkg.price, deal)) : null}
-                    priceSuffix={t('applications.paymentPackage.perMonth')}
-                    deal={deal ? { label: live ? dealLabel : t('deals.inactiveSuffix', { label: dealLabel }), live } : null}
-                    description={isAr ? pkg.description_ar || pkg.description_en : pkg.description_en || pkg.description_ar}
-                    features={pkg.features_json.map((feature) => (isAr ? feature.ar || feature.en : feature.en || feature.ar)).filter(Boolean)}
-                    emptyHint={t('packageCard.noDetails')}
-                    facts={[
-                      ...(hoursRangeLabel ? [{ icon: 'schedule', label: hoursRangeLabel }] : []),
-                      { icon: 'groups', label: t('packages.assignedCount', { count: pkg.subscribed_count }) },
-                    ]}
-                    actions={
-                      <>
-                        <Button type="button" variant="outline" size="sm" onClick={() => openEdit(pkg)}>
-                          <MaterialSymbol name="edit" size="text-base" />
-                          {t('common.edit')}
-                        </Button>
-                        <Button type="button" variant="outline" size="sm" disabled={update.isPending} onClick={() => void toggleActive(pkg)}>
-                          {pkg.active ? t('packages.deactivate') : t('packages.activate')}
-                        </Button>
-                      </>
-                    }
-                  />
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
+        )}
+      </TableCard>
 
       <BulkTuitionAssignDialog open={bulkOpen} onOpenChange={setBulkOpen} nurseryId={nurseryId} />
 
@@ -597,6 +598,6 @@ export function TuitionPackagesEditor({ nurseryId }: { nurseryId?: string | null
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </section>
+    </>
   );
 }

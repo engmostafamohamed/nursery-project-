@@ -13,22 +13,23 @@ export function ParentDashboardQuickActions() {
   const { t } = useTranslation();
 
   return (
-    <section className="max-h-[280px] overflow-y-auto rounded-xl border border-outline-variant bg-surface-container-lowest p-4 shadow-sm lg:max-h-[360px]">
-      <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1">
+    <section className="rounded-xl border border-outline-variant bg-surface p-3 shadow-sm sm:p-4">
+      {/* One column beside the schedule on wide screens, two on tablets. */}
+      <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-1">
         {ACTIONS.map((a) => (
           <li key={a.to}>
             <Link
               to={a.to}
-              className="flex items-center gap-3 rounded-lg border border-outline-variant bg-surface px-4 py-3 text-foreground transition-colors hover:border-primary hover:bg-primary-container/20"
+              className="group flex h-full items-center gap-3 rounded-lg border border-outline-variant bg-surface px-3 py-2.5 transition hover:border-primary/40 hover:bg-primary/5"
             >
-              <span className="material-symbols-outlined shrink-0 text-2xl text-primary" aria-hidden>
-                {a.icon}
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden>
+                <span className="material-symbols-outlined text-xl">{a.icon}</span>
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-semibold text-on-surface">{t(a.titleKey)}</span>
-                <span className="block text-xs text-on-surface-variant">{t(a.descKey)}</span>
+                <span className="block truncate text-xs text-on-surface-variant">{t(a.descKey)}</span>
               </span>
-              <span className="material-symbols-outlined shrink-0 text-on-surface-variant rtl:rotate-180" aria-hidden>
+              <span className="material-symbols-outlined shrink-0 text-on-surface-variant transition group-hover:text-primary rtl:rotate-180" aria-hidden>
                 chevron_right
               </span>
             </Link>

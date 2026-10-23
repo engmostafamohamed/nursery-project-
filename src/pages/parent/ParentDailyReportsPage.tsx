@@ -16,10 +16,9 @@ import { useTranslation } from 'react-i18next';
 
 import { ParentReportDetailModal } from '@/components/parent/ParentReportDetailModal';
 import { Button } from '@/components/ui/button';
-import { EmptyState } from '@/components/ui/EmptyState';
+import { TableCard, TableEmpty, TablePagination } from '@/components/ui/DataTable';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Input } from '@/components/ui/input';
-import { Pagination } from '@/components/ui/Pagination';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatTile } from '@/components/ui/StatTile';
@@ -32,34 +31,30 @@ import {
   formatMealSlot,
   formatMoodLabel,
   formatNapQuality,
+  moodKey,
 } from '@/lib/dailyReportDisplay';
 import { CHART_CURSOR, CHART_GRID_STROKE, CHART_SERIES, CHART_TOOLTIP_STYLE, chartColor, chartDirection } from '@/lib/chartTheme';
-import { formatDateTime } from '@/lib/datetime';
+import { dayHeading, groupByDay } from '@/lib/dayGroups';
 import { supabase } from '@/lib/supabase';
+import { cn } from '@/lib/utils';
+
+/** Icon and colours per mood, so a report's mood reads at a glance. */
+const MOOD_STYLE: Record<ReturnType<typeof moodKey>, { icon: string; pill: string }> = {
+  happy: { icon: 'sentiment_very_satisfied', pill: 'bg-success/10 text-success' },
+  content: { icon: 'sentiment_satisfied', pill: 'bg-primary/10 text-primary' },
+  fussy: { icon: 'sentiment_neutral', pill: 'bg-warning/10 text-warning' },
+  cranky: { icon: 'sentiment_dissatisfied', pill: 'bg-error/10 text-error' },
+};
+
+function initialsOf(name: string): string {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((word) => word[0]).join('').toUpperCase() || '?';
+}
 
 function formatDateLabel(value: string, locale: string, options?: Intl.DateTimeFormatOptions) {
   if (!value) return '-';
   return new Intl.DateTimeFormat(locale, options ?? { day: 'numeric', month: 'short', year: 'numeric' }).format(
     new Date(`${value}T00:00:00`),
   );
-}
-
-function reportSummary(t: ReturnType<typeof useTranslation>['t'], report: ParentReportItem) {
-  const tags = (
-    (report.activities.tags as string[] | undefined) ??
-    (report.activities.participated_in as string[] | undefined) ??
-    []
-  )
-    .slice(0, 2)
-    .map((tag) => formatActivityTag(t, tag));
-  const napMinutes = Number(report.nap.duration_minutes ?? 0);
-  const parts = [
-    formatMoodLabel(t, report.mood.mood),
-    formatMealSlot(t, report.meals.lunch as Record<string, unknown> | undefined),
-    napMinutes ? `${napMinutes} ${t('parent.reports.minutes')}` : formatNapQuality(t, report.nap.quality),
-    ...tags,
-  ].filter(Boolean);
-  return parts.join(' • ');
 }
 
 function ReportFact({ icon, label, value }: { icon: string; label: string; value: string }) {
@@ -85,35 +80,39 @@ function ReportCard({
 }) {
   const { t } = useTranslation();
   const mood = formatMoodLabel(t, report.mood.mood);
-  const summary = reportSummary(t, report);
+  const moodStyle = MOOD_STYLE[moodKey(report.mood.mood)];
   const notes = report.specialNotes?.trim();
+  const publishedTime = report.publishedAt
+    ? new Date(report.publishedAt).toLocaleTimeString(locale.startsWith('ar') ? 'ar-EG' : 'en-GB', { hour: 'numeric', minute: '2-digit', hour12: true })
+    : null;
   const napMinutes = Number(report.nap.duration_minutes ?? 0);
-  const firstActivity = (
+  const activities = (
     (report.activities.tags as string[] | undefined) ??
     (report.activities.participated_in as string[] | undefined) ??
     []
-  )
-    .slice(0, 1)
-    .map((tag) => formatActivityTag(t, tag))
-    .join(', ');
+  ).map((tag) => formatActivityTag(t, tag));
 
   return (
     <article className="group flex overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm transition hover:border-primary/40 hover:shadow-md">
       <button type="button" className="flex w-full flex-col p-4 text-start outline-none focus-visible:bg-surface-container-lowest" onClick={() => onOpen(report)}>
         <div className="flex w-full items-start justify-between gap-3">
-          <div className="flex min-w-0 items-start gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-              <MaterialSymbol name="assignment" size="text-xl" />
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary" aria-hidden>
+              {initialsOf(report.childName)}
             </span>
             <div className="min-w-0">
               <p className="truncate text-base font-semibold text-on-surface" title={report.childName}>{report.childName}</p>
-              <p className="mt-0.5 text-xs text-on-surface-variant">
-                {formatDateLabel(report.reportDate, locale)} · {report.teacherName}
+              <p className="mt-0.5 flex items-center gap-1 text-xs text-on-surface-variant">
+                <MaterialSymbol name="school" size="text-sm" />
+                {report.teacherName}
               </p>
             </div>
           </div>
           {mood ? (
-            <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">{mood}</span>
+            <span className={cn('inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold', moodStyle.pill)}>
+              <MaterialSymbol name={moodStyle.icon} size="text-base" />
+              {mood}
+            </span>
           ) : null}
         </div>
 
@@ -128,13 +127,30 @@ function ReportCard({
             label={t('parent.reports.sections.nap')}
             value={(napMinutes ? `${napMinutes} ${t('parent.reports.minutes')}` : formatNapQuality(t, report.nap.quality)) || '-'}
           />
-          <ReportFact icon="toys" label={t('parent.reports.sections.activities')} value={firstActivity || '-'} />
+          <ReportFact icon="toys" label={t('parent.reports.sections.activities')} value={activities[0] || '-'} />
         </div>
 
-        <p className="mt-3 line-clamp-2 w-full flex-1 text-sm text-on-surface-variant">{notes || summary}</p>
+        <div className="mt-3 w-full flex-1">
+          {notes ? (
+            <p className="flex gap-2 rounded-lg border-s-4 border-primary/40 bg-surface-container-lowest px-3 py-2 text-sm text-on-surface">
+              <MaterialSymbol name="format_quote" size="text-base" className="mt-0.5 shrink-0 text-primary" />
+              <span className="line-clamp-2">{notes}</span>
+            </p>
+          ) : activities.length > 1 ? (
+            // No note: the activities the tile had no room for.
+            <ul className="flex flex-wrap gap-1.5">
+              {activities.slice(1, 4).map((activity) => (
+                <li key={activity} className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+                  {activity}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
         <div className="mt-3 flex w-full items-center justify-between gap-3 border-t border-outline-variant pt-3">
-          <p className="text-xs text-on-surface-variant">
-            {report.publishedAt ? formatDateTime(report.publishedAt) : formatDateLabel(report.reportDate, locale)}
+          <p className="flex items-center gap-1 text-xs text-on-surface-variant">
+            <MaterialSymbol name="schedule" size="text-sm" />
+            {publishedTime ? t('parent.reports.publishedAtTime', { time: publishedTime }) : formatDateLabel(report.reportDate, locale)}
           </p>
           <span className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-primary">
             {t('parent.reports.viewFull')}
@@ -248,6 +264,7 @@ export function ParentDailyReportsPage() {
   const latestReport = reports.reports[0];
   const uniqueChildrenWithReports = new Set(reports.reports.map((report) => report.childId)).size;
   const pager = usePagination(reports.reports, 6, `${childId}|${fromDate}|${toDate}|${sort}|${reports.reports.length}`);
+  const reportGroups = groupByDay(pager.pageItems, (report) => report.reportDate);
 
   return (
     <div className="w-full max-w-none space-y-5 pb-28">
@@ -422,64 +439,48 @@ export function ParentDailyReportsPage() {
         </div>
       </section>
 
-      <section className="rounded-xl border border-outline-variant bg-surface p-4 shadow-sm sm:p-5">
-        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h2 className="text-base font-semibold text-on-surface">
-              {t('parent.reports.listTitle', { defaultValue: 'Report timeline' })}
-            </h2>
-            <p className="mt-0.5 text-xs text-on-surface-variant">
-              {t('common.paginationSummary', {
-                start: pager.startIndex,
-                end: pager.endIndex,
-                total: pager.total,
-              })}
-            </p>
-          </div>
-          {latestReport ? (
-            <p className="w-fit rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-              {t('parent.reports.latestFrom', {
-                defaultValue: 'Latest from {{teacher}}',
-                teacher: latestReport.teacherName,
-              })}
-            </p>
-          ) : null}
-        </div>
-
+      <TableCard
+        title={t('parent.reports.listTitle', { defaultValue: 'Report timeline' })}
+        count={reports.isLoading ? undefined : t('parent.reports.resultsCount', { count: reports.reports.length })}
+        actions={
+          latestReport ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+              <MaterialSymbol name="school" size="text-sm" />
+              {t('parent.reports.latestFrom', { defaultValue: 'Latest from {{teacher}}', teacher: latestReport.teacherName })}
+            </span>
+          ) : null
+        }
+        pagination={reports.isLoading || !reports.reports.length ? null : <TablePagination pager={pager} pageSizeOptions={[6, 12, 24]} />}
+      >
         {reports.isLoading ? (
-          <div className="grid gap-3 lg:grid-cols-2">
+          <div className="grid gap-3 p-4 sm:p-5 lg:grid-cols-2">
             {Array.from({ length: 4 }, (_, index) => (
               <Skeleton key={index} className="h-56 rounded-xl" />
             ))}
           </div>
         ) : !reports.reports.length ? (
-          <EmptyState
-            icon="description"
-            title={t('parent.reports.emptyTitle')}
-            description={t('parent.reports.emptyDescription')}
-          />
+          <TableEmpty icon="description" title={t('parent.reports.emptyTitle')} description={t('parent.reports.emptyDescription')} />
         ) : (
-          <>
-            <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
-              {pager.pageItems.map((report) => (
-                <ReportCard key={report.id} report={report} locale={i18n.language} onOpen={openReport} />
-              ))}
-            </div>
-            <Pagination
-              className="mt-5"
-              page={pager.page}
-              pageCount={pager.pageCount}
-              total={pager.total}
-              startIndex={pager.startIndex}
-              endIndex={pager.endIndex}
-              hasPrev={pager.hasPrev}
-              hasNext={pager.hasNext}
-              onPrev={pager.prev}
-              onNext={pager.next}
-            />
-          </>
+          <div className="divide-y divide-outline-variant">
+            {reportGroups.map((group) => (
+              <section key={group.key} className="space-y-3 p-4 sm:p-5">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-on-surface">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <MaterialSymbol name="calendar_today" size="text-sm" />
+                  </span>
+                  {dayHeading(group.key, i18n.language.startsWith('ar') ? 'ar-EG' : 'en-GB', { today: t('common.today'), yesterday: t('common.yesterday') })}
+                  <span className="rounded-full bg-surface-high px-2 py-0.5 text-xs font-medium text-on-surface-variant">{group.items.length}</span>
+                </h3>
+                <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+                  {group.items.map((report) => (
+                    <ReportCard key={report.id} report={report} locale={i18n.language} onOpen={openReport} />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
         )}
-      </section>
+      </TableCard>
 
       <ParentReportDetailModal
         open={Boolean(activeReport)}

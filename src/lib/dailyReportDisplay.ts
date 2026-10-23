@@ -40,10 +40,13 @@ const MOOD_MAP: Record<string, 'happy' | 'content' | 'fussy' | 'cranky'> = {
   upset: 'cranky',
 };
 
+/** The mood a report's raw value maps to (unknown values read as happy, as in formatMoodLabel). */
+export function moodKey(raw: unknown): 'happy' | 'content' | 'fussy' | 'cranky' {
+  return MOOD_MAP[String(raw ?? '')] ?? 'happy';
+}
+
 export function formatMoodLabel(t: TFunction, raw: unknown): string {
-  const s = String(raw ?? '');
-  const k = MOOD_MAP[s] ?? 'happy';
-  return t(`reports.daily.options.mood.${k}`);
+  return t(`reports.daily.options.mood.${moodKey(raw)}`);
 }
 
 export function formatActivityTag(t: TFunction, tag: string): string {

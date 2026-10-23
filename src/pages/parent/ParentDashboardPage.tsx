@@ -49,7 +49,8 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { STEP_DATE_TIME } from '@/lib/admissionTimeline';
 import { applicationStatusUi } from '@/lib/applicationStatus';
 import { CHART_CURSOR, CHART_GRID_STROKE, CHART_TOOLTIP_STYLE, chartColor, chartDirection } from '@/lib/chartTheme';
-import { formatDateTime } from '@/lib/datetime';
+import { formatDate, formatDateTime } from '@/lib/datetime';
+import { formatMoneyAmount } from '@/lib/money';
 import { cn } from '@/lib/utils';
 
 function SectionHeading({ icon, children }: { icon: string; children: React.ReactNode }) {
@@ -324,6 +325,18 @@ function ParentDashboardApplicationsCard({
 }) {
   return (
     <article className="flex min-h-[360px] flex-col rounded-2xl border border-outline-variant bg-surface p-3 shadow-sm sm:min-h-[460px] sm:rounded-xl sm:p-4">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <p className="flex items-center gap-2 text-sm font-semibold text-on-surface">
+          <span className="material-symbols-outlined text-base text-primary" aria-hidden>assignment</span>
+          {t('parent.dashboard.sectionApplications')}
+          {applicationRows.length ? (
+            <span className="rounded-full bg-surface-high px-2 py-0.5 text-xs font-medium tabular-nums text-on-surface-variant">{applicationRows.length}</span>
+          ) : null}
+        </p>
+        <Link to="/parent/applications" className="text-xs font-semibold text-primary hover:underline">
+          {t('common.viewAll', { defaultValue: 'View all' })}
+        </Link>
+      </div>
       {isLoading ? (
         <p className="text-sm text-on-surface-variant">{t('common.loading')}</p>
       ) : applicationRows.length === 0 ? (
@@ -412,17 +425,60 @@ function ParentAdmissionCyclePanel({
   const balanceDue = invoice?.balanceDue ?? 0;
   const paidAmount = invoice?.paidAmount ?? 0;
   const pendingAmount = invoice?.pendingAmount ?? 0;
-  const nextPaymentDate = invoice?.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : '-';
+  const money = (amount: number) => t('invoice.egpAmount', { amount: formatMoneyAmount(amount) });
+  const childName = applicationChildName(application);
+  const submittedAt = application.submitted_at ? formatDateTime(String(application.submitted_at), STEP_DATE_TIME) : null;
   const nextAction =
     status === 'rejected'
       ? t('parent.dashboard.admissionCycle.contact', { defaultValue: 'Contact nursery' })
       : invoice && balanceDue > 0
-        ? t('payment.payNowAmount', { amount: balanceDue.toFixed(2) })
+        ? t('payment.payNowAmount', { amount: formatMoneyAmount(balanceDue) })
         : invoice
           ? t('parent.dashboard.admissionCycle.reviewInvoice', { defaultValue: 'Review invoice' })
           : packagesCount > 0
             ? t('parent.dashboard.admissionCycle.choosePackage', { defaultValue: 'Choose package' })
             : t('parent.dashboard.admissionCycle.openApplication', { defaultValue: 'Open application' });
+
+  // Where the application stands: each step is done, the current one, or still to come.
+  const steps: Array<{ key: string; icon: string; label: string; detail: string; done: boolean; failed?: boolean }> = [
+    {
+      key: 'application',
+      icon: 'edit_document',
+      label: t('parent.dashboard.admissionCycle.steps.application'),
+      detail: t(`applications.statuses.${status}`, { defaultValue: status }),
+      done: status !== 'draft',
+    },
+    {
+      key: 'package',
+      icon: 'inventory_2',
+      label: t('parent.dashboard.admissionCycle.steps.package'),
+      detail: invoice?.packageName || t('applications.paymentPackage.notSelected', { defaultValue: 'Not selected' }),
+      done: Boolean(invoice),
+    },
+    {
+      key: 'payment',
+      icon: 'payments',
+      label: t('parent.dashboard.admissionCycle.steps.payment'),
+      detail: !invoice
+        ? t('parent.dashboard.admissionCycle.steps.notYet')
+        : balanceDue > 0
+          ? t('parent.dashboard.admissionCycle.steps.due', { amount: money(balanceDue) })
+          : t('invoice.status.paid'),
+      done: Boolean(invoice) && balanceDue <= 0,
+    },
+    {
+      key: 'decision',
+      icon: status === 'rejected' ? 'block' : 'verified',
+      label: t('parent.dashboard.admissionCycle.steps.decision'),
+      detail:
+        status === 'approved' || status === 'rejected'
+          ? t(`applications.statuses.${status}`)
+          : t('parent.dashboard.admissionCycle.steps.waiting'),
+      done: status === 'approved',
+      failed: status === 'rejected',
+    },
+  ];
+  const currentStep = steps.findIndex((step) => !step.done);
 
   return (
     <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
@@ -431,9 +487,14 @@ function ParentAdmissionCyclePanel({
           <SectionHeading icon="assignment">
             {t('parent.dashboard.admissionCycle.title', { defaultValue: 'Admission cycle' })}
           </SectionHeading>
-          <p className="mt-3 truncate text-lg font-semibold text-on-surface">{applicationChildName(application)}</p>
-          <p className="mt-1 text-xs text-on-surface-variant">
-            {t('applications.submittedAt')}: {application.submitted_at ? formatDateTime(String(application.submitted_at), STEP_DATE_TIME) : '-'}
+          <p className="mt-3 truncate text-lg font-semibold text-on-surface">
+            {childName !== '-' ? childName : t('parent.dashboard.admissionCycle.newApplication')}
+          </p>
+          <p className="mt-1 flex items-center gap-1 text-xs text-on-surface-variant">
+            <span className="material-symbols-outlined text-sm" aria-hidden>schedule</span>
+            {submittedAt
+              ? `${t('applications.submittedAt')}: ${submittedAt}`
+              : t('parent.dashboard.admissionCycle.notSubmitted')}
           </p>
         </div>
         <span className={`inline-flex w-fit items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold ${statusUi.className}`}>
@@ -441,63 +502,80 @@ function ParentAdmissionCyclePanel({
           {t(`applications.statuses.${status}`, { defaultValue: status })}
         </span>
       </div>
-      <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_220px]">
-        <div className="grid divide-y divide-outline-variant sm:grid-cols-2 xl:grid-cols-5 sm:divide-x sm:divide-y-0">
-          <div className="p-4">
-            <p className="text-[11px] font-semibold uppercase text-on-surface-variant">
-              {t('parent.dashboard.admissionCycle.status', { defaultValue: 'Application' })}
-            </p>
-            <p className="mt-1 text-sm font-semibold text-on-surface">
-              {t(`applications.statuses.${status}`, { defaultValue: status })}
-            </p>
-          </div>
-          <div className="p-4">
-            <p className="text-[11px] font-semibold uppercase text-on-surface-variant">
-              {t('applications.paymentPackage.title', { defaultValue: 'Payment package' })}
-            </p>
-            <p className="mt-1 text-sm font-semibold text-on-surface">
-              {invoice?.packageName || t('applications.paymentPackage.notSelected', { defaultValue: 'Not selected' })}
-            </p>
-          </div>
-          <div className="p-4">
-            <p className="text-[11px] font-semibold uppercase text-on-surface-variant">
-              {t('financial.paymentHistory.balanceLabel', { defaultValue: 'Balance' })}
-            </p>
-            <p className="mt-1 text-sm font-semibold text-on-surface">
-              {invoice ? t('invoice.egpAmount', { amount: balanceDue.toFixed(2) }) : '-'}
-            </p>
-          </div>
-          <div className="p-4">
-            <p className="text-[11px] font-semibold uppercase text-on-surface-variant">
-              {t('financial.paymentHistory.paidLabel', { defaultValue: 'Paid' })}
-            </p>
-            <p className="mt-1 text-sm font-semibold text-success">
-              {invoice ? t('invoice.egpAmount', { amount: paidAmount.toFixed(2) }) : '-'}
-            </p>
-          </div>
-          <div className="p-4">
-            <p className="text-[11px] font-semibold uppercase text-on-surface-variant">
-              {t('parent.financial.nextDueLabel', { defaultValue: 'Next payment' })}
-            </p>
-            <p className="mt-1 text-sm font-semibold text-on-surface">{nextPaymentDate}</p>
-            {pendingAmount > 0 ? (
-              <p className="mt-1 text-xs font-medium text-warning">
-                {t('financial.paymentHistory.pending', {
-                  amount: pendingAmount.toFixed(2),
-                  defaultValue: 'Pending {{amount}}',
-                })}
-              </p>
-            ) : null}
-          </div>
-        </div>
-        <div className="border-t border-outline-variant p-4 lg:border-l lg:border-t-0">
-          <Button asChild className="h-11 w-full rounded-md">
-            <Link to={invoice && balanceDue > 0 ? `/parent/invoices/${invoice.id}/pay` : `/parent/applications/${id}`}>
-              {nextAction}
-            </Link>
-          </Button>
-        </div>
+
+      <div className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-center">
+        <ol className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {steps.map((step, index) => {
+            const current = index === currentStep && !step.failed;
+            return (
+              <li
+                key={step.key}
+                className={cn(
+                  'flex min-w-0 items-start gap-2.5 rounded-lg border p-3',
+                  step.failed
+                    ? 'border-error/30 bg-error/5'
+                    : step.done
+                      ? 'border-success/30 bg-success/5'
+                      : current
+                        ? 'border-primary/40 bg-primary/5'
+                        : 'border-outline-variant bg-surface',
+                )}
+              >
+                <span
+                  className={cn(
+                    'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
+                    step.failed
+                      ? 'bg-error text-on-primary'
+                      : step.done
+                        ? 'bg-success text-on-primary'
+                        : current
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-surface-high text-on-surface-variant',
+                  )}
+                  aria-hidden
+                >
+                  <span className="material-symbols-outlined text-base">{step.failed ? 'close' : step.done ? 'check' : step.icon}</span>
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[11px] font-semibold uppercase text-on-surface-variant">{step.label}</span>
+                  <span className="mt-0.5 line-clamp-2 block break-words text-sm font-semibold leading-5 text-on-surface" title={step.detail}>{step.detail}</span>
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+        <Button asChild className="h-11 w-full rounded-md">
+          <Link to={invoice && balanceDue > 0 ? `/parent/invoices/${invoice.id}/pay` : `/parent/applications/${id}`}>
+            {nextAction}
+            <span className="material-symbols-outlined ms-1 text-base rtl:rotate-180" aria-hidden>arrow_forward</span>
+          </Link>
+        </Button>
       </div>
+
+      {invoice ? (
+        <dl className="grid grid-cols-2 divide-outline-variant border-t border-outline-variant sm:grid-cols-4 sm:divide-x rtl:sm:divide-x-reverse">
+          {[
+            { label: t('applications.paymentPackage.title', { defaultValue: 'Payment package' }), value: invoice.packageName || '—', tone: 'text-on-surface' },
+            { label: t('financial.paymentHistory.balanceLabel', { defaultValue: 'Balance' }), value: money(balanceDue), tone: balanceDue > 0 ? 'text-error' : 'text-on-surface' },
+            { label: t('financial.paymentHistory.paidLabel', { defaultValue: 'Paid' }), value: money(paidAmount), tone: 'text-success' },
+            {
+              label: t('parent.financial.nextDueLabel', { defaultValue: 'Next payment' }),
+              value: invoice.dueDate ? formatDate(invoice.dueDate) : '—',
+              tone: 'text-on-surface',
+              extra:
+                pendingAmount > 0
+                  ? t('financial.paymentHistory.pending', { amount: formatMoneyAmount(pendingAmount), defaultValue: 'Pending {{amount}}' })
+                  : null,
+            },
+          ].map((fact) => (
+            <div key={fact.label} className="p-4">
+              <dt className="text-[11px] font-semibold uppercase text-on-surface-variant">{fact.label}</dt>
+              <dd className={cn('mt-1 truncate text-sm font-semibold tabular-nums', fact.tone)}>{fact.value}</dd>
+              {fact.extra ? <dd className="mt-1 text-xs font-medium text-warning">{fact.extra}</dd> : null}
+            </div>
+          ))}
+        </dl>
+      ) : null}
       {paymentHistoryLoading || paymentRows.length > 0 ? (
         <div className="border-t border-outline-variant bg-surface-container-lowest p-4">
           <div className="mb-3 flex items-center justify-between gap-3">
@@ -524,21 +602,21 @@ function ParentAdmissionCyclePanel({
                       <p className="mt-1 text-xs text-on-surface-variant">{row.description || t(`invoice.types.${row.invoiceType}`)}</p>
                     </div>
                     <span className="shrink-0 text-sm font-semibold text-on-surface">
-                      {t('invoice.egpAmount', { amount: row.amount.toFixed(2) })}
+                      {t('invoice.egpAmount', { amount: formatMoneyAmount(row.amount) })}
                     </span>
                   </div>
                   <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
                     <span>
                       <span className="block text-on-surface-variant">{t('financial.paymentHistory.paidLabel', { defaultValue: 'Paid' })}</span>
-                      <span className="font-semibold text-success">{t('invoice.egpAmount', { amount: row.paidAmount.toFixed(2) })}</span>
+                      <span className="font-semibold text-success">{t('invoice.egpAmount', { amount: formatMoneyAmount(row.paidAmount) })}</span>
                     </span>
                     <span>
                       <span className="block text-on-surface-variant">{t('invoice.inReview')}</span>
-                      <span className="font-semibold text-warning">{t('invoice.egpAmount', { amount: row.pendingAmount.toFixed(2) })}</span>
+                      <span className="font-semibold text-warning">{t('invoice.egpAmount', { amount: formatMoneyAmount(row.pendingAmount) })}</span>
                     </span>
                     <span>
                       <span className="block text-on-surface-variant">{t('financial.paymentHistory.balanceLabel', { defaultValue: 'Balance' })}</span>
-                      <span className="font-semibold text-on-surface">{t('invoice.egpAmount', { amount: row.balanceDue.toFixed(2) })}</span>
+                      <span className="font-semibold text-on-surface">{t('invoice.egpAmount', { amount: formatMoneyAmount(row.balanceDue) })}</span>
                     </span>
                   </div>
                 </Link>
@@ -718,8 +796,9 @@ export function ParentDashboardPage() {
               {t('applications.createApplication', { defaultValue: 'Add child' })}
             </Button>
           </div>
-          <div className="grid grid-cols-2 gap-3 p-3 sm:p-4 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 p-3 sm:p-4 lg:grid-cols-3 xl:grid-cols-5">
             <StatTile
+              className="xl:flex-col xl:items-start xl:gap-2"
               icon="child_care"
               label={t('parent.dashboard.stats.children', { defaultValue: 'Children' })}
               value={activeChildrenCount}
@@ -727,6 +806,7 @@ export function ParentDashboardPage() {
               to="/parent/children"
             />
             <StatTile
+              className="xl:flex-col xl:items-start xl:gap-2"
               icon="assignment"
               label={t('parent.dashboard.stats.applications', { defaultValue: 'Applications' })}
               value={pendingApplicationsCount}
@@ -734,6 +814,7 @@ export function ParentDashboardPage() {
               to="/parent/applications"
             />
             <StatTile
+              className="xl:flex-col xl:items-start xl:gap-2"
               icon="payments"
               label={t('parent.dashboard.stats.outstanding', { defaultValue: 'Outstanding' })}
               value={moneyFormatter.format(totalOutstanding)}
@@ -741,6 +822,15 @@ export function ParentDashboardPage() {
               to="/parent/invoices"
             />
             <StatTile
+              className="xl:flex-col xl:items-start xl:gap-2"
+              icon="hourglass_top"
+              label={t('parent.dashboard.stats.paymentsInReview', { defaultValue: 'Payments in review' })}
+              value={inReviewInvoicesCount}
+              tone={inReviewInvoicesCount > 0 ? 'warning' : 'neutral'}
+              to="/parent/invoices"
+            />
+            <StatTile
+              className="xl:flex-col xl:items-start xl:gap-2"
               icon="notifications"
               label={t('parent.dashboard.stats.unread', { defaultValue: 'Unread' })}
               value={unreadTotal}
@@ -771,24 +861,10 @@ export function ParentDashboardPage() {
         t={t}
       />
 
-      <section className="grid items-stretch gap-3 sm:gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))]">
-        <ParentAdminInboxSection />
-        <ParentPasswordResetCard profile={profile} />
-        <StatTile
-          icon="hourglass_top"
-          label={t('parent.dashboard.stats.paymentsInReview', { defaultValue: 'Payments in review' })}
-          value={inReviewInvoicesCount}
-          tone={inReviewInvoicesCount > 0 ? 'warning' : 'success'}
-          to="/parent/invoices"
-          className="h-full"
-        />
-      </section>
+      <ParentAdminInboxSection />
 
       <section className="space-y-3">
-        <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))]">
-          <SectionHeading icon="assignment">{t('parent.dashboard.sectionApplications')}</SectionHeading>
-          <SectionHeading icon="child_care">{t('parent.dashboard.sectionChildren')}</SectionHeading>
-        </div>
+        <SectionHeading icon="child_care">{t('parent.dashboard.sectionChildren')}</SectionHeading>
         <ParentChildSummaryCards
           leadingCard={
             <ParentDashboardApplicationsCard
@@ -816,7 +892,7 @@ export function ParentDashboardPage() {
               <ParentChildBillingCard
                 key={child.id}
                 childId={child.id}
-                childName={child.nameEn || child.nameAr}
+                childName={i18n.language === 'ar' ? child.nameAr || child.nameEn : child.nameEn || child.nameAr}
                 parentId={user?.id}
                 billing={childBillingQuery.data?.[child.id]}
               />
@@ -879,6 +955,8 @@ export function ParentDashboardPage() {
           />
         </div>
       </section>
+
+      <ParentPasswordResetCard profile={profile} />
     </div>
   );
 }

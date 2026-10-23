@@ -7,6 +7,7 @@ import { useAuthSession } from '@/hooks/useAuthSession';
 import { useParentInvoices } from '@/hooks/useParentInvoices';
 import { useParentChildren, type ChildOption } from '@/hooks/useParentChildren';
 import { formatDate } from '@/lib/datetime';
+import { formatMoneyAmount } from '@/lib/money';
 
 type ChildBreakdown = {
   child: ChildOption;
@@ -61,27 +62,27 @@ export function FinancialSummaryCard() {
         </span>
       ) : null}
       <p className="text-sm text-on-surface-variant">
-        {t('parent.financial.totalOutstanding', { amount: summary.totalOutstanding.toFixed(2) })}
+        {t('parent.financial.totalOutstanding', { amount: formatMoneyAmount(summary.totalOutstanding) })}
       </p>
       {summary.perChild.length > 0 || summary.generalDue > 0 ? (
         <div className="space-y-1 border-t border-outline-variant pt-2">
           {summary.perChild.map((item) => (
             <p key={item.child.id} className="flex items-center justify-between text-xs text-on-surface-variant">
               <span>{getName(item.child)}</span>
-              <span className="font-medium">{t('invoice.egpAmount', { amount: item.outstanding.toFixed(2) })}</span>
+              <span className="font-medium">{t('invoice.egpAmount', { amount: formatMoneyAmount(item.outstanding) })}</span>
             </p>
           ))}
           {summary.generalDue > 0 ? (
             <p className="flex items-center justify-between text-xs text-on-surface-variant">
               <span>{t('parent.financial.generalInvoices')}</span>
-              <span className="font-medium">{t('invoice.egpAmount', { amount: summary.generalDue.toFixed(2) })}</span>
+              <span className="font-medium">{t('invoice.egpAmount', { amount: formatMoneyAmount(summary.generalDue) })}</span>
             </p>
           ) : null}
         </div>
       ) : null}
       <p className="text-sm text-on-surface-variant">
         {summary.nextDue
-          ? t('parent.financial.nextDue', { date: formatDate(summary.nextDue.dueDate), amount: summary.nextDue.amount.toFixed(2) })
+          ? t('parent.financial.nextDue', { date: formatDate(summary.nextDue.dueDate), amount: formatMoneyAmount(summary.nextDue.amount) })
           : t('parent.financial.noUpcoming')}
       </p>
       <div className="flex gap-2">

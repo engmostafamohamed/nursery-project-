@@ -8,9 +8,11 @@ import { DashboardAlertsBar } from '@/components/admin/DashboardAlertsBar';
 import { DashboardMiniCharts } from '@/components/admin/DashboardMiniCharts';
 import { DashboardQuickActions } from '@/components/admin/DashboardQuickActions';
 import { AttendanceKpiPanel } from '@/components/admin/attendance/AttendanceKpiPanel';
-import { Skeleton } from '@/components/ui/skeleton';
-import { StatsCard } from '@/components/ui/StatsCard';
 import { Button } from '@/components/ui/button';
+import { StatusPill, TableCard } from '@/components/ui/DataTable';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Skeleton } from '@/components/ui/skeleton';
+import { StatTile } from '@/components/ui/StatTile';
 import { useActiveNurseryId } from '@/hooks/useActiveNurseryId';
 import { useAdminDashboardActivityFeed } from '@/hooks/useAdminDashboardActivityFeed';
 import { useAdminDashboardAlerts } from '@/hooks/useAdminDashboardAlerts';
@@ -20,17 +22,21 @@ import { useAdminDashboardRealtime } from '@/hooks/useAdminDashboardRealtime';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useNurserySettings } from '@/hooks/useNurserySettings';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { formatMoneyAmount } from '@/lib/money';
 
 function formatInt(n: number, locale: string): string {
   return new Intl.NumberFormat(locale === 'ar' ? 'ar-EG' : 'en-GB').format(n);
 }
 
-function formatMoney(n: number, locale: string): string {
-  return new Intl.NumberFormat(locale === 'ar' ? 'ar-EG' : 'en-GB', {
-    style: 'currency',
-    currency: 'EGP',
-    maximumFractionDigits: 0,
-  }).format(n);
+function SectionTitle({ icon, children }: { icon: string; children: React.ReactNode }) {
+  return (
+    <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-on-surface">
+      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary" aria-hidden>
+        <span className="material-symbols-outlined text-lg">{icon}</span>
+      </span>
+      {children}
+    </h2>
+  );
 }
 
 export function AdminDashboardPage() {
@@ -60,6 +66,12 @@ export function AdminDashboardPage() {
       ? (profile?.name_ar?.trim() || profile?.name_en?.trim() || '')
       : (profile?.name_en?.trim() || profile?.name_ar?.trim() || '');
   const greetingName = displayName || t('admin.userMenu.fallbackName');
+  const todayLabel = new Date().toLocaleDateString(locale === 'ar' ? 'ar-EG' : 'en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
 
   const trendHint =
     stats && (stats.newChildrenThisMonth > 0 || stats.newChildrenLastMonth > 0)
@@ -80,16 +92,13 @@ export function AdminDashboardPage() {
         ? '/invoices'
         : '/media/approval';
   const registrationOpen = settings?.parent_registration_enabled ?? true;
+  const attendanceRate = stats?.attendanceRatePercent;
 
   const toggleRegistration = async () => {
     try {
       await updateSettings({ parent_registration_enabled: !registrationOpen });
       toast.success(
-        t(
-          registrationOpen
-            ? 'admin.dashboard.registrationClosedToast'
-            : 'admin.dashboard.registrationOpenedToast',
-        ),
+        registrationOpen ? t('admin.dashboard.registrationClosedToast') : t('admin.dashboard.registrationOpenedToast'),
       );
     } catch {
       toast.error(t('settings.messages.saveError'));
@@ -97,44 +106,49 @@ export function AdminDashboardPage() {
   };
 
   return (
-    <div className="space-y-8">
-      <section>
-        {profilePending ? (
-          <Skeleton className="h-10 w-72 max-w-full" />
-        ) : (
-          <h1 className="font-headline text-3xl font-extrabold text-on-surface sm:text-4xl">
-            {t('admin.dashboard.greeting', { name: greetingName })}
-          </h1>
-        )}
-      </section>
-
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {showStatSkeleton ? (
+    <div className="space-y-6">
+      <PageHeader
+        icon="space_dashboard"
+        eyebrow={todayLabel}
+        title={profilePending ? '' : t('admin.dashboard.greeting', { name: greetingName })}
+        description={t('admin.dashboard.subtitle')}
+        actions={
           <>
-            <Skeleton className="h-40 rounded-md" />
-            <Skeleton className="h-40 rounded-md" />
-            <Skeleton className="h-40 rounded-md" />
-            <Skeleton className="h-40 rounded-md" />
+            <Button asChild variant="outline">
+              <Link to={adminPath('/attendance')}>
+                <span className="material-symbols-outlined me-1 text-base" aria-hidden>how_to_reg</span>
+                {t('admin.dashboard.attendanceTodayAction')}
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link to={adminPath('/children/enroll')}>
+                <span className="material-symbols-outlined me-1 text-base" aria-hidden>person_add</span>
+                {t('admin.dashboard.quickActions.child')}
+              </Link>
+            </Button>
           </>
+        }
+      >
+        {showStatSkeleton ? (
+          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+            {[1, 2, 3, 4].map((k) => <Skeleton key={k} className="h-24 rounded-xl" />)}
+          </div>
         ) : (
-          <>
-            <StatsCard
+          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+            <StatTile
               to={adminPath('/children')}
-              icon={<span className="material-symbols-outlined">groups</span>}
-              value={formatInt(stats?.totalChildren ?? 0, locale)}
+              icon="groups"
               label={t('admin.dashboard.statTotalChildren')}
-              hint={trendHint}
+              value={formatInt(stats?.totalChildren ?? 0, locale)}
+              helper={trendHint}
             />
-            <StatsCard
+            <StatTile
               to={adminPath('/attendance')}
-              icon={<span className="material-symbols-outlined">percent</span>}
-              value={
-                stats?.attendanceRatePercent != null
-                  ? `${formatInt(Math.round(stats.attendanceRatePercent), locale)}%`
-                  : '—'
-              }
+              icon="how_to_reg"
               label={t('admin.dashboard.statAttendanceToday')}
-              hint={
+              value={attendanceRate != null ? `${formatInt(Math.round(attendanceRate), locale)}%` : '—'}
+              tone={attendanceRate == null ? 'neutral' : attendanceRate >= 80 ? 'success' : 'warning'}
+              helper={
                 stats?.closedToday
                   ? t('attendance.offDayTitle')
                   : t('admin.dashboard.statAttendanceHint', {
@@ -143,109 +157,89 @@ export function AdminDashboardPage() {
                     })
               }
             />
-            <StatsCard
+            <StatTile
               to={adminPath(pendingApprovalsPath)}
-              icon={<span className="material-symbols-outlined">pending_actions</span>}
-              value={formatInt(stats?.pendingApprovals ?? 0, locale)}
+              icon="pending_actions"
               label={t('admin.dashboard.statPendingApprovals')}
-              hint={t('admin.dashboard.statPendingApprovalsHint', {
+              value={formatInt(stats?.pendingApprovals ?? 0, locale)}
+              tone={(stats?.pendingApprovals ?? 0) > 0 ? 'warning' : 'success'}
+              helper={t('admin.dashboard.statPendingApprovalsHint', {
                 applications: formatInt(pendingBreakdown.applications, locale),
                 payments: formatInt(pendingBreakdown.payments, locale),
                 media: formatInt(pendingBreakdown.media, locale),
               })}
             />
-            <StatsCard
+            <StatTile
               to={adminPath('/invoices')}
-              icon={<span className="material-symbols-outlined">payments</span>}
-              value={formatMoney(stats?.revenueThisMonth ?? 0, locale)}
+              icon="payments"
               label={t('admin.dashboard.statRevenueMonth')}
+              value={t('invoice.egpAmount', { amount: formatMoneyAmount(stats?.revenueThisMonth ?? 0) })}
+              tone="success"
             />
-          </>
+          </div>
         )}
+      </PageHeader>
+
+      <section>
+        <SectionTitle icon="notification_important">{t('admin.dashboard.alerts.title')}</SectionTitle>
+        <DashboardAlertsBar alerts={alerts} isLoading={Boolean(nurseryId) && alertsPending} basePath={adminBasePath} />
       </section>
 
-      {nurseryId ? (
-        <section className="rounded-md border border-outline-variant bg-surface-container-lowest p-5 shadow-sm">
-          <AttendanceKpiPanel nurseryId={nurseryId} />
-        </section>
-      ) : null}
+      {nurseryId ? <AttendanceKpiPanel nurseryId={nurseryId} /> : null}
 
-      <section className="rounded-md border border-outline-variant bg-surface-container-lowest p-5 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="material-symbols-outlined text-primary" aria-hidden>app_registration</span>
-              <h2 className="text-lg font-semibold text-on-surface">
-                {t('admin.dashboard.registrationControlTitle')}
-              </h2>
-              <span
-                className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                  registrationOpen
-                    ? 'bg-success/10 text-success'
-                    : 'bg-error-container text-on-error-container'
-                }`}
-              >
-                {registrationOpen
-                  ? t('admin.dashboard.registrationOpen')
-                  : t('admin.dashboard.registrationClosed')}
-              </span>
-            </div>
-            <p className="mt-1 text-sm text-on-surface-variant">
-              {registrationOpen
-                ? t('admin.dashboard.registrationOpenHint')
-                : t('admin.dashboard.registrationClosedHint')}
-            </p>
+      <section className="grid grid-cols-1 items-start gap-5 xl:grid-cols-12">
+        <TableCard
+          title={t('admin.dashboard.recentActivity')}
+          count={feedItems.length ? t('admin.dashboard.activityCount', { count: feedItems.length }) : undefined}
+          className="xl:col-span-7"
+        >
+          <div className="max-h-[38rem] overflow-y-auto">
+            <AdminDashboardActivityFeed items={feedItems} isLoading={Boolean(nurseryId) && feedPending} />
           </div>
-          <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[34rem]">
-            <div className="rounded-md border border-outline-variant bg-surface p-3">
-              <p className="text-xs text-on-surface-variant">{t('admin.dashboard.registrationApplicationsThisMonth')}</p>
-              <p className="mt-1 text-2xl font-black text-on-surface">
-                {formatInt(stats?.applicationsThisMonth ?? 0, locale)}
-              </p>
+        </TableCard>
+        <div className="space-y-5 xl:col-span-5">
+          <DashboardQuickActions basePath={adminBasePath} />
+
+          <TableCard
+            title={t('admin.dashboard.registrationControlTitle')}
+            actions={
+              <StatusPill tone={registrationOpen ? 'success' : 'error'} icon={registrationOpen ? 'lock_open' : 'lock'}>
+                {registrationOpen ? t('admin.dashboard.registrationOpen') : t('admin.dashboard.registrationClosed')}
+              </StatusPill>
+            }
+            description={registrationOpen ? t('admin.dashboard.registrationOpenHint') : t('admin.dashboard.registrationClosedHint')}
+          >
+            <div className="flex flex-wrap items-center gap-3 p-4 sm:p-5">
+              <div className="me-auto">
+                <p className="text-xs text-on-surface-variant">{t('admin.dashboard.registrationApplicationsThisMonth')}</p>
+                <p className="text-2xl font-bold tabular-nums text-on-surface">{formatInt(stats?.applicationsThisMonth ?? 0, locale)}</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button asChild variant="ghost">
+                  <Link to={adminPath('/settings')}>
+                    <span className="material-symbols-outlined me-1 text-base" aria-hidden>tune</span>
+                    {t('admin.dashboard.editRegistrationSettings')}
+                  </Link>
+                </Button>
+                <Button
+                  type="button"
+                  variant={registrationOpen ? 'outline' : 'default'}
+                  disabled={!nurseryId || settingsSaving}
+                  onClick={() => void toggleRegistration()}
+                >
+                  <span className="material-symbols-outlined me-1 text-base" aria-hidden>
+                    {registrationOpen ? 'visibility_off' : 'visibility'}
+                  </span>
+                  {registrationOpen ? t('admin.dashboard.disableRegistration') : t('admin.dashboard.enableRegistration')}
+                </Button>
+              </div>
             </div>
-            <Button
-              type="button"
-              variant={registrationOpen ? 'outline' : 'default'}
-              className="min-h-16 justify-center gap-2"
-              disabled={!nurseryId || settingsSaving}
-              onClick={() => void toggleRegistration()}
-            >
-              <span className="material-symbols-outlined text-base" aria-hidden>
-                {registrationOpen ? 'visibility_off' : 'visibility'}
-              </span>
-              {registrationOpen
-                ? t('admin.dashboard.disableRegistration')
-                : t('admin.dashboard.enableRegistration')}
-            </Button>
-            <Button asChild variant="outline" className="min-h-16 justify-center gap-2">
-              <Link to={adminPath('/settings')}>
-                <span className="material-symbols-outlined text-base" aria-hidden>tune</span>
-                {t('admin.dashboard.editRegistrationSettings')}
-              </Link>
-            </Button>
-          </div>
+          </TableCard>
         </div>
       </section>
 
       <section>
-        <h2 className="mb-3 text-base font-semibold text-on-surface">{t('admin.dashboard.alerts.title')}</h2>
-        <DashboardAlertsBar alerts={alerts} isLoading={Boolean(nurseryId) && alertsPending} basePath={adminBasePath} />
-      </section>
-
-      <section className="grid grid-cols-1 items-stretch gap-6 xl:grid-cols-12">
-        <div className="flex min-h-0 flex-col rounded-3xl bg-surface-container-lowest p-6 shadow-sm xl:col-span-7 xl:h-[30rem]">
-          <h2 className="mb-4 text-lg font-semibold">{t('admin.dashboard.recentActivity')}</h2>
-          <div className="min-h-0 flex-1">
-            <AdminDashboardActivityFeed items={feedItems} isLoading={Boolean(nurseryId) && feedPending} />
-          </div>
-        </div>
-        <div className="xl:col-span-5 xl:h-[30rem]">
-          <DashboardQuickActions basePath={adminBasePath} />
-        </div>
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-on-surface">{t('admin.dashboard.charts.sectionTitle')}</h2>
+        <SectionTitle icon="monitoring">{t('admin.dashboard.charts.sectionTitle')}</SectionTitle>
         <DashboardMiniCharts data={charts} isLoading={Boolean(nurseryId) && chartsPending} />
       </section>
     </div>

@@ -18,7 +18,8 @@ function localizedChildName(child: ChildQrInput, languagePref: 'ar' | 'en' | 'bo
   const en = (child.full_name_en ?? '').trim();
   if (languagePref === 'ar') return ar || en;
   if (languagePref === 'en') return en || ar;
-  if (ar && en) return `${ar} / ${en}`;
+  // Once when both are written the same.
+  if (ar && en && ar !== en) return `${ar} / ${en}`;
   return ar || en || '-';
 }
 
@@ -137,7 +138,7 @@ export function ParentChildProfilePage() {
         </TabsContent>
 
         <TabsContent value="history" className="mt-4">
-          <ParentQrHistoryList parentId={user?.id} children={childLabels} />
+          <ParentQrHistoryList parentId={user?.id} children={childLabels} childId={child.id} />
         </TabsContent>
       </Tabs>
     </div>

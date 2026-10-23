@@ -35,17 +35,32 @@ export function buildMonthGrid(year: number, monthIndex: number): ({ day: number
   return cells.slice(0, 42);
 }
 
-export function categoryDotClass(category: string): string {
+export type EventCategoryTone = 'primary' | 'success' | 'warning' | 'error' | 'neutral';
+
+/** One theme colour per event category, so trips and activities no longer share one (--info equals --primary). */
+export function categoryTone(category: string): EventCategoryTone {
   switch (category) {
     case 'trip':
-      return 'bg-primary';
+      return 'primary';
     case 'activity':
-      return 'bg-info';
+      return 'warning';
     case 'service':
-      return 'bg-accent';
+      return 'error';
     case 'doctor_visit':
-      return 'bg-success';
+      return 'success';
     default:
-      return 'bg-on-surface-variant';
+      return 'neutral';
   }
+}
+
+const DOT_CLASS: Record<EventCategoryTone, string> = {
+  primary: 'bg-primary',
+  success: 'bg-success',
+  warning: 'bg-warning',
+  error: 'bg-error',
+  neutral: 'bg-on-surface-variant',
+};
+
+export function categoryDotClass(category: string): string {
+  return DOT_CLASS[categoryTone(category)];
 }

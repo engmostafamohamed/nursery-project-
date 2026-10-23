@@ -19,6 +19,8 @@ type TableCardProps = {
   title: string;
   /** Result count shown next to the title, e.g. "12 classes". */
   count?: string;
+  /** One line under the title saying what the list is for. */
+  description?: string;
   /** Buttons on the trailing side of the title strip. */
   actions?: ReactNode;
   /** A <FilterBar> above the table. */
@@ -29,15 +31,19 @@ type TableCardProps = {
   className?: string;
 };
 
-export function TableCard({ title, count, actions, filters, pagination, children, className }: TableCardProps) {
+export function TableCard({ title, count, description, actions, filters, pagination, children, className }: TableCardProps) {
   return (
     <section className={cn('overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm', className)}>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant bg-surface-container-lowest px-4 py-3 sm:px-5">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <h2 className="text-base font-semibold text-on-surface">{title}</h2>
-          {count ? (
-            <span className="rounded-full bg-surface-high px-2.5 py-0.5 text-xs font-medium tabular-nums text-on-surface-variant">{count}</span>
-          ) : null}
+        {/* Shares the row with the actions; a long description wraps instead of pushing them down. */}
+        <div className="min-w-[16rem] flex-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <h2 className="text-base font-semibold text-on-surface">{title}</h2>
+            {count ? (
+              <span className="rounded-full bg-surface-high px-2.5 py-0.5 text-xs font-medium tabular-nums text-on-surface-variant">{count}</span>
+            ) : null}
+          </div>
+          {description ? <p className="mt-0.5 max-w-3xl text-xs leading-5 text-on-surface-variant">{description}</p> : null}
         </div>
         {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
       </div>

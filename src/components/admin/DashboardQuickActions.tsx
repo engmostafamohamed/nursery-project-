@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
+import { TableCard } from '@/components/ui/DataTable';
+
 type ActionItem = {
   path: string;
   icon: string;
@@ -49,29 +51,29 @@ export function DashboardQuickActions({ basePath = '/admin' }: Props) {
   const { t } = useTranslation();
 
   return (
-    <div className="h-full rounded-3xl bg-surface-container-lowest p-6 shadow-sm">
-      <h2 className="mb-4 text-lg font-semibold text-on-surface">{t('admin.dashboard.quickActions.title')}</h2>
-      <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <TableCard title={t('admin.dashboard.quickActions.title')} className="h-full">
+      {/* One column beside the activity feed on wide screens, two on tablets. */}
+      <ul className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-1">
         {ACTIONS.map((a) => (
           <li key={a.path}>
             <Link
               to={`${basePath}${a.path}`}
-              className="flex items-start gap-3 rounded-2xl border border-outline-variant bg-surface text-foreground p-4 transition-colors hover:border-primary hover:bg-primary-container/30"
+              className="group flex h-full items-center gap-3 rounded-xl border border-outline-variant bg-surface p-3 transition hover:border-primary/40 hover:bg-primary/5"
             >
-              <span className="material-symbols-outlined mt-0.5 shrink-0 text-2xl text-primary" aria-hidden>
-                {a.icon}
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden>
+                <span className="material-symbols-outlined text-xl">{a.icon}</span>
               </span>
-              <span className="min-w-0">
+              <span className="min-w-0 flex-1">
                 <span className="block text-sm font-semibold text-on-surface">{t(a.titleKey)}</span>
-                <span className="mt-0.5 block text-xs text-on-surface-variant">{t(a.descKey)}</span>
+                <span className="mt-0.5 line-clamp-2 block text-xs text-on-surface-variant">{t(a.descKey)}</span>
               </span>
-              <span className="material-symbols-outlined ms-auto shrink-0 text-on-surface-variant rtl:rotate-180" aria-hidden>
+              <span className="material-symbols-outlined shrink-0 text-on-surface-variant transition group-hover:text-primary rtl:rotate-180" aria-hidden>
                 chevron_right
               </span>
             </Link>
           </li>
         ))}
       </ul>
-    </div>
+    </TableCard>
   );
 }

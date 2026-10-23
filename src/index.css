@@ -374,3 +374,9 @@
 .material-symbols-outlined {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
+
+/* Google's icon-font CSS gives every icon direction: ltr, so start-/end- on an absolutely
+   placed icon (the search icon in inputs) landed on the left in Arabic. */
+html[dir='rtl'] .material-symbols-outlined {
+  direction: rtl;
+}

@@ -1,119 +1,133 @@
 import { useTranslation } from 'react-i18next';
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
+import { TableCard } from '@/components/ui/DataTable';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { AdminDashboardCharts } from '@/hooks/useAdminDashboardCharts';
+import { CHART_CURSOR, CHART_GRID_STROKE, CHART_TOOLTIP_STYLE, chartColor, chartDirection } from '@/lib/chartTheme';
+import { formatMoneyAmount } from '@/lib/money';
 
 type Props = {
   data: AdminDashboardCharts | undefined;
   isLoading: boolean;
 };
 
-function formatShortDate(iso: string, locale: string): string {
-  const d = new Date(`${iso}T12:00:00`);
-  return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-GB', {
-    weekday: 'short',
-    day: 'numeric',
-  }).format(d);
-}
-
+/**
+ * The dashboard trends: daily attendance (7 days), revenue (30 days) and children per class.
+ * Each chart is one series, so it is one colour and its card title names it (no legend).
+ */
 export function DashboardMiniCharts({ data, isLoading }: Props) {
   const { t, i18n } = useTranslation();
-  const locale = i18n.language;
+  const isAr = i18n.language === 'ar';
+  const locale = isAr ? 'ar-EG' : 'en-GB';
 
   if (isLoading || !data) {
     return (
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Skeleton className="h-56 w-full rounded-3xl" />
-        <Skeleton className="h-56 w-full rounded-3xl" />
-        <Skeleton className="h-56 w-full rounded-3xl" />
+      <div className="grid gap-5 lg:grid-cols-3">
+        <Skeleton className="h-72 w-full rounded-xl" />
+        <Skeleton className="h-72 w-full rounded-xl" />
+        <Skeleton className="h-72 w-full rounded-xl" />
       </div>
     );
   }
 
-  const maxAtt = Math.max(1, ...data.attendance7.map((p) => p.ratePercent));
-  const maxRev = Math.max(1, ...data.revenue30.map((p) => p.amount));
-  const maxEnroll = Math.max(1, ...data.enrollmentByClass.map((p) => p.count));
+  // The plots render left to right (dir="ltr"): in Arabic, SVG tick labels anchored at "start"
+  // would grow into the plot. chartDirection still runs time right to left.
+  // Value axes keep their full width: pulled in, "50%" and "4.5K" lose their first characters in Arabic.
+  const chart = chartDirection(i18n.dir() === 'rtl', 0);
+  const revenueChart = chart;
+  const compact = new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 });
+  const primary = chartColor('primary');
+  const money = (amount: number) => t('invoice.egpAmount', { amount: formatMoneyAmount(amount) });
+  const dayLabel = (iso: string, options: Intl.DateTimeFormatOptions) => new Date(`${iso}T12:00:00`).toLocaleDateString(locale, options);
+
+  const attendance = data.attendance7.map((p) => ({ ...p, label: dayLabel(p.date, { weekday: 'short' }) }));
+  const withRate = attendance.filter((p) => p.total > 0);
+  const averageRate = withRate.length ? Math.round(withRate.reduce((sum, p) => sum + p.ratePercent, 0) / withRate.length) : null;
+
+  const revenue = data.revenue30.map((p) => ({ ...p, label: dayLabel(p.date, { day: 'numeric', month: 'short' }) }));
+  const revenueTotal = revenue.reduce((sum, p) => sum + p.amount, 0);
+
+  const classes = data.enrollmentByClass.slice(0, 6);
+  const maxEnroll = Math.max(1, ...classes.map((p) => p.count));
+  const totalEnrolled = data.enrollmentByClass.reduce((sum, p) => sum + p.count, 0);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-3">
-      <div className="rounded-3xl bg-surface-container-lowest p-5 shadow-sm">
-        <h3 className="mb-4 flex items-center gap-2 text-base font-semibold text-on-surface">
-          <span className="material-symbols-outlined text-primary" aria-hidden>
-            bar_chart
-          </span>
-          {t('admin.dashboard.charts.attendanceTitle')}
-        </h3>
-        <div className="flex h-40 items-end justify-between gap-1 border-b border-outline-variant pb-1">
-          {data.attendance7.map((p) => (
-            <div key={p.date} className="flex flex-1 flex-col items-center gap-1">
-              <div
-                className="w-full max-w-[2rem] rounded-t-md bg-primary transition-all"
-                style={{ height: `${(p.ratePercent / maxAtt) * 100}%`, minHeight: p.ratePercent > 0 ? 4 : 0 }}
-                title={`${p.ratePercent}%`}
+    <div className="grid gap-5 lg:grid-cols-3">
+      <TableCard
+        title={t('admin.dashboard.charts.attendanceTitle')}
+        count={averageRate != null ? t('admin.dashboard.charts.averageRate', { rate: averageRate }) : undefined}
+        description={t('admin.dashboard.charts.attendanceHint')}
+      >
+        <div className="h-52 p-4 sm:p-5" dir="ltr">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={attendance} margin={chart.margin}>
+              <CartesianGrid stroke={CHART_GRID_STROKE} strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={11} {...chart.xAxis} />
+              <YAxis domain={[0, 100]} ticks={[0, 50, 100]} tickFormatter={(v: number) => `${v}%`} tickLine={false} axisLine={false} fontSize={11} width={40} {...chart.yAxis} />
+              <Tooltip
+                cursor={CHART_CURSOR}
+                contentStyle={CHART_TOOLTIP_STYLE}
+                wrapperStyle={{ direction: i18n.dir() }}
+                formatter={(value) => [`${value}%`, t('admin.dashboard.charts.rateLabel')]}
               />
-              <span className="text-[10px] text-on-surface-variant">{formatShortDate(p.date, locale)}</span>
-            </div>
-          ))}
+              <Bar dataKey="ratePercent" fill={primary} radius={[4, 4, 0, 0]} maxBarSize={28} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
-        <p className="mt-2 text-xs text-on-surface-variant">{t('admin.dashboard.charts.attendanceHint')}</p>
-      </div>
+      </TableCard>
 
-      <div className="rounded-3xl bg-surface-container-lowest p-5 shadow-sm">
-        <h3 className="mb-4 flex items-center gap-2 text-base font-semibold text-on-surface">
-          <span className="material-symbols-outlined text-primary" aria-hidden>
-            trending_up
-          </span>
-          {t('admin.dashboard.charts.revenueTitle')}
-        </h3>
-        <div className="relative h-40">
-          <svg className="h-full w-full overflow-visible" viewBox="0 0 100 40" preserveAspectRatio="none">
-            <polyline
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="0.8"
-              className="text-primary"
-              vectorEffect="non-scaling-stroke"
-              points={data.revenue30
-                .map((p, i) => {
-                  const x = data.revenue30.length > 1 ? (i / (data.revenue30.length - 1)) * 100 : 50;
-                  const y = 40 - (p.amount / maxRev) * 36 - 2;
-                  return `${x},${y}`;
-                })
-                .join(' ')}
-            />
-          </svg>
+      <TableCard
+        title={t('admin.dashboard.charts.revenueTitle')}
+        count={money(revenueTotal)}
+        description={t('admin.dashboard.charts.revenueHint')}
+      >
+        <div className="h-52 p-4 sm:p-5" dir="ltr">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={revenue} margin={revenueChart.margin}>
+              <defs>
+                <linearGradient id="dashboard-revenue-fill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={primary} stopOpacity={0.25} />
+                  <stop offset="100%" stopColor={primary} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid stroke={CHART_GRID_STROKE} strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={11} interval="preserveStartEnd" minTickGap={24} {...revenueChart.xAxis} />
+              <YAxis allowDecimals={false} tickFormatter={(v: number) => compact.format(v)} tickLine={false} axisLine={false} fontSize={11} width={isAr ? 60 : 40} {...revenueChart.yAxis} />
+              <Tooltip
+                cursor={{ stroke: CHART_GRID_STROKE }}
+                contentStyle={CHART_TOOLTIP_STYLE}
+                wrapperStyle={{ direction: i18n.dir() }}
+                formatter={(value) => [money(Number(value)), t('admin.dashboard.charts.revenueLabel')]}
+              />
+              <Area type="monotone" dataKey="amount" stroke={primary} strokeWidth={2} fill="url(#dashboard-revenue-fill)" dot={false} activeDot={{ r: 4 }} />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
-        <p className="mt-2 text-xs text-on-surface-variant">{t('admin.dashboard.charts.revenueHint')}</p>
-      </div>
+      </TableCard>
 
-      <div className="rounded-3xl bg-surface-container-lowest p-5 shadow-sm">
-        <h3 className="mb-4 flex items-center gap-2 text-base font-semibold text-on-surface">
-          <span className="material-symbols-outlined text-primary" aria-hidden>
-            pie_chart
-          </span>
-          {t('admin.dashboard.charts.enrollmentTitle')}
-        </h3>
-        <ul className="space-y-2">
-          {data.enrollmentByClass.slice(0, 6).map((row) => {
-            const label = locale === 'ar' ? row.labelAr : row.labelEn;
-            const w = (row.count / maxEnroll) * 100;
-            return (
+      <TableCard
+        title={t('admin.dashboard.charts.enrollmentTitle')}
+        count={totalEnrolled ? t('admin.dashboard.charts.childrenCount', { count: totalEnrolled }) : undefined}
+      >
+        {classes.length ? (
+          <ul className="space-y-3 p-4 sm:p-5">
+            {classes.map((row) => (
               <li key={row.classId}>
-                <div className="mb-0.5 flex justify-between text-xs text-on-surface">
-                  <span className="truncate pe-2">{label}</span>
-                  <span className="shrink-0 font-medium">{row.count}</span>
+                <div className="mb-1 flex items-center justify-between gap-2 text-sm">
+                  <span className="truncate text-on-surface">{isAr ? row.labelAr || row.labelEn : row.labelEn || row.labelAr}</span>
+                  <span className="shrink-0 font-semibold tabular-nums text-on-surface">{row.count}</span>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-surface-container">
-                  <div className="h-full rounded-full bg-secondary" style={{ width: `${w}%` }} />
+                <div className="h-2 overflow-hidden rounded-full bg-surface-high">
+                  <div className="h-full rounded-full bg-primary" style={{ width: `${(row.count / maxEnroll) * 100}%` }} />
                 </div>
               </li>
-            );
-          })}
-        </ul>
-        {data.enrollmentByClass.length === 0 ? (
-          <p className="text-sm text-on-surface-variant">{t('admin.dashboard.charts.enrollmentEmpty')}</p>
-        ) : null}
-      </div>
+            ))}
+          </ul>
+        ) : (
+          <p className="p-5 text-sm text-on-surface-variant">{t('admin.dashboard.charts.enrollmentEmpty')}</p>
+        )}
+      </TableCard>
     </div>
   );
 }

@@ -3,8 +3,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { StatusPill } from '@/components/ui/DataTable';
 import { Label } from '@/components/ui/label';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Textarea } from '@/components/ui/textarea';
@@ -95,9 +95,9 @@ export function PackageSectionTextsCard({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant={usesOwnText ? 'success' : 'secondary'}>
+          <StatusPill tone={usesOwnText ? 'success' : 'neutral'}>
             {usesOwnText ? t('packageTexts.custom') : t('packageTexts.standard')}
-          </Badge>
+          </StatusPill>
           {open ? null : (
             <Button type="button" variant="outline" size="sm" onClick={() => setDraft(saved)}>
               <MaterialSymbol name="edit" size="text-base" />

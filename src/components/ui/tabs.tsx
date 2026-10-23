@@ -10,11 +10,19 @@ interface TabsContextValue {
 const TabsContext = React.createContext<TabsContextValue | undefined>(undefined);
 
 interface TabsProps extends React.HTMLAttributes<HTMLDivElement> {
-  defaultValue: string;
+  defaultValue?: string;
+  /** Controlled use: the open tab, changed through onValueChange. */
+  value?: string;
+  onValueChange?: (value: string) => void;
 }
 
-export function Tabs({ defaultValue, className, children, ...props }: TabsProps) {
-  const [value, setValue] = React.useState(defaultValue);
+export function Tabs({ defaultValue = '', value: controlledValue, onValueChange, className, children, ...props }: TabsProps) {
+  const [ownValue, setOwnValue] = React.useState(defaultValue);
+  const value = controlledValue ?? ownValue;
+  const setValue = (next: string) => {
+    if (controlledValue === undefined) setOwnValue(next);
+    onValueChange?.(next);
+  };
 
   return (
     <TabsContext.Provider value={{ value, setValue }}>

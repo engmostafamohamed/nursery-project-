@@ -22,6 +22,9 @@ export function AvatarImage({
   decoding = 'async',
   ...props
 }: React.ImgHTMLAttributes<HTMLImageElement>) {
+  // No picture: render nothing, so the fallback fills the circle instead of sharing it with a
+  // broken image.
+  if (!props.src) return null;
   return <img className={cn('h-full w-full object-cover', className)} loading={loading} decoding={decoding} {...props} />;
 }
 

@@ -85,6 +85,21 @@ describe('admin package and deal screens', () => {
     }
   });
 
+  it('the Packages page counts have every Arabic plural form', () => {
+    const counts = [
+      'packages.overview.count',
+      'packages.overview.activeCount',
+      'packages.overview.ofActiveChildren',
+      'tuitionBulkAssign.assign',
+    ];
+    for (const key of counts) {
+      expect(typeof lookup(en, `${key}_one`), `en: ${key}_one`).toBe('string');
+      for (const form of ['zero', 'one', 'two', 'few', 'many', 'other']) {
+        expect(typeof lookup(ar, `${key}_${form}`), `ar: ${key}_${form}`).toBe('string');
+      }
+    }
+  });
+
   it.each(SCREENS.filter((file) => file.endsWith('.tsx')))('%s: no English text written into the screen', (file) => {
     const code = source(file)
       .replace(/\/\*[\s\S]*?\*\//g, '')

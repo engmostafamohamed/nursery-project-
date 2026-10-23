@@ -1,5 +1,7 @@
 {
   "common": {
+    "today": "اليوم",
+    "yesterday": "أمس",
     "paginationRange": "عرض {{start}}–{{end}}",
     "rowsPerPage": "عدد الصفوف",
     "pagination": "الصفحات",
@@ -1105,6 +1107,14 @@
       }
     },
     "dashboard": {
+      "subtitle": "ما يحتاجك اليوم، وسير الحضور، وآخر نشاط في الحضانة.",
+      "attendanceTodayAction": "حضور اليوم",
+      "activityCount_zero": "لا توجد تحديثات",
+      "activityCount_one": "تحديث واحد",
+      "activityCount_two": "تحديثان",
+      "activityCount_few": "{{count}} تحديثات",
+      "activityCount_many": "{{count}} تحديثًا",
+      "activityCount_other": "{{count}} تحديث",
       "greeting": "صباح الخير، {{name}}",
       "totalChildren": "إجمالي الأطفال",
       "totalStaff": "إجمالي الموظفين",
@@ -1150,6 +1160,15 @@
         "reportDesc": "تحليلات الفواتير والإيرادات"
       },
       "charts": {
+        "averageRate": "متوسط {{rate}}%",
+        "rateLabel": "الحضور",
+        "revenueLabel": "الإيرادات",
+        "childrenCount_zero": "لا يوجد أطفال",
+        "childrenCount_one": "طفل واحد",
+        "childrenCount_two": "طفلان",
+        "childrenCount_few": "{{count}} أطفال",
+        "childrenCount_many": "{{count}} طفلًا",
+        "childrenCount_other": "{{count}} طفل",
         "sectionTitle": "الاتجاهات",
         "attendanceTitle": "الحضور (7 أيام)",
         "attendanceHint": "نصيب الأطفال النشطين مع تسجيل حضور كل يوم",
@@ -2385,6 +2404,14 @@
     "updateFailed": "تعذّر تحديث الباقة."
   },
   "tuitionBulkAssign": {
+    "assign_zero": "تعيين",
+    "assign_one": "تعيين لطفل واحد",
+    "assign_two": "تعيين لطفلين",
+    "assign_few": "تعيين لـ {{count}} أطفال",
+    "assign_many": "تعيين لـ {{count}} طفلًا",
+    "assign_other": "تعيين لـ {{count}} طفل",
+    "summary": "{{package}} · {{period}}",
+    "summaryEmpty": "اختر الباقة وفترة الفوترة، ثم الأطفال.",
     "title": "تعيين باقة لأطفال",
     "description": "الأطفال الذين لديهم باقة تصدر فواتيرهم تلقائيًا كل يوم. استخدم هذا للأطفال المسجّلين قبل وجود الباقات، أو المضافين بالاستيراد أو معالج التسجيل.",
     "sections": {
@@ -2393,6 +2420,8 @@
       "childrenHint": "{{unassigned}} من {{total}} طفل نشط بدون باقة بعد."
     },
     "fields": {
+      "class": "الفصل",
+      "allClasses": "كل الفصول",
       "package": "الباقة",
       "choosePackage": "اختر باقة",
       "loading": "جارٍ التحميل…",
@@ -3265,8 +3294,32 @@
     "atNursery": "داخل الحضانة",
     "homeTitle": "الرئيسية",
     "dashboard": {
+      "billing": {
+        "due": "مستحق {{amount}}",
+        "upToDate": "لا مستحقات",
+        "tuition": "الرسوم الدراسية",
+        "nextInvoice": "الفاتورة القادمة: {{date}}",
+        "noTuition": "لم تُحدد باقة رسوم بعد.",
+        "extraHours": "الساعات الإضافية",
+        "unlimited": "ساعات إضافية بلا حد",
+        "hoursUsed": "استُخدم {{used}} من {{total}} ساعة",
+        "expires": "تنتهي: {{date}}",
+        "noExtraHours": "لا توجد باقة ساعات إضافية.",
+        "viewInvoices": "عرض الفواتير"
+      },
       "unread": "غير مقروء",
       "admissionCycle": {
+        "newApplication": "طلب جديد",
+        "notSubmitted": "لم يُرسل بعد",
+        "steps": {
+          "application": "الطلب",
+          "package": "الباقة",
+          "payment": "الدفع",
+          "decision": "قرار الحضانة",
+          "notYet": "ليس بعد",
+          "due": "مستحق {{amount}}",
+          "waiting": "بانتظار المراجعة"
+        },
         "title": "دورة القبول",
         "empty": "ابدأ طلبًا لمتابعة حالة المراجعة واختيار الباقة ودفع رسوم التسجيل.",
         "contact": "تواصل مع الحضانة",
@@ -3336,6 +3389,8 @@
       },
       "noChildren": "لا يوجد أطفال مرتبطون بعد. تواصل مع الحضانة إذا كنت تتوقع صلاحية.",
       "child": {
+        "paymentDue": "مستحق الدفع",
+        "messageNursery": "راسل الحضانة",
         "attendanceAbsent": "لم يُسجّل حضور اليوم بعد",
         "attendanceIn": "حضور في {{time}}",
         "attendanceOut": "دخول {{in}} · خروج {{out}}",
@@ -3441,6 +3496,13 @@
       "pending": "بانتظار الموافقة"
     },
     "inbox": {
+      "unreadLabel": "غير مقروء",
+      "resultsCount_zero": "لا توجد رسائل",
+      "resultsCount_one": "رسالة واحدة",
+      "resultsCount_two": "رسالتان",
+      "resultsCount_few": "{{count}} رسائل",
+      "resultsCount_many": "{{count}} رسالة",
+      "resultsCount_other": "{{count}} رسالة",
       "title": "صندوق الوارد",
       "subtitle": "كل ما يصلك من الحضانة في مكان واحد — رسائل وإعلانات وأذونات واستبيانات.",
       "filters": {
@@ -3494,6 +3556,9 @@
       "nurseryHint": "تم تحديدها عند التسجيل. الباقات والفواتير والطلبات تتبع هذه الحضانة."
     },
     "events": {
+      "pageSubtitle": "الرحلات والأنشطة والخدمات في الحضانة، والأذونات التي تحتاجها منك.",
+      "pendingPermissionsLabel": "بانتظار إذنك",
+      "moreOnDay": "+{{count}} أخرى",
       "emptyTitle": "لا توجد طلبات موافقة حالياً",
       "emptyDescription": "ستظهر طلبات الموافقة هنا عند الحاجة.",
       "actionRequired": "إجراء مطلوب",
@@ -3744,6 +3809,34 @@
       "allChildren": "جميع الأطفال"
     },
     "invoices": {
+      "subtitle": "ادفع المستحق، وتابع الدفعات قيد المراجعة، وافتح أي فاتورة لعرض تفاصيلها.",
+      "allInvoices": "كل الفواتير",
+      "overdueCount_zero": "لا توجد فواتير متأخرة",
+      "overdueCount_one": "فاتورة متأخرة واحدة",
+      "overdueCount_two": "فاتورتان متأخرتان",
+      "overdueCount_few": "{{count}} فواتير متأخرة",
+      "overdueCount_many": "{{count}} فاتورة متأخرة",
+      "overdueCount_other": "{{count}} فاتورة متأخرة",
+      "openCount_zero": "لا توجد فواتير للدفع",
+      "openCount_one": "فاتورة واحدة للدفع",
+      "openCount_two": "فاتورتان للدفع",
+      "openCount_few": "{{count}} فواتير للدفع",
+      "openCount_many": "{{count}} فاتورة للدفع",
+      "openCount_other": "{{count}} فاتورة للدفع",
+      "nothingDue": "لا يوجد مستحق",
+      "resultsCount_zero": "لا توجد فواتير",
+      "resultsCount_one": "فاتورة واحدة",
+      "resultsCount_two": "فاتورتان",
+      "resultsCount_few": "{{count}} فواتير",
+      "resultsCount_many": "{{count}} فاتورة",
+      "resultsCount_other": "{{count}} فاتورة",
+      "searchPlaceholder": "ابحث في الفواتير",
+      "childFilter": "الطفل",
+      "allChildren": "كل الأطفال",
+      "sortLabel": "الترتيب",
+      "emptyHint": "ستظهر هنا الفواتير التي ترسلها الحضانة.",
+      "emptyFiltered": "لا توجد فواتير تطابق هذه الفلاتر.",
+      "remaining": "المتبقي: {{amount}}",
       "title": "فواتيري",
       "totalDue": "إجمالي المستحق",
       "nextDue": "موعد الاستحقاق التالي",
@@ -3831,6 +3924,13 @@
       }
     },
     "reports": {
+      "publishedAtTime": "نُشر {{time}}",
+      "resultsCount_zero": "لا توجد تقارير",
+      "resultsCount_one": "تقرير واحد",
+      "resultsCount_two": "تقريران",
+      "resultsCount_few": "{{count}} تقارير",
+      "resultsCount_many": "{{count}} تقريرًا",
+      "resultsCount_other": "{{count}} تقرير",
       "eyebrow": "التحديثات اليومية",
       "subtitle": "الوجبات والقيلولة والمزاج والأنشطة وملاحظات المعلمة في مكان واحد.",
       "last7Days": "آخر 7 أيام",
@@ -5617,6 +5717,7 @@
       "absence_reported": "إبلاغ بغياب"
     },
     "kpis": {
+      "live": "مباشر",
       "today": "اليوم",
       "month": "هذا الشهر ({{month}})",
       "inNursery": "في الحضانة الآن",
@@ -5884,6 +5985,20 @@
     }
   },
   "qr": {
+    "childPage": {
+      "eyebrow": "إعدادات كود الاستلام",
+      "subtitle": "استخدم كود ولي الأمر للاستلام المعتاد، أو أنشئ كودًا مؤقتًا لشخص آخر مفوَّض.",
+      "parentQrTitle": "كود ولي الأمر",
+      "parentQrHint": "متاح دائمًا حتى تغييره.",
+      "identityTitle": "إثبات الهوية مطلوب",
+      "identityHint": "يحتاج الكود المؤقت إلى بيانات بطاقة الهوية أو جواز السفر.",
+      "deadlineTitle": "موعد الانتهاء",
+      "deadlineHint": "ينتهي الكود المؤقت في نهاية اليوم الذي تختاره.",
+      "tabs": {
+        "parent": "كود ولي الأمر",
+        "custom": "كود مؤقت"
+      }
+    },
     "refresh": "تحديث الرمز",
     "rotate": "تحديث QR",
     "rotated": "تم تدوير الكود. الكود القديم لم يعد يعمل.",
@@ -5977,6 +6092,14 @@
       "rotateFailed": "تعذر تغيير رمز QR."
     },
     "history": {
+      "title": "أكواد QR الصادرة",
+      "count_zero": "لا توجد أكواد",
+      "count_one": "كود واحد",
+      "count_two": "كودان",
+      "count_few": "{{count}} أكواد",
+      "count_many": "{{count}} كودًا",
+      "count_other": "{{count}} كود",
+      "all": "الكل",
       "emptyTitle": "لا يوجد نشاط بعد",
       "emptyDescription": "ستظهر هنا الأكواد التي تنشئها لنفسك أو للمستلمين الآخرين.",
       "sections": {
@@ -6102,6 +6225,30 @@
     }
   },
   "packages": {
+    "removeChild": "إزالة من هذه الباقة",
+    "overview": {
+      "activeCount_zero": "لا توجد باقة نشطة",
+      "activeCount_one": "باقة نشطة واحدة",
+      "activeCount_two": "باقتان نشطتان",
+      "activeCount_few": "{{count}} باقات نشطة",
+      "activeCount_many": "{{count}} باقة نشطة",
+      "activeCount_other": "{{count}} باقة نشطة",
+      "withoutPackage": "أطفال بلا باقة",
+      "ofActiveChildren_zero": "لا يوجد أطفال نشطون",
+      "ofActiveChildren_one": "من طفل نشط واحد",
+      "ofActiveChildren_two": "من طفلين نشطين",
+      "ofActiveChildren_few": "من {{count}} أطفال نشطين",
+      "ofActiveChildren_many": "من {{count}} طفلًا نشطًا",
+      "ofActiveChildren_other": "من {{count}} طفل نشط",
+      "onDiscount": "باقات عليها خصم",
+      "onDiscountHint": "بعرض سارٍ اليوم",
+      "count_zero": "لا توجد باقات",
+      "count_one": "باقة واحدة",
+      "count_two": "باقتان",
+      "count_few": "{{count}} باقات",
+      "count_many": "{{count}} باقة",
+      "count_other": "{{count}} باقة"
+    },
     "columns": {
       "validity": "الصلاحية",
       "assigned": "المعيّنون",

@@ -3,23 +3,26 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
-import { Badge } from '@/components/ui/badge';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { Skeleton } from '@/components/ui/skeleton';
+import { StatusPill, TableCard, TableEmpty, TableLoading, TablePagination, type PillTone } from '@/components/ui/DataTable';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { StatTile } from '@/components/ui/StatTile';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useNurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
+import { usePagination } from '@/hooks/usePagination';
 import { useParentInbox, type ParentInboxItem, type ParentInboxKind } from '@/hooks/useParentInbox';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { dayHeading, groupByDay } from '@/lib/dayGroups';
 import { supabase } from '@/lib/supabase';
+import { cn } from '@/lib/utils';
 
 type FilterKey = 'all' | 'action' | 'chats';
 
-const ICONS: Record<ParentInboxKind, string> = {
-  chat: 'chat',
-  announcement: 'campaign',
-  permission: 'task_alt',
-  questionnaire: 'fact_check',
-  notification: 'notifications',
+const KIND_STYLE: Record<ParentInboxKind, { icon: string; tone: PillTone; tile: string }> = {
+  chat: { icon: 'chat', tone: 'primary', tile: 'bg-primary/10 text-primary' },
+  announcement: { icon: 'campaign', tone: 'primary', tile: 'bg-primary/10 text-primary' },
+  permission: { icon: 'task_alt', tone: 'warning', tile: 'bg-warning/10 text-warning' },
+  questionnaire: { icon: 'fact_check', tone: 'success', tile: 'bg-success/10 text-success' },
+  notification: { icon: 'notifications', tone: 'neutral', tile: 'bg-surface-high text-on-surface-variant' },
 };
 
 function relativeTime(iso: string, lang: string): string {
@@ -41,6 +44,7 @@ export function ParentInboxPage() {
   const nurseryId = profile?.nursery_id ?? undefined;
   const { data: languagePref = 'both' } = useNurseryLanguagePref(nurseryId);
   const [filter, setFilter] = useState<FilterKey>('all');
+  const locale = i18n.language.startsWith('ar') ? 'ar-EG' : 'en-GB';
 
   // Pull this parent's children's class IDs to scope class-level announcements.
   const childClassesQuery = useQuery({
@@ -78,110 +82,98 @@ export function ParentInboxPage() {
     );
   }, [inbox.items, filter]);
 
+  const unreadCount = useMemo(() => inbox.items.filter((it) => it.unread).length, [inbox.items]);
+  const pager = usePagination(filtered, 10, filter);
+  const groups = groupByDay(pager.pageItems, (it) => it.sentAt);
+  const dayLabels = { today: t('common.today'), yesterday: t('common.yesterday') };
+
   const renderItem = (it: ParentInboxItem) => {
-    const icon = ICONS[it.kind];
+    const style = KIND_STYLE[it.kind] ?? KIND_STYLE.notification;
     const isHigh = it.urgent;
-    const ringClass = isHigh ? 'border-error/60 ring-1 ring-error/40 bg-error/5' : 'border-outline-variant';
-    const unreadDot = it.unread && !isHigh;
     const photo = it.imageUrl?.trim();
     return (
-      <Link
-        key={it.id}
-        to={it.actionLink}
-        className={`flex items-start gap-3 rounded-2xl border p-4 transition-colors hover:bg-surface-container-low ${ringClass}`}
-      >
-        {photo ? (
-          <img
-            src={photo}
-            alt=""
-            className="mt-0.5 h-10 w-10 shrink-0 rounded-full object-cover ring-1 ring-outline-variant"
-            loading="lazy"
-            decoding="async"
-          />
-        ) : (
-          <span
-            className={`material-symbols-outlined mt-0.5 shrink-0 text-xl ${
-              isHigh ? 'text-error' : 'text-primary'
-            }`}
-            aria-hidden
-          >
-            {isHigh ? 'priority_high' : icon}
-          </span>
-        )}
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            {unreadDot ? (
-              <span className="h-2 w-2 shrink-0 rounded-full bg-primary" aria-hidden />
-            ) : null}
-            <p className="text-sm font-semibold text-on-surface">{it.title}</p>
-            <Badge
-              className={
-                it.kind === 'permission' || isHigh
-                  ? 'border-error bg-error/10 text-error text-[10px]'
-                  : 'text-[10px]'
-              }
-            >
-              {t(`parent.inbox.kinds.${isHigh && it.kind === 'notification' ? 'urgent' : it.kind}`)}
-            </Badge>
+      <li key={it.id}>
+        <Link
+          to={it.actionLink}
+          className={cn(
+            'group flex items-start gap-3 border-s-4 px-4 py-4 outline-none transition-colors hover:bg-surface-container-lowest focus-visible:bg-surface-container-lowest sm:px-5',
+            isHigh ? 'border-s-error bg-error/5' : it.unread ? 'border-s-primary' : 'border-s-transparent',
+          )}
+        >
+          {photo ? (
+            <img src={photo} alt="" className="h-10 w-10 shrink-0 rounded-md object-cover" loading="lazy" decoding="async" />
+          ) : (
+            <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-md', isHigh ? 'bg-error/10 text-error' : style.tile)}>
+              <span className="material-symbols-outlined text-xl" aria-hidden>{isHigh ? 'priority_high' : style.icon}</span>
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-3">
+              <p className={cn('min-w-0 text-sm text-on-surface', it.unread ? 'font-bold' : 'font-semibold')}>
+                {it.unread ? <span className="me-1.5 inline-block h-2 w-2 rounded-full bg-primary align-middle" aria-hidden /> : null}
+                {it.title}
+              </p>
+              <time dateTime={it.sentAt} className="shrink-0 text-xs text-on-surface-variant">
+                {relativeTime(it.sentAt, i18n.language)}
+              </time>
+            </div>
+            <p className="mt-0.5 line-clamp-2 text-sm text-on-surface-variant">{it.preview}</p>
+            <div className="mt-2">
+              <StatusPill tone={isHigh ? 'error' : style.tone}>
+                {t(`parent.inbox.kinds.${isHigh && it.kind === 'notification' ? 'urgent' : it.kind}`)}
+              </StatusPill>
+            </div>
           </div>
-          <p className={`mt-1 text-sm ${isHigh ? 'text-error' : 'text-on-surface-variant'}`}>
-            {it.preview}
-          </p>
-          <p className="mt-2 text-xs text-on-surface-variant">{relativeTime(it.sentAt, i18n.language)}</p>
-        </div>
-      </Link>
+          <span className="material-symbols-outlined mt-2 shrink-0 text-lg text-on-surface-variant opacity-0 transition-opacity group-hover:opacity-100 rtl:rotate-180" aria-hidden>
+            chevron_right
+          </span>
+        </Link>
+      </li>
     );
   };
 
+  const toggle = (key: FilterKey) => setFilter((current) => (current === key && key !== 'all' ? 'all' : key));
+
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-lg font-semibold text-on-surface">{t('parent.inbox.title')}</h1>
-        <p className="mt-1 text-sm text-on-surface-variant">{t('parent.inbox.subtitle')}</p>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {(['all', 'action', 'chats'] as const).map((key) => {
-          const labelKey = `parent.inbox.filters.${key}`;
-          const count =
-            key === 'all'
-              ? inbox.counts.total
-              : key === 'action'
-                ? inbox.counts.actionNeeded
-                : inbox.counts.chats;
-          const active = filter === key;
-          return (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setFilter(key)}
-              className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                active
-                  ? 'border-primary bg-primary/10 text-primary'
-                  : 'border-outline-variant text-foreground hover:bg-surface-container-low'
-              }`}
-            >
-              {t(labelKey)} {count > 0 ? `(${count})` : ''}
-            </button>
-          );
-        })}
-      </div>
-
-      {inbox.isLoading ? (
-        <div className="space-y-2">
-          {[1, 2, 3, 4].map((k) => (
-            <Skeleton key={k} className="h-20 w-full rounded-2xl" />
-          ))}
+    <div className="space-y-5 pb-8">
+      <PageHeader icon="inbox" title={t('parent.inbox.title')} description={t('parent.inbox.subtitle')}>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatTile icon="inbox" label={t('parent.inbox.filters.all')} value={inbox.counts.total} onClick={() => toggle('all')} active={filter === 'all'} />
+          <StatTile
+            icon="pending_actions"
+            label={t('parent.inbox.filters.action')}
+            value={inbox.counts.actionNeeded}
+            tone={inbox.counts.actionNeeded > 0 ? 'warning' : 'neutral'}
+            onClick={() => toggle('action')}
+            active={filter === 'action'}
+          />
+          <StatTile icon="chat" label={t('parent.inbox.filters.chats')} value={inbox.counts.chats} onClick={() => toggle('chats')} active={filter === 'chats'} />
+          <StatTile icon="mark_email_unread" label={t('parent.inbox.unreadLabel')} value={unreadCount} tone={unreadCount > 0 ? 'primary' : 'neutral'} />
         </div>
-      ) : filtered.length === 0 ? (
-        <EmptyState
-          icon="inbox"
-          title={t('parent.inbox.emptyTitle')}
-          description={t('parent.inbox.emptyDescription')}
-        />
-      ) : (
-        <div className="space-y-2">{filtered.map(renderItem)}</div>
-      )}
+      </PageHeader>
+
+      <TableCard
+        title={t(`parent.inbox.filters.${filter}`)}
+        count={inbox.isLoading ? undefined : t('parent.inbox.resultsCount', { count: filtered.length })}
+        pagination={inbox.isLoading || !filtered.length ? null : <TablePagination pager={pager} />}
+      >
+        {inbox.isLoading ? (
+          <TableLoading rows={5} />
+        ) : filtered.length === 0 ? (
+          <TableEmpty icon="inbox" title={t('parent.inbox.emptyTitle')} description={t('parent.inbox.emptyDescription')} />
+        ) : (
+          <div className="divide-y divide-outline-variant">
+            {groups.map((group) => (
+              <section key={group.key} aria-label={dayHeading(group.key, locale, dayLabels)}>
+                <h3 className="border-b border-outline-variant bg-surface-container-lowest px-4 py-2 text-xs font-semibold text-on-surface-variant sm:px-5">
+                  {dayHeading(group.key, locale, dayLabels)}
+                </h3>
+                <ul className="divide-y divide-outline-variant">{group.items.map(renderItem)}</ul>
+              </section>
+            ))}
+          </div>
+        )}
+      </TableCard>
     </div>
   );
 }

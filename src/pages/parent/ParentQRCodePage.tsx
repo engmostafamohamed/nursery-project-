@@ -7,6 +7,7 @@ import { DelegatePickupQrCard } from '@/components/qr/DelegatePickupQrCard';
 import { ParentQrHistoryList } from '@/components/qr/ParentQrHistoryList';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useNurseryLanguagePref, type NurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
@@ -25,7 +26,8 @@ function localizedChildName(child: ChildRow, pref: NurseryLanguagePref): string 
   const en = (child.full_name_en ?? '').trim();
   if (pref === 'ar') return ar || en;
   if (pref === 'en') return en || ar;
-  if (ar && en) return `${ar} / ${en}`;
+  // Once when both are written the same.
+  if (ar && en && ar !== en) return `${ar} / ${en}`;
   return ar || en;
 }
 
@@ -96,10 +98,7 @@ export function ParentQRCodePage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-lg font-semibold text-on-surface">{t('qr.parentPage.title')}</h1>
-        <p className="mt-1 text-sm text-on-surface-variant">{t('qr.parentPage.subtitle')}</p>
-      </div>
+      <PageHeader icon="qr_code_2" title={t('qr.parentPage.title')} description={t('qr.parentPage.subtitle')} />
 
       <Tabs defaultValue="live">
         <TabsList className="flex w-full flex-wrap gap-1">

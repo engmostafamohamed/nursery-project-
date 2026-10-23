@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Badge } from '@/components/ui/badge';
+import { StatusPill } from '@/components/ui/DataTable';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { cn } from '@/lib/utils';
 
@@ -12,6 +12,8 @@ const FEATURES_SHOWN = 6;
 
 type Props = {
   name: string;
+  /** Icon on the card's tile: what kind of package it is. */
+  icon?: string;
   active: boolean;
   /** "EGP 1,000"; crossed out when a live deal gives `discountedPrice`. */
   price: string;
@@ -36,6 +38,7 @@ type Props = {
  */
 export function AdminPackageCard({
   name,
+  icon = 'package_2',
   active,
   price,
   discountedPrice,
@@ -66,33 +69,38 @@ export function AdminPackageCard({
   return (
     <article
       className={cn(
-        'flex flex-col rounded-2xl border bg-surface p-5 shadow-sm transition hover:shadow-md',
-        active ? 'border-outline-variant' : 'border-dashed border-outline-variant opacity-80',
+        'flex flex-col rounded-xl border bg-surface p-4 shadow-sm transition hover:border-primary/40 hover:shadow-md sm:p-5',
+        active ? 'border-outline-variant' : 'border-dashed border-outline-variant bg-surface-container-lowest',
       )}
     >
-      <header className="flex items-start justify-between gap-3">
-        <h3 className="min-w-0 break-words text-base font-semibold text-on-surface">{name}</h3>
-        <Badge variant={active ? 'success' : 'secondary'} className="shrink-0">
-          {active ? t('packageFilters.active') : t('packageFilters.inactive')}
-        </Badge>
-      </header>
-
-      <div className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-        <span className="text-2xl font-bold tracking-tight tabular-nums text-on-surface">{discountedPrice ?? price}</span>
-        {priceSuffix ? <span className="text-sm text-on-surface-variant">{priceSuffix}</span> : null}
-        {discountedPrice ? <span className="text-sm tabular-nums text-on-surface-variant line-through">{price}</span> : null}
-      </div>
-      {deal ? (
+      <header className="flex items-start gap-3">
         <span
           className={cn(
-            'mt-2 inline-flex w-fit items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium',
-            deal.live ? 'border-warning/30 bg-warning/10 text-warning' : 'border-outline-variant bg-surface-container text-on-surface-variant',
+            'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
+            active ? 'bg-primary/10 text-primary' : 'bg-surface-high text-on-surface-variant',
           )}
+          aria-hidden
         >
-          <MaterialSymbol name="sell" size="text-sm" />
-          {deal.label}
+          <MaterialSymbol name={icon} />
         </span>
-      ) : null}
+        <h3 className="min-w-0 flex-1 break-words pt-2 text-base font-semibold leading-6 text-on-surface">{name}</h3>
+        <StatusPill tone={active ? 'success' : 'neutral'} className="mt-1.5 shrink-0">
+          {active ? t('packageFilters.active') : t('packageFilters.inactive')}
+        </StatusPill>
+      </header>
+
+      <div className="mt-4 rounded-lg bg-surface-container-lowest px-3 py-2.5">
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <span className="text-2xl font-bold tracking-tight tabular-nums text-on-surface">{discountedPrice ?? price}</span>
+          {priceSuffix ? <span className="text-sm text-on-surface-variant">{priceSuffix}</span> : null}
+          {discountedPrice ? <span className="text-sm tabular-nums text-on-surface-variant line-through">{price}</span> : null}
+        </div>
+        {deal ? (
+          <StatusPill tone={deal.live ? 'warning' : 'neutral'} icon="sell" className="mt-2">
+            {deal.label}
+          </StatusPill>
+        ) : null}
+      </div>
 
       {description ? (
         <p
@@ -132,15 +140,18 @@ export function AdminPackageCard({
       ) : null}
 
       <div className="mt-auto pt-4">
-        <ul className="flex flex-wrap gap-x-4 gap-y-1.5 border-t border-outline-variant pt-3 text-xs text-on-surface-variant">
+        <ul className="flex flex-wrap gap-1.5">
           {facts.map((fact) => (
-            <li key={fact.icon + fact.label} className="inline-flex items-center gap-1.5">
+            <li
+              key={fact.icon + fact.label}
+              className="inline-flex items-center gap-1.5 rounded-full bg-surface-high px-2.5 py-1 text-xs font-medium text-on-surface-variant"
+            >
               <MaterialSymbol name={fact.icon} size="text-sm" />
               {fact.label}
             </li>
           ))}
         </ul>
-        <div className="mt-3 flex flex-wrap justify-end gap-2">{actions}</div>
+        <div className="mt-3 flex flex-wrap justify-end gap-2 border-t border-outline-variant pt-3">{actions}</div>
       </div>
     </article>
   );

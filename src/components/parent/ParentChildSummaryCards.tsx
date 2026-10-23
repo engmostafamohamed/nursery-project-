@@ -3,8 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { StatusPill, type PillTone } from '@/components/ui/DataTable';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { ParentDashboardChildCard } from '@/hooks/useParentDashboardChildren';
+import { formatMoneyAmount } from '@/lib/money';
 import { cn, getUserInitials } from '@/lib/utils';
 
 type ChildInsight = {
@@ -118,7 +120,7 @@ export function ParentChildSummaryCards({
           {totalOutstanding != null && totalOutstanding > 0 ? (
             <div className="flex items-center gap-2 text-sm text-on-surface-variant">
               <span className="material-symbols-outlined text-lg text-error" aria-hidden>payments</span>
-              {t('parent.dashboard.totals.outstanding', { amount: totalOutstanding.toFixed(2) })}
+              {t('parent.dashboard.totals.outstanding', { amount: formatMoneyAmount(totalOutstanding) })}
             </div>
           ) : null}
           {upcomingEventsCount != null && upcomingEventsCount > 0 ? (
@@ -145,22 +147,22 @@ export function ParentChildSummaryCards({
 
           let attendanceText = t('parent.dashboard.child.attendanceAbsent');
           let attendanceIcon = 'event_busy';
-          let attendanceTone = 'border-error/30 bg-error/10 text-error';
+          let attendanceTone: PillTone = 'error';
           if (child.attendanceLabel === 'checked_in') {
             attendanceText = t('parent.dashboard.child.attendanceIn', { time: formatClock(child.checkIn, locale) });
             attendanceIcon = 'login';
-            attendanceTone = 'border-success/30 bg-success/10 text-success';
+            attendanceTone = 'success';
           } else if (child.attendanceLabel === 'off') {
             attendanceText = t('attendance.offDayTitle');
             attendanceIcon = 'weekend';
-            attendanceTone = 'border-outline-variant bg-surface-container text-on-surface-variant';
+            attendanceTone = 'neutral';
           } else if (child.attendanceLabel === 'checked_out') {
             attendanceText = t('parent.dashboard.child.attendanceOut', {
               in: formatClock(child.checkIn, locale),
               out: formatClock(child.checkOut, locale),
             });
             attendanceIcon = 'task_alt';
-            attendanceTone = 'border-primary/30 bg-primary/10 text-primary';
+            attendanceTone = 'primary';
           }
 
           const moodLine = child.lastReportMood
@@ -186,21 +188,15 @@ export function ParentChildSummaryCards({
                       <Link to={`/parent/child/${child.id}/qr`} className="min-w-0 hover:text-primary">
                         <p className="truncate text-sm font-semibold text-on-surface sm:text-base">{name}</p>
                       </Link>
-                      <span
-                        className={cn(
-                          'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold',
-                          hasOutstanding ? 'bg-error/10 text-error' : 'bg-success/10 text-success',
-                        )}
-                      >
+                      <StatusPill tone={hasOutstanding ? 'error' : 'success'} className="shrink-0">
                         {hasOutstanding
                           ? t('parent.dashboard.child.paymentDue', { defaultValue: 'Payment due' })
                           : t('invoice.status.paid', { defaultValue: 'Paid' })}
-                      </span>
+                      </StatusPill>
                     </div>
-                    <div className={cn('mt-2 inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold', attendanceTone)}>
-                      <span className="material-symbols-outlined text-sm" aria-hidden>{attendanceIcon}</span>
+                    <StatusPill tone={attendanceTone} icon={attendanceIcon} className="mt-2 max-w-full">
                       <span className="truncate">{attendanceText}</span>
-                    </div>
+                    </StatusPill>
                   </div>
                 </div>
               </div>
@@ -268,28 +264,24 @@ export function ParentChildSummaryCards({
                   )}
                 </div>
 
-                <div className="mt-auto grid grid-cols-2 gap-2 pt-3 sm:grid-cols-3">
-                  <Link
-                    to={`/parent/attendance?child=${child.id}`}
-                    className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md bg-primary/10 px-2 text-xs font-semibold text-primary transition hover:bg-primary/15"
-                  >
-                    <span className="material-symbols-outlined text-sm" aria-hidden>history</span>
-                    {t('parent.dashboard.analytics.openAttendance', { defaultValue: 'Attendance details' })}
-                  </Link>
-                  <Link
-                    to={`/parent/daily-reports?child=${child.id}`}
-                    className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md bg-primary/10 px-2 text-xs font-semibold text-primary transition hover:bg-primary/15"
-                  >
-                    <span className="material-symbols-outlined text-sm" aria-hidden>description</span>
-                    {t('parent.dashboard.analytics.openReports', { defaultValue: 'Open reports' })}
-                  </Link>
-                  <Link
-                    to="/parent/messages"
-                    className="col-span-2 inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md bg-surface-container px-2 text-xs font-semibold text-on-surface transition hover:bg-surface-high sm:col-span-1"
-                  >
-                    <span className="material-symbols-outlined text-sm" aria-hidden>forum</span>
-                    {t('parent.dashboard.child.messageNursery', { defaultValue: 'Message nursery' })}
-                  </Link>
+                {/* Icon above a short label, so all three fit one row even on a phone. */}
+                <div className="mt-auto grid grid-cols-3 gap-2 border-t border-outline-variant pt-3">
+                  {[
+                    { to: `/parent/attendance?child=${child.id}`, icon: 'history', label: t('parent.dashboard.analytics.openAttendance', { defaultValue: 'Attendance details' }) },
+                    { to: `/parent/daily-reports?child=${child.id}`, icon: 'description', label: t('parent.dashboard.analytics.openReports', { defaultValue: 'Open reports' }) },
+                    { to: '/parent/messages', icon: 'forum', label: t('parent.dashboard.child.messageNursery', { defaultValue: 'Message nursery' }) },
+                  ].map((action) => (
+                    <Link
+                      key={action.icon}
+                      to={action.to}
+                      className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg px-1 py-2 text-center text-[11px] font-semibold leading-tight text-on-surface-variant transition hover:bg-primary/5 hover:text-primary"
+                    >
+                      <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden>
+                        <span className="material-symbols-outlined text-lg">{action.icon}</span>
+                      </span>
+                      {action.label}
+                    </Link>
+                  ))}
                 </div>
               </div>
             </article>

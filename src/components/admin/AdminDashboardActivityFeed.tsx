@@ -1,52 +1,39 @@
 import { useTranslation } from 'react-i18next';
 
-import { EmptyState } from '@/components/ui/EmptyState';
+import { TableEmpty } from '@/components/ui/DataTable';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { DashboardFeedItem } from '@/hooks/useAdminDashboardActivityFeed';
+import { dayHeading, groupByDay } from '@/lib/dayGroups';
+import { formatMoneyAmount } from '@/lib/money';
+import { cn } from '@/lib/utils';
 
 type Props = {
   items: DashboardFeedItem[];
   isLoading: boolean;
 };
 
-function formatWhen(iso: string, locale: string): string {
-  const d = Date.parse(iso);
-  if (Number.isNaN(d)) return '';
-  return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-GB', {
-    dateStyle: 'short',
-    timeStyle: 'short', hour12: true,
-  }).format(new Date(d));
-}
+const KIND_STYLE: Record<DashboardFeedItem['kind'], { icon: string; tile: string }> = {
+  child_enrolled: { icon: 'child_care', tile: 'bg-success/10 text-success' },
+  inquiry: { icon: 'mail', tile: 'bg-primary/10 text-primary' },
+  payment: { icon: 'payments', tile: 'bg-success/10 text-success' },
+  media: { icon: 'photo_library', tile: 'bg-warning/10 text-warning' },
+  daily_report: { icon: 'description', tile: 'bg-primary/10 text-primary' },
+  child_check_in: { icon: 'how_to_reg', tile: 'bg-success/10 text-success' },
+  event_created: { icon: 'event', tile: 'bg-warning/10 text-warning' },
+};
 
-function iconFor(kind: DashboardFeedItem['kind']): string {
-  switch (kind) {
-    case 'child_enrolled':
-      return 'child_care';
-    case 'inquiry':
-      return 'mail';
-    case 'payment':
-      return 'payments';
-    case 'media':
-      return 'photo_library';
-    case 'daily_report':
-      return 'description';
-    case 'child_check_in':
-      return 'how_to_reg';
-    case 'event_created':
-      return 'event';
-  }
-}
-
+/** Recent activity across the nursery, grouped under Today / Yesterday / date headings. */
 export function AdminDashboardActivityFeed({ items, isLoading }: Props) {
   const { t, i18n } = useTranslation();
-  const locale = i18n.language;
+  const isAr = i18n.language === 'ar';
+  const locale = isAr ? 'ar-EG' : 'en-GB';
 
   if (isLoading) {
     return (
-      <div className="h-full max-h-[24rem] space-y-4 overflow-y-auto pe-2 xl:max-h-none">
+      <div className="space-y-3 p-4 sm:p-5">
         {[1, 2, 3, 4, 5].map((k) => (
-          <div key={k} className="flex items-center gap-3 rounded-2xl bg-surface-container-low p-3">
-            <Skeleton className="h-10 w-10 rounded-full" />
+          <div key={k} className="flex items-center gap-3">
+            <Skeleton className="h-10 w-10 rounded-md" />
             <div className="flex-1 space-y-2">
               <Skeleton className="h-4 w-full" />
               <Skeleton className="h-3 w-32" />
@@ -58,93 +45,67 @@ export function AdminDashboardActivityFeed({ items, isLoading }: Props) {
   }
 
   if (!items.length) {
-    return (
-      <EmptyState
-        icon="history"
-        title={t('admin.dashboard.activityEmptyTitle')}
-        description={t('admin.dashboard.activityFeedEmptyDescription')}
-      />
-    );
+    return <TableEmpty icon="history" title={t('admin.dashboard.activityEmptyTitle')} description={t('admin.dashboard.activityFeedEmptyDescription')} />;
   }
 
+  const describe = (item: DashboardFeedItem): { primary: string; secondary: string } => {
+    switch (item.kind) {
+      case 'child_enrolled':
+        return { primary: t('admin.dashboard.feed.childEnrolled', { name: isAr ? item.childNameAr : item.childNameEn }), secondary: '' };
+      case 'inquiry':
+        return { primary: t('admin.dashboard.feed.inquiry', { parent: item.parentName, child: item.childName }), secondary: '' };
+      case 'payment':
+        return {
+          primary: t('admin.dashboard.feed.payment', { amount: t('invoice.egpAmount', { amount: formatMoneyAmount(item.amount) }) }),
+          secondary: isAr ? item.parentNameAr || item.parentNameEn : item.parentNameEn || item.parentNameAr,
+        };
+      case 'media':
+        return {
+          primary: t('admin.dashboard.feed.media'),
+          secondary: isAr ? item.uploaderNameAr || item.uploaderNameEn : item.uploaderNameEn || item.uploaderNameAr,
+        };
+      case 'daily_report':
+        return {
+          primary: t('admin.dashboard.feed.dailyReport', { child: isAr ? item.childNameAr : item.childNameEn }),
+          secondary: isAr ? item.teacherNameAr || item.teacherNameEn : item.teacherNameEn || item.teacherNameAr,
+        };
+      case 'child_check_in':
+        return { primary: t('admin.dashboard.feed.checkIn', { name: isAr ? item.childNameAr : item.childNameEn }), secondary: '' };
+      case 'event_created':
+        return { primary: t('admin.dashboard.feed.event', { title: isAr ? item.titleAr : item.titleEn }), secondary: '' };
+    }
+  };
+
+  const groups = groupByDay(items, (item) => item.at);
+  const time = (iso: string) => new Date(iso).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit', hour12: true });
+
   return (
-    <ul className="h-full max-h-[24rem] space-y-3 overflow-y-auto pe-2 xl:max-h-none">
-      {items.map((item) => {
-        const when = formatWhen(item.at, locale);
-        let primary = '';
-        let secondary = '';
-
-        switch (item.kind) {
-          case 'child_enrolled':
-            primary = t('admin.dashboard.feed.childEnrolled', {
-              name: locale === 'ar' ? item.childNameAr : item.childNameEn,
-            });
-            break;
-          case 'inquiry':
-            primary = t('admin.dashboard.feed.inquiry', {
-              parent: item.parentName,
-              child: item.childName,
-            });
-            break;
-          case 'payment':
-            primary = t('admin.dashboard.feed.payment', {
-              amount: new Intl.NumberFormat(locale === 'ar' ? 'ar-EG' : 'en-GB', {
-                style: 'currency',
-                currency: 'EGP',
-                maximumFractionDigits: 0,
-              }).format(item.amount),
-            });
-            secondary =
-              locale === 'ar'
-                ? item.parentNameAr || item.parentNameEn
-                : item.parentNameEn || item.parentNameAr;
-            break;
-          case 'media':
-            primary = t('admin.dashboard.feed.media');
-            secondary =
-              locale === 'ar'
-                ? item.uploaderNameAr || item.uploaderNameEn
-                : item.uploaderNameEn || item.uploaderNameAr;
-            break;
-          case 'daily_report':
-            primary = t('admin.dashboard.feed.dailyReport', {
-              child: locale === 'ar' ? item.childNameAr : item.childNameEn,
-            });
-            secondary =
-              locale === 'ar'
-                ? item.teacherNameAr || item.teacherNameEn
-                : item.teacherNameEn || item.teacherNameAr;
-            break;
-          case 'child_check_in':
-            primary = t('admin.dashboard.feed.checkIn', {
-              name: locale === 'ar' ? item.childNameAr : item.childNameEn,
-            });
-            break;
-          case 'event_created':
-            primary = t('admin.dashboard.feed.event', {
-              title: locale === 'ar' ? item.titleAr : item.titleEn,
-            });
-            break;
-        }
-
-        return (
-          <li
-            key={`${item.kind}-${item.id}`}
-            className="flex items-start gap-3 rounded-2xl bg-surface-container-low p-3"
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary-fixed text-primary">
-              <span className="material-symbols-outlined text-lg" aria-hidden>
-                {iconFor(item.kind)}
-              </span>
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-on-surface">{primary}</p>
-              {secondary ? <p className="text-xs text-on-surface-variant">{secondary}</p> : null}
-              <p className="mt-0.5 text-xs text-on-surface-variant">{when}</p>
-            </div>
-          </li>
-        );
-      })}
-    </ul>
+    <div>
+      {groups.map((group) => (
+        <section key={group.key}>
+          <h3 className="border-b border-outline-variant bg-surface-container-lowest px-4 py-2 text-xs font-semibold text-on-surface-variant sm:px-5">
+            {dayHeading(group.key, locale, { today: t('common.today'), yesterday: t('common.yesterday') })}
+          </h3>
+          <ul className="divide-y divide-outline-variant">
+            {group.items.map((item) => {
+              const { primary, secondary } = describe(item);
+              const style = KIND_STYLE[item.kind];
+              return (
+                <li key={`${item.kind}-${item.id}`} className="flex items-start gap-3 px-4 py-3 sm:px-5">
+                  <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-md', style.tile)} aria-hidden>
+                    <span className="material-symbols-outlined text-xl">{style.icon}</span>
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-on-surface">{primary}</p>
+                    {secondary ? <p className="mt-0.5 truncate text-xs text-on-surface-variant">{secondary}</p> : null}
+                  </div>
+                  <span className="shrink-0 pt-0.5 text-xs tabular-nums text-on-surface-variant">{time(item.at)}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
+    </div>
   );
 }

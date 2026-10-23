@@ -1,24 +1,14 @@
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { StatusPill } from '@/components/ui/DataTable';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { useParentInvoices } from '@/hooks/useParentInvoices';
 import type { ParentChildBilling } from '@/hooks/useParentChildBilling';
-import type { BillingPeriodKind } from '@/hooks/useAdminTuitionBillingPeriods';
-
-const PERIOD_LABELS: Record<BillingPeriodKind, string> = {
-  monthly: 'Monthly',
-  quarterly: 'Quarterly',
-  half_annual: 'Half-annual',
-  annual: 'Annual',
-};
-
-function fmtDate(value: string | null | undefined) {
-  if (!value) return '—';
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString();
-}
+import { formatDate } from '@/lib/datetime';
+import { formatMoneyAmount } from '@/lib/money';
+import { cn } from '@/lib/utils';
 
 export function ParentChildBillingCard({
   childId,
@@ -31,78 +21,94 @@ export function ParentChildBillingCard({
   parentId: string | undefined;
   billing: ParentChildBilling | undefined;
 }) {
+  const { t, i18n } = useTranslation();
+  const isAr = i18n.language.startsWith('ar');
   const invoicesQuery = useParentInvoices({ parentId, childId, status: 'pending', sort: 'due_soon' });
-  const outstanding = invoicesQuery.data.reduce((sum, invoice) => sum + invoice.amount, 0);
+  // What is still owed on this child's open invoices (a partly paid invoice counts its balance).
+  const outstanding = invoicesQuery.data.reduce((sum, invoice) => sum + invoice.balance, 0);
   const subscription = billing?.subscription ?? null;
   const extraHours = billing?.extraHours ?? null;
+  const money = (amount: number) => t('invoice.egpAmount', { amount: formatMoneyAmount(amount) });
+  const usedPct =
+    extraHours && extraHours.coverageType !== 'unlimited' && (extraHours.includedHours ?? 0) > 0
+      ? Math.min(100, Math.round((extraHours.hoursUsed / (extraHours.includedHours ?? 1)) * 100))
+      : null;
 
   return (
-    <div className="rounded-2xl border border-outline-variant bg-surface p-4">
+    <article className="flex flex-col rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-on-surface">{childName}</p>
+        <p className="min-w-0 truncate text-sm font-semibold text-on-surface" title={childName}>{childName}</p>
         {outstanding > 0 ? (
-          <Badge variant="warning">EGP {outstanding.toFixed(2)} due</Badge>
+          <StatusPill tone="warning" icon="schedule">{t('parent.dashboard.billing.due', { amount: money(outstanding) })}</StatusPill>
         ) : (
-          <Badge variant="success">Up to date</Badge>
+          <StatusPill tone="success" icon="task_alt">{t('parent.dashboard.billing.upToDate')}</StatusPill>
         )}
       </div>
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <div className="rounded-xl bg-surface-container-lowest p-3">
+        <div className="rounded-lg bg-surface-container-lowest p-3">
           <p className="flex items-center gap-1.5 text-xs font-medium text-on-surface-variant">
             <MaterialSymbol name="school" size="text-sm" />
-            Tuition
+            {t('parent.dashboard.billing.tuition')}
           </p>
           {subscription ? (
             <>
               <p className="mt-1 text-sm font-semibold text-on-surface">
-                {subscription.packageNameEn || subscription.packageNameAr}
+                {(isAr ? subscription.packageNameAr || subscription.packageNameEn : subscription.packageNameEn || subscription.packageNameAr) || '—'}
               </p>
               <p className="mt-0.5 text-xs text-on-surface-variant">
-                {PERIOD_LABELS[subscription.billingPeriod]} · EGP {subscription.lockedPrice.toFixed(2)}
+                {t(`tuitionPackages.periods.${subscription.billingPeriod}`)} · {money(subscription.lockedPrice)}
               </p>
               <p className="mt-0.5 text-xs text-on-surface-variant">
-                Next invoice: {fmtDate(subscription.nextInvoiceDate)}
+                {t('parent.dashboard.billing.nextInvoice', { date: subscription.nextInvoiceDate ? formatDate(subscription.nextInvoiceDate) : '—' })}
               </p>
             </>
           ) : (
-            <p className="mt-1 text-sm text-on-surface-variant">No tuition plan set up yet.</p>
+            <p className="mt-1 text-sm text-on-surface-variant">{t('parent.dashboard.billing.noTuition')}</p>
           )}
         </div>
 
-        <div className="rounded-xl bg-surface-container-lowest p-3">
+        <div className="rounded-lg bg-surface-container-lowest p-3">
           <p className="flex items-center gap-1.5 text-xs font-medium text-on-surface-variant">
-            <MaterialSymbol name="schedule" size="text-sm" />
-            Extra hours
+            <MaterialSymbol name="more_time" size="text-sm" />
+            {t('parent.dashboard.billing.extraHours')}
           </p>
           {extraHours ? (
             <>
               <p className="mt-1 text-sm font-semibold text-on-surface">
-                {extraHours.packageNameEn || extraHours.packageNameAr}
+                {(isAr ? extraHours.packageNameAr || extraHours.packageNameEn : extraHours.packageNameEn || extraHours.packageNameAr) || '—'}
               </p>
-              <p className="mt-0.5 text-xs text-on-surface-variant">
+              {usedPct != null ? (
+                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-high">
+                  <div
+                    className={cn('h-full rounded-full', usedPct >= 90 ? 'bg-error' : usedPct >= 60 ? 'bg-warning' : 'bg-success')}
+                    style={{ width: `${usedPct}%` }}
+                  />
+                </div>
+              ) : null}
+              <p className="mt-1 text-xs text-on-surface-variant">
                 {extraHours.coverageType === 'unlimited'
-                  ? 'Unlimited'
-                  : `${extraHours.hoursUsed} / ${extraHours.includedHours ?? 0} hours used`}
+                  ? t('parent.dashboard.billing.unlimited')
+                  : t('parent.dashboard.billing.hoursUsed', { used: extraHours.hoursUsed, total: extraHours.includedHours ?? 0 })}
               </p>
               {extraHours.expiresAt ? (
-                <p className="mt-0.5 text-xs text-on-surface-variant">Expires: {fmtDate(extraHours.expiresAt)}</p>
+                <p className="mt-0.5 text-xs text-on-surface-variant">{t('parent.dashboard.billing.expires', { date: formatDate(extraHours.expiresAt) })}</p>
               ) : null}
             </>
           ) : (
-            <p className="mt-1 text-sm text-on-surface-variant">No extra-hours package.</p>
+            <p className="mt-1 text-sm text-on-surface-variant">{t('parent.dashboard.billing.noExtraHours')}</p>
           )}
         </div>
       </div>
 
-      <div className="mt-3 flex justify-end">
-        <Button type="button" variant="outline" size="sm" asChild>
+      <div className="mt-auto flex justify-end pt-3">
+        <Button type="button" variant={outstanding > 0 ? 'default' : 'outline'} size="sm" asChild>
           <Link to={`/parent/invoices?child=${childId}`}>
-            <MaterialSymbol name="receipt_long" size="text-base" />
-            {outstanding > 0 ? 'Pay now' : 'View invoices'}
+            <MaterialSymbol name={outstanding > 0 ? 'payments' : 'receipt_long'} size="text-base" />
+            {outstanding > 0 ? t('invoice.actions.payNow') : t('parent.dashboard.billing.viewInvoices')}
           </Link>
         </Button>
       </div>
-    </div>
+    </article>
   );
 }

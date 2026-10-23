@@ -4,15 +4,22 @@ import { Link } from 'react-router-dom';
 
 import { ParentEventsCalendar } from '@/components/parent/ParentEventsCalendar';
 import { ParentEventsEventCard } from '@/components/parent/ParentEventsEventCard';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { TableCard, TableEmpty, TablePagination } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { FilterBar, SearchInput } from '@/components/ui/FilterBar';
+import { FilterField } from '@/components/ui/FilterField';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Select } from '@/components/ui/select';
+import { StatTile } from '@/components/ui/StatTile';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { usePagination } from '@/hooks/usePagination';
 import { useParentEventsCatalog, type ParentCatalogPermissionRow } from '@/hooks/useParentEventsCatalog';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { localDateKeyFromIso } from '@/lib/parentEventsCalendarUtils';
+import { cn } from '@/lib/utils';
 
 type TabFilter = 'all' | 'urgent' | 'mine' | 'upcoming' | 'past';
 type CategoryFilter = 'all' | 'trip' | 'activity' | 'service' | 'doctor_visit';
@@ -107,32 +114,29 @@ export function ParentEventsPage() {
     return list;
   }, [events, permissions, tab, category, debouncedSearch, selectedDateKey, sortMode, nowMs]);
 
+  const pager = usePagination(filtered, 6, `${tab}|${category}|${debouncedSearch}|${selectedDateKey}|${sortMode}`);
+  const filtersActive = tab !== 'all' || category !== 'all' || sortMode !== 'starts_at' || Boolean(search.trim()) || Boolean(selectedDateKey);
+  const clearFilters = () => {
+    setTab('all');
+    setCategory('all');
+    setSortMode('starts_at');
+    setSearch('');
+    setSelectedDateKey(null);
+  };
+  const goToToday = () => {
+    const n = new Date();
+    setViewMonth(new Date(n.getFullYear(), n.getMonth(), 1));
+    setSelectedDateKey(null);
+  };
+
   if (!parentId) {
     return null;
   }
 
   if (catalogQuery.isPending) {
     return (
-      <div className="mx-auto max-w-4xl lg:max-w-none space-y-4 px-4 pb-28 pt-2">
-        <h1 className="text-lg font-semibold text-on-surface">{t('parent.events.pageTitle')}</h1>
-        <div className="flex flex-wrap gap-2" role="group" aria-label={t('parent.events.toggleViewLabel')}>
-          <Button
-            type="button"
-            variant={viewMode === 'list' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setViewMode('list')}
-          >
-            {t('parent.events.viewList')}
-          </Button>
-          <Button
-            type="button"
-            variant={viewMode === 'calendar' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setViewMode('calendar')}
-          >
-            {t('parent.events.viewCalendar')}
-          </Button>
-        </div>
+      <div className="space-y-5 pb-28">
+        <PageHeader icon="event" title={t('parent.events.pageTitle')} description={t('parent.events.pageSubtitle')} />
         {viewMode === 'calendar' ? (
           <LoadingSkeleton variant="parentEventsCalendar" parentEventsCalendarLabel={t('parent.events.loadingCalendar')} />
         ) : null}
@@ -143,19 +147,16 @@ export function ParentEventsPage() {
 
   if (catalogQuery.isError) {
     return (
-      <div className="mx-auto max-w-4xl lg:max-w-none px-4 py-6">
-        <p className="text-sm text-error" role="alert">
-          {t('parent.events.loadCatalogError')}
-        </p>
+      <div className="space-y-5 pb-28">
+        <PageHeader icon="event" title={t('parent.events.pageTitle')} />
+        <EmptyState icon="error" title={t('parent.events.loadCatalogError')} description="" />
       </div>
     );
   }
 
   if (!nurseryId) {
     return (
-      <div className="mx-auto max-w-4xl lg:max-w-none px-4 py-6">
-        <EmptyState icon="calendar_month" title={t('parent.events.noNursery')} description={t('parent.permissions.noNurseryDescription', { defaultValue: '' })} />
-      </div>
+      <EmptyState icon="calendar_month" title={t('parent.events.noNursery')} description={t('parent.permissions.noNurseryDescription', { defaultValue: '' })} />
     );
   }
 
@@ -165,205 +166,174 @@ export function ParentEventsPage() {
   const pendingPermissions = permissions.filter((p) => p.status === 'pending').length;
   const upcomingCount = events.filter((e) => new Date(e.starts_at).getTime() > nowMs).length;
   const urgentCount = events.filter((e) => e.is_urgent).length;
+  const toggleTab = (value: TabFilter) => setTab((current) => (current === value ? 'all' : value));
 
   return (
-    <div className="mx-auto max-w-4xl lg:max-w-none space-y-4 px-4 pb-28 pt-2">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary">
-            <span className="material-symbols-outlined text-2xl" aria-hidden>calendar_month</span>
-          </span>
-          <h1 className="text-xl font-semibold text-on-surface">{t('parent.events.pageTitle')}</h1>
-        </div>
-        <Button asChild>
-          <Link to="/parent/events/create" className="gap-1">
-            <span className="material-symbols-outlined text-base" aria-hidden>
-              priority_high
-            </span>
-            {t('parent.events.create.button')}
-          </Link>
-        </Button>
-      </div>
-
-      <div className="flex flex-wrap gap-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-3">
-        <div className="flex items-center gap-2 text-sm text-on-surface-variant">
-          <span className="material-symbols-outlined text-lg text-primary" aria-hidden>event</span>
-          {t('parent.events.totalCount', { count: events.length })}
-        </div>
-        {upcomingCount > 0 ? (
-          <div className="flex items-center gap-2 text-sm text-on-surface-variant">
-            <span className="material-symbols-outlined text-lg text-primary" aria-hidden>upcoming</span>
-            {t('parent.events.upcomingCount', { count: upcomingCount })}
-          </div>
-        ) : null}
-        {urgentCount > 0 ? (
-          <div className="flex items-center gap-2 text-sm text-error">
-            <span className="material-symbols-outlined text-lg" aria-hidden>priority_high</span>
-            {t('parent.events.urgentCount', { count: urgentCount })}
-          </div>
-        ) : null}
-        {pendingPermissions > 0 ? (
-          <div className="flex items-center gap-2 text-sm text-on-surface-variant">
-            <span className="material-symbols-outlined text-lg text-primary" aria-hidden>pending_actions</span>
-            {t('parent.events.pendingPermissions', { count: pendingPermissions })}
-          </div>
-        ) : null}
-      </div>
-
-      <div className="flex flex-wrap gap-2" role="group" aria-label={t('parent.events.toggleViewLabel')}>
-        <Button
-          type="button"
-          variant={viewMode === 'list' ? 'default' : 'outline'}
-          size="sm"
-          className="gap-1"
-          onClick={() => setViewMode('list')}
-        >
-          <span className="material-symbols-outlined text-base" aria-hidden>
-            view_list
-          </span>
-          {t('parent.events.viewList')}
-        </Button>
-        <Button
-          type="button"
-          variant={viewMode === 'calendar' ? 'default' : 'outline'}
-          size="sm"
-          className="gap-1"
-          onClick={() => setViewMode('calendar')}
-        >
-          <span className="material-symbols-outlined text-base" aria-hidden>
-            calendar_month
-          </span>
-          {t('parent.events.viewCalendar')}
-        </Button>
-      </div>
-
-      {viewMode === 'calendar' ? (
-        <ParentEventsCalendar
-          viewMonth={viewMonth}
-          allEvents={events}
-          selectedDateKey={selectedDateKey}
-          onSelectDate={setSelectedDateKey}
-          onPrevMonth={() =>
-            setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))
-          }
-          onNextMonth={() =>
-            setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))
-          }
-          locale={locale}
-        />
-      ) : null}
-
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-        <div className="flex flex-wrap gap-2" role="tablist" aria-label={t('parent.events.tabListLabel')}>
-          {TABS.map((key) => (
-            <button
-              key={key}
-              type="button"
-              role="tab"
-              aria-selected={tab === key}
-              className={`rounded-full px-3 py-1.5 text-sm font-medium ${
-                tab === key ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface-variant'
-              }`}
-              onClick={() => setTab(key)}
-            >
-              {t(TAB_LABEL[key])}
-            </button>
-          ))}
-        </div>
-        <div className="flex min-w-0 flex-1 flex-col gap-1 sm:max-w-xs">
-          <label htmlFor="parent-events-category" className="text-xs text-on-surface-variant">
-            {t('parent.events.categoryFilter')}
-          </label>
-          <select
-            id="parent-events-category"
-            className="h-11 w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface"
-            value={category}
-            onChange={(e) => setCategory(e.target.value as CategoryFilter)}
-          >
-            {CATS.map((c) => (
-              <option key={c} value={c}>
-                {t(`parent.events.categories.${c}`)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="space-y-1 sm:max-w-[10rem]">
-          <label htmlFor="parent-events-sort" className="text-xs text-on-surface-variant">
-            {t('parent.events.sortLabel')}
-          </label>
-          <select
-            id="parent-events-sort"
-            className="h-11 w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface"
-            value={sortMode}
-            onChange={(e) => setSortMode(e.target.value as SortMode)}
-          >
-            <option value="starts_at">{t('parent.events.sortByDate')}</option>
-            <option value="deadline">{t('parent.events.sortByDeadline')}</option>
-          </select>
-        </div>
-        <div className="min-w-0 flex-1 sm:max-w-sm">
-          <label htmlFor="parent-events-search" className="sr-only">
-            {t('parent.events.searchPlaceholder')}
-          </label>
-          <div className="relative">
-            <span className="material-symbols-outlined pointer-events-none absolute start-3 top-2.5 text-on-surface-variant text-base">
-              search
-            </span>
-            <input
-              id="parent-events-search"
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t('parent.events.searchPlaceholder')}
-              className="h-11 w-full rounded-md border border-outline-variant bg-surface-container-lowest py-2 ps-10 pe-3 text-sm text-on-surface"
-            />
-          </div>
-        </div>
-      </div>
-
-      {selectedDateKey ? (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-low px-3 py-2 text-sm">
-          <Badge className="border-transparent bg-secondary/15 text-on-secondary-container">
-            {t('parent.events.selectedDayBanner', {
-              date: dayBannerFmt.format(parseLocalDateKey(selectedDateKey)),
-            })}
-          </Badge>
-          <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedDateKey(null)}>
-            {t('parent.events.clearDateFilter')}
+    <div className="space-y-5 pb-28">
+      <PageHeader
+        icon="event"
+        title={t('parent.events.pageTitle')}
+        description={t('parent.events.pageSubtitle')}
+        actions={
+          <Button asChild>
+            <Link to="/parent/events/create">
+              <span className="material-symbols-outlined me-1 text-base" aria-hidden>priority_high</span>
+              {t('parent.events.create.button')}
+            </Link>
           </Button>
+        }
+      >
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <StatTile icon="event" label={t('parent.events.tabAll')} value={events.length} onClick={() => setTab('all')} active={tab === 'all'} />
+          <StatTile
+            icon="upcoming"
+            label={t('parent.events.tabUpcoming')}
+            value={upcomingCount}
+            tone="success"
+            onClick={() => toggleTab('upcoming')}
+            active={tab === 'upcoming'}
+          />
+          <StatTile
+            icon="priority_high"
+            label={t('parent.events.tabUrgent')}
+            value={urgentCount}
+            tone={urgentCount > 0 ? 'error' : 'neutral'}
+            onClick={() => toggleTab('urgent')}
+            active={tab === 'urgent'}
+          />
+          <StatTile
+            icon="pending_actions"
+            label={t('parent.events.pendingPermissionsLabel')}
+            value={pendingPermissions}
+            tone={pendingPermissions > 0 ? 'warning' : 'neutral'}
+          />
         </div>
-      ) : null}
+      </PageHeader>
 
-      {showEmptyAll ? (
-        <EmptyState
-          icon="event_busy"
-          title={t('parent.events.emptyScheduled')}
-          description={t('parent.events.emptyScheduledDescription')}
-        />
-      ) : null}
-
-      {showEmptyFilters ? (
-        <EmptyState
-          icon="filter_alt_off"
-          title={t('parent.events.emptyFilters')}
-          description={t('parent.events.emptyFiltersDescription')}
-        />
-      ) : null}
-
-      {!showEmptyAll && !showEmptyFilters ? (
-        <div className="space-y-3">
-          {filtered.map((e) => (
-            <ParentEventsEventCard
-              key={e.id}
-              event={e}
-              permissions={permissions}
-              dateTimeFmt={dateTimeFmt}
-              deadlineFmt={deadlineFmt}
-              priceFmt={priceFmt}
+      <TableCard
+        title={t('parent.events.pageTitle')}
+        count={t('parent.events.totalCount', { count: filtered.length })}
+        actions={
+          <div className="inline-flex rounded-lg border border-outline-variant bg-surface p-0.5" role="group" aria-label={t('parent.events.toggleViewLabel')}>
+            {(['calendar', 'list'] as const).map((option) => (
+              <button
+                key={option}
+                type="button"
+                aria-pressed={viewMode === option}
+                onClick={() => setViewMode(option)}
+                className={cn(
+                  'inline-flex h-8 items-center gap-1 rounded-md px-3 text-xs font-semibold transition-colors',
+                  viewMode === option ? 'bg-primary text-primary-foreground' : 'text-on-surface-variant hover:bg-surface-high',
+                )}
+              >
+                <span className="material-symbols-outlined text-base" aria-hidden>{option === 'calendar' ? 'calendar_month' : 'view_list'}</span>
+                {option === 'calendar' ? t('parent.events.viewCalendar') : t('parent.events.viewList')}
+              </button>
+            ))}
+          </div>
+        }
+        filters={
+          showEmptyAll ? null : (
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-1.5" role="tablist" aria-label={t('parent.events.tabListLabel')}>
+                {TABS.map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    role="tab"
+                    aria-selected={tab === key}
+                    onClick={() => setTab(key)}
+                    className={cn(
+                      'h-9 rounded-full border px-3.5 text-xs font-semibold transition-colors',
+                      tab === key ? 'border-primary bg-primary text-primary-foreground' : 'border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-high',
+                    )}
+                  >
+                    {t(TAB_LABEL[key])}
+                  </button>
+                ))}
+              </div>
+              <FilterBar onClear={clearFilters} canClear={filtersActive}>
+                <FilterField label={t('parent.events.categoryFilter')}>
+                  <Select value={category} onChange={(e) => setCategory(e.target.value as CategoryFilter)}>
+                    {CATS.map((c) => (
+                      <option key={c} value={c}>{t(`parent.events.categories.${c}`)}</option>
+                    ))}
+                  </Select>
+                </FilterField>
+                <FilterField label={t('parent.events.sortLabel')}>
+                  <Select value={sortMode} onChange={(e) => setSortMode(e.target.value as SortMode)}>
+                    <option value="starts_at">{t('parent.events.sortByDate')}</option>
+                    <option value="deadline">{t('parent.events.sortByDeadline')}</option>
+                  </Select>
+                </FilterField>
+                <FilterField label={t('common.search')} className="sm:flex-[2]">
+                  <SearchInput value={search} onChange={setSearch} placeholder={t('parent.events.searchPlaceholder')} />
+                </FilterField>
+              </FilterBar>
+              {selectedDateKey ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                    <span className="material-symbols-outlined text-sm" aria-hidden>event</span>
+                    {t('parent.events.selectedDayBanner', { date: dayBannerFmt.format(parseLocalDateKey(selectedDateKey)) })}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDateKey(null)}
+                      aria-label={t('parent.events.clearDateFilter')}
+                      className="ms-1 flex h-5 w-5 items-center justify-center rounded-full hover:bg-primary/15"
+                    >
+                      <span className="material-symbols-outlined text-sm" aria-hidden>close</span>
+                    </button>
+                  </span>
+                </div>
+              ) : null}
+            </div>
+          )
+        }
+        pagination={showEmptyAll || showEmptyFilters ? null : <TablePagination pager={pager} pageSizeOptions={[6, 12, 24]} />}
+      >
+        {viewMode === 'calendar' ? (
+          <div className="border-b border-outline-variant p-4 sm:p-5">
+            <ParentEventsCalendar
+              viewMonth={viewMonth}
+              allEvents={events}
+              selectedDateKey={selectedDateKey}
+              onSelectDate={setSelectedDateKey}
+              onPrevMonth={() => setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
+              onNextMonth={() => setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
+              onToday={goToToday}
+              locale={locale}
             />
-          ))}
-        </div>
-      ) : null}
+          </div>
+        ) : null}
+
+        {showEmptyAll ? (
+          <TableEmpty icon="event_busy" title={t('parent.events.emptyScheduled')} description={t('parent.events.emptyScheduledDescription')} />
+        ) : showEmptyFilters ? (
+          <TableEmpty
+            icon="filter_alt_off"
+            title={t('parent.events.emptyFilters')}
+            description={t('parent.events.emptyFiltersDescription')}
+            action={
+              <Button type="button" variant="outline" onClick={clearFilters}>
+                {t('common.clearFilters')}
+              </Button>
+            }
+          />
+        ) : (
+          <div className="grid gap-3 p-4 sm:p-5 xl:grid-cols-2">
+            {pager.pageItems.map((e) => (
+              <ParentEventsEventCard
+                key={e.id}
+                event={e}
+                permissions={permissions}
+                dateTimeFmt={dateTimeFmt}
+                deadlineFmt={deadlineFmt}
+                priceFmt={priceFmt}
+              />
+            ))}
+          </div>
+        )}
+      </TableCard>
     </div>
   );
 }
