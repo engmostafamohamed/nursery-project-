@@ -115,6 +115,10 @@ describe('shared formatting', () => {
     ['M', null, 'MM'],
     ['', 'sara@example.com', 'SA'],
     ['', null, '??'],
+    // A bilingual "Arabic / English" name uses the first name only, so the letters never mix scripts.
+    ['عمر حسن / Omar Hassan', null, 'عح'],
+    ['Omar Hassan / عمر حسن', null, 'OH'],
+    [' / Omar', null, 'OM'],
   ])('initials of "%s" (%s) are %s', (name, email, initials) => {
     expect(getUserInitials(name, email)).toBe(initials);
   });

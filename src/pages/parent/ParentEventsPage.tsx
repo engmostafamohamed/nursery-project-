@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { TableCard, TableEmpty, TablePagination } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FilterBar, SearchInput } from '@/components/ui/FilterBar';
+import { FilterChips } from '@/components/ui/FilterChips';
 import { FilterField } from '@/components/ui/FilterField';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -235,23 +236,12 @@ export function ParentEventsPage() {
         filters={
           showEmptyAll ? null : (
             <div className="space-y-3">
-              <div className="flex flex-wrap gap-1.5" role="tablist" aria-label={t('parent.events.tabListLabel')}>
-                {TABS.map((key) => (
-                  <button
-                    key={key}
-                    type="button"
-                    role="tab"
-                    aria-selected={tab === key}
-                    onClick={() => setTab(key)}
-                    className={cn(
-                      'h-9 rounded-full border px-3.5 text-xs font-semibold transition-colors',
-                      tab === key ? 'border-primary bg-primary text-primary-foreground' : 'border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-high',
-                    )}
-                  >
-                    {t(TAB_LABEL[key])}
-                  </button>
-                ))}
-              </div>
+              <FilterChips
+                label={t('parent.events.tabListLabel')}
+                value={tab}
+                onChange={setTab}
+                options={TABS.map((key) => ({ value: key, label: t(TAB_LABEL[key]) }))}
+              />
               <FilterBar onClear={clearFilters} canClear={filtersActive}>
                 <FilterField label={t('parent.events.categoryFilter')}>
                   <Select value={category} onChange={(e) => setCategory(e.target.value as CategoryFilter)}>

@@ -8,7 +8,9 @@ export function cn(...inputs: ClassValue[]): string {
 /** Safe text for query errors (PostgrestError is not always `instanceof Error`). */
 /** Two-letter initials for avatars from a display name or email fallback. */
 export function getUserInitials(displayName: string, email: string | null | undefined): string {
-  const trimmed = displayName.trim();
+  // A bilingual name ("عمر حسن / Omar Hassan") takes its initials from the first name only,
+  // so the two letters never mix scripts.
+  const trimmed = displayName.split('/').map((part) => part.trim()).find(Boolean) ?? '';
   if (trimmed) {
     const parts = trimmed.split(/\s+/).filter(Boolean);
     if (parts.length >= 2) {

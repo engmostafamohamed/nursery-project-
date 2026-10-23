@@ -1,3 +1,5 @@
+import type { PillTone } from '@/lib/tones';
+
 /** Local calendar date key YYYY-MM-DD (no UTC shift for display bucketing). */
 export function toLocalDateKey(d: Date): string {
   const y = d.getFullYear();
@@ -35,7 +37,7 @@ export function buildMonthGrid(year: number, monthIndex: number): ({ day: number
   return cells.slice(0, 42);
 }
 
-export type EventCategoryTone = 'primary' | 'success' | 'warning' | 'error' | 'neutral';
+export type EventCategoryTone = PillTone;
 
 /** One theme colour per event category, so trips and activities no longer share one (--info equals --primary). */
 export function categoryTone(category: string): EventCategoryTone {

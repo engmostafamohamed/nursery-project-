@@ -15,10 +15,10 @@ import {
 } from 'recharts';
 import { toast } from 'sonner';
 
-import { ApplicationStatusBadge } from '@/components/applications/ApplicationStatusBadge';
 import { ChatPanel } from '@/components/chat/ChatPanel';
 import { PaymentHistoryTable } from '@/components/financial/PaymentHistoryTable';
 import { FinancialSummaryCard } from '@/components/parent/FinancialSummaryCard';
+import { ParentApplicationsTable } from '@/components/parent/ParentApplicationsTable';
 import { ParentChildBillingCard } from '@/components/parent/ParentChildBillingCard';
 import { ParentAdminInboxSection } from '@/components/parent/ParentAdminInboxSection';
 import { ParentChildSummaryCards } from '@/components/parent/ParentChildSummaryCards';
@@ -311,63 +311,6 @@ function ParentDashboardAnalyticsPanel({
         </aside>
       </div>
     </section>
-  );
-}
-
-function ParentDashboardApplicationsCard({
-  isLoading,
-  applicationRows,
-  t,
-}: {
-  isLoading: boolean;
-  applicationRows: Record<string, unknown>[];
-  t: (key: string, options?: Record<string, unknown>) => string;
-}) {
-  return (
-    <article className="flex min-h-[360px] flex-col rounded-2xl border border-outline-variant bg-surface p-3 shadow-sm sm:min-h-[460px] sm:rounded-xl sm:p-4">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <p className="flex items-center gap-2 text-sm font-semibold text-on-surface">
-          <span className="material-symbols-outlined text-base text-primary" aria-hidden>assignment</span>
-          {t('parent.dashboard.sectionApplications')}
-          {applicationRows.length ? (
-            <span className="rounded-full bg-surface-high px-2 py-0.5 text-xs font-medium tabular-nums text-on-surface-variant">{applicationRows.length}</span>
-          ) : null}
-        </p>
-        <Link to="/parent/applications" className="text-xs font-semibold text-primary hover:underline">
-          {t('common.viewAll', { defaultValue: 'View all' })}
-        </Link>
-      </div>
-      {isLoading ? (
-        <p className="text-sm text-on-surface-variant">{t('common.loading')}</p>
-      ) : applicationRows.length === 0 ? (
-        <p className="flex flex-1 items-center justify-center text-center text-sm text-on-surface-variant">
-          {t('parent.dashboard.noApplications')}
-        </p>
-      ) : (
-        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pe-1">
-          {applicationRows.map((row) => {
-            const id = String(row.id);
-            const status = String(row.status ?? 'draft');
-            const submittedAt = row.submitted_at ? formatDateTime(String(row.submitted_at), STEP_DATE_TIME) : '-';
-            return (
-              <Link
-                key={id}
-                to={`/parent/applications/${id}`}
-                className="block rounded-xl border border-outline-variant bg-surface-container-lowest p-3 text-foreground transition-all hover:border-primary hover:shadow-sm sm:rounded-lg"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-on-surface">{applicationChildName(row)}</p>
-                    <p className="mt-1 text-xs text-on-surface-variant">{t('applications.submittedAt')}: {submittedAt}</p>
-                  </div>
-                  <ApplicationStatusBadge status={status} className="shrink-0" />
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      )}
-    </article>
   );
 }
 
@@ -861,18 +804,17 @@ export function ParentDashboardPage() {
         t={t}
       />
 
+      <ParentApplicationsTable
+        rows={applicationRows}
+        isLoading={applications.isLoading}
+        onNewApplication={() => void handleAddChild()}
+      />
+
       <ParentAdminInboxSection />
 
       <section className="space-y-3">
         <SectionHeading icon="child_care">{t('parent.dashboard.sectionChildren')}</SectionHeading>
         <ParentChildSummaryCards
-          leadingCard={
-            <ParentDashboardApplicationsCard
-              isLoading={applications.isLoading}
-              applicationRows={applicationRows}
-              t={t}
-            />
-          }
           children={childRows}
           unreadTotal={unreadTotal}
           isLoading={showChildSkeleton}
@@ -919,7 +861,7 @@ export function ParentDashboardPage() {
 
       <section className="grid gap-4 sm:gap-6 xl:grid-cols-12">
         {user?.id && nurseryId ? (
-          <div className="space-y-3 xl:col-span-7">
+          <div className="space-y-3 xl:col-span-8">
             <SectionHeading icon="forum">{t('parent.dashboard.sectionNurseryChat')}</SectionHeading>
             <ChatPanel
               role="parent"
@@ -927,33 +869,33 @@ export function ParentDashboardPage() {
               nurseryId={nurseryId}
               languagePref={languagePref}
               initialParticipantRole={['branch_admin', 'manager', 'chain_super_admin', 'teacher']}
-              className="h-[520px]"
+              className="h-[600px]"
             />
           </div>
         ) : null}
-        <div className={user?.id && nurseryId ? 'space-y-3 xl:col-span-5' : 'max-w-2xl space-y-3'}>
+        <div className={user?.id && nurseryId ? 'space-y-3 xl:col-span-4' : 'max-w-2xl space-y-3'}>
           <SectionHeading icon="dynamic_feed">{t('parent.dashboard.sectionFeed')}</SectionHeading>
           <ParentDashboardFeedList items={feedQuery.data ?? []} isLoading={Boolean(user) && feedQuery.isPending} />
         </div>
       </section>
 
-      <section className="grid gap-4 sm:gap-6 xl:grid-cols-12">
-        <div className="space-y-3 xl:col-span-5">
-          <SectionHeading icon="account_balance_wallet">{t('parent.dashboard.sectionFinancial')}</SectionHeading>
-          <FinancialSummaryCard />
-        </div>
-        <div className="space-y-3 xl:col-span-7">
-          <SectionHeading icon="receipt_long">
-            {t('financial.paymentHistory.parentDashboardTitle', { defaultValue: 'Recent payment history' })}
-          </SectionHeading>
-          <PaymentHistoryTable
-            rows={paymentHistory.data}
-            isLoading={paymentHistory.isLoading}
-            showParent={false}
-            compact
-            linkBase="/parent/invoices"
-          />
-        </div>
+      {/* Payments run the full width, so every invoice keeps all its data on one row. */}
+      <section className="space-y-4">
+        <FinancialSummaryCard />
+        <PaymentHistoryTable
+          title={t('financial.paymentHistory.parentDashboardTitle', { defaultValue: 'Recent payment history' })}
+          rows={paymentHistory.data}
+          isLoading={paymentHistory.isLoading}
+          showParent={false}
+          compact
+          linkBase="/parent/invoices"
+          actions={
+            <Link to="/parent/payment-record" className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
+              {t('common.viewAll', { defaultValue: 'View all' })}
+              <span className="material-symbols-outlined text-base rtl:rotate-180" aria-hidden>chevron_right</span>
+            </Link>
+          }
+        />
       </section>
 
       <ParentPasswordResetCard profile={profile} />

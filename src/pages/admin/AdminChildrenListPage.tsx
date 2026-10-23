@@ -38,7 +38,7 @@ import { fetchAttendanceDays, type AttendanceDay } from '@/lib/attendanceApi';
 import { fetchAllRows } from '@/lib/fetchAllRows';
 import { getNurseryCalendarDateString, NURSERY_CALENDAR_TIMEZONE } from '@/lib/nurseryDay';
 import { supabase } from '@/lib/supabase';
-import { cn, formatQueryError } from '@/lib/utils';
+import { cn, formatQueryError, getUserInitials } from '@/lib/utils';
 
 type ChildItem = {
   id: string;
@@ -145,15 +145,6 @@ function firstAndLastName(fullName: string): string {
   return `${parts[0]} ${parts[parts.length - 1]}`;
 }
 
-function initials(name: string): string {
-  const letters = name
-    .split(/\s+/)
-    .filter((part) => part && part !== '/')
-    .slice(0, 2)
-    .map((part) => part[0]);
-  return letters.join('').toUpperCase() || '?';
-}
-
 function humanize(value: string): string {
   return value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 }
@@ -200,7 +191,7 @@ function ChildAvatar({ name, url, className }: { name: string; url: string | nul
   // Initials are drawn locally: no child names leave the app to build a placeholder image.
   return (
     <Avatar className={cn('h-11 w-11', className)}>
-      {url ? <AvatarImage src={url} alt="" /> : <AvatarFallback className="bg-primary/10 text-primary">{initials(name)}</AvatarFallback>}
+      {url ? <AvatarImage src={url} alt="" /> : <AvatarFallback className="bg-primary/10 text-primary">{getUserInitials(name, null)}</AvatarFallback>}
     </Avatar>
   );
 }

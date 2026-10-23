@@ -1,17 +1,12 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
+import type { PillTone } from '@/lib/tones';
 import { cn } from '@/lib/utils';
 
-export type StatTone = 'primary' | 'success' | 'warning' | 'error' | 'neutral';
+import { TONE_TINT } from './toneClasses';
 
-const TONE_TILE: Record<StatTone, string> = {
-  primary: 'bg-primary/10 text-primary',
-  success: 'bg-success/10 text-success',
-  warning: 'bg-warning/10 text-warning',
-  error: 'bg-error/10 text-error',
-  neutral: 'bg-surface-high text-on-surface-variant',
-};
+export type StatTone = PillTone;
 
 const TONE_TEXT: Record<StatTone, string> = {
   primary: 'text-primary',
@@ -47,7 +42,7 @@ type StatTileProps = {
 export function StatTile({ icon, label, value, tone = 'primary', helper, to, onClick, active = false, className }: StatTileProps) {
   const content = (
     <>
-      <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-md', TONE_TILE[tone])}>
+      <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-md', TONE_TINT[tone])}>
         <span className="material-symbols-outlined text-xl" aria-hidden>{icon}</span>
       </span>
       <span className="min-w-0 flex-1">

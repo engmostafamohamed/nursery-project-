@@ -21,7 +21,7 @@ import { MEDICATION_CONSENT_OPTIONS } from '@/lib/admissions/medicationConsentOp
 import { allergyLabel } from '@/lib/allergies';
 import { formatDateTime } from '@/lib/datetime';
 import { supabase } from '@/lib/supabase';
-import { cn } from '@/lib/utils';
+import { cn, getUserInitials } from '@/lib/utils';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -182,10 +182,6 @@ function humanize(value: string | number | null | undefined): string {
   const raw = String(value).trim();
   if (!raw) return '';
   return raw.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-function initialsOf(name: string): string {
-  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'CH';
 }
 
 export function AdminChildRecordPage() {
@@ -420,7 +416,7 @@ export function AdminChildRecordPage() {
       ? `${packageName} · ${egp(selectedPackage.price)}`
       : dash;
   const extraHoursName = extraHoursPackage ? localized(extraHoursPackage.name_ar, extraHoursPackage.name_en) || dash : dash;
-  const avatarSrc = child.avatar_url ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(initialsOf(childName))}&background=eceef0&color=191c1e`;
+  const avatarSrc = child.avatar_url ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(getUserInitials(childName, null))}&background=eceef0&color=191c1e`;
   const parentName = (p: ParentLink) => localized(p.user?.name_ar, p.user?.name_en) || dash;
   const enrolledOn = child.enrollment_date ?? child.created_at;
   const journeyRow = journey.byChild.get(child.id);

@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Pagination } from '@/components/ui/Pagination';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Pagination as Pager } from '@/hooks/usePagination';
+import type { PillTone } from '@/lib/tones';
 import { cn } from '@/lib/utils';
 
 /*
@@ -178,7 +179,8 @@ export function Td({ children, align = 'start', className, colSpan }: { children
   );
 }
 
-export type PillTone = 'primary' | 'success' | 'warning' | 'error' | 'neutral';
+// The tone type lives in lib, so lib code can return tones; re-exported here for the kit's users.
+export type { PillTone };
 
 const PILL: Record<PillTone, { pill: string; dot: string }> = {
   primary: { pill: 'border-primary/30 bg-primary/10 text-primary', dot: 'bg-primary' },

@@ -5,6 +5,8 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { paymentStateUi } from '@/lib/invoiceDisplay';
+
 import ar from './ar.json';
 import en from './en.json';
 
@@ -20,9 +22,13 @@ const files = [
   '../pages/parent/ParentInvoicesPage.tsx',
   '../components/parent/InvoiceCard.tsx',
   '../components/parent/ParentChildSummaryCards.tsx',
+  '../components/parent/ParentApplicationsTable.tsx',
   '../components/parent/ParentChildBillingCard.tsx',
   '../components/parent/ParentDashboardScheduleSection.tsx',
   '../components/parent/ParentDashboardFeedList.tsx',
+  '../components/parent/FinancialSummaryCard.tsx',
+  '../components/financial/PaymentHistoryTable.tsx',
+  '../components/chat/ChatPanel.tsx',
 ];
 
 function lookup(dict: unknown, key: string): unknown {
@@ -57,6 +63,10 @@ describe('parent overview pages', () => {
       'parent.invoices.resultsCount',
       'parent.invoices.overdueCount',
       'parent.invoices.openCount',
+      'parent.dashboard.applicationsTable.count',
+      'parent.dashboard.child.presentCount',
+      'parent.dashboard.child.absentCount',
+      'financial.paymentHistory.count',
     ]) {
       for (const form of ['zero', 'one', 'two', 'few', 'many', 'other']) {
         expect(typeof lookup(ar, `${key}_${form}`), `${key}_${form}`).toBe('string');
@@ -73,5 +83,16 @@ describe('parent overview pages', () => {
       .map((m) => m[1].trim())
       .filter((text) => /[A-Za-z]{2,}/.test(text) && !/[(){};=?&|]/.test(text));
     expect(textNodes).toEqual([]);
+  });
+
+  it('every payment state and chat role label exists in English and Arabic', () => {
+    const keys = [
+      ...(['paid', 'partial', 'unpaid', 'in_review', 'overdue', 'cancelled'] as const).map((state) => paymentStateUi(state).labelKey),
+      ...['parent', 'teacher', 'manager', 'branch_admin', 'chain_super_admin'].map((role) => `chat.role.${role}`),
+    ];
+    for (const key of keys) {
+      expect(typeof lookup(en, key), `en: ${key}`).toBe('string');
+      expect(typeof lookup(ar, key), `ar: ${key}`).toBe('string');
+    }
   });
 });

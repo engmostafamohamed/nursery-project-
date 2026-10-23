@@ -19,6 +19,7 @@ import {
   type StaffPerson,
 } from '@/hooks/useClassStaff';
 import { useNurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
+import { getUserInitials } from '@/lib/utils';
 
 function localized(
   ar: string | null | undefined,
@@ -36,13 +37,6 @@ function localized(
 function personLabel(p: StaffPerson | null | undefined, pref: 'ar' | 'en' | 'both'): string {
   if (!p) return '—';
   return localized(p.name_ar, p.name_en, pref);
-}
-
-function initials(name: string): string {
-  const parts = name.replace(/[/].*$/, '').trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 interface ClassViewDialogProps {
@@ -103,7 +97,7 @@ function PersonRow({
   const body = (
     <>
       <Avatar className="h-9 w-9 bg-primary/10">
-        <AvatarFallback className="text-primary">{initials(name)}</AvatarFallback>
+        <AvatarFallback className="text-primary">{getUserInitials(name, null)}</AvatarFallback>
       </Avatar>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-foreground">{name}</p>

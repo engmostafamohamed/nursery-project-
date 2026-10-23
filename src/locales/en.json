@@ -1,5 +1,6 @@
 {
   "common": {
+    "open": "Open",
     "today": "Today",
     "yesterday": "Yesterday",
     "paginationRange": "Showing {{start}}–{{end}}",
@@ -2143,6 +2144,9 @@
   },
   "financial": {
     "paymentHistory": {
+      "partial": "Partly paid",
+      "count_one": "{{count}} invoice",
+      "count_other": "{{count}} invoices",
       "parentDashboardTitle": "Recent payment history",
       "applicationTitle": "Application payment history",
       "registrationTitle": "Registration payment history",
@@ -3266,6 +3270,19 @@
     "atNursery": "At Nursery",
     "homeTitle": "Parent Home",
     "dashboard": {
+      "applicationsTable": {
+        "all": "All",
+        "inReview": "In review",
+        "continue": "Continue",
+        "open": "Open",
+        "count_one": "{{count}} application",
+        "count_other": "{{count}} applications",
+        "child": "Child",
+        "status": "Status",
+        "submitted": "Submitted",
+        "updated": "Last update",
+        "action": "Next step"
+      },
       "billing": {
         "due": "{{amount}} due",
         "upToDate": "Up to date",
@@ -3361,6 +3378,16 @@
       },
       "noChildren": "No linked children yet. Contact your nursery if you expect access.",
       "child": {
+        "presentCount_one": "{{count}} present",
+        "presentCount_other": "{{count}} present",
+        "absentCount_one": "{{count}} absent",
+        "absentCount_other": "{{count}} absent",
+        "monthRate": "{{rate}}% over 30 days",
+        "day": {
+          "present": "Present",
+          "absent": "Absent",
+          "off": "Day off"
+        },
         "paymentDue": "Payment due",
         "messageNursery": "Message nursery",
         "attendanceAbsent": "Not checked in today yet",
@@ -3800,6 +3827,9 @@
       "emptyDescription": "No invoices yet."
     },
     "financial": {
+      "breakdownTitle": "Still owed per child",
+      "noBreakdown": "The amount due is on family invoices.",
+      "allPaid": "Everything is paid. Thank you!",
       "nextDueLabel": "Next payment",
       "title": "Financial Summary",
       "overdueAlert": "Overdue",
@@ -6389,6 +6419,10 @@
     "deleted": "Reminder deleted."
   },
   "chat": {
+    "filterUnread": "Unread",
+    "noUnread": "No unread messages",
+    "privacyNote": "Messages here are only between you and the people in the conversation.",
+    "announcement": "Announcement",
     "inboxTitle": "Messages",
     "messagePlaceholder": "Write a message...",
     "send": "Send",

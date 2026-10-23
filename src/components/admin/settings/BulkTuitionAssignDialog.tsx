@@ -26,13 +26,8 @@ import {
   type BulkAssignResult,
 } from '@/hooks/useBulkTuitionAssignment';
 import { formatMoneyAmount } from '@/lib/money';
-import { cn } from '@/lib/utils';
+import { cn, getUserInitials } from '@/lib/utils';
 import { FormSection } from './FormSection';
-
-function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  return ((parts[0]?.[0] ?? '') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase() || '?';
-}
 
 /**
  * Gives many already-enrolled children a tuition package in one go, so the daily billing job
@@ -296,7 +291,7 @@ export function BulkTuitionAssignDialog({
                             )}
                             aria-hidden
                           >
-                            {initialsOf(name)}
+                            {getUserInitials(name, null)}
                           </span>
                           <span className="min-w-0 flex-1">
                             <span className="block truncate font-medium text-on-surface" title={name}>{name}</span>

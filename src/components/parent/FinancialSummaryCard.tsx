@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
+import { StatusPill, TableCard } from '@/components/ui/DataTable';
+import { StatTile } from '@/components/ui/StatTile';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useParentInvoices } from '@/hooks/useParentInvoices';
 import { useParentChildren, type ChildOption } from '@/hooks/useParentChildren';
@@ -53,48 +55,76 @@ export function FinancialSummaryCard() {
     return { totalOutstanding, nextDue, hasOverdue, perChild, generalDue };
   }, [invoices.allData, children]);
 
+  const money = (amount: number) => t('invoice.egpAmount', { amount: formatMoneyAmount(amount) });
+  const breakdown = [
+    ...summary.perChild.map((item) => ({ key: item.child.id, label: getName(item.child), icon: 'child_care', amount: item.outstanding })),
+    ...(summary.generalDue > 0 ? [{ key: 'general', label: t('parent.financial.generalInvoices'), icon: 'family_restroom', amount: summary.generalDue }] : []),
+  ];
+
   return (
-    <section className="space-y-3 rounded-3xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm">
-      {summary.hasOverdue ? (
-        <span className="inline-flex items-center gap-1 rounded-full bg-error-container px-2.5 py-1 text-[11px] font-medium text-on-error-container">
-          <span className="material-symbols-outlined text-sm" aria-hidden>warning</span>
-          {t('parent.financial.overdueAlert')}
-        </span>
-      ) : null}
-      <p className="text-sm text-on-surface-variant">
-        {t('parent.financial.totalOutstanding', { amount: formatMoneyAmount(summary.totalOutstanding) })}
-      </p>
-      {summary.perChild.length > 0 || summary.generalDue > 0 ? (
-        <div className="space-y-1 border-t border-outline-variant pt-2">
-          {summary.perChild.map((item) => (
-            <p key={item.child.id} className="flex items-center justify-between text-xs text-on-surface-variant">
-              <span>{getName(item.child)}</span>
-              <span className="font-medium">{t('invoice.egpAmount', { amount: formatMoneyAmount(item.outstanding) })}</span>
-            </p>
-          ))}
-          {summary.generalDue > 0 ? (
-            <p className="flex items-center justify-between text-xs text-on-surface-variant">
-              <span>{t('parent.financial.generalInvoices')}</span>
-              <span className="font-medium">{t('invoice.egpAmount', { amount: formatMoneyAmount(summary.generalDue) })}</span>
-            </p>
+    <TableCard
+      title={t('parent.dashboard.sectionFinancial')}
+      actions={
+        <>
+          {summary.hasOverdue ? (
+            <StatusPill tone="error" icon="warning">{t('parent.financial.overdueAlert')}</StatusPill>
           ) : null}
-        </div>
-      ) : null}
-      <p className="text-sm text-on-surface-variant">
-        {summary.nextDue
-          ? t('parent.financial.nextDue', { date: formatDate(summary.nextDue.dueDate), amount: formatMoneyAmount(summary.nextDue.amount) })
-          : t('parent.financial.noUpcoming')}
-      </p>
-      <div className="flex gap-2">
-        <Button asChild variant="outline" size="sm">
-          <Link to={`/parent/invoices${qs}`}>{t('parent.financial.viewHistory')}</Link>
-        </Button>
-        {summary.hasOverdue ? (
-          <Button asChild size="sm">
-            <Link to={`/parent/invoices${qs ? `${qs}&status=pending` : '?status=pending'}`}>{t('parent.financial.payNow')}</Link>
+          <Button asChild variant="outline" size="sm">
+            <Link to={`/parent/invoices${qs}`}>
+              <span className="material-symbols-outlined me-1 text-base" aria-hidden>receipt_long</span>
+              {t('parent.financial.viewHistory')}
+            </Link>
           </Button>
-        ) : null}
+          {summary.totalOutstanding > 0 ? (
+            <Button asChild size="sm">
+              <Link to={`/parent/invoices${qs ? `${qs}&status=pending` : '?status=pending'}`}>
+                <span className="material-symbols-outlined me-1 text-base" aria-hidden>payments</span>
+                {t('parent.financial.payNow')}
+              </Link>
+            </Button>
+          ) : null}
+        </>
+      }
+    >
+      <div className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <StatTile
+            icon="account_balance_wallet"
+            label={t('parent.dashboard.stats.outstanding')}
+            value={money(summary.totalOutstanding)}
+            tone={summary.hasOverdue ? 'error' : summary.totalOutstanding > 0 ? 'warning' : 'success'}
+            to={`/parent/invoices${qs ? `${qs}&status=pending` : '?status=pending'}`}
+          />
+          <StatTile
+            icon="event_upcoming"
+            label={t('parent.invoices.nextDue')}
+            value={summary.nextDue ? formatDate(summary.nextDue.dueDate) : '—'}
+            helper={summary.nextDue ? money(summary.nextDue.amount) : t('parent.financial.noUpcoming')}
+            tone={summary.nextDue ? 'primary' : 'neutral'}
+          />
+        </div>
+        {breakdown.length ? (
+          <div className="overflow-hidden rounded-lg border border-outline-variant">
+            <p className="border-b border-outline-variant bg-surface-container-lowest px-3 py-2 text-xs font-semibold text-on-surface-variant">
+              {t('parent.financial.breakdownTitle')}
+            </p>
+            <ul className="divide-y divide-outline-variant">
+              {breakdown.map((item) => (
+                <li key={item.key} className="flex items-center gap-3 px-3 py-2 text-sm">
+                  <span className="material-symbols-outlined text-lg text-on-surface-variant" aria-hidden>{item.icon}</span>
+                  <span className="min-w-0 flex-1 truncate text-on-surface">{item.label}</span>
+                  <span className="shrink-0 font-semibold tabular-nums text-error">{money(item.amount)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <p className="flex items-center gap-2 self-center rounded-lg border border-success/30 bg-success/5 px-3 py-3 text-sm text-on-surface">
+            <span className="material-symbols-outlined text-lg text-success" aria-hidden>task_alt</span>
+            {summary.totalOutstanding > 0 ? t('parent.financial.noBreakdown') : t('parent.financial.allPaid')}
+          </p>
+        )}
       </div>
-    </section>
+    </TableCard>
   );
 }

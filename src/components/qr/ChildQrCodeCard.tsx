@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { confirm } from '@/components/ui/confirm';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQrTokenGeneration } from '@/hooks/useQrTokenGeneration';
-import { cn } from '@/lib/utils';
+import { cn, getUserInitials } from '@/lib/utils';
 
 export interface ChildQrInput {
   id: string;
@@ -45,10 +45,6 @@ const QR_CORNERS = [
 /** Download / copy link / print: icon above the label so three fit on a phone. */
 const ACTION_TILE = 'h-auto min-h-16 flex-col gap-1 whitespace-normal px-2 py-3 text-xs leading-4';
 
-function initialsOf(name: string): string {
-  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((word) => word[0]).join('').toUpperCase();
-}
-
 export function ChildQrCodeCard({
   child,
   languagePref,
@@ -73,7 +69,7 @@ export function ChildQrCodeCard({
     return ar || en;
   }, [child.full_name_ar, child.full_name_en, languagePref]);
   // Latin initials read better in the small tile when the English name is shown too.
-  const initials = initialsOf(languagePref === 'ar' ? childName : child.full_name_en?.trim() || childName);
+  const initials = getUserInitials(languagePref === 'ar' ? childName : child.full_name_en?.trim() || childName, null);
 
   const { mutateAsync: generateQrToken, isPending } = useQrTokenGeneration();
 

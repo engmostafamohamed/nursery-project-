@@ -36,7 +36,7 @@ import {
 import { CHART_CURSOR, CHART_GRID_STROKE, CHART_SERIES, CHART_TOOLTIP_STYLE, chartColor, chartDirection } from '@/lib/chartTheme';
 import { dayHeading, groupByDay } from '@/lib/dayGroups';
 import { supabase } from '@/lib/supabase';
-import { cn } from '@/lib/utils';
+import { cn, getUserInitials } from '@/lib/utils';
 
 /** Icon and colours per mood, so a report's mood reads at a glance. */
 const MOOD_STYLE: Record<ReturnType<typeof moodKey>, { icon: string; pill: string }> = {
@@ -45,10 +45,6 @@ const MOOD_STYLE: Record<ReturnType<typeof moodKey>, { icon: string; pill: strin
   fussy: { icon: 'sentiment_neutral', pill: 'bg-warning/10 text-warning' },
   cranky: { icon: 'sentiment_dissatisfied', pill: 'bg-error/10 text-error' },
 };
-
-function initialsOf(name: string): string {
-  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((word) => word[0]).join('').toUpperCase() || '?';
-}
 
 function formatDateLabel(value: string, locale: string, options?: Intl.DateTimeFormatOptions) {
   if (!value) return '-';
@@ -98,7 +94,7 @@ function ReportCard({
         <div className="flex w-full items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary" aria-hidden>
-              {initialsOf(report.childName)}
+              {getUserInitials(report.childName, null)}
             </span>
             <div className="min-w-0">
               <p className="truncate text-base font-semibold text-on-surface" title={report.childName}>{report.childName}</p>

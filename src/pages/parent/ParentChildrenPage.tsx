@@ -38,7 +38,7 @@ import { useParentChildrenOverview, type ParentChildOverview } from '@/hooks/use
 import { useParentInvoices } from '@/hooks/useParentInvoices';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { joinedWhenText } from '@/lib/admissionTimeline';
-import { cn } from '@/lib/utils';
+import { cn, getUserInitials } from '@/lib/utils';
 
 type ChildStatusFilter = 'all' | 'active' | 'pending' | 'inactive';
 type AttendanceFilter = 'all' | 'present' | 'absent';
@@ -68,10 +68,6 @@ const STATUS_TONE: Record<string, PillTone> = {
   withdrawn: 'neutral',
   graduated: 'primary',
 };
-
-function initialsOf(name: string): string {
-  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((word) => word[0]).join('').toUpperCase() || '?';
-}
 
 type ChildAction = { icon: string; label: string } & ({ to: string } | { key: string; onSelect: () => void });
 
@@ -302,7 +298,7 @@ export function ParentChildrenPage() {
       <img src={child.avatarUrl} alt="" className="h-11 w-11 shrink-0 rounded-full object-cover" loading="lazy" decoding="async" />
     ) : (
       <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary" aria-hidden>
-        {initialsOf(name)}
+        {getUserInitials(name, null)}
       </span>
     );
 

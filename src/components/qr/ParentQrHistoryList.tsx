@@ -4,6 +4,8 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { StatusPill, TableCard, TableEmpty, TableLoading, TablePagination, type PillTone } from '@/components/ui/DataTable';
+import { FilterChips } from '@/components/ui/FilterChips';
+import { TONE_TINT } from '@/components/ui/toneClasses';
 import { usePagination } from '@/hooks/usePagination';
 import {
   useParentIssuedQrTokens,
@@ -32,14 +34,6 @@ const STATUS_TONE: Record<IssuedQrStatus, PillTone> = {
   used: 'primary',
   expired: 'neutral',
   revoked: 'error',
-};
-
-const ICON_TILE: Record<PillTone, string> = {
-  primary: 'bg-primary/10 text-primary',
-  success: 'bg-success/10 text-success',
-  warning: 'bg-warning/10 text-warning',
-  error: 'bg-error/10 text-error',
-  neutral: 'bg-surface-high text-on-surface-variant',
 };
 
 const IDENTITY_TYPE_KEY: Record<string, string> = {
@@ -118,30 +112,17 @@ export function ParentQrHistoryList({ parentId, children, childId }: Props) {
       count={t('qr.history.count', { count: tokens.length })}
       filters={
         tokens.length ? (
-          <div className="flex flex-wrap gap-1.5" role="tablist" aria-label={t('qr.history.title')}>
-            {(['all', ...STATUS_ORDER] as const).map((value) => {
-              const count = value === 'all' ? tokens.length : counts[value];
-              if (value !== 'all' && count === 0) return null;
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  role="tab"
-                  aria-selected={statusFilter === value}
-                  onClick={() => setStatusFilter(value)}
-                  className={cn(
-                    'inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-xs font-semibold transition-colors',
-                    statusFilter === value
-                      ? 'border-primary bg-primary text-primary-foreground'
-                      : 'border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-high',
-                  )}
-                >
-                  {value === 'all' ? t('qr.history.all') : t(`qr.history.statuses.${value}`)}
-                  <span className={cn('rounded-full px-1.5 tabular-nums', statusFilter === value ? 'bg-primary-foreground/20' : 'bg-surface-high')}>{count}</span>
-                </button>
-              );
-            })}
-          </div>
+          <FilterChips
+            label={t('qr.history.title')}
+            value={statusFilter}
+            onChange={setStatusFilter}
+            hideEmpty
+            options={(['all', ...STATUS_ORDER] as const).map((value) => ({
+              value,
+              label: value === 'all' ? t('qr.history.all') : t(`qr.history.statuses.${value}`),
+              count: value === 'all' ? tokens.length : counts[value],
+            }))}
+          />
         ) : null
       }
       pagination={filtered.length ? <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} /> : null}
@@ -169,7 +150,7 @@ export function ParentQrHistoryList({ parentId, children, childId }: Props) {
                   return (
                     <li key={token.id} className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:px-5">
                       <div className="flex min-w-0 flex-1 gap-3">
-                        <span className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-lg', ICON_TILE[tone])} aria-hidden>
+                        <span className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-lg', TONE_TINT[tone])} aria-hidden>
                           <span className="material-symbols-outlined text-xl">{isDelegate ? 'badge' : 'qr_code_2'}</span>
                         </span>
                         <div className="min-w-0 flex-1 space-y-1.5">

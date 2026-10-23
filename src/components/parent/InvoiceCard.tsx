@@ -3,8 +3,10 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { StatusPill, type PillTone } from '@/components/ui/DataTable';
+import { TONE_TINT } from '@/components/ui/toneClasses';
 import type { ParentInvoiceItem } from '@/hooks/useParentInvoices';
 import { activeLocale, formatDate } from '@/lib/datetime';
+import { invoiceTypeIcon } from '@/lib/invoiceDisplay';
 import { formatMoneyAmount } from '@/lib/money';
 import { cn } from '@/lib/utils';
 
@@ -17,22 +19,6 @@ interface Props {
   /** Names of the children the invoice covers; shown when the family has more than one child. */
   childNames?: string[];
 }
-
-const TYPE_ICON: Record<ParentInvoiceItem['type'], string> = {
-  monthly: 'calendar_month',
-  event: 'celebration',
-  extra_hours: 'more_time',
-  other: 'receipt_long',
-};
-
-/** Tinted due-date block, one colour per status (same look as the event cards). */
-const DATE_BLOCK: Record<PillTone, string> = {
-  primary: 'bg-primary/10 text-primary',
-  success: 'bg-success/10 text-success',
-  warning: 'bg-warning/10 text-warning',
-  error: 'bg-error/10 text-error',
-  neutral: 'bg-surface-high text-on-surface-variant',
-};
 
 function invoiceStatusUi(invoice: ParentInvoiceItem): { tone: PillTone; icon: string } {
   if (invoice.inReview) return { tone: 'primary', icon: 'hourglass_top' };
@@ -61,7 +47,7 @@ export function InvoiceCard({ invoice, onPayNow, onView, highlighted, submitting
         highlighted ? 'border-primary ring-2 ring-primary/40' : invoice.status === 'overdue' && !invoice.inReview ? 'border-error/40' : 'border-outline-variant',
       )}
     >
-      <div className={cn('flex h-16 w-14 shrink-0 flex-col items-center justify-center rounded-lg', DATE_BLOCK[tone])}>
+      <div className={cn('flex h-16 w-14 shrink-0 flex-col items-center justify-center rounded-lg', TONE_TINT[tone])}>
         <span className="text-[11px] font-semibold uppercase">{dueDate.toLocaleDateString(activeLocale(), { month: 'short' })}</span>
         <span className="text-2xl font-bold leading-none tabular-nums">{dueDate.toLocaleDateString(activeLocale(), { day: 'numeric' })}</span>
       </div>
@@ -70,7 +56,7 @@ export function InvoiceCard({ invoice, onPayNow, onView, highlighted, submitting
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
             <p className="flex items-center gap-1.5 text-sm font-semibold text-on-surface">
-              <span className="material-symbols-outlined text-base text-primary" aria-hidden>{TYPE_ICON[invoice.type]}</span>
+              <span className="material-symbols-outlined text-base text-primary" aria-hidden>{invoiceTypeIcon(invoice.type)}</span>
               {t(`invoice.types.${invoice.type}`)}
             </p>
             <p className="mt-0.5 text-xs text-on-surface-variant">{t('invoice.invoiceNumber', { number: invoice.invoiceNumber })}</p>

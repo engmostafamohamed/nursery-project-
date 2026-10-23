@@ -1,5 +1,6 @@
 {
   "common": {
+    "open": "فتح",
     "today": "اليوم",
     "yesterday": "أمس",
     "paginationRange": "عرض {{start}}–{{end}}",
@@ -2155,6 +2156,13 @@
   },
   "financial": {
     "paymentHistory": {
+      "partial": "مدفوعة جزئيًا",
+      "count_zero": "لا توجد فواتير",
+      "count_one": "فاتورة واحدة",
+      "count_two": "فاتورتان",
+      "count_few": "{{count}} فواتير",
+      "count_many": "{{count}} فاتورة",
+      "count_other": "{{count}} فاتورة",
       "parentDashboardTitle": "آخر المدفوعات",
       "applicationTitle": "سجل مدفوعات الطلب",
       "registrationTitle": "سجل مدفوعات التسجيل",
@@ -3294,6 +3302,23 @@
     "atNursery": "داخل الحضانة",
     "homeTitle": "الرئيسية",
     "dashboard": {
+      "applicationsTable": {
+        "all": "الكل",
+        "inReview": "قيد المراجعة",
+        "continue": "متابعة",
+        "open": "فتح",
+        "count_zero": "لا توجد طلبات",
+        "count_one": "طلب واحد",
+        "count_two": "طلبان",
+        "count_few": "{{count}} طلبات",
+        "count_many": "{{count}} طلبًا",
+        "count_other": "{{count}} طلب",
+        "child": "الطفل",
+        "status": "الحالة",
+        "submitted": "تاريخ الإرسال",
+        "updated": "آخر تحديث",
+        "action": "الخطوة التالية"
+      },
       "billing": {
         "due": "مستحق {{amount}}",
         "upToDate": "لا مستحقات",
@@ -3389,6 +3414,24 @@
       },
       "noChildren": "لا يوجد أطفال مرتبطون بعد. تواصل مع الحضانة إذا كنت تتوقع صلاحية.",
       "child": {
+        "presentCount_zero": "لا حضور",
+        "presentCount_one": "حضور يوم واحد",
+        "presentCount_two": "حضور يومين",
+        "presentCount_few": "حضور {{count}} أيام",
+        "presentCount_many": "حضور {{count}} يومًا",
+        "presentCount_other": "حضور {{count}} يوم",
+        "absentCount_zero": "لا غياب",
+        "absentCount_one": "غياب يوم واحد",
+        "absentCount_two": "غياب يومين",
+        "absentCount_few": "غياب {{count}} أيام",
+        "absentCount_many": "غياب {{count}} يومًا",
+        "absentCount_other": "غياب {{count}} يوم",
+        "monthRate": "{{rate}}% خلال 30 يومًا",
+        "day": {
+          "present": "حاضر",
+          "absent": "غائب",
+          "off": "يوم عطلة"
+        },
         "paymentDue": "مستحق الدفع",
         "messageNursery": "راسل الحضانة",
         "attendanceAbsent": "لم يُسجّل حضور اليوم بعد",
@@ -3844,6 +3887,9 @@
       "emptyDescription": "لا توجد فواتير بعد."
     },
     "financial": {
+      "breakdownTitle": "المتبقي على كل طفل",
+      "noBreakdown": "المبلغ المستحق على فواتير العائلة.",
+      "allPaid": "تم سداد كل شيء. شكرًا لك!",
       "nextDueLabel": "الدفعة القادمة",
       "title": "الملخص المالي",
       "overdueAlert": "متأخر",
@@ -6496,6 +6542,10 @@
     "deleted": "تم حذف التذكير."
   },
   "chat": {
+    "filterUnread": "غير المقروءة",
+    "noUnread": "لا توجد رسائل غير مقروءة",
+    "privacyNote": "الرسائل هنا بينك وبين أطراف المحادثة فقط.",
+    "announcement": "إعلان",
     "inboxTitle": "الرسائل",
     "messagePlaceholder": "اكتب رسالة...",
     "send": "إرسال",
