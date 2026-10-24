@@ -35,3 +35,11 @@ export function formatQueryError(err: unknown): string {
     return 'Unknown error';
   }
 }
+
+/**
+ * `path` when it is a page of this app, otherwise '/'. For return-to paths handed to a full page
+ * load: `//host` and `/\host` leave the site, which would make them an open redirect.
+ */
+export function toAppPath(path: string | null | undefined): string {
+  return path && /^\/(?![/\\])/.test(path) ? path : '/';
+}

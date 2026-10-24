@@ -1,9 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
 
-import { supabase } from '@/lib/supabase';
+import { endSession } from '@/lib/sessionExpiry';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { HelpAiBundle } from '@/components/help/HelpAiBundle';
 import { NotificationCenterDrawer } from '@/components/notifications/NotificationCenterDrawer';
@@ -105,11 +104,8 @@ export function TeacherLayout() {
   );
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast.error(t('common.logoutError'));
-      return;
-    }
+    // Always ends the session here, even when the server cannot be reached.
+    await endSession('user');
     setMoreOpen(false);
     navigate('/login', { replace: true });
   };

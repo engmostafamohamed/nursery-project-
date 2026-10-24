@@ -2,16 +2,12 @@ import { useTranslation } from 'react-i18next';
 import { Navigate } from 'react-router-dom';
 
 import { PageSkeleton } from '@/components/PageSkeleton';
-import { useAuthSession } from '@/hooks/useAuthSession';
 import { usePermissionMatrix } from '@/hooks/usePermissionMatrix';
-import { useUserProfile } from '@/hooks/useUserProfile';
-import { isAuthSessionError } from '@/lib/authErrors';
+import { useSessionProfile } from '@/hooks/useSessionProfile';
 
 export function HomeRedirect() {
   const { t } = useTranslation();
-  const { session, loading: sessionLoading } = useAuthSession();
-  const userId = session?.user?.id;
-  const { data: profile, isPending, isError, error } = useUserProfile(userId);
+  const { status, profile } = useSessionProfile();
   // For hybrid teacher roles (e.g. "Manager Teacher") whose base_role is
   // teacher but whose custom feature set includes admin-tier features like
   // `staff_onboarding`, route them to /admin instead of /teacher so they can
@@ -28,20 +24,16 @@ export function HomeRedirect() {
   // to wait for, and the disabled query would stay pending forever.
   const waitingForMatrix = profile?.role === 'teacher' && Boolean(profile.role_id) && matrix.isPending;
 
-  if (sessionLoading || (session && isPending) || waitingForMatrix) {
+  // An expired token keeps this on 'loading' until it is refreshed or the session ends.
+  if (status === 'loading' || waitingForMatrix) {
     return <PageSkeleton />;
   }
 
-  if (!session) {
+  if (status === 'unauthenticated') {
     return <Navigate to="/login" replace />;
   }
 
-  // An expired token fails this fetch too; that is a sign-in problem, not a database one.
-  if (isError && isAuthSessionError(error)) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (isError || !profile) {
+  if (status === 'database') {
     return <Navigate to="/error" replace />;
   }
 

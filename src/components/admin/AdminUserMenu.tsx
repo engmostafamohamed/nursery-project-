@@ -1,7 +1,6 @@
 import { LogOut, User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -15,7 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { supabase } from '@/lib/supabase';
+import { endSession } from '@/lib/sessionExpiry';
 import { getUserInitials } from '@/lib/utils';
 
 export function AdminUserMenu() {
@@ -36,11 +35,8 @@ export function AdminUserMenu() {
       : undefined;
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast.error(t('admin.userMenu.logoutError'));
-      return;
-    }
+    // Always ends the session here, even when the server cannot be reached.
+    await endSession('user');
     navigate('/login', { replace: true });
   };
 

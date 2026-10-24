@@ -25,18 +25,13 @@ export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
     return <PageSkeleton />;
   }
 
-  if (status === 'unauthenticated' || status === 'expired') {
+  if (status === 'unauthenticated') {
     if (isPreviewAllowedRoute) {
       return <Outlet />;
     }
-    // Carry why they landed here, and where to put them back afterwards.
-    return (
-      <Navigate
-        to="/login"
-        replace
-        state={{ sessionExpired: status === 'expired', from: location.pathname + location.search }}
-      />
-    );
+    // Carry where to put them back afterwards. Why they landed here (an expired session) is
+    // left by sessionExpiry for the sign-in page.
+    return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
   }
 
   if (status === 'database') {

@@ -124,6 +124,9 @@ export const fakeDb = {
   },
 };
 
+/** Same as the real `@/lib/supabase` export. */
+export const AUTH_STORAGE_KEY = 'xo-auth';
+
 /** The fake client. Exported as `supabase` so it can replace `@/lib/supabase` directly. */
 export const supabase = {
   from: (table: string) => queryBuilder(table),

@@ -144,7 +144,8 @@ export function LoginPage() {
     if (expiryAnnounced.current) return;
     // Either the guard redirected here, or some other request tripped the global
     // handler and the session simply vanished underneath the user.
-    const expired = navigationState?.sessionExpired || consumeSessionExpiredFlag();
+    // The flag is read first so it is always cleared, or it would announce an expiry again later.
+    const expired = consumeSessionExpiredFlag() || navigationState?.sessionExpired;
     if (expired) {
       expiryAnnounced.current = true;
       toast.info(t('auth.sessionExpired'));

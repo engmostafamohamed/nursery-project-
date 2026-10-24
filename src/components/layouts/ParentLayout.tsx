@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
 
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { HelpAiBundle } from '@/components/help/HelpAiBundle';
@@ -22,6 +21,7 @@ import { parentNurseryLabel, useParentNursery } from '@/hooks/useParentNursery';
 import { useParentInAppNotifications } from '@/hooks/useParentInAppNotifications';
 import { useNotificationsCenter } from '@/hooks/useNotificationsCenter';
 import { useParentPushNotifications } from '@/hooks/useParentPushNotifications';
+import { endSession } from '@/lib/sessionExpiry';
 import { supabase } from '@/lib/supabase';
 import { isHelpPanelEnabled } from '@/lib/helpAiPreferences';
 import { cn } from '@/lib/utils';
@@ -109,11 +109,8 @@ export function ParentLayout() {
   const { showPrompt, enablePush, dismissPrompt } = useParentPushNotifications(user?.id);
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast.error(t('common.logoutError'));
-      return;
-    }
+    // Always ends the session here, even when the server cannot be reached.
+    await endSession('user');
     setMoreOpen(false);
     navigate('/login', { replace: true });
   };

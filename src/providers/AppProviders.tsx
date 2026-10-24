@@ -6,7 +6,11 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { AuthProvider } from '@/providers/AuthProvider';
 import { DatabaseConnectionGate } from '@/providers/DatabaseConnectionGate';
 import { RealtimeQuerySync } from '@/providers/RealtimeQuerySync';
+import { isRefreshFailure } from '@/lib/sessionFetchGuard';
 import { handleFailedRequest } from '@/lib/sessionExpiry';
+
+/** One retry, except for a session whose token could not be refreshed: that goes to sign-in. */
+const retryOnce = (failureCount: number, error: unknown) => failureCount < 1 && !isRefreshFailure(error);
 
 const queryClient = new QueryClient({
   // Any request may be the one that finds the session dead, not just the profile
@@ -15,7 +19,7 @@ const queryClient = new QueryClient({
   mutationCache: new MutationCache({ onError: handleFailedRequest }),
   defaultOptions: {
     queries: {
-      retry: 1,
+      retry: retryOnce,
       refetchOnWindowFocus: false,
       refetchOnReconnect: true,
       networkMode: 'online',
@@ -25,7 +29,7 @@ const queryClient = new QueryClient({
       gcTime: 10 * 60 * 1000,
     },
     mutations: {
-      retry: 1,
+      retry: retryOnce,
       networkMode: 'offlineFirst',
     },
   },
