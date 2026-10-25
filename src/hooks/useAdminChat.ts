@@ -44,6 +44,9 @@ export type ChatDirectoryEntry = {
   name_ar: string | null;
   name_en: string | null;
   role: string;
+  /** For a parent: their children's names (only those in a teacher's classes, for a teacher). */
+  context_ar?: string | null;
+  context_en?: string | null;
 };
 
 const conversationsKey = (userId: string | undefined) => ['admin-chat-conversations', userId] as const;

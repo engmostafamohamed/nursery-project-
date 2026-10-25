@@ -107,6 +107,7 @@ export function AppRouter() {
               <Route path="packages" element={<P.AdminPackagesPage />} />
               <Route path="deals" element={<P.AdminDealsPage />} />
               <Route path="reports" element={<P.AdminReportsPage />} />
+              <Route path="daily-reports" element={<P.DailyReportRatesPage />} />
               <Route path="reports/quarterly" element={<P.AdminReportsPage />} />
               <Route path="staff/onboarding" element={<P.AdminStaffOnboardingPage />} />
               <Route path="staff/new" element={<Navigate to="/admin/staff/onboarding" replace />} />
@@ -133,6 +134,7 @@ export function AppRouter() {
               <Route path="settings/positions" element={<P.AdminPositionsPage />} />
               <Route path="settings/features" element={<P.AdminFeaturesPage />} />
               <Route path="settings/roles" element={<P.AdminRolesPage />} />
+              <Route path="settings/team" element={<P.ClassTeamPage />} />
             </Route>
           </Route>
 
@@ -181,12 +183,15 @@ export function AppRouter() {
               <Route path="attendance" element={<P.TeacherAttendancePage />} />
               <Route path="daily-reports" element={<P.TeacherDailyReportPage />} />
               <Route path="daily-reports/:childId/:date" element={<P.TeacherDailyReportEditorPage />} />
+              <Route path="report-rates" element={<P.DailyReportRatesPage />} />
               <Route path="reports" element={<Navigate to="/teacher/daily-reports" replace />} />
               <Route path="reports/create" element={<Navigate to="/teacher/daily-reports" replace />} />
               <Route path="milestones" element={<P.TeacherMilestonesListPage />} />
               <Route path="milestones/record" element={<P.TeacherMilestoneRecordPage />} />
               <Route path="inbox" element={<P.TeacherInboxPage />} />
               <Route path="messages" element={<P.TeacherMessagesPage />} />
+              <Route path="family-messages" element={<P.TeacherFamilyMessagesPage />} />
+              <Route path="team" element={<P.ClassTeamPage />} />
               <Route path="chat" element={<P.AdminChatPage />} />
               <Route path="media" element={<P.TeacherMediaListPage />} />
               <Route path="media/upload" element={<P.TeacherMediaUploadPage />} />
@@ -272,6 +277,7 @@ export function AppRouter() {
               <Route path="nursery/reminders" element={<P.RemindersPage />} />
               <Route path="nursery/packages" element={<P.AdminPackagesPage />} />
               <Route path="nursery/reports" element={<P.AdminReportsPage />} />
+              <Route path="nursery/daily-reports" element={<P.DailyReportRatesPage />} />
               <Route path="nursery/reports/quarterly" element={<P.AdminReportsPage />} />
               <Route path="nursery/staff/onboarding" element={<P.AdminStaffOnboardingPage />} />
               <Route path="nursery/staff/new" element={<Navigate to="/xo-admin/nursery/staff/onboarding" replace />} />
@@ -297,6 +303,7 @@ export function AppRouter() {
               <Route path="nursery/settings/positions" element={<P.AdminPositionsPage />} />
               <Route path="nursery/settings/features" element={<P.AdminFeaturesPage />} />
               <Route path="nursery/settings/roles" element={<P.AdminRolesPage />} />
+              <Route path="nursery/settings/team" element={<P.ClassTeamPage />} />
             </Route>
           </Route>
 

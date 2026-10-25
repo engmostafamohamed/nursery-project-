@@ -57,6 +57,7 @@ export type FeatureKey =
   | 'newsfeed'
   | 'kids_applications'
   | 'staff'
+  | 'class_team'
   | 'classes'
   | 'admissions'
   | 'permissions'

@@ -1,355 +1,510 @@
-import { useMemo } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
-import { Badge } from '@/components/ui/badge';
+import { ReportDueBanner } from '@/components/daily-reports/ReportDueBanner';
+import { ReportRateCard } from '@/components/daily-reports/ReportRateCard';
+import { Button } from '@/components/ui/button';
+import {
+  DataTable,
+  IconAction,
+  StatusPill,
+  TableCard,
+  TableEmpty,
+  TableLoading,
+  TablePagination,
+  TBody,
+  Td,
+  Th,
+  THead,
+  Tr,
+} from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { FilterBar, SearchInput } from '@/components/ui/FilterBar';
+import { FilterChips } from '@/components/ui/FilterChips';
+import { FilterField } from '@/components/ui/FilterField';
+import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { StatTile } from '@/components/ui/StatTile';
 import { useAuthSession } from '@/hooks/useAuthSession';
-import { useNurseryLanguagePref, type NurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
+import { useMyDailyReports } from '@/hooks/useDailyReportWorkflow';
+import { useMyClassChildren, useMyClasses } from '@/hooks/useFamilyMessages';
+import { usePagination } from '@/hooks/usePagination';
+import { useCan } from '@/hooks/usePermissions';
+import { reportDay, stageOf } from '@/lib/dailyReport';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { classStaffBadgeVariant, classStaffRoleKey } from '@/lib/classStaff';
 import { getNurseryCalendarDateString } from '@/lib/nurseryDay';
 import { supabase } from '@/lib/supabase';
-import type { ClassStaffRole } from '@/types/tables';
+import {
+  classDay,
+  filterClassChildren,
+  inState,
+  mainParent,
+  NO_CHILDREN_FILTERS,
+  type ChildrenFilters,
+  type ChildState,
+  type ClassPlace,
+  type MyClassChild,
+} from '@/lib/teacherClasses';
+import { cn, getUserInitials } from '@/lib/utils';
 
-type ClassRow = { id: string; name_ar: string | null; name_en: string | null; role: ClassStaffRole };
-type ChildRow = {
-  id: string;
-  class_id: string | null;
-  full_name_ar: string | null;
-  full_name_en: string | null;
-  avatar_url: string | null;
-};
-type AttRow = {
-  child_id: string;
-  check_in: string | null;
-  check_out: string | null;
-  attendance_date: string;
-};
-type MediaRow = {
-  id: string;
-  thumbnail_url: string | null;
-  caption: string | null;
-  activity_type: string | null;
-  uploaded_at: string;
-};
+type MediaRow = { id: string; thumbnail_url: string | null; caption: string | null; uploaded_at: string };
+type T = ReturnType<typeof useTranslation>['t'];
 
-function localized(ar: string | null, en: string | null, pref: NurseryLanguagePref): string {
-  const a = (ar ?? '').trim();
-  const e = (en ?? '').trim();
-  if (pref === 'ar') return a || e || '—';
-  if (pref === 'en') return e || a || '—';
-  if (a && e) return `${a} / ${e}`;
-  return a || e || '—';
+const STATES: ChildState[] = ['all', 'here', 'picked_up', 'absent', 'extra_now'];
+
+function placeName(t: T, place: ClassPlace): string {
+  if (place === 'lead') return t('teacher.dashboard.places.lead');
+  if (place === 'assistant') return t('teacher.dashboard.places.assistant');
+  return t('teacher.dashboard.places.substitute');
 }
 
+function stateName(t: T, state: ChildState): string {
+  switch (state) {
+    case 'all':
+      return t('teacher.dashboard.states.all');
+    case 'here':
+      return t('teacher.dashboard.states.here');
+    case 'picked_up':
+      return t('teacher.dashboard.states.picked_up');
+    case 'absent':
+      return t('teacher.dashboard.states.absent');
+    case 'extra_now':
+      return t('teacher.dashboard.states.extra_now');
+  }
+}
+
+/**
+ * The teacher's day: their classes and team, today's numbers, the absent children, and every child
+ * of their classes with today's state and family, with one-click chat, message and photo.
+ */
 export function TeacherHomePage() {
   const { t, i18n } = useTranslation();
+  const lang = i18n.language;
+  const locale = lang.startsWith('ar') ? 'ar-EG' : 'en-GB';
+  const navigate = useNavigate();
   const { user } = useAuthSession();
   const { data: profile } = useUserProfile(user?.id);
-  const { data: languagePref = 'both' } = useNurseryLanguagePref(profile?.nursery_id);
-  const today = getNurseryCalendarDateString();
+  const classes = useMyClasses(user?.id);
+  const childrenQuery = useMyClassChildren(user?.id);
+  const [today] = useState(() => getNurseryCalendarDateString());
+  const [filters, setFilters] = useState<ChildrenFilters>(NO_CHILDREN_FILTERS);
+  const tableRef = useRef<HTMLDivElement>(null);
+  // Today's daily reports, and the nursery's send rate for the head of teachers.
+  const reports = useMyDailyReports(user?.id, null);
+  const canSeeRates = useCan('class_team');
+  const reportRows = reports.data ?? [];
+  const reportTally = reportDay(reportRows);
+  const nextReport = reportRows.find((r) => stageOf(r) === 'not_started' || stageOf(r) === 'in_progress');
 
-  // Classes the teacher is on staff of.
-  const classesQuery = useQuery({
-    queryKey: ['teacher-home-classes', user?.id],
-    queryFn: async (): Promise<ClassRow[]> => {
-      if (!user?.id) return [];
-      const memberships = await supabase
-        .from('class_staff')
-        .select('class_id, role')
-        .eq('user_id', user.id);
-      if (memberships.error) throw memberships.error;
-      const memberRows = (memberships.data ?? []) as { class_id: string; role: ClassStaffRole }[];
-      if (!memberRows.length) return [];
-      const roleByClass = new Map(memberRows.map((m) => [m.class_id, m.role]));
-      const classes = await supabase
-        .from('classes')
-        .select('id, name_ar, name_en')
-        .in('id', [...roleByClass.keys()])
-        .is('deleted_at', null);
-      if (classes.error) throw classes.error;
-      return ((classes.data ?? []) as Omit<ClassRow, 'role'>[]).map((c) => ({
-        ...c,
-        role: roleByClass.get(c.id) ?? 'assistant',
-      }));
-    },
-    enabled: Boolean(user?.id),
-  });
+  const all = useMemo(() => childrenQuery.data ?? [], [childrenQuery.data]);
+  const day = classDay(all);
+  const rows = useMemo(() => filterClassChildren(all, filters), [all, filters]);
+  const pager = usePagination(rows, 20, JSON.stringify(filters));
+  const absent = useMemo(() => all.filter((c) => inState(c, 'absent')), [all]);
 
-  const classIds = useMemo(
-    () => (classesQuery.data ?? []).map((c) => c.id),
-    [classesQuery.data],
-  );
-
-  // Children in those classes.
-  const childrenQuery = useQuery({
-    queryKey: ['teacher-home-children', classIds],
-    queryFn: async (): Promise<ChildRow[]> => {
-      if (!classIds.length) return [];
-      const res = await supabase
-        .from('children')
-        .select('id, class_id, full_name_ar, full_name_en, avatar_url')
-        .in('class_id', classIds)
-        .eq('status', 'active')
-        .order('full_name_en', { ascending: true });
-      if (res.error) throw res.error;
-      return (res.data ?? []) as ChildRow[];
-    },
-    enabled: classIds.length > 0,
-  });
-
-  const childIds = useMemo(
-    () => (childrenQuery.data ?? []).map((c) => c.id),
-    [childrenQuery.data],
-  );
-
-  // Today's attendance for those children.
-  const attendanceQuery = useQuery({
-    queryKey: ['teacher-home-attendance', childIds, today],
-    queryFn: async (): Promise<AttRow[]> => {
-      if (!childIds.length) return [];
-      const res = await supabase
-        .from('attendance_records')
-        .select('child_id, check_in, check_out, attendance_date')
-        .eq('attendance_date', today)
-        .in('child_id', childIds);
-      if (res.error) throw res.error;
-      return (res.data ?? []) as AttRow[];
-    },
-    enabled: childIds.length > 0,
-  });
-
-  const attIndex = useMemo(() => {
-    const map = new Map<string, AttRow>();
-    for (const r of attendanceQuery.data ?? []) map.set(r.child_id, r);
-    return map;
-  }, [attendanceQuery.data]);
-
-  const stats = useMemo(() => {
-    let stillIn = 0;
-    let leftOut = 0;
-    let notArrived = 0;
-    for (const c of childrenQuery.data ?? []) {
-      const r = attIndex.get(c.id);
-      if (!r || !r.check_in) notArrived += 1;
-      else if (r.check_out) leftOut += 1;
-      else stillIn += 1;
-    }
-    return { stillIn, leftOut, notArrived, total: (childrenQuery.data ?? []).length };
-  }, [attIndex, childrenQuery.data]);
-
-  // Today's photos uploaded by this teacher.
+  // Today's photos this teacher took.
   const mediaQuery = useQuery({
     queryKey: ['teacher-home-media', user?.id, today],
     queryFn: async (): Promise<MediaRow[]> => {
-      if (!user?.id) return [];
       const res = await supabase
         .from('media')
-        .select('id, thumbnail_url, caption, activity_type, uploaded_at')
-        .eq('uploaded_by', user.id)
+        .select('id, thumbnail_url, caption, uploaded_at')
+        .eq('uploaded_by', user!.id)
         .eq('captured_at', today)
-        .order('uploaded_at', { ascending: false });
+        .order('uploaded_at', { ascending: false })
+        .limit(8);
       if (res.error) throw res.error;
       return (res.data ?? []) as MediaRow[];
     },
     enabled: Boolean(user?.id),
   });
 
-  const formatTime = useMemo(() => {
-    const locale = i18n.language === 'ar' ? 'ar-EG' : 'en-GB';
-    return (iso: string | null) =>
-      iso
-        ? new Date(iso).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: true })
-        : '—';
-  }, [i18n.language]);
+  const name = (row: { name_ar?: string | null; name_en?: string | null; full_name_ar?: string | null; full_name_en?: string | null }) => {
+    const ar = row.full_name_ar ?? row.name_ar ?? null;
+    const en = row.full_name_en ?? row.name_en ?? null;
+    return (lang.startsWith('ar') ? ar || en : en || ar) || '—';
+  };
+  const time = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit', hour12: true }) : '—');
+  const showState = (state: ChildState) => {
+    setFilters((f) => ({ ...f, state }));
+    tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  const chatWith = (child: MyClassChild) => {
+    const parent = mainParent(child);
+    if (parent) navigate(`/teacher/chat?with=${parent.id}`);
+  };
 
-  const teacherName = profile?.name_en || profile?.name_ar || t('teacher.home.fallbackName');
-  const showSkeleton = classesQuery.isLoading || childrenQuery.isLoading || attendanceQuery.isLoading;
+  const teacherName = (lang.startsWith('ar') ? profile?.name_ar || profile?.name_en : profile?.name_en || profile?.name_ar) || t('teacher.home.fallbackName');
 
-  if (showSkeleton) {
+  if (classes.isPending || childrenQuery.isPending) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-48 w-full" />
+        <Skeleton className="h-28 w-full rounded-xl" />
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">{[1, 2, 3, 4, 5].map((k) => <Skeleton key={k} className="h-24 rounded-xl" />)}</div>
+        <Skeleton className="h-72 w-full rounded-xl" />
       </div>
     );
   }
 
-  if (classIds.length === 0) {
-    return (
-      <EmptyState
-        icon="school"
-        title={t('teacher.home.noClassesTitle')}
-        description={t('teacher.home.noClassesDescription')}
-      />
-    );
+  if (!(classes.data ?? []).length) {
+    return <EmptyState icon="school" title={t('teacher.home.noClassesTitle')} description={t('teacher.home.noClassesDescription')} />;
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="font-headline text-2xl font-extrabold text-on-surface">
-          {t('teacher.home.greeting', { name: teacherName })}
-        </h1>
-        <p className="mt-1 text-sm text-on-surface-variant">{t('teacher.home.subtitle')}</p>
+    <div className="space-y-5 pb-8">
+      {/* Greeting and the day's shortcuts */}
+      <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
+        <div className="flex flex-col gap-4 bg-surface-container-lowest px-4 py-5 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md">
+              <MaterialSymbol name="waving_hand" className="text-2xl" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase text-primary">
+                {new Date(`${today}T12:00:00`).toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' })}
+              </p>
+              <h1 className="font-headline text-2xl font-extrabold text-on-surface">{t('teacher.home.greeting', { name: teacherName })}</h1>
+              <p className="text-sm text-on-surface-variant">{t('teacher.dashboard.subtitle')}</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild>
+              <Link to="/teacher/family-messages">
+                <MaterialSymbol name="outgoing_mail" className="me-2 text-base" />
+                {t('teacher.dashboard.actions.message')}
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/teacher/media/upload">
+                <MaterialSymbol name="add_a_photo" className="me-2 text-base" />
+                {t('teacher.dashboard.actions.photos')}
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/teacher/chat">
+                <MaterialSymbol name="forum" className="me-2 text-base" />
+                {t('teacher.dashboard.actions.chat')}
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/teacher/attendance">
+                <MaterialSymbol name="fact_check" className="me-2 text-base" />
+                {t('teacher.dashboard.actions.attendance')}
+              </Link>
+            </Button>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 sm:p-5 xl:grid-cols-5">
+          <StatTile className="xl:flex-col xl:items-start xl:gap-2" icon="groups" label={t('teacher.dashboard.tiles.children')} value={day.children} onClick={() => showState('all')} active={filters.state === 'all'} />
+          <StatTile className="xl:flex-col xl:items-start xl:gap-2" icon="home_work" label={t('teacher.dashboard.tiles.here')} value={day.here} tone="primary" onClick={() => showState('here')} active={filters.state === 'here'} />
+          <StatTile className="xl:flex-col xl:items-start xl:gap-2" icon="logout" label={t('teacher.dashboard.tiles.pickedUp')} value={day.pickedUp} tone="success" onClick={() => showState('picked_up')} active={filters.state === 'picked_up'} />
+          <StatTile
+            className="xl:flex-col xl:items-start xl:gap-2"
+            icon="event_busy"
+            label={t('teacher.dashboard.tiles.absent')}
+            value={day.absent}
+            tone={day.absent > 0 ? 'error' : 'neutral'}
+            helper={day.withNotice > 0 ? t('teacher.dashboard.tiles.withNotice', { count: day.withNotice }) : undefined}
+            onClick={() => showState('absent')}
+            active={filters.state === 'absent'}
+          />
+          <StatTile
+            className="xl:flex-col xl:items-start xl:gap-2"
+            icon="schedule"
+            label={t('teacher.dashboard.tiles.extraNow')}
+            value={day.inExtraNow}
+            tone={day.inExtraNow > 0 ? 'error' : 'neutral'}
+            helper={t('teacher.dashboard.tiles.extraNowHint')}
+            onClick={() => showState('extra_now')}
+            active={filters.state === 'extra_now'}
+          />
+        </div>
+      </section>
+
+      {/* The day's reports: an alarm as the end of the day nears */}
+      {reportRows.length || canSeeRates ? (
+        <div className={cn('grid gap-5', canSeeRates && reportRows.length && 'xl:grid-cols-3')}>
+          {reportRows.length ? (
+            <ReportDueBanner
+              className={cn(canSeeRates && 'xl:col-span-2')}
+              day={reportTally}
+              dueAt={reportRows[0]?.due_at ?? null}
+              actions={
+                <>
+                  <Button asChild>
+                    <Link to="/teacher/daily-reports">
+                      <MaterialSymbol name="description" className="me-1 text-base" />
+                      {t('dailyReport.banner.open')}
+                    </Link>
+                  </Button>
+                  {nextReport ? (
+                    <Button asChild variant="outline" className="bg-surface text-on-surface">
+                      <Link to={`/teacher/daily-reports/${nextReport.child_id}/${nextReport.day}`}>
+                        <MaterialSymbol name="edit_note" className="me-1 text-base" />
+                        {t('dailyReport.banner.fillNext')}
+                      </Link>
+                    </Button>
+                  ) : null}
+                </>
+              }
+            />
+          ) : null}
+          {canSeeRates ? <ReportRateCard nurseryId={profile?.nursery_id} to="/teacher/report-rates" /> : null}
+        </div>
+      ) : null}
+
+      <div className="grid gap-5 xl:grid-cols-3">
+        {/* My classes and their team */}
+        <section className="space-y-3 xl:col-span-2">
+          <h2 className="flex items-center gap-2 text-base font-semibold text-on-surface">
+            <MaterialSymbol name="school" className="text-primary" />
+            {t('teacher.dashboard.myClasses')}
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {(classes.data ?? []).map((cls) => {
+              const kids = all.filter((c) => c.class_id === cls.class_id);
+              const present = kids.filter((c) => c.day_status === 'in_nursery' || c.day_status === 'picked_up').length;
+              return (
+                <article key={cls.class_id} className="space-y-3 rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
+                  <header className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h3 className="truncate font-semibold text-on-surface">{name(cls)}</h3>
+                      <p className="text-xs text-on-surface-variant">{t('teacher.dashboard.classToday', { present, total: cls.children_count })}</p>
+                    </div>
+                    <StatusPill tone={cls.my_role === 'lead' ? 'primary' : 'neutral'}>{placeName(t, cls.my_role)}</StatusPill>
+                  </header>
+                  <ul className="flex flex-wrap gap-1.5">
+                    {cls.team.map((member) => (
+                      <li key={member.user_id} className="inline-flex items-center gap-1.5 rounded-full bg-surface-container-lowest px-2.5 py-1 text-xs text-on-surface">
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">
+                          {getUserInitials(name(member), null)}
+                        </span>
+                        {name(member)}
+                        <span className="text-on-surface-variant">· {placeName(t, member.role)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="flex flex-wrap gap-2">
+                    <Button asChild size="sm" variant="outline">
+                      <Link to={`/teacher/family-messages?class=${cls.class_id}`}>
+                        <MaterialSymbol name="outgoing_mail" className="me-1 text-base" />
+                        {t('teacher.dashboard.messageClass')}
+                      </Link>
+                    </Button>
+                    <Button asChild size="sm" variant="ghost">
+                      <Link to={`/teacher/media/upload?class=${cls.class_id}`}>
+                        <MaterialSymbol name="add_a_photo" className="me-1 text-base" />
+                        {t('teacher.dashboard.actions.photos')}
+                      </Link>
+                    </Button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Today's absent children */}
+        <section className="space-y-3">
+          <h2 className="flex items-center gap-2 text-base font-semibold text-on-surface">
+            <MaterialSymbol name="event_busy" className="text-error" />
+            {t('teacher.dashboard.absentToday')}
+            <span className="rounded-full bg-surface-high px-2 py-0.5 text-xs font-medium tabular-nums text-on-surface-variant">{absent.length}</span>
+          </h2>
+          <div className="rounded-xl border border-outline-variant bg-surface shadow-sm">
+            {absent.length ? (
+              <ul className="max-h-80 divide-y divide-outline-variant overflow-y-auto">
+                {absent.map((child) => (
+                  <li key={child.child_id} className="flex items-center gap-3 px-4 py-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-on-surface">{name(child)}</p>
+                      <p className="truncate text-xs text-on-surface-variant">
+                        {child.day_status === 'excused'
+                          ? `${t('teacher.dashboard.withNotice')}${child.absence_reason ? ` · ${t(`attendance.absence.reasons.${child.absence_reason}`, { defaultValue: child.absence_reason })}` : ''}`
+                          : t('teacher.dashboard.noNotice')}
+                      </p>
+                    </div>
+                    <IconAction icon="forum" label={t('teacher.dashboard.row.chat')} onClick={() => chatWith(child)} disabled={!mainParent(child)} />
+                    <IconAction icon="outgoing_mail" label={t('teacher.dashboard.row.message')} to={`/teacher/family-messages?child=${child.child_id}`} />
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="flex items-center gap-2 px-4 py-6 text-sm text-on-surface-variant">
+                <MaterialSymbol name="verified" className="text-success" />
+                {t('teacher.dashboard.noAbsent')}
+              </p>
+            )}
+          </div>
+        </section>
       </div>
 
-      <section className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-on-surface">
-            {t('teacher.home.classesTitle')}
-          </h2>
-          <Link to="/teacher/classes" className="text-sm font-medium text-primary hover:underline">
-            {t('teacher.home.viewAll')}
-          </Link>
-        </div>
-        <div className="grid gap-2 md:grid-cols-2">
-          {(classesQuery.data ?? []).map((c) => {
-            const count = (childrenQuery.data ?? []).filter((ch) => ch.class_id === c.id).length;
-            return (
-              <Link
-                key={c.id}
-                to="/teacher/classes"
-                className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 transition-colors hover:bg-surface-container-low"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold text-on-surface">
-                    {localized(c.name_ar, c.name_en, languagePref)}
-                  </p>
-                  <Badge variant={classStaffBadgeVariant(c.role)} className="shrink-0 text-[10px]">
-                    {t(classStaffRoleKey(c.role))}
-                  </Badge>
-                </div>
-                <p className="mt-1 text-xs text-on-surface-variant">
-                  {t('teacher.home.studentsCount', { count })}
-                </p>
-              </Link>
-            );
-          })}
-        </div>
-      </section>
+      {/* Every child of my classes */}
+      <div ref={tableRef}>
+        <TableCard
+          title={t('teacher.dashboard.childrenTitle')}
+          count={t('teacher.dashboard.childrenCount', { count: rows.length })}
+          description={t('teacher.dashboard.childrenHint')}
+          filters={
+            <div className="space-y-3">
+              <FilterBar onClear={() => setFilters(NO_CHILDREN_FILTERS)} canClear={JSON.stringify(filters) !== JSON.stringify(NO_CHILDREN_FILTERS)}>
+                <FilterField label={t('teacher.dashboard.filters.search')} className="sm:flex-[2]">
+                  <SearchInput value={filters.search} onChange={(search) => setFilters((f) => ({ ...f, search }))} placeholder={t('teacher.dashboard.filters.searchPlaceholder')} />
+                </FilterField>
+                {(classes.data ?? []).length > 1 ? (
+                  <FilterField label={t('teacher.dashboard.filters.class')}>
+                    <Select value={filters.classId} onChange={(e) => setFilters((f) => ({ ...f, classId: e.target.value }))}>
+                      <option value="all">{t('teacher.dashboard.filters.allClasses')}</option>
+                      {(classes.data ?? []).map((cls) => (
+                        <option key={cls.class_id} value={cls.class_id}>{name(cls)}</option>
+                      ))}
+                    </Select>
+                  </FilterField>
+                ) : null}
+              </FilterBar>
+              <FilterChips
+                value={filters.state}
+                onChange={(state) => setFilters((f) => ({ ...f, state }))}
+                label={t('teacher.dashboard.filters.state')}
+                options={STATES.map((state) => ({ value: state, label: stateName(t, state), count: all.filter((c) => inState(c, state)).length }))}
+              />
+            </div>
+          }
+          pagination={rows.length ? <TablePagination pager={pager} /> : null}
+        >
+          {childrenQuery.isError ? (
+            <TableEmpty icon="error" title={t('teacher.dashboard.loadError')} />
+          ) : childrenQuery.isPending ? (
+            <TableLoading />
+          ) : !rows.length ? (
+            <TableEmpty icon="group_off" title={all.length ? t('teacher.dashboard.noMatch') : t('teacher.dashboard.noChildren')} />
+          ) : (
+            <DataTable minWidth={900}>
+              <THead>
+                <Th>{t('teacher.dashboard.columns.child')}</Th>
+                <Th>{t('teacher.dashboard.columns.class')}</Th>
+                <Th>{t('teacher.dashboard.columns.today')}</Th>
+                <Th>{t('teacher.dashboard.columns.family')}</Th>
+                <Th align="end">{t('teacher.dashboard.columns.actions')}</Th>
+              </THead>
+              <TBody>
+                {pager.pageItems.map((child) => {
+                  const parent = mainParent(child);
+                  return (
+                    <Tr key={child.child_id}>
+                      <Td>
+                        <div className="flex items-center gap-3">
+                          {child.avatar_url ? (
+                            <img src={child.avatar_url} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" loading="lazy" />
+                          ) : (
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                              {getUserInitials(name(child), null)}
+                            </span>
+                          )}
+                          <div className="min-w-0">
+                            <p className="truncate font-medium text-on-surface">{name(child)}</p>
+                            {child.child_code ? <p className="font-mono text-xs text-on-surface-variant" dir="ltr">{child.child_code}</p> : null}
+                          </div>
+                        </div>
+                      </Td>
+                      <Td>
+                        <p>{lang.startsWith('ar') ? child.class_name_ar || child.class_name_en : child.class_name_en || child.class_name_ar}</p>
+                        <p className="text-xs text-on-surface-variant">{placeName(t, child.my_role)}</p>
+                      </Td>
+                      <Td>
+                        <TodayState child={child} time={time} />
+                      </Td>
+                      <Td>
+                        {parent ? (
+                          <div className="min-w-0">
+                            <p className="truncate">{name(parent)}</p>
+                            {parent.phone ? (
+                              <a href={`tel:${parent.phone}`} className="text-xs font-medium text-primary hover:underline" dir="ltr">
+                                {parent.phone}
+                              </a>
+                            ) : null}
+                            {child.parents.length > 1 ? <p className="text-xs text-on-surface-variant">{t('teacher.dashboard.moreParents', { count: child.parents.length - 1 })}</p> : null}
+                          </div>
+                        ) : (
+                          <span className="text-on-surface-variant">{t('teacher.dashboard.noParents')}</span>
+                        )}
+                      </Td>
+                      <Td align="end">
+                        <div className="inline-flex gap-1">
+                          <IconAction icon="forum" label={t('teacher.dashboard.row.chat')} onClick={() => chatWith(child)} disabled={!parent} />
+                          <IconAction icon="outgoing_mail" label={t('teacher.dashboard.row.message')} to={`/teacher/family-messages?child=${child.child_id}`} />
+                          <IconAction icon="add_a_photo" label={t('teacher.dashboard.row.photo')} to={`/teacher/media/upload?class=${child.class_id}&child=${child.child_id}`} />
+                        </div>
+                      </Td>
+                    </Tr>
+                  );
+                })}
+              </TBody>
+            </DataTable>
+          )}
+        </TableCard>
+      </div>
 
-      <section className="space-y-2">
+      {/* Today's photos */}
+      <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-on-surface">
-            {t('teacher.home.attendanceTitle')}
-          </h2>
-          <Link to="/teacher/attendance" className="text-sm font-medium text-primary hover:underline">
-            {t('teacher.home.openAttendance')}
-          </Link>
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-3">
-            <p className="text-xs text-on-surface-variant">{t('teacher.home.stillIn')}</p>
-            <p className="mt-1 text-2xl font-extrabold text-primary">{stats.stillIn}</p>
-          </div>
-          <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-3">
-            <p className="text-xs text-on-surface-variant">{t('teacher.home.leftOut')}</p>
-            <p className="mt-1 text-2xl font-extrabold text-on-surface">{stats.leftOut}</p>
-          </div>
-          <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-3">
-            <p className="text-xs text-on-surface-variant">{t('teacher.home.notArrived')}</p>
-            <p className="mt-1 text-2xl font-extrabold text-on-surface-variant">
-              {stats.notArrived}
-            </p>
-          </div>
-        </div>
-        <div className="space-y-2 rounded-2xl border border-outline-variant bg-surface-container-lowest p-3">
-          {(childrenQuery.data ?? []).slice(0, 8).map((c) => {
-            const r = attIndex.get(c.id);
-            const status = !r || !r.check_in ? 'not_arrived' : r.check_out ? 'left' : 'in';
-            const name = localized(c.full_name_ar, c.full_name_en, languagePref);
-            return (
-              <div key={c.id} className="flex items-center gap-3">
-                <div className="h-8 w-8 shrink-0 rounded-full bg-secondary-fixed text-center text-xs font-semibold leading-8 text-primary">
-                  {name.slice(0, 1)}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm text-on-surface">{name}</p>
-                  <p className="text-xs text-on-surface-variant">
-                    {t('teacher.home.checkIn')}: {formatTime(r?.check_in ?? null)}
-                    {' · '}
-                    {t('teacher.home.checkOut')}: {formatTime(r?.check_out ?? null)}
-                  </p>
-                </div>
-                <Badge
-                  className={
-                    status === 'in'
-                      ? 'border-primary bg-primary/10 text-primary text-[10px]'
-                      : status === 'left'
-                        ? 'text-[10px]'
-                        : 'border-outline-variant text-on-surface-variant text-[10px]'
-                  }
-                >
-                  {t(`teacher.home.statuses.${status}`)}
-                </Badge>
-              </div>
-            );
-          })}
-          {(childrenQuery.data ?? []).length > 8 ? (
-            <p className="text-center text-xs text-on-surface-variant">
-              {t('teacher.home.moreStudents', {
-                count: (childrenQuery.data ?? []).length - 8,
-              })}
-            </p>
-          ) : null}
-        </div>
-      </section>
-
-      <section className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-on-surface">
+          <h2 className="flex items-center gap-2 text-base font-semibold text-on-surface">
+            <MaterialSymbol name="photo_library" className="text-primary" />
             {t('teacher.home.mediaTitle')}
           </h2>
           <Link to="/teacher/media" className="text-sm font-medium text-primary hover:underline">
             {t('teacher.home.openMedia')}
           </Link>
         </div>
-        {(mediaQuery.data ?? []).length === 0 ? (
-          <Link
-            to="/teacher/media/upload"
-            className="block rounded-2xl border border-dashed border-outline-variant bg-surface-container-lowest p-6 text-center text-sm text-on-surface-variant transition-colors hover:bg-surface-container-low"
-          >
-            {t('teacher.home.noMediaToday')}
-          </Link>
-        ) : (
-          <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+        {(mediaQuery.data ?? []).length ? (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
             {(mediaQuery.data ?? []).map((m) => (
-              <div
-                key={m.id}
-                className="overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest"
-              >
-                <div className="aspect-[4/3] w-full bg-surface-container">
-                  {m.thumbnail_url ? (
-                    <img
-                      src={m.thumbnail_url}
-                      alt=""
-                      className="h-full w-full object-cover"
-                      loading="lazy"
-                    />
-                  ) : null}
-                </div>
-                <div className="space-y-1 p-2">
-                  <p className="line-clamp-2 text-xs text-on-surface">
-                    {m.caption ?? '—'}
-                  </p>
-                  <p className="text-[10px] text-on-surface-variant">
-                    {m.activity_type
-                      ? t(`media.activity.${m.activity_type}`, { defaultValue: m.activity_type })
-                      : ''}
-                    {m.activity_type ? ' · ' : ''}
-                    {formatTime(m.uploaded_at)}
-                  </p>
+              <div key={m.id} className="overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest">
+                <div className="aspect-square bg-surface-container">
+                  {m.thumbnail_url ? <img src={m.thumbnail_url} alt={m.caption ?? ''} className="h-full w-full object-cover" loading="lazy" /> : null}
                 </div>
               </div>
             ))}
           </div>
+        ) : (
+          <Link
+            to="/teacher/media/upload"
+            className="block rounded-xl border border-dashed border-outline-variant bg-surface-container-lowest p-6 text-center text-sm text-on-surface-variant transition-colors hover:bg-surface-container-low"
+          >
+            {t('teacher.home.noMediaToday')}
+          </Link>
         )}
       </section>
+    </div>
+  );
+}
+
+function TodayState({ child, time }: { child: MyClassChild; time: (iso: string | null) => string }) {
+  const { t } = useTranslation();
+  const pill = child.late_now ? (
+    <StatusPill tone="error" icon="schedule">{t('teacher.dashboard.states.extra_now')}</StatusPill>
+  ) : child.day_status === 'in_nursery' ? (
+    <StatusPill tone="primary" icon="home_work">{t('teacher.dashboard.states.here')}</StatusPill>
+  ) : child.day_status === 'picked_up' ? (
+    <StatusPill tone="success" icon="logout">{t('teacher.dashboard.states.picked_up')}</StatusPill>
+  ) : child.day_status === 'excused' ? (
+    <StatusPill tone="warning" icon="mark_email_read">{t('teacher.dashboard.withNotice')}</StatusPill>
+  ) : child.day_status === 'absent' ? (
+    <StatusPill tone="error" icon="event_busy">{t('teacher.dashboard.states.absent')}</StatusPill>
+  ) : (
+    <StatusPill tone="neutral" icon="weekend">{t('teacher.dashboard.states.off')}</StatusPill>
+  );
+  return (
+    <div className="space-y-1">
+      {pill}
+      {child.check_in ? (
+        <p className={cn('text-xs tabular-nums text-on-surface-variant')}>
+          {time(child.check_in)} → {child.check_out ? time(child.check_out) : t('teacher.dashboard.stillHere')}
+        </p>
+      ) : null}
     </div>
   );
 }

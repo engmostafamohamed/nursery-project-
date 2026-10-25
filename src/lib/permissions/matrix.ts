@@ -26,6 +26,8 @@ export const PERMISSION_MATRIX: Record<FeatureKey, FeatureAccess> = {
   community: { topManagement: 'full', manager: 'full', teacher: 'full' },
   settings: { topManagement: 'full', manager: 'none', teacher: 'none' },
   roles_permissions: { topManagement: 'full', manager: 'none', teacher: 'none' },
+  // Granted per role in the database (the seeded "Head of teachers" role has it).
+  class_team: { topManagement: 'full', manager: 'none', teacher: 'none' },
   dashboard_finance: { topManagement: 'full', manager: { requireDepartment: 'finance' }, teacher: 'none' },
   newsfeed: { topManagement: 'full', manager: 'full', teacher: 'full' },
   kids_applications: { topManagement: 'full', manager: 'full', teacher: 'none' },

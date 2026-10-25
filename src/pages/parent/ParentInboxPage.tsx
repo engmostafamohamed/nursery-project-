@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
+import { FamilyMessageDialog } from '@/components/family-messages/FamilyMessageView';
 import { StatusPill, TableCard, TableEmpty, TableLoading, TablePagination, type PillTone } from '@/components/ui/DataTable';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatTile } from '@/components/ui/StatTile';
 import { useAuthSession } from '@/hooks/useAuthSession';
+import { useMarkFamilyMessageRead, useParentFamilyMessages } from '@/hooks/useFamilyMessages';
 import { useNurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
 import { usePagination } from '@/hooks/usePagination';
 import { useParentInbox, type ParentInboxItem, type ParentInboxKind } from '@/hooks/useParentInbox';
@@ -15,7 +17,7 @@ import { dayHeading, groupByDay } from '@/lib/dayGroups';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 
-type FilterKey = 'all' | 'action' | 'chats';
+type FilterKey = 'all' | 'action' | 'chats' | 'staff';
 
 const KIND_STYLE: Record<ParentInboxKind, { icon: string; tone: PillTone; tile: string }> = {
   chat: { icon: 'chat', tone: 'primary', tile: 'bg-primary/10 text-primary' },
@@ -23,6 +25,7 @@ const KIND_STYLE: Record<ParentInboxKind, { icon: string; tone: PillTone; tile: 
   permission: { icon: 'task_alt', tone: 'warning', tile: 'bg-warning/10 text-warning' },
   questionnaire: { icon: 'fact_check', tone: 'success', tile: 'bg-success/10 text-success' },
   notification: { icon: 'notifications', tone: 'neutral', tile: 'bg-surface-high text-on-surface-variant' },
+  staff: { icon: 'contact_mail', tone: 'primary', tile: 'bg-primary/10 text-primary' },
 };
 
 function relativeTime(iso: string, lang: string): string {
@@ -43,7 +46,18 @@ export function ParentInboxPage() {
   const { data: profile } = useUserProfile(user?.id);
   const nurseryId = profile?.nursery_id ?? undefined;
   const { data: languagePref = 'both' } = useNurseryLanguagePref(nurseryId);
-  const [filter, setFilter] = useState<FilterKey>('all');
+  // ?filter=staff opens on the staff messages; ?message=<id> opens that message.
+  const [params, setParams] = useSearchParams();
+  const [filter, setFilter] = useState<FilterKey>(() => (params.get('filter') === 'staff' ? 'staff' : 'all'));
+  const familyMessages = useParentFamilyMessages(user?.id);
+  const markRead = useMarkFamilyMessageRead(user?.id);
+  const openMessageId = params.get('message');
+  const openMessage = (familyMessages.data ?? []).find((m) => m.message_id === openMessageId) ?? null;
+  const closeMessage = () => {
+    const next = new URLSearchParams(params);
+    next.delete('message');
+    setParams(next, { replace: true });
+  };
   const locale = i18n.language.startsWith('ar') ? 'ar-EG' : 'en-GB';
 
   // Pull this parent's children's class IDs to scope class-level announcements.
@@ -76,6 +90,7 @@ export function ParentInboxPage() {
   const filtered = useMemo(() => {
     if (filter === 'all') return inbox.items;
     if (filter === 'chats') return inbox.items.filter((it) => it.kind === 'chat');
+    if (filter === 'staff') return inbox.items.filter((it) => it.kind === 'staff');
     // action needed: permissions, questionnaires, urgent items
     return inbox.items.filter(
       (it) => it.kind === 'permission' || it.kind === 'questionnaire' || it.urgent,
@@ -137,7 +152,7 @@ export function ParentInboxPage() {
   return (
     <div className="space-y-5 pb-8">
       <PageHeader icon="inbox" title={t('parent.inbox.title')} description={t('parent.inbox.subtitle')}>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           <StatTile icon="inbox" label={t('parent.inbox.filters.all')} value={inbox.counts.total} onClick={() => toggle('all')} active={filter === 'all'} />
           <StatTile
             icon="pending_actions"
@@ -148,6 +163,13 @@ export function ParentInboxPage() {
             active={filter === 'action'}
           />
           <StatTile icon="chat" label={t('parent.inbox.filters.chats')} value={inbox.counts.chats} onClick={() => toggle('chats')} active={filter === 'chats'} />
+          <StatTile
+            icon="contact_mail"
+            label={t('parent.inbox.filters.staff')}
+            value={inbox.items.filter((it) => it.kind === 'staff').length}
+            onClick={() => toggle('staff')}
+            active={filter === 'staff'}
+          />
           <StatTile icon="mark_email_unread" label={t('parent.inbox.unreadLabel')} value={unreadCount} tone={unreadCount > 0 ? 'primary' : 'neutral'} />
         </div>
       </PageHeader>
@@ -174,6 +196,7 @@ export function ParentInboxPage() {
           </div>
         )}
       </TableCard>
+      <FamilyMessageDialog message={openMessage} onClose={closeMessage} onRead={(id) => markRead.mutate(id)} />
     </div>
   );
 }

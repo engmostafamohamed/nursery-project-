@@ -946,6 +946,8 @@
       "broadcastHistory": "Broadcasts log",
       "notifications": "Notifications",
       "settings": "Settings",
+      "rbacTeam": "Team & classes",
+      "dailyReportRates": "Daily report rate",
       "rbacPositions": "Positions",
       "rbacRoles": "Roles",
       "rbacFeatures": "Features",
@@ -3049,100 +3051,22 @@
       }
     },
     "daily": {
-      "createTitle": "Create Daily Report",
-      "listTitle": "Daily Reports",
-      "createNew": "Create Report",
-      "child": "Child",
-      "selectChild": "Select child",
-      "date": "Report date",
-      "sameForAll": "Same for all children",
-      "copyYesterday": "Copy from Yesterday",
-      "saveDraft": "Save Draft",
-      "publish": "Publish to Parent",
-      "savedDraft": "Draft saved.",
-      "published": "Report published.",
-      "copiedYesterday": "Yesterday's data copied.",
-      "noYesterdayData": "No report found for yesterday.",
-      "notesOptional": "Notes (optional)",
-      "specialNotes": "Special Notes",
-      "searchChild": "Search child",
-      "filterClass": "Filter class",
-      "quickStats": "{{mood}}, Napped {{nap}} min",
-      "parentFeedback": "{{count}} parent reaction(s)",
-      "unknownChild": "Child",
-      "edit": "Edit",
-      "delete": "Delete",
-      "actionError": "Could not complete action.",
-      "emptyTitle": "No reports yet.",
-      "emptyDescription": "Create your first daily report!",
-      "groups": {
-        "today": "Today",
-        "yesterday": "Yesterday",
-        "thisWeek": "This Week"
-      },
-      "status": {
-        "all": "All",
-        "draft": "Draft",
-        "published": "Published"
-      },
       "sections": {
         "meals": "Meals",
-        "nap": "Nap",
-        "mood": "Mood",
-        "toilet": "Toilet / Diaper",
-        "activities": "Activities",
         "feeding": "Feeding Log (Infants)"
       },
-      "meals": {
-        "breakfast": "Breakfast",
-        "lunch": "Lunch",
-        "snacks": "Snacks",
-        "water": "Water intake",
-        "mealPhoto": "Meal photo media ID (optional)",
-        "mealPhotoPlaceholder": "Optional media id"
-      },
       "nap": {
-        "napped": "Napped",
-        "startTime": "Start time",
-        "endTime": "End time",
-        "durationMinutes": "Duration (minutes)",
         "quality": "Nap quality"
       },
-      "mood": {
-        "overallMood": "Overall mood"
-      },
-      "toilet": {
-        "changeCount": "Changes (diaper / toilet)",
-        "diaperChanges": "Diaper changes",
-        "toiletVisits": "Toilet visits",
-        "pottyTraining": "Potty training",
-        "successes": "Successes",
-        "accidents": "Accidents"
-      },
-      "activities": {
-        "freeText": "Activities (free text)",
-        "otherLabel": "Other activity",
-        "engagement": "Engagement level"
-      },
       "feeding": {
-        "bottleSessionsHint": "Record each bottle time and amount (optional).",
         "bottleTime": "Time",
         "amountMl": "Amount (ml)",
         "addBottle": "Add bottle",
         "removeBottle": "Remove",
-        "bottleFeedsCount": "Bottle feeds count",
-        "bottleAmount": "Amount per feed (ml)",
         "nursingCount": "Nursing count",
         "nursingDuration": "Nursing duration (minutes)",
         "solidFoods": "Solid foods given"
       },
-      "validation": {
-        "childRequired": "Please select a child."
-      },
-      "statusHint": "Use Save draft (staff only) or Publish (notifies parents).",
-      "todayListHint": "Date filters default to today. Clear dates to see all reports.",
-      "clearDates": "All dates",
-      "todayOnly": "Today only",
       "invalidRoute": "Invalid report link.",
       "backToList": "Back to list",
       "childNotInClass": "This child is not in your class.",
@@ -3562,11 +3486,13 @@
       "title": "Inbox",
       "subtitle": "Everything from the nursery in one place — chats, announcements, permissions, and surveys.",
       "filters": {
+        "staff": "From teachers & staff",
         "all": "All",
         "action": "Action needed",
         "chats": "Chats"
       },
       "kinds": {
+        "staff": "Message",
         "chat": "Chat",
         "announcement": "Announcement",
         "permission": "Permission",
@@ -4080,34 +4006,87 @@
     "onDuty": "On Duty",
     "homeTitle": "Teacher Home",
     "homeDescription": "Open scanner to check students in and out.",
+    "dashboard": {
+      "subtitle": "Your classes today: who is here, who is missing, and your families.",
+      "actions": {
+        "message": "Message families",
+        "photos": "Upload photos",
+        "chat": "Chat",
+        "attendance": "Attendance"
+      },
+      "tiles": {
+        "children": "Children in my classes",
+        "here": "Here now",
+        "pickedUp": "Picked up",
+        "absent": "Absent today",
+        "withNotice": "{{count}} with a notice",
+        "extraNow": "In extra hours now",
+        "extraNowHint": "Still here after pickup time"
+      },
+      "places": {
+        "lead": "Lead teacher",
+        "assistant": "Assistant",
+        "substitute": "Backup teacher"
+      },
+      "states": {
+        "all": "All",
+        "here": "Here now",
+        "picked_up": "Picked up",
+        "absent": "Absent",
+        "extra_now": "In extra hours",
+        "off": "No school today"
+      },
+      "myClasses": "My classes",
+      "classToday": "Came today: {{present}} of {{total}}",
+      "messageClass": "Message the class",
+      "absentToday": "Absent today",
+      "withNotice": "With a notice",
+      "noNotice": "No notice from the family",
+      "noAbsent": "Everyone is here today.",
+      "row": {
+        "chat": "Chat with the family",
+        "message": "Send a message",
+        "photo": "Upload a photo"
+      },
+      "childrenTitle": "My children",
+      "childrenCount": "Children: {{count}}",
+      "childrenHint": "Every child of your classes with today's state and family.",
+      "filters": {
+        "search": "Search",
+        "searchPlaceholder": "Child's name or code, parent's name or phone",
+        "class": "Class",
+        "allClasses": "All my classes",
+        "state": "Today"
+      },
+      "columns": {
+        "child": "Child",
+        "class": "Class",
+        "today": "Today",
+        "family": "Family",
+        "actions": "Actions"
+      },
+      "moreParents": "+{{count}} more",
+      "noParents": "No parent linked",
+      "stillHere": "still here",
+      "loadError": "Couldn't load your children.",
+      "noMatch": "No child matches these filters.",
+      "noChildren": "No children in your classes yet."
+    },
     "home": {
       "fallbackName": "Teacher",
       "greeting": "Welcome back, {{name}}",
-      "subtitle": "Here's today at a glance — your classes, attendance, and uploads.",
       "noClassesTitle": "No classes assigned yet",
       "noClassesDescription": "An admin can assign you to a class from Admin → Classes → Staff.",
-      "classesTitle": "My classes",
-      "viewAll": "View all",
       "studentsCount": "{{count}} student(s)",
-      "attendanceTitle": "Today's attendance",
-      "openAttendance": "Open attendance",
-      "stillIn": "In nursery",
-      "leftOut": "Picked up",
-      "notArrived": "Not arrived",
-      "checkIn": "In",
-      "checkOut": "Out",
-      "moreStudents": "+{{count}} more",
-      "statuses": {
-        "in": "In",
-        "left": "Left",
-        "not_arrived": "Not yet"
-      },
       "mediaTitle": "Today's photos",
       "openMedia": "Open media",
       "noMediaToday": "No photos uploaded today. Tap to upload."
     },
     "nav": {
 
+      "familyMessages": "Messages",
+      "team": "Team & classes",
+      "reportRates": "Report send rate",
       "community": "Community",
       "bottomBarLabel": "Teacher app main sections",
       "home": "Home",
@@ -5933,6 +5912,417 @@
       "due": "Due {{date}}"
     }
   },
+  "classTeam": {
+    "title": "Team & classes",
+    "description": "Choose each class's lead teacher, assistants and backup teacher.",
+    "readOnly": "You can see the teams. Changing them needs the Class team permission.",
+    "saved": "Saved",
+    "removed": "Removed from the class",
+    "tiles": {
+      "classes": "Classes",
+      "withoutLead": "Without a lead teacher",
+      "withoutAssistant": "Without an assistant",
+      "teachers": "Teachers",
+      "teachersWithoutClass": "Teachers without a class"
+    },
+    "tabs": {
+      "label": "Show",
+      "classes": "Classes",
+      "teachers": "Teachers",
+      "changes": "Recent changes"
+    },
+    "filters": {
+      "search": "Search",
+      "searchClasses": "Class or teacher name",
+      "searchTeachers": "Name, email or phone",
+      "show": "Show",
+      "allClasses": "All classes",
+      "noLead": "No lead teacher",
+      "noAssistant": "No assistant",
+      "allTeachers": "All teachers",
+      "noClass": "No class",
+      "leads": "Lead teachers",
+      "assistants": "Assistants",
+      "substitutes": "Backup teachers"
+    },
+    "roles": {
+      "lead": "Lead teacher",
+      "assistant": "Assistant",
+      "substitute": "Backup teacher"
+    },
+    "departments": {
+      "finance": "Finance department",
+      "hr": "HR department",
+      "operations": "Operations department"
+    },
+    "card": {
+      "children": "Children: {{count}}",
+      "capacity": "Capacity {{capacity}}",
+      "room": "Room {{room}}",
+      "ready": "Has a lead",
+      "choose": "Choose a teacher",
+      "none": "Not set",
+      "noAssistants": "No assistants yet",
+      "addAssistant": "Add an assistant",
+      "remove": "Remove {{name}}"
+    },
+    "confirm": {
+      "replaceTitle": "Change the {{role}}?",
+      "replaceBody": "{{old}} will leave {{class}} and {{new}} takes their place.",
+      "replace": "Change",
+      "removeTitle": "Remove {{name}} from {{class}}?",
+      "removeBody": "They will no longer see this class's children or families.",
+      "remove": "Remove"
+    },
+    "teachersTable": {
+      "count": "Teachers: {{count}}",
+      "teacher": "Teacher",
+      "role": "Role",
+      "classes": "Classes",
+      "status": "Status",
+      "teacherRole": "Teacher",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "changes": {
+      "assigned": "{{name}} joined {{class}} as {{role}}",
+      "changed": "{{name}} is now {{role}} in {{class}}",
+      "removed": "{{name}} left {{class}}",
+      "by": "by {{name}}",
+      "empty": "No changes yet."
+    },
+    "empty": {
+      "classes": "No classes yet.",
+      "teachers": "No teachers yet.",
+      "noMatch": "Nothing matches these filters."
+    },
+    "errors": {
+      "forbidden": "You are not allowed to change class teams.",
+      "not_a_teacher": "Only an active teacher of this nursery can join a class team.",
+      "teacher_inactive": "This teacher is not active.",
+      "class_not_found": "This class no longer exists.",
+      "failed": "Couldn't save. Try again."
+    }
+  },
+  "familyMessages": {
+    "title": "Messages to families",
+    "description": "Write to the families of one child, chosen children, a class, today's absent children or the children in extra hours now.",
+    "openChat": "Open chats",
+    "tabs": {
+      "label": "Show",
+      "compose": "New message",
+      "sent": "Sent"
+    },
+    "audience": {
+      "class": "Whole class",
+      "absent_today": "Absent today",
+      "extra_hours_now": "In extra hours now",
+      "child": "One child",
+      "children": "Chosen children"
+    },
+    "compose": {
+      "whoTitle": "Who receives it",
+      "selectedCount": "Children: {{children}} · Families: {{families}}",
+      "class": "Class",
+      "allMyClasses": "All my classes",
+      "search": "Search",
+      "searchPlaceholder": "Child's name or code, parent's name",
+      "tickHint": "Tick the children whose families should get the message.",
+      "selectAll": "Select all",
+      "selectNone": "Clear",
+      "noParentsShort": "No parent linked",
+      "noneInGroup": "No child in this group right now.",
+      "noClasses": "You are not in a class team yet, so there are no families to write to.",
+      "messageTitle": "Message",
+      "message": "Your message",
+      "messagePlaceholder": "Write your message to the families…",
+      "reaches": "Children: {{children}} · Families: {{families}}",
+      "senderNote": "Families see your name, role, department and class with the message.",
+      "send": "Send",
+      "sending": "Sending…",
+      "confirmTitle": "Send this message?",
+      "confirmBody": "It goes to the families of {{children}} children ({{families}} families).",
+      "sent": "Sent to {{families}} families",
+      "errors": {
+        "bodyRequired": "Write a message.",
+        "bodyTooLong": "Keep the message under {{max}} characters.",
+        "noChildren": "Choose at least one child.",
+        "noParents": "None of the chosen children has a parent linked."
+      }
+    },
+    "state": {
+      "extraNow": "In extra hours",
+      "here": "Here",
+      "pickedUp": "Picked up",
+      "excused": "Absent with notice",
+      "absent": "Absent",
+      "off": "No school"
+    },
+    "sent": {
+      "count": "Messages: {{count}}",
+      "empty": "You have not sent a message yet.",
+      "to": "To the families of: {{children}}",
+      "readBy": "Read by {{read}} of {{families}} families"
+    },
+    "errors": {
+      "child_not_in_your_class": "You can only write to the families of children in your classes.",
+      "body_invalid": "Write a message under 2000 characters.",
+      "no_children": "Choose at least one child.",
+      "no_parents": "None of the chosen children has a parent linked.",
+      "forbidden": "You are not allowed to send messages to families.",
+      "child_not_found": "One of the children is no longer enrolled.",
+      "chat_member_not_allowed": "You can only talk with families of children in your classes.",
+      "failed": "Couldn't send. Try again."
+    },
+    "senderRole": {
+      "teacher": "Teacher",
+      "manager": "Manager",
+      "branch_admin": "Nursery admin",
+      "chain_super_admin": "Group admin",
+      "xo_super_admin": "XO team"
+    },
+    "department": {
+      "finance": "Finance department",
+      "hr": "HR department",
+      "operations": "Operations department"
+    },
+    "place": {
+      "lead": "Lead teacher",
+      "assistant": "Assistant",
+      "substitute": "Backup teacher"
+    },
+    "unknownSender": "The nursery",
+    "dialogTitle": "Message from the nursery",
+    "about": "About: {{children}}",
+    "parentCard": {
+      "title": "Messages from teachers & staff",
+      "description": "Who sent each message, their role, department and class.",
+      "unread": "Unread: {{count}}",
+      "viewAll": "All messages"
+    }
+  },
+  "dailyReport": {
+    "title": "Daily reports",
+    "subtitle": "Fill in each child's report during the day — every change is saved as you go. At the end of the day, send the complete ones to the families.",
+    "percent": "{{value}}%",
+    "questions": {
+      "breakfast": "Breakfast",
+      "lunch": "Lunch",
+      "snacks": "Snack",
+      "nap": "Nap",
+      "mood": "Mood",
+      "toilet": "Toilet / diaper",
+      "activities": "Activities"
+    },
+    "stage": {
+      "sent": "Sent",
+      "ready": "Ready to send",
+      "in_progress": "In progress",
+      "not_started": "Not started",
+      "not_expected": "Not needed"
+    },
+    "attendance": {
+      "present": "Came",
+      "partial": "Here now",
+      "absent": "Absent",
+      "excused": "Absent (notice)",
+      "off": "No school",
+      "not_enrolled": "Not enrolled yet"
+    },
+    "banner": {
+      "openTitle": "Reports still to send today: {{count}}",
+      "soonTitle": "Reports due in {{minutes}} min — still to send: {{count}}",
+      "overdueTitle": "Reports overdue since {{time}} — not sent: {{count}}",
+      "doneTitle": "All of today's reports are sent",
+      "doneBody": "{{sent}} of {{expected}} families have their child's report.",
+      "nothingTitle": "No reports needed today",
+      "nothingBody": "None of the children in your classes came today.",
+      "progress": "Ready to send: {{ready}} · In progress: {{inProgress}} · Not started: {{notStarted}}",
+      "dueAt": "Due at {{time}}",
+      "sentOf": "Sent {{sent}} of {{expected}} ({{rate}}%)",
+      "open": "Open daily reports",
+      "fillNext": "Fill the next report"
+    },
+    "tiles": {
+      "expected": "Came today",
+      "expectedHint": "One report each",
+      "sent": "Sent to families",
+      "rate": "{{rate}}% sent",
+      "ready": "Ready to send",
+      "readyHint": "Every question answered",
+      "inProgress": "In progress",
+      "avgCompletion": "Average {{value}}% answered",
+      "notStarted": "Not started"
+    },
+    "list": {
+      "day": "Day",
+      "today": "Today",
+      "rates": "Send rate",
+      "sendAllReady": "Send all ready ({{count}})",
+      "fillNext": "Fill {{name}}'s report",
+      "tableTitle": "Children and their reports",
+      "count": "Children: {{count}}",
+      "tableHint": "Tick the complete reports (or all of them at once) and send them together. A report can be sent only when every question is answered.",
+      "search": "Search",
+      "searchPlaceholder": "Child's name or code",
+      "class": "Class",
+      "allClasses": "All classes",
+      "stageFilter": "Report status",
+      "allChildren": "All children",
+      "toSend": "Still to send",
+      "selectAllReady": "Select all reports ready to send",
+      "selectChild": "Select {{name}}'s report",
+      "answerAllFirst": "Answer every question first",
+      "sendSelected": "Send selected ({{count}})",
+      "sendTitle": "Send reports to families: {{count}}",
+      "sendBody": "Each family gets their child's report on their dashboard. A sent report can no longer be changed.",
+      "sendConfirm": "Send ({{count}})",
+      "sentToast": "Reports sent to families: {{count}}",
+      "resultSent": "Sent to families: {{count}}",
+      "resultAlready": "already sent: {{count}}",
+      "resultIncomplete": "{{name}} was not sent — still to answer: {{questions}}",
+      "dismiss": "Dismiss",
+      "columns": {
+        "child": "Child",
+        "class": "Class",
+        "attendance": "Attendance",
+        "completion": "Completion",
+        "status": "Status",
+        "saved": "Last saved",
+        "action": "Report"
+      },
+      "completionOf": "How far {{name}}'s report is",
+      "missing": "To answer: {{questions}}",
+      "sentAt": "Sent at {{time}}",
+      "view": "View",
+      "fill": "Fill in",
+      "continue": "Continue",
+      "noMatch": "No child matches these filters.",
+      "empty": "No children in your classes yet.",
+      "emptyHint": "Once the admin or the head of teachers puts you in a class, its children appear here."
+    },
+    "editor": {
+      "title": "{{name}}'s daily report",
+      "invalidRouteHint": "Open the report from the daily reports list.",
+      "notInClassHint": "You can write reports only for the children of your classes.",
+      "previousChild": "Previous child",
+      "nextChild": "Next child",
+      "lockedSent": "This report was sent to the family and can no longer be changed.",
+      "lockedOld": "Reports can be written up to 7 days later; this one can only be viewed.",
+      "sentAt": "Sent at {{time}}",
+      "questionsLegend": "The report's questions",
+      "answered": "Answered",
+      "notAnswered": "Not answered yet",
+      "pickOne": "Pick one",
+      "mealsHint": "How much they ate at each meal.",
+      "note": "Note (optional)",
+      "noteFor": "Note about {{question}}",
+      "notePlaceholder": "Note (optional)",
+      "napHint": "Did they nap? If so, how long and how well.",
+      "napped": "Did they nap?",
+      "nappedYes": "Yes, they napped",
+      "nappedNo": "No nap today",
+      "napMinutes": "How long (minutes)",
+      "napMinutesNeeded": "Enter how many minutes they slept.",
+      "napQualityNeeded": "Choose how well they slept.",
+      "moodHint": "Their mood for most of the day.",
+      "toiletHint": "How many times — none is an answer too.",
+      "toiletCount": "Times (toilet / diaper)",
+      "less": "One less",
+      "more": "One more",
+      "toiletNone": "None today",
+      "activitiesHint": "Pick what they did, or write it.",
+      "activitiesText": "Or write what they did",
+      "optional": "Optional",
+      "familyNote": "A note to the family",
+      "progressLabel": "How far the report is",
+      "answeredOf": "{{answered}} of {{required}}",
+      "toAnswer": "Still to answer:",
+      "saving": "Saving…",
+      "unsaved": "Changes not saved yet",
+      "savedAt": "Saved at {{time}}",
+      "notSavedYet": "Saved automatically as you go",
+      "saveChanges": "Save changes",
+      "send": "Send to the family",
+      "sending": "Sending…",
+      "sendTitle": "Send {{name}}'s report?",
+      "sendBody": "The family sees it on their dashboard right away. A sent report can no longer be changed.",
+      "sentToast": "{{name}}'s report was sent to the family.",
+      "stillMissing": "Not sent — still to answer: {{questions}}"
+    },
+    "card": {
+      "title": "Daily reports today",
+      "subtitle": "Sent to families, out of the children who came",
+      "all": "Details",
+      "nothing": "No child has come in yet today.",
+      "sentOf": "Sent {{sent}} of {{expected}}",
+      "missing": "not sent: {{count}}"
+    },
+    "rates": {
+      "title": "Daily report send rate",
+      "subtitle": "One report is expected for each child who came, each day. See how many were sent, on the day or late, and which are missing — by teacher, class, day and child.",
+      "class": "Class",
+      "teacher": "Teacher",
+      "allTeachers": "All teachers",
+      "viewLabel": "View",
+      "views": {
+        "teachers": "By teacher",
+        "classes": "By class",
+        "days": "By day",
+        "children": "By child",
+        "missing": "Missing reports"
+      },
+      "tiles": {
+        "expected": "Reports expected",
+        "expectedHint": "Children who came × days",
+        "sent": "Sent",
+        "rate": "Send rate {{rate}}",
+        "onTime": "Sent on the day",
+        "onTimeHint": "{{rate}} of expected",
+        "late": "Sent late",
+        "lateHint": "After the day ended",
+        "missing": "Missing",
+        "drafts": "Started, not sent: {{count}}",
+        "completion": "Average completion",
+        "completionHint": "Questions answered"
+      },
+      "teachersHint": "Each class counts for its lead teacher; \"Sent by them\" is what the teacher sent themselves. Click a row to see only that teacher.",
+      "missingHint": "Reports expected but not sent, newest first.",
+      "searchPlaceholder": "Child, code, class or teacher",
+      "columns": {
+        "teacher": "Teacher",
+        "class": "Class",
+        "lead": "Lead teacher",
+        "day": "Day",
+        "expected": "Expected",
+        "sent": "Sent",
+        "onTime": "On the day",
+        "missing": "Missing",
+        "rate": "Send rate",
+        "sentByThem": "Sent by them"
+      },
+      "rateOf": "Send rate for {{name}}",
+      "noTeachers": "No class has a lead teacher yet.",
+      "noClasses": "No classes.",
+      "noDays": "No child came in this period.",
+      "noChildren": "No child matches.",
+      "noMissing": "Nothing missing — every expected report was sent.",
+      "noLead": "No lead teacher",
+      "draftOf": "Started · {{answered}} of {{required}}",
+      "limited": "Showing the first {{count}}."
+    },
+    "errors": {
+      "child_not_in_your_class": "This child is not in your classes.",
+      "already_sent": "This report was already sent and can no longer be changed.",
+      "date_invalid": "Reports can be written for today or the past 7 days.",
+      "incomplete": "Answer every question before sending.",
+      "none_selected": "Choose at least one report (up to 300 at once).",
+      "forbidden": "You can't change this report.",
+      "child_not_found": "This child was not found.",
+      "failed": "Something went wrong. Please try again.",
+      "rates_forbidden": "You need the class team permission to see the send rate."
+    }
+  },
   "notificationTemplates": {
     "demo_message_password_reset": {
       "title": "Your verification code (demo email)",
@@ -5949,6 +6339,22 @@
     "demo_message_invoice_ready": {
       "title": "New invoice (demo WhatsApp)",
       "body": "A new invoice of {{amount}} is ready. In demo mode WhatsApp messages are not sent, so the message appears here."
+    },
+    "class_team_assigned": {
+      "title": "You joined a class team",
+      "body": "You are now {{role}} in {{class}}."
+    },
+    "family_message": {
+      "title": "Message from {{sender}}",
+      "body": "About {{children}}: {{preview}}"
+    },
+    "daily_report_sent": {
+      "title": "{{child}}'s daily report",
+      "body": "The report for {{date}} is ready: meals, nap, mood and activities."
+    },
+    "daily_report_reminder": {
+      "title": "Daily reports are due at {{due_time}}",
+      "body": "Reports still to send: {{count}}. Finish them and send them to the families."
     },
     "unknown": {
       "title": "Notification"
@@ -6538,6 +6944,8 @@
     "deleted": "Reminder deleted."
   },
   "chatAdmin": {
+    "parentOf": "Parent of {{children}}",
+    "openFailed": "Couldn't open this conversation.",
     "title": "Chat",
     "new": "New",
     "newTitle": "New conversation",
@@ -8090,6 +8498,7 @@
       "manager_finance": "Manager — finance"
     },
     "systemRoles": {
+      "head_teacher": "Head of teachers",
       "teacher": "Teacher",
       "manager_operations": "Operations manager",
       "manager_hr": "HR manager",
@@ -8100,6 +8509,7 @@
       "parent": "Parent"
     },
     "features": {
+      "class_team": "Class team",
       "dashboard_attendance": "Attendance",
       "qr_scanner": "QR scanner",
       "classes": "Classes",

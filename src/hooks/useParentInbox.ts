@@ -2,6 +2,9 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 
+import { useParentFamilyMessages } from '@/hooks/useFamilyMessages';
+import { useSenderLine } from '@/hooks/useSenderLine';
+import { senderParts } from '@/lib/familyMessages';
 import { notificationText } from '@/lib/notificationText';
 import { supabase } from '@/lib/supabase';
 import { useParentInAppNotifications } from '@/hooks/useParentInAppNotifications';
@@ -12,7 +15,9 @@ export type ParentInboxKind =
   | 'announcement'
   | 'permission'
   | 'questionnaire'
-  | 'notification';
+  | 'notification'
+  /** A message from a teacher or the nursery's staff (family_messages). */
+  | 'staff';
 
 export type ParentInboxItem = {
   id: string;
@@ -70,7 +75,7 @@ function deadlineUrgent(iso: string | null | undefined): boolean {
 /**
  * Aggregates everything a parent should see into a single sorted list.
  * Sources: surveys (permission + questionnaire), broadcast announcements,
- * direct messages, and high-urgency in-app notifications.
+ * direct messages, messages from the staff, and high-urgency in-app notifications.
  */
 export function useParentInbox(params: {
   userId: string | undefined;
@@ -174,6 +179,8 @@ export function useParentInbox(params: {
   });
 
   const notificationsQuery = useParentInAppNotifications(userId);
+  const familyQuery = useParentFamilyMessages(userId);
+  const senderLine = useSenderLine();
 
   const items: ParentInboxItem[] = useMemo(() => {
     const out: ParentInboxItem[] = [];
@@ -248,11 +255,28 @@ export function useParentInbox(params: {
       });
     }
 
+    // Messages from teachers and staff: who sent each, with their role, title, department and class.
+    for (const m of familyQuery.data ?? []) {
+      const name = senderParts(m, appLanguage).name ?? '—';
+      out.push({
+        id: `staff:${m.message_id}`,
+        kind: 'staff',
+        title: `${name} · ${senderLine(m)}`,
+        preview: m.body.slice(0, 140),
+        sentAt: m.created_at,
+        unread: !m.read_at,
+        urgent: false,
+        actionLink: `/parent/inbox?message=${m.message_id}`,
+        meta: { messageId: m.message_id },
+      });
+    }
+
     // High-urgency notifications that aren't already represented as surveys/broadcasts.
     for (const n of notificationsQuery.data ?? []) {
       const t = n.type.toLowerCase();
       if (t.startsWith('permission_') || t.startsWith('survey_')) continue; // surveys cover these
       if (t.startsWith('broadcast')) continue; // broadcasts cover these
+      if (t === 'family_message') continue; // the staff messages above cover these
       const isHigh = n.urgency === 'high';
       const { title, body } = notificationText(n, language === 'ar' || language === 'en' ? language : appLanguage);
       out.push({
@@ -280,6 +304,8 @@ export function useParentInbox(params: {
     broadcastsQuery.data,
     messagesQuery.data,
     notificationsQuery.data,
+    familyQuery.data,
+    senderLine,
     userId,
     language,
     appLanguage,

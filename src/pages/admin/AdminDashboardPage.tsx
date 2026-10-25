@@ -8,6 +8,7 @@ import { DashboardAlertsBar } from '@/components/admin/DashboardAlertsBar';
 import { DashboardMiniCharts } from '@/components/admin/DashboardMiniCharts';
 import { DashboardQuickActions } from '@/components/admin/DashboardQuickActions';
 import { AttendanceKpiPanel } from '@/components/admin/attendance/AttendanceKpiPanel';
+import { ReportRateCard } from '@/components/daily-reports/ReportRateCard';
 import { Button } from '@/components/ui/button';
 import { StatusPill, TableCard } from '@/components/ui/DataTable';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -199,6 +200,8 @@ export function AdminDashboardPage() {
         </TableCard>
         <div className="space-y-5 xl:col-span-5">
           <DashboardQuickActions basePath={adminBasePath} />
+
+          {nurseryId ? <ReportRateCard nurseryId={nurseryId} to={adminPath('/daily-reports')} /> : null}
 
           <TableCard
             title={t('admin.dashboard.registrationControlTitle')}

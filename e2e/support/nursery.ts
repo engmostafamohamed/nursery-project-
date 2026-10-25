@@ -94,6 +94,8 @@ export type TestNursery = {
   parent: Person;
   /** Children and applications made through this nursery, for cleanup. */
   childIds: string[];
+  /** People added later (addTeacher), for cleanup. */
+  extraUserIds?: string[];
 };
 
 export type ChildSpec = {
@@ -338,11 +340,33 @@ export async function signIn(page: Page, person: Person) {
   await expect(page).toHaveURL(home, { timeout: 30_000 });
 }
 
+/** Adds another teacher to the nursery (signed in); cleanupTestNursery removes them too. */
+export async function addTeacher(n: TestNursery, name_en: string, name_ar: string): Promise<Omit<Person, 'key'> & { key: 'teacher' }> {
+  const svc = await service();
+  const email = `${n.run}-${name_en.toLowerCase().replace(/[^a-z]+/g, '-')}@xo-platform.local`;
+  const password = `Ui!${crypto.randomUUID()}`;
+  const created = await svc.auth.admin.createUser({ email, password, email_confirm: true });
+  if (created.error || !created.data.user) throw new Error(`${name_en}: ${created.error?.message}`);
+  const id = created.data.user.id;
+  n.extraUserIds = [...(n.extraUserIds ?? []), id];
+  ok(
+    await svc.from('users').upsert(
+      { id, email, role: 'teacher', nursery_id: n.id, name_ar, name_en, status: 'active', language_pref: 'en', onboarding_completed: true },
+      { onConflict: 'id' },
+    ),
+    `${name_en} profile`,
+  );
+  const client = newClient(ANON_KEY);
+  const signedIn = await client.auth.signInWithPassword({ email, password });
+  if (signedIn.error) throw new Error(`${name_en} sign-in: ${signedIn.error.message}`);
+  return { key: 'teacher', role: 'teacher', name_en, name_ar, email, password, id, client };
+}
+
 /** Deletes everything this nursery holds (rows, accounts, files) and checks nothing is left. */
 export async function cleanupTestNursery(n: TestNursery | undefined) {
   if (!n || !UUID.test(n.id)) return;
   const svc = await service();
-  const userIds = [n.admin, n.teacher, n.parent].map((p) => p?.id).filter((id): id is string => UUID.test(String(id)));
+  const userIds = [n.admin?.id, n.teacher?.id, n.parent?.id, ...(n.extraUserIds ?? [])].filter((id): id is string => UUID.test(String(id)));
   const [{ ids: childRows }] = await sql<{ ids: string[] | null }>(`select array_agg(id) as ids from public.children where nursery_id = '${n.id}'`);
   const childIds = [...new Set([...(childRows ?? []), ...n.childIds])].filter((id) => UUID.test(id));
   const idList = (ids: string[]) => ids.map((id) => `'${id}'`).join(',') || "'00000000-0000-0000-0000-000000000000'";

@@ -943,6 +943,8 @@
       "broadcastHistory": "سجل التعميمات",
       "notifications": "الإشعارات",
       "settings": "الإعدادات",
+      "rbacTeam": "فريق العمل والفصول",
+      "dailyReportRates": "نسبة التقارير اليومية",
       "rbacPositions": "الوظائف",
       "rbacRoles": "الأدوار",
       "rbacFeatures": "الميزات",
@@ -3077,100 +3079,22 @@
       }
     },
     "daily": {
-      "createTitle": "إنشاء تقرير يومي",
-      "listTitle": "التقارير اليومية",
-      "createNew": "إنشاء تقرير",
-      "child": "الطفل",
-      "selectChild": "اختر الطفل",
-      "date": "تاريخ التقرير",
-      "sameForAll": "نفس التقرير لكل الأطفال",
-      "copyYesterday": "نسخ من الأمس",
-      "saveDraft": "حفظ كمسودة",
-      "publish": "نشر لولي الأمر",
-      "savedDraft": "تم حفظ المسودة.",
-      "published": "تم نشر التقرير.",
-      "copiedYesterday": "تم نسخ بيانات الأمس.",
-      "noYesterdayData": "لا يوجد تقرير للأمس.",
-      "notesOptional": "ملاحظات (اختياري)",
-      "specialNotes": "ملاحظات خاصة",
-      "searchChild": "ابحث عن طفل",
-      "filterClass": "تصفية الفصل",
-      "quickStats": "{{mood}}، نوم {{nap}} دقيقة",
-      "parentFeedback": "{{count}} تفاعل من ولي الأمر",
-      "unknownChild": "طفل",
-      "edit": "تعديل",
-      "delete": "حذف",
-      "actionError": "تعذر إتمام العملية.",
-      "emptyTitle": "لا توجد تقارير بعد.",
-      "emptyDescription": "أنشئ أول تقرير يومي!",
-      "groups": {
-        "today": "اليوم",
-        "yesterday": "الأمس",
-        "thisWeek": "هذا الأسبوع"
-      },
-      "status": {
-        "all": "الكل",
-        "draft": "مسودة",
-        "published": "منشور"
-      },
       "sections": {
         "meals": "الوجبات",
-        "nap": "النوم",
-        "mood": "المزاج",
-        "toilet": "الحمام / الحفاض",
-        "activities": "الأنشطة",
         "feeding": "سجل التغذية (للرضع)"
       },
-      "meals": {
-        "breakfast": "الإفطار",
-        "lunch": "الغداء",
-        "snacks": "الوجبات الخفيفة",
-        "water": "شرب الماء",
-        "mealPhoto": "معرف صورة الوجبة (اختياري)",
-        "mealPhotoPlaceholder": "معرف الوسائط اختياري"
-      },
       "nap": {
-        "napped": "نام",
-        "startTime": "وقت البدء",
-        "endTime": "وقت الانتهاء",
-        "durationMinutes": "المدة (دقائق)",
         "quality": "جودة النوم"
       },
-      "mood": {
-        "overallMood": "المزاج العام"
-      },
-      "toilet": {
-        "changeCount": "عدد التغييرات (حفاض / حمام)",
-        "diaperChanges": "عدد تغيير الحفاض",
-        "toiletVisits": "مرات دخول الحمام",
-        "pottyTraining": "تدريب الحمام",
-        "successes": "مرات النجاح",
-        "accidents": "الحوادث"
-      },
-      "activities": {
-        "freeText": "الأنشطة (نص حر)",
-        "otherLabel": "نشاط آخر",
-        "engagement": "مستوى التفاعل"
-      },
       "feeding": {
-        "bottleSessionsHint": "سجّل وقت كل رضعة والكمية (اختياري).",
         "bottleTime": "الوقت",
         "amountMl": "الكمية (مل)",
         "addBottle": "إضافة رضعة",
         "removeBottle": "إزالة",
-        "bottleFeedsCount": "عدد رضعات الزجاجة",
-        "bottleAmount": "الكمية لكل رضعة (مل)",
         "nursingCount": "عدد الرضاعات الطبيعية",
         "nursingDuration": "مدة الرضاعة (دقائق)",
         "solidFoods": "تم تقديم أكل صلب"
       },
-      "validation": {
-        "childRequired": "يرجى اختيار الطفل."
-      },
-      "statusHint": "استخدم حفظ كمسودة (للطاقم فقط) أو النشر (يُشعر أولياء الأمور).",
-      "todayListHint": "التاريخ الافتراضي هو اليوم. امسح التواريخ لعرض كل التقارير.",
-      "clearDates": "كل التواريخ",
-      "todayOnly": "اليوم فقط",
       "invalidRoute": "رابط التقرير غير صالح.",
       "backToList": "العودة للقائمة",
       "childNotInClass": "هذا الطفل ليس في فصلك.",
@@ -3610,11 +3534,13 @@
       "title": "صندوق الوارد",
       "subtitle": "كل ما يصلك من الحضانة في مكان واحد — رسائل وإعلانات وأذونات واستبيانات.",
       "filters": {
+        "staff": "من المعلمين والإدارة",
         "all": "الكل",
         "action": "يحتاج رد",
         "chats": "المحادثات"
       },
       "kinds": {
+        "staff": "رسالة",
         "chat": "محادثة",
         "announcement": "إعلان",
         "permission": "إذن",
@@ -4152,28 +4078,78 @@
     "onDuty": "على رأس العمل",
     "homeTitle": "واجهة المعلم",
     "homeDescription": "افتح الماسح لتسجيل دخول وخروج الطلاب.",
+    "dashboard": {
+      "subtitle": "فصولك اليوم: من حضر، ومن غاب، وأولياء الأمور.",
+      "actions": {
+        "message": "مراسلة أولياء الأمور",
+        "photos": "رفع صور",
+        "chat": "المحادثات",
+        "attendance": "الحضور"
+      },
+      "tiles": {
+        "children": "أطفال فصولي",
+        "here": "في الحضانة الآن",
+        "pickedUp": "تم استلامهم",
+        "absent": "غائبون اليوم",
+        "withNotice": "{{count}} بعذر",
+        "extraNow": "في الساعات الإضافية الآن",
+        "extraNowHint": "ما زالوا بعد موعد الاستلام"
+      },
+      "places": {
+        "lead": "المعلم الرئيسي",
+        "assistant": "مساعد",
+        "substitute": "المعلم البديل"
+      },
+      "states": {
+        "all": "الكل",
+        "here": "في الحضانة",
+        "picked_up": "تم استلامه",
+        "absent": "غائب",
+        "extra_now": "في الساعات الإضافية",
+        "off": "لا دراسة اليوم"
+      },
+      "myClasses": "فصولي",
+      "classToday": "حضر اليوم: {{present}} من {{total}}",
+      "messageClass": "مراسلة الفصل",
+      "absentToday": "الغائبون اليوم",
+      "withNotice": "بعذر",
+      "noNotice": "لم يصل إبلاغ من الأسرة",
+      "noAbsent": "الجميع حاضر اليوم.",
+      "row": {
+        "chat": "محادثة مع الأسرة",
+        "message": "إرسال رسالة",
+        "photo": "رفع صورة"
+      },
+      "childrenTitle": "أطفالي",
+      "childrenCount": "عدد الأطفال: {{count}}",
+      "childrenHint": "كل أطفال فصولك بحالتهم اليوم وأسرهم.",
+      "filters": {
+        "search": "بحث",
+        "searchPlaceholder": "اسم الطفل أو الكود، اسم ولي الأمر أو هاتفه",
+        "class": "الفصل",
+        "allClasses": "كل فصولي",
+        "state": "اليوم"
+      },
+      "columns": {
+        "child": "الطفل",
+        "class": "الفصل",
+        "today": "اليوم",
+        "family": "الأسرة",
+        "actions": "إجراءات"
+      },
+      "moreParents": "+{{count}} آخرين",
+      "noParents": "لا يوجد ولي أمر مرتبط",
+      "stillHere": "ما زال في الحضانة",
+      "loadError": "تعذّر تحميل أطفالك.",
+      "noMatch": "لا يوجد طفل يطابق هذه الفلاتر.",
+      "noChildren": "لا يوجد أطفال في فصولك بعد."
+    },
     "home": {
       "fallbackName": "المعلم",
       "greeting": "أهلاً بعودتك يا {{name}}",
-      "subtitle": "نظرة سريعة على اليوم — فصولك والحضور والصور.",
       "noClassesTitle": "لا توجد فصول مُسندة بعد",
       "noClassesDescription": "يمكن للمدير إسنادك إلى فصل من إدارة → الفصول → الطاقم.",
-      "classesTitle": "فصولي",
-      "viewAll": "عرض الكل",
       "studentsCount": "{{count}} طالب",
-      "attendanceTitle": "حضور اليوم",
-      "openAttendance": "فتح الحضور",
-      "stillIn": "بالحضانة",
-      "leftOut": "تم الاستلام",
-      "notArrived": "لم يأتِ",
-      "checkIn": "دخول",
-      "checkOut": "خروج",
-      "moreStudents": "+{{count}} آخرين",
-      "statuses": {
-        "in": "بالداخل",
-        "left": "خرج",
-        "not_arrived": "لم يأتِ"
-      },
       "mediaTitle": "صور اليوم",
       "openMedia": "فتح الوسائط",
       "noMediaToday": "لا توجد صور مرفوعة اليوم. اضغط للرفع."
@@ -4188,6 +4164,9 @@
       "reminders": "تذكيراتي",
       "chat": "المحادثات",
       "media": "الوسائط",
+      "familyMessages": "الرسائل",
+      "team": "فريق العمل والفصول",
+      "reportRates": "نسبة إرسال التقارير",
       "community": "المجتمع",
       "scanner": "الماسح",
       "classes": "الفصول",
@@ -6032,6 +6011,417 @@
       "due": "مستحق {{date}}"
     }
   },
+  "classTeam": {
+    "title": "فريق العمل والفصول",
+    "description": "اختر المعلم الرئيسي والمساعدين والمعلم البديل لكل فصل.",
+    "readOnly": "يمكنك عرض الفرق، وتعديلها يحتاج صلاحية فريق الفصول.",
+    "saved": "تم الحفظ",
+    "removed": "تمت الإزالة من الفصل",
+    "tiles": {
+      "classes": "الفصول",
+      "withoutLead": "بدون معلم رئيسي",
+      "withoutAssistant": "بدون مساعد",
+      "teachers": "المعلمون",
+      "teachersWithoutClass": "معلمون بدون فصل"
+    },
+    "tabs": {
+      "label": "عرض",
+      "classes": "الفصول",
+      "teachers": "المعلمون",
+      "changes": "آخر التغييرات"
+    },
+    "filters": {
+      "search": "بحث",
+      "searchClasses": "اسم الفصل أو المعلم",
+      "searchTeachers": "الاسم أو البريد أو الهاتف",
+      "show": "عرض",
+      "allClasses": "كل الفصول",
+      "noLead": "بدون معلم رئيسي",
+      "noAssistant": "بدون مساعد",
+      "allTeachers": "كل المعلمين",
+      "noClass": "بدون فصل",
+      "leads": "المعلمون الرئيسيون",
+      "assistants": "المساعدون",
+      "substitutes": "المعلمون البدلاء"
+    },
+    "roles": {
+      "lead": "المعلم الرئيسي",
+      "assistant": "مساعد",
+      "substitute": "المعلم البديل"
+    },
+    "departments": {
+      "finance": "القسم المالي",
+      "hr": "قسم الموارد البشرية",
+      "operations": "قسم التشغيل"
+    },
+    "card": {
+      "children": "عدد الأطفال: {{count}}",
+      "capacity": "السعة {{capacity}}",
+      "room": "غرفة {{room}}",
+      "ready": "له معلم رئيسي",
+      "choose": "اختر معلمًا",
+      "none": "غير محدد",
+      "noAssistants": "لا يوجد مساعدون بعد",
+      "addAssistant": "إضافة مساعد",
+      "remove": "إزالة {{name}}"
+    },
+    "confirm": {
+      "replaceTitle": "تغيير {{role}}؟",
+      "replaceBody": "سيغادر {{old}} فصل {{class}} ويحل محله {{new}}.",
+      "replace": "تغيير",
+      "removeTitle": "إزالة {{name}} من فصل {{class}}؟",
+      "removeBody": "لن يرى أطفال هذا الفصل ولا أسرهم بعد الآن.",
+      "remove": "إزالة"
+    },
+    "teachersTable": {
+      "count": "عدد المعلمين: {{count}}",
+      "teacher": "المعلم",
+      "role": "الدور",
+      "classes": "الفصول",
+      "status": "الحالة",
+      "teacherRole": "معلم",
+      "active": "نشط",
+      "inactive": "غير نشط"
+    },
+    "changes": {
+      "assigned": "انضم {{name}} إلى فصل {{class}} بصفة {{role}}",
+      "changed": "أصبح {{name}} {{role}} في فصل {{class}}",
+      "removed": "غادر {{name}} فصل {{class}}",
+      "by": "بواسطة {{name}}",
+      "empty": "لا توجد تغييرات بعد."
+    },
+    "empty": {
+      "classes": "لا توجد فصول بعد.",
+      "teachers": "لا يوجد معلمون بعد.",
+      "noMatch": "لا يوجد ما يطابق هذه الفلاتر."
+    },
+    "errors": {
+      "forbidden": "ليس لديك صلاحية تعديل فرق الفصول.",
+      "not_a_teacher": "يمكن فقط لمعلم نشط في هذه الحضانة الانضمام إلى فريق فصل.",
+      "teacher_inactive": "هذا المعلم غير نشط.",
+      "class_not_found": "هذا الفصل لم يعد موجودًا.",
+      "failed": "تعذّر الحفظ. حاول مرة أخرى."
+    }
+  },
+  "familyMessages": {
+    "title": "رسائل لأولياء الأمور",
+    "description": "راسل أسر طفل واحد، أو أطفال تختارهم، أو فصل كامل، أو غائبي اليوم، أو الأطفال في الساعات الإضافية الآن.",
+    "openChat": "فتح المحادثات",
+    "tabs": {
+      "label": "عرض",
+      "compose": "رسالة جديدة",
+      "sent": "المرسلة"
+    },
+    "audience": {
+      "class": "الفصل كله",
+      "absent_today": "غائبو اليوم",
+      "extra_hours_now": "في الساعات الإضافية الآن",
+      "child": "طفل واحد",
+      "children": "أطفال مختارون"
+    },
+    "compose": {
+      "whoTitle": "من يستلمها",
+      "selectedCount": "الأطفال: {{children}} · الأسر: {{families}}",
+      "class": "الفصل",
+      "allMyClasses": "كل فصولي",
+      "search": "بحث",
+      "searchPlaceholder": "اسم الطفل أو الكود، اسم ولي الأمر",
+      "tickHint": "اختر الأطفال الذين تصل الرسالة إلى أسرهم.",
+      "selectAll": "تحديد الكل",
+      "selectNone": "مسح",
+      "noParentsShort": "لا يوجد ولي أمر مرتبط",
+      "noneInGroup": "لا يوجد أطفال في هذه المجموعة الآن.",
+      "noClasses": "أنت لست ضمن فريق أي فصل بعد، لذلك لا توجد أسر لمراسلتها.",
+      "messageTitle": "الرسالة",
+      "message": "رسالتك",
+      "messagePlaceholder": "اكتب رسالتك لأولياء الأمور…",
+      "reaches": "الأطفال: {{children}} · الأسر: {{families}}",
+      "senderNote": "يرى أولياء الأمور اسمك ودورك وقسمك وفصلك مع الرسالة.",
+      "send": "إرسال",
+      "sending": "جارٍ الإرسال…",
+      "confirmTitle": "إرسال هذه الرسالة؟",
+      "confirmBody": "تصل إلى أسر {{children}} أطفال ({{families}} أسرة).",
+      "sent": "تم الإرسال إلى {{families}} أسرة",
+      "errors": {
+        "bodyRequired": "اكتب الرسالة.",
+        "bodyTooLong": "اجعل الرسالة أقل من {{max}} حرف.",
+        "noChildren": "اختر طفلًا واحدًا على الأقل.",
+        "noParents": "لا يوجد ولي أمر مرتبط بأي من الأطفال المختارين."
+      }
+    },
+    "state": {
+      "extraNow": "في الساعات الإضافية",
+      "here": "في الحضانة",
+      "pickedUp": "تم استلامه",
+      "excused": "غائب بعذر",
+      "absent": "غائب",
+      "off": "لا دراسة"
+    },
+    "sent": {
+      "count": "عدد الرسائل: {{count}}",
+      "empty": "لم ترسل أي رسالة بعد.",
+      "to": "إلى أسر: {{children}}",
+      "readBy": "قرأها {{read}} من {{families}} أسرة"
+    },
+    "errors": {
+      "child_not_in_your_class": "يمكنك مراسلة أسر أطفال فصولك فقط.",
+      "body_invalid": "اكتب رسالة أقل من 2000 حرف.",
+      "no_children": "اختر طفلًا واحدًا على الأقل.",
+      "no_parents": "لا يوجد ولي أمر مرتبط بأي من الأطفال المختارين.",
+      "forbidden": "ليس لديك صلاحية مراسلة أولياء الأمور.",
+      "child_not_found": "أحد الأطفال لم يعد مسجلًا.",
+      "chat_member_not_allowed": "يمكنك التحدث فقط مع أسر أطفال فصولك.",
+      "failed": "تعذّر الإرسال. حاول مرة أخرى."
+    },
+    "senderRole": {
+      "teacher": "معلم",
+      "manager": "مدير",
+      "branch_admin": "إدارة الحضانة",
+      "chain_super_admin": "إدارة المجموعة",
+      "xo_super_admin": "فريق XO"
+    },
+    "department": {
+      "finance": "القسم المالي",
+      "hr": "قسم الموارد البشرية",
+      "operations": "قسم التشغيل"
+    },
+    "place": {
+      "lead": "المعلم الرئيسي",
+      "assistant": "مساعد",
+      "substitute": "المعلم البديل"
+    },
+    "unknownSender": "الحضانة",
+    "dialogTitle": "رسالة من الحضانة",
+    "about": "بخصوص: {{children}}",
+    "parentCard": {
+      "title": "رسائل من المعلمين والإدارة",
+      "description": "من أرسل كل رسالة، ودوره وقسمه وفصله.",
+      "unread": "غير مقروءة: {{count}}",
+      "viewAll": "كل الرسائل"
+    }
+  },
+  "dailyReport": {
+    "title": "التقارير اليومية",
+    "subtitle": "املأ تقرير كل طفل خلال اليوم — كل تعديل يُحفظ تلقائيًا. وفي آخر اليوم أرسل التقارير المكتملة إلى أولياء الأمور.",
+    "percent": "{{value}}%",
+    "questions": {
+      "breakfast": "الإفطار",
+      "lunch": "الغداء",
+      "snacks": "الوجبة الخفيفة",
+      "nap": "القيلولة",
+      "mood": "المزاج",
+      "toilet": "الحمام / الحفاض",
+      "activities": "الأنشطة"
+    },
+    "stage": {
+      "sent": "أُرسل",
+      "ready": "جاهز للإرسال",
+      "in_progress": "قيد الكتابة",
+      "not_started": "لم يبدأ",
+      "not_expected": "غير مطلوب"
+    },
+    "attendance": {
+      "present": "حضر",
+      "partial": "موجود الآن",
+      "absent": "غائب",
+      "excused": "غائب (بإذن)",
+      "off": "لا دراسة",
+      "not_enrolled": "لم يُسجَّل بعد"
+    },
+    "banner": {
+      "openTitle": "تقارير اليوم المتبقية للإرسال: {{count}}",
+      "soonTitle": "موعد التقارير بعد {{minutes}} دقيقة — المتبقي: {{count}}",
+      "overdueTitle": "تأخرت التقارير منذ {{time}} — لم يُرسل: {{count}}",
+      "doneTitle": "أُرسلت كل تقارير اليوم",
+      "doneBody": "وصل التقرير إلى {{sent}} من {{expected}} أسرة.",
+      "nothingTitle": "لا تقارير مطلوبة اليوم",
+      "nothingBody": "لم يحضر اليوم أي طفل من فصولك.",
+      "progress": "جاهز للإرسال: {{ready}} · قيد الكتابة: {{inProgress}} · لم يبدأ: {{notStarted}}",
+      "dueAt": "الموعد {{time}}",
+      "sentOf": "أُرسل {{sent}} من {{expected}} ({{rate}}%)",
+      "open": "فتح التقارير اليومية",
+      "fillNext": "املأ التقرير التالي"
+    },
+    "tiles": {
+      "expected": "حضروا اليوم",
+      "expectedHint": "تقرير لكل طفل",
+      "sent": "أُرسلت للأسر",
+      "rate": "نسبة الإرسال {{rate}}%",
+      "ready": "جاهزة للإرسال",
+      "readyHint": "كل الأسئلة مُجابة",
+      "inProgress": "قيد الكتابة",
+      "avgCompletion": "متوسط الاكتمال {{value}}%",
+      "notStarted": "لم تبدأ"
+    },
+    "list": {
+      "day": "التاريخ",
+      "today": "اليوم",
+      "rates": "نسبة الإرسال",
+      "sendAllReady": "إرسال كل الجاهز ({{count}})",
+      "fillNext": "املأ تقرير {{name}}",
+      "tableTitle": "الأطفال وتقاريرهم",
+      "count": "الأطفال: {{count}}",
+      "tableHint": "حدّد التقارير المكتملة (أو كلها مرة واحدة) وأرسلها معًا. لا يُرسل التقرير إلا بعد الإجابة عن كل الأسئلة.",
+      "search": "بحث",
+      "searchPlaceholder": "اسم الطفل أو كوده",
+      "class": "الفصل",
+      "allClasses": "كل الفصول",
+      "stageFilter": "حالة التقرير",
+      "allChildren": "كل الأطفال",
+      "toSend": "لم يُرسل بعد",
+      "selectAllReady": "تحديد كل التقارير الجاهزة للإرسال",
+      "selectChild": "تحديد تقرير {{name}}",
+      "answerAllFirst": "أجب عن كل الأسئلة أولًا",
+      "sendSelected": "إرسال المحدد ({{count}})",
+      "sendTitle": "إرسال التقارير إلى الأسر: {{count}}",
+      "sendBody": "ستجد كل أسرة تقرير طفلها في لوحة ولي الأمر. لا يمكن تعديل التقرير بعد إرساله.",
+      "sendConfirm": "إرسال ({{count}})",
+      "sentToast": "أُرسلت تقارير إلى الأسر: {{count}}",
+      "resultSent": "أُرسل إلى الأسر: {{count}}",
+      "resultAlready": "مُرسل من قبل: {{count}}",
+      "resultIncomplete": "لم يُرسل تقرير {{name}} — متبقٍ: {{questions}}",
+      "dismiss": "إغلاق",
+      "columns": {
+        "child": "الطفل",
+        "class": "الفصل",
+        "attendance": "الحضور",
+        "completion": "نسبة الاكتمال",
+        "status": "الحالة",
+        "saved": "آخر حفظ",
+        "action": "التقرير"
+      },
+      "completionOf": "نسبة اكتمال تقرير {{name}}",
+      "missing": "متبقٍ: {{questions}}",
+      "sentAt": "أُرسل {{time}}",
+      "view": "عرض",
+      "fill": "ابدأ الكتابة",
+      "continue": "استكمال",
+      "noMatch": "لا يوجد طفل يطابق هذه الفلاتر.",
+      "empty": "لا يوجد أطفال في فصولك بعد.",
+      "emptyHint": "عندما يضيفك المدير أو رئيس المعلمين إلى فصل، يظهر أطفاله هنا."
+    },
+    "editor": {
+      "title": "التقرير اليومي لـ {{name}}",
+      "invalidRouteHint": "افتح التقرير من قائمة التقارير اليومية.",
+      "notInClassHint": "يمكنك كتابة تقارير أطفال فصولك فقط.",
+      "previousChild": "الطفل السابق",
+      "nextChild": "الطفل التالي",
+      "lockedSent": "أُرسل هذا التقرير إلى الأسرة ولا يمكن تعديله.",
+      "lockedOld": "يمكن كتابة التقرير حتى 7 أيام بعد يومه؛ هذا التقرير للعرض فقط.",
+      "sentAt": "أُرسل {{time}}",
+      "questionsLegend": "أسئلة التقرير",
+      "answered": "تمت الإجابة",
+      "notAnswered": "لم تتم الإجابة بعد",
+      "pickOne": "اختر إجابة",
+      "mealsHint": "كم أكل الطفل في كل وجبة.",
+      "note": "ملاحظة (اختياري)",
+      "noteFor": "ملاحظة عن {{question}}",
+      "notePlaceholder": "ملاحظة (اختياري)",
+      "napHint": "هل نام الطفل؟ وإن نام: كم من الوقت وكيف كان نومه.",
+      "napped": "هل نام؟",
+      "nappedYes": "نعم، نام",
+      "nappedNo": "لم ينم اليوم",
+      "napMinutes": "المدة (بالدقائق)",
+      "napMinutesNeeded": "اكتب كم دقيقة نام.",
+      "napQualityNeeded": "اختر كيف كان نومه.",
+      "moodHint": "مزاج الطفل معظم اليوم.",
+      "toiletHint": "عدد المرات — «لا شيء» إجابة أيضًا.",
+      "toiletCount": "عدد المرات (حمام / حفاض)",
+      "less": "مرة أقل",
+      "more": "مرة أكثر",
+      "toiletNone": "لا شيء اليوم",
+      "activitiesHint": "اختر ما فعله الطفل، أو اكتبه.",
+      "activitiesText": "أو اكتب ما فعله",
+      "optional": "اختياري",
+      "familyNote": "ملاحظة للأسرة",
+      "progressLabel": "نسبة اكتمال التقرير",
+      "answeredOf": "{{answered}} من {{required}}",
+      "toAnswer": "متبقٍ:",
+      "saving": "جارٍ الحفظ…",
+      "unsaved": "تعديلات لم تُحفظ بعد",
+      "savedAt": "حُفظ {{time}}",
+      "notSavedYet": "يُحفظ تلقائيًا أثناء الكتابة",
+      "saveChanges": "حفظ التعديلات",
+      "send": "إرسال إلى الأسرة",
+      "sending": "جارٍ الإرسال…",
+      "sendTitle": "إرسال تقرير {{name}}؟",
+      "sendBody": "ستراه الأسرة فورًا في لوحة ولي الأمر. لا يمكن تعديل التقرير بعد إرساله.",
+      "sentToast": "أُرسل تقرير {{name}} إلى الأسرة.",
+      "stillMissing": "لم يُرسل — متبقٍ: {{questions}}"
+    },
+    "card": {
+      "title": "التقارير اليومية اليوم",
+      "subtitle": "المُرسل إلى الأسر من الأطفال الحاضرين",
+      "all": "التفاصيل",
+      "nothing": "لم يحضر أي طفل بعد اليوم.",
+      "sentOf": "أُرسل {{sent}} من {{expected}}",
+      "missing": "لم يُرسل: {{count}}"
+    },
+    "rates": {
+      "title": "نسبة إرسال التقارير اليومية",
+      "subtitle": "تقرير واحد مطلوب لكل طفل حضر في كل يوم. اعرف كم أُرسل، في يومه أو متأخرًا، وما الناقص — حسب المعلم والفصل واليوم والطفل.",
+      "class": "الفصل",
+      "teacher": "المعلم",
+      "allTeachers": "كل المعلمين",
+      "viewLabel": "طريقة العرض",
+      "views": {
+        "teachers": "حسب المعلم",
+        "classes": "حسب الفصل",
+        "days": "حسب اليوم",
+        "children": "حسب الطفل",
+        "missing": "التقارير الناقصة"
+      },
+      "tiles": {
+        "expected": "التقارير المطلوبة",
+        "expectedHint": "الأطفال الحاضرون × الأيام",
+        "sent": "أُرسلت",
+        "rate": "نسبة الإرسال {{rate}}",
+        "onTime": "أُرسلت في يومها",
+        "onTimeHint": "{{rate}} من المطلوب",
+        "late": "أُرسلت متأخرة",
+        "lateHint": "بعد انتهاء يومها",
+        "missing": "ناقصة",
+        "drafts": "بدأت ولم تُرسل: {{count}}",
+        "completion": "متوسط الاكتمال",
+        "completionHint": "الأسئلة المُجابة"
+      },
+      "teachersHint": "يُحسب كل فصل لمعلمه الرئيسي، و«أرسلها بنفسه» هي ما أرسله المعلم بنفسه. اضغط على صف لعرض هذا المعلم فقط.",
+      "missingHint": "تقارير مطلوبة لم تُرسل، الأحدث أولًا.",
+      "searchPlaceholder": "الطفل أو الكود أو الفصل أو المعلم",
+      "columns": {
+        "teacher": "المعلم",
+        "class": "الفصل",
+        "lead": "المعلم الرئيسي",
+        "day": "اليوم",
+        "expected": "المطلوب",
+        "sent": "أُرسل",
+        "onTime": "في يومه",
+        "missing": "ناقص",
+        "rate": "نسبة الإرسال",
+        "sentByThem": "أرسلها بنفسه"
+      },
+      "rateOf": "نسبة الإرسال لـ {{name}}",
+      "noTeachers": "لا يوجد فصل له معلم رئيسي بعد.",
+      "noClasses": "لا توجد فصول.",
+      "noDays": "لم يحضر أي طفل في هذه الفترة.",
+      "noChildren": "لا يوجد طفل مطابق.",
+      "noMissing": "لا شيء ناقص — أُرسلت كل التقارير المطلوبة.",
+      "noLead": "بدون معلم رئيسي",
+      "draftOf": "بدأ · {{answered}} من {{required}}",
+      "limited": "يُعرض أول {{count}} فقط."
+    },
+    "errors": {
+      "child_not_in_your_class": "هذا الطفل ليس في فصولك.",
+      "already_sent": "أُرسل هذا التقرير من قبل ولا يمكن تعديله.",
+      "date_invalid": "يمكن كتابة التقارير لليوم أو لآخر 7 أيام.",
+      "incomplete": "أجب عن كل الأسئلة قبل الإرسال.",
+      "none_selected": "اختر تقريرًا واحدًا على الأقل (حتى 300 مرة واحدة).",
+      "forbidden": "لا يمكنك تعديل هذا التقرير.",
+      "child_not_found": "لم يُعثر على هذا الطفل.",
+      "failed": "حدث خطأ. حاول مرة أخرى.",
+      "rates_forbidden": "تحتاج صلاحية فريق الفصول لرؤية نسبة الإرسال."
+    }
+  },
   "notificationTemplates": {
     "demo_message_password_reset": {
       "title": "رمز التحقق (بريد تجريبي)",
@@ -6048,6 +6438,22 @@
     "demo_message_invoice_ready": {
       "title": "فاتورة جديدة (واتساب تجريبي)",
       "body": "تم إصدار فاتورة جديدة بقيمة {{amount}}. في الوضع التجريبي لا تُرسل رسائل واتساب، لذلك تظهر الرسالة هنا."
+    },
+    "class_team_assigned": {
+      "title": "انضممت إلى فريق فصل",
+      "body": "أصبحت {{role}} في فصل {{class}}."
+    },
+    "family_message": {
+      "title": "رسالة من {{sender}}",
+      "body": "بخصوص {{children}}: {{preview}}"
+    },
+    "daily_report_sent": {
+      "title": "التقرير اليومي لـ {{child}}",
+      "body": "تقرير يوم {{date}} جاهز: الوجبات والقيلولة والمزاج والأنشطة."
+    },
+    "daily_report_reminder": {
+      "title": "موعد التقارير اليومية {{due_time}}",
+      "body": "تقارير لم تُرسل بعد: {{count}}. أكملها وأرسلها إلى الأسر."
     },
     "unknown": {
       "title": "إشعار"
@@ -6661,6 +7067,8 @@
     "deleted": "تم حذف التذكير."
   },
   "chatAdmin": {
+    "parentOf": "ولي أمر {{children}}",
+    "openFailed": "تعذّر فتح هذه المحادثة.",
     "title": "المحادثات",
     "new": "جديد",
     "newTitle": "محادثة جديدة",
@@ -8229,6 +8637,7 @@
       "manager_finance": "مدير — المالية"
     },
     "systemRoles": {
+      "head_teacher": "رئيس المعلمين",
       "teacher": "معلم",
       "manager_operations": "مدير التشغيل",
       "manager_hr": "مدير الموارد البشرية",
@@ -8239,6 +8648,7 @@
       "parent": "ولي أمر"
     },
     "features": {
+      "class_team": "فريق الفصول",
       "dashboard_attendance": "الحضور",
       "qr_scanner": "ماسح QR",
       "classes": "الفصول",

@@ -1,164 +1,304 @@
-import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
-import { DailyReportForm } from '@/components/teacher/DailyReportForm';
+import { CompletionBar } from '@/components/daily-reports/CompletionBar';
+import { DailyReportQuestions } from '@/components/daily-reports/DailyReportQuestions';
 import { Button } from '@/components/ui/button';
+import { confirm } from '@/components/ui/confirm';
+import { StatusPill } from '@/components/ui/DataTable';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
-import {
-  copyYesterdayReport,
-  defaultDailyReportForm,
-  hydrateDailyReportFormFromRow,
-  loadDailyReport,
-} from '@/hooks/dailyReportsSchema';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthSession } from '@/hooks/useAuthSession';
-import { useDailyReports } from '@/hooks/useDailyReports';
-import { useUserProfile } from '@/hooks/useUserProfile';
+import { useAutosave } from '@/hooks/useAutosave';
+import {
+  useDailyReportRow,
+  useMyDailyReports,
+  useRefreshMyDailyReports,
+  useSaveDailyReport,
+  useSendDailyReports,
+} from '@/hooks/useDailyReportWorkflow';
+import { completion, dailyReportErrorKey, fromRow, nextChild, toPayload, type DailyReportAnswers, type SaveResult } from '@/lib/dailyReport';
+import { ATTENDANCE_TONE, attendanceName, questionList, questionName } from '@/lib/dailyReportLabels';
+import { addCalendarDaysYmd, getNurseryCalendarDateString } from '@/lib/nurseryDay';
+import { cn } from '@/lib/utils';
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+/** A report can still be written up to seven days later (save_daily_report's limit). */
+const EDITABLE_DAYS = 7;
 
-function ageFromDob(dob: string) {
-  const d = new Date(dob);
+function ageInYears(dob: string | null): number {
+  if (!dob) return 99;
+  const d = new Date(`${dob}T12:00:00`);
   const now = new Date();
   let years = now.getFullYear() - d.getFullYear();
   if (now.getMonth() < d.getMonth() || (now.getMonth() === d.getMonth() && now.getDate() < d.getDate())) years -= 1;
   return Math.max(0, years);
 }
 
+/** /teacher/daily-reports/:childId/:date — one child's report for one day. */
 export function TeacherDailyReportEditorPage() {
+  const { t } = useTranslation();
+  const { childId, date } = useParams();
+  if (!childId || !date || !UUID_RE.test(childId) || !DATE_RE.test(date)) {
+    return (
+      <EmptyState
+        icon="link_off"
+        title={t('reports.daily.invalidRoute')}
+        description={t('dailyReport.editor.invalidRouteHint')}
+        action={
+          <Button asChild variant="outline">
+            <Link to="/teacher/daily-reports">{t('reports.daily.backToList')}</Link>
+          </Button>
+        }
+      />
+    );
+  }
+  // A new editor per child and day: what is left unsaved is saved when moving to the next child.
+  return <ReportEditor key={`${childId}|${date}`} childId={childId} day={date} />;
+}
+
+function ReportEditor({ childId, day }: { childId: string; day: string }) {
   const { t, i18n } = useTranslation();
-  const { childId: childIdParam, date: dateParam } = useParams();
+  const lang = i18n.language;
+  const locale = lang.startsWith('ar') ? 'ar-EG' : 'en-GB';
   const navigate = useNavigate();
   const { user } = useAuthSession();
-  const { data: profile } = useUserProfile(user?.id);
-  const reports = useDailyReports({ userId: user?.id, nurseryId: profile?.nursery_id ?? undefined });
+  const dayQuery = useMyDailyReports(user?.id, day);
+  const rowQuery = useDailyReportRow(user?.id, childId, day);
+  const save = useSaveDailyReport();
+  const send = useSendDailyReports(user?.id);
+  const refreshDay = useRefreshMyDailyReports(user?.id);
 
-  const [form, setForm] = useState(defaultDailyReportForm);
-  const [sameForAllChildren, setSameForAllChildren] = useState(false);
+  const [answers, setAnswers] = useState<DailyReportAnswers | null>(null);
+  const [reportId, setReportId] = useState<string | null>(null);
+  // The id a save just returned, for sending right after it (state is only seen on the next render).
+  const savedId = useRef<string | null>(null);
+  const [sentAt, setSentAt] = useState<string | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
 
-  const validParams = Boolean(childIdParam && dateParam && UUID_RE.test(childIdParam) && DATE_RE.test(dateParam));
+  // Filled once from the saved report; later refetches must not overwrite what is being typed.
+  if (rowQuery.isSuccess && answers === null) {
+    const row = rowQuery.data;
+    setAnswers(fromRow(row));
+    setReportId(row ? String(row.id) : null);
+    setSentAt(row?.status === 'published' ? String(row.published_at ?? '') || new Date().toISOString() : null);
+  }
 
-  const allowedChildIds = useMemo(() => new Set(reports.children.map((c) => c.id)), [reports.children]);
-  const childAllowed = childIdParam ? allowedChildIds.has(childIdParam) : false;
-
-  const childOptions = useMemo(
-    () =>
-      reports.children.map((c) => ({
-        id: c.id,
-        name: i18n.language === 'ar' ? c.full_name_ar : c.full_name_en,
-        ageYears: ageFromDob(c.dob),
-      })),
-    [reports.children, i18n.language],
+  const autosave = useAutosave<DailyReportAnswers, SaveResult>(
+    (value) => save.mutateAsync({ childId, day, answers: toPayload(value) }),
+    {
+      onSaved: (result) => {
+        savedId.current = result.id;
+        setReportId(result.id);
+        refreshDay();
+      },
+    },
   );
 
-  // The saved report for this child and date, read fresh each time the editor opens it.
-  const existing = useQuery({
-    queryKey: ['teacher-daily-report-editor', childIdParam, dateParam],
-    enabled: validParams && childAllowed,
-    queryFn: () => loadDailyReport(childIdParam as string, dateParam as string),
-    gcTime: 0,
-    refetchOnReconnect: false,
-  });
+  const rows = dayQuery.data ?? [];
+  const me = rows.find((r) => r.child_id === childId);
+  const today = getNurseryCalendarDateString();
+  const tooOld = day < addCalendarDaysYmd(today, -EDITABLE_DAYS) || day > today;
+  const readOnly = Boolean(sentAt) || tooOld;
+  const done = answers ? completion(answers) : null;
+  const previous = nextChild(rows, childId, -1);
+  const next = nextChild(rows, childId, 1);
+  const name = me ? (lang.startsWith('ar') ? me.full_name_ar || me.full_name_en : me.full_name_en || me.full_name_ar) || '—' : '';
+  const className = me ? (lang.startsWith('ar') ? me.class_name_ar || me.class_name_en : me.class_name_en || me.class_name_ar) : '';
+  const time = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit', hour12: true }) : '');
+  const listLink = `/teacher/daily-reports${day === today ? '' : `?date=${day}`}`;
 
-  // Fill the form once per child and date. Later refetches (live updates refresh every query)
-  // must not overwrite what the teacher is typing.
-  const loadedKey = `${childIdParam}|${dateParam}`;
-  const [filledKey, setFilledKey] = useState<string | null>(null);
-  if (existing.isSuccess && filledKey !== loadedKey) {
-    const row = existing.data;
-    setFilledKey(loadedKey);
-    setForm((prev) =>
-      hydrateDailyReportFormFromRow(row, { ...prev, childId: childIdParam as string, reportDate: dateParam as string }),
-    );
-  }
+  const change = (value: DailyReportAnswers) => {
+    if (readOnly) return;
+    setAnswers(value);
+    setSendError(null);
+    autosave.change(value);
+  };
 
-  const validate = () => {
-    if (!form.childId) {
-      toast.error(t('reports.daily.validation.childRequired'));
-      return false;
+  const sendNow = async () => {
+    if (!done || done.missing.length || readOnly) return;
+    setSendError(null);
+    if (!(await autosave.flush())) return;
+    const id = savedId.current ?? reportId;
+    if (!id) return;
+    const ok = await confirm({
+      title: t('dailyReport.editor.sendTitle', { name }),
+      description: t('dailyReport.editor.sendBody'),
+      confirmText: t('dailyReport.editor.send'),
+      icon: 'send',
+    });
+    if (!ok) return;
+    try {
+      const result = await send.mutateAsync([id]);
+      if (result.sent_count > 0 || result.already_sent > 0) {
+        setSentAt(new Date().toISOString());
+        toast.success(t('dailyReport.editor.sentToast', { name }));
+      } else if (result.incomplete.length) {
+        setSendError(t('dailyReport.editor.stillMissing', { questions: questionList(t, result.incomplete[0].missing, lang) }));
+      }
+    } catch (error) {
+      setSendError(t(`dailyReport.errors.${dailyReportErrorKey(error)}`));
     }
-    return true;
   };
 
-  const saveDraft = async () => {
-    if (!validate()) return;
-    await reports.upsertReport({ form, status: 'draft' });
-    toast.success(t('reports.daily.savedDraft'));
-  };
+  const goTo = (id: string) => navigate(`/teacher/daily-reports/${id}/${day}`);
 
-  const publish = async () => {
-    if (!validate()) return;
-    await reports.upsertReport({ form, status: 'published' });
-    toast.success(t('reports.daily.published'));
-    navigate('/teacher/daily-reports');
-  };
-
-  if (!validParams) {
+  if (dayQuery.isPending || rowQuery.isPending || !answers) {
     return (
-      <div className="space-y-4 pb-28">
-        <p className="text-sm text-on-surface-variant">{t('reports.daily.invalidRoute')}</p>
-        <Button asChild variant="outline">
-          <Link to="/teacher/daily-reports">{t('reports.daily.backToList')}</Link>
-        </Button>
+      <div className="space-y-4">
+        <Skeleton className="h-28 w-full rounded-xl" />
+        {[1, 2, 3].map((k) => <Skeleton key={k} className="h-40 w-full rounded-xl" />)}
       </div>
     );
   }
 
-  if (!childAllowed) {
+  if (!me) {
     return (
-      <div className="space-y-4 pb-28">
-        <p className="text-sm text-on-surface-variant">{t('reports.daily.childNotInClass')}</p>
-        <Button asChild variant="outline">
-          <Link to="/teacher/daily-reports">{t('reports.daily.backToList')}</Link>
-        </Button>
-      </div>
+      <EmptyState
+        icon="person_off"
+        title={t('reports.daily.childNotInClass')}
+        description={t('dailyReport.editor.notInClassHint')}
+        action={
+          <Button asChild variant="outline">
+            <Link to={listLink}>{t('reports.daily.backToList')}</Link>
+          </Button>
+        }
+      />
     );
   }
+
+  const saveLine =
+    autosave.status === 'saving'
+      ? t('dailyReport.editor.saving')
+      : autosave.status === 'dirty'
+        ? t('dailyReport.editor.unsaved')
+        : autosave.status === 'error'
+          ? t(`dailyReport.errors.${dailyReportErrorKey(autosave.error)}`)
+          : autosave.savedAt
+            ? t('dailyReport.editor.savedAt', { time: time(autosave.savedAt.toISOString()) })
+            : me.last_saved_at
+              ? t('dailyReport.editor.savedAt', { time: time(me.last_saved_at) })
+              : t('dailyReport.editor.notSavedYet');
 
   return (
-    <div className="mx-auto w-full max-w-4xl lg:max-w-none space-y-4 pb-28">
-      <div className="flex flex-wrap items-center gap-2">
+    <div className="mx-auto w-full max-w-5xl space-y-4 pb-32">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <Button asChild variant="ghost" size="sm" className="gap-1">
-          <Link to="/teacher/daily-reports">
-            <MaterialSymbol name="arrow_back" size="text-lg" />
+          <Link to={listLink}>
+            <MaterialSymbol name="arrow_back" className="text-lg rtl:rotate-180" />
             {t('reports.daily.backToList')}
           </Link>
         </Button>
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" size="sm" disabled={!previous} onClick={() => previous && goTo(previous.child_id)}>
+            <MaterialSymbol name="chevron_left" className="me-1 text-lg rtl:rotate-180" />
+            {t('dailyReport.editor.previousChild')}
+          </Button>
+          <Button type="button" variant="outline" size="sm" disabled={!next} onClick={() => next && goTo(next.child_id)}>
+            {t('dailyReport.editor.nextChild')}
+            <MaterialSymbol name="chevron_right" className="ms-1 text-lg rtl:rotate-180" />
+          </Button>
+        </div>
       </div>
-      <div className="flex items-center gap-2">
-        <MaterialSymbol name="edit_note" className="text-primary" size="text-2xl" />
-        <h1 className="text-lg font-semibold text-on-surface">{t('reports.daily.createTitle')}</h1>
+
+      {/* The child and the day */}
+      <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
+        <div className="flex flex-col gap-4 bg-surface-container-lowest p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary text-lg font-bold text-primary-foreground">
+              {name.slice(0, 1)}
+            </span>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase text-primary">
+                {new Date(`${day}T12:00:00`).toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+              </p>
+              <h1 className="font-headline text-2xl font-extrabold text-on-surface">{t('dailyReport.editor.title', { name })}</h1>
+              <p className="text-sm text-on-surface-variant">
+                {[className, me.child_code].filter(Boolean).join(' · ')}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <StatusPill tone={ATTENDANCE_TONE[me.attendance]}>
+              {attendanceName(t, me.attendance)}
+              {me.check_in ? ` · ${time(me.check_in)}` : ''}
+              {me.check_out ? ` – ${time(me.check_out)}` : ''}
+            </StatusPill>
+            {sentAt ? (
+              <StatusPill tone="success" icon="mark_email_read">{t('dailyReport.editor.sentAt', { time: time(sentAt) })}</StatusPill>
+            ) : null}
+          </div>
+        </div>
+        {readOnly ? (
+          <p className="flex items-center gap-2 border-t border-outline-variant px-4 py-3 text-sm text-on-surface-variant sm:px-5">
+            <MaterialSymbol name="lock" className="text-base" />
+            {sentAt ? t('dailyReport.editor.lockedSent') : t('dailyReport.editor.lockedOld')}
+          </p>
+        ) : null}
+      </section>
+
+      <DailyReportQuestions value={answers} onChange={change} missing={done?.missing ?? []} readOnly={readOnly} showFeeding={ageInYears(me.dob) < 2} />
+
+      {/* Progress, saving and sending: stays at the bottom of the screen */}
+      <div className="sticky bottom-0 z-20 -mx-4 border-t border-outline-variant bg-surface/95 px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] backdrop-blur sm:mx-0 sm:rounded-xl sm:border">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0 flex-1 space-y-1">
+            <CompletionBar
+              percent={done?.percent ?? 0}
+              label={t('dailyReport.editor.progressLabel')}
+              detail={t('dailyReport.editor.answeredOf', { answered: done?.answered ?? 0, required: done?.required ?? 7 })}
+              className="max-w-md"
+            />
+            {!readOnly && done && done.missing.length ? (
+              <p className="flex flex-wrap items-center gap-x-1 gap-y-0.5 text-xs text-warning">
+                <span className="font-semibold">{t('dailyReport.editor.toAnswer')}</span>
+                {done.missing.map((q) => (
+                  <button
+                    key={q}
+                    type="button"
+                    className="underline underline-offset-2 hover:text-on-surface"
+                    onClick={() => document.getElementById(`q-${q}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                  >
+                    {questionName(t, q)}
+                  </button>
+                ))}
+              </p>
+            ) : null}
+            {sendError ? <p role="alert" className="text-xs text-error">{sendError}</p> : null}
+          </div>
+          {!readOnly ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                aria-live="polite"
+                className={cn('inline-flex items-center gap-1 text-xs', autosave.status === 'error' ? 'text-error' : 'text-on-surface-variant')}
+              >
+                <MaterialSymbol
+                  name={autosave.status === 'saving' ? 'sync' : autosave.status === 'error' ? 'cloud_off' : autosave.status === 'dirty' ? 'edit' : 'cloud_done'}
+                  className={cn('text-base', autosave.status === 'saving' && 'animate-spin')}
+                />
+                {saveLine}
+              </span>
+              <Button type="button" variant="outline" disabled={autosave.status === 'saving'} onClick={() => void autosave.flush()}>
+                <MaterialSymbol name="save" className="me-1 text-base" />
+                {t('dailyReport.editor.saveChanges')}
+              </Button>
+              <Button type="button" disabled={!done || done.missing.length > 0 || send.isPending} onClick={() => void sendNow()}>
+                <MaterialSymbol name="send" className="me-1 text-base rtl:rotate-180" />
+                {send.isPending ? t('dailyReport.editor.sending') : t('dailyReport.editor.send')}
+              </Button>
+            </div>
+          ) : next ? (
+            <Button type="button" onClick={() => goTo(next.child_id)}>
+              {t('dailyReport.editor.nextChild')}
+              <MaterialSymbol name="chevron_right" className="ms-1 text-lg rtl:rotate-180" />
+            </Button>
+          ) : null}
+        </div>
       </div>
-      <DailyReportForm
-        value={form}
-        children={childOptions}
-        sameForAllChildren={sameForAllChildren}
-        onToggleSameForAll={setSameForAllChildren}
-        onChange={(next) => {
-          const childChanged = next.childId !== form.childId;
-          const dateChanged = next.reportDate !== form.reportDate;
-          setForm(next);
-          if (next.childId && next.reportDate && (childChanged || dateChanged)) {
-            navigate(`/teacher/daily-reports/${next.childId}/${next.reportDate}`, { replace: true });
-          }
-        }}
-        onSaveDraft={saveDraft}
-        onPublish={publish}
-        onCopyFromYesterday={async () => {
-          if (!form.childId) return;
-          const row = await copyYesterdayReport(form.childId, form.reportDate);
-          if (!row) {
-            toast.message(t('reports.daily.noYesterdayData'));
-            return;
-          }
-          setForm((prev) => hydrateDailyReportFormFromRow(row, prev));
-          toast.success(t('reports.daily.copiedYesterday'));
-        }}
-        isSaving={reports.isSaving}
-      />
     </div>
   );
 }

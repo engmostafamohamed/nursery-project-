@@ -41,12 +41,15 @@ const primaryNavItems: TeacherNavItem[] = [
 
 const secondaryNavItems: TeacherNavItem[] = [
   { to: '/teacher/daily-reports', key: 'dailyReports', icon: 'description', feature: 'daily_reports' },
+  { to: '/teacher/report-rates', key: 'reportRates', icon: 'monitoring', feature: 'class_team' },
   { to: '/teacher/milestones', key: 'milestones', icon: 'social_leaderboard', feature: 'daily_reports' },
   { to: '/teacher/reminders', key: 'reminders', icon: 'alarm' },
   { to: '/teacher/chat', key: 'chat', icon: 'forum', feature: 'chat' },
+  { to: '/teacher/family-messages', key: 'familyMessages', icon: 'outgoing_mail', feature: 'messages' },
   { to: '/teacher/media', key: 'media', icon: 'photo_library', feature: 'media_library' },
   { to: '/teacher/scanner', key: 'scanner', icon: 'qr_code_scanner', feature: 'qr_scanner' },
   { to: '/teacher/classes', key: 'classes', icon: 'school', feature: 'classes' },
+  { to: '/teacher/team', key: 'team', icon: 'groups', feature: 'class_team' },
   { to: '/teacher/community', key: 'community', icon: 'diversity_3', feature: 'community' },
   { to: '/teacher/profile', key: 'profile', icon: 'person' },
   { to: '/teacher/settings', key: 'settings', icon: 'settings' },

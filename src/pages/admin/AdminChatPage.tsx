@@ -1,5 +1,6 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -41,6 +42,31 @@ export function AdminChatPage() {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = conversations.find((c) => c.id === selectedId) ?? null;
+
+  // ?with=<user>: open the direct conversation with that person (found or started), e.g. a family
+  // from the teacher's dashboard. The server refuses anyone the viewer may not talk to.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const withUser = searchParams.get('with');
+  const openedWith = useRef<string | null>(null);
+  const { createConversation } = actions;
+  useEffect(() => {
+    if (!withUser || !userId || openedWith.current === withUser) return;
+    openedWith.current = withUser;
+    createConversation
+      .mutateAsync({ kind: 'direct', title: null, memberIds: [withUser] })
+      .then((id) => setSelectedId(id))
+      .catch(() => toast.error(t('chatAdmin.openFailed')))
+      .finally(() => {
+        setSearchParams(
+          (current) => {
+            const next = new URLSearchParams(current);
+            next.delete('with');
+            return next;
+          },
+          { replace: true },
+        );
+      });
+  }, [withUser, userId, createConversation, setSearchParams, t]);
 
   const [search, setSearch] = useState('');
   const [draft, setDraft] = useState('');
@@ -565,8 +591,11 @@ function NewConversationDialog(props: {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm text-on-surface">{dn(p.name_ar, p.name_en)}</span>
-                    <span className="block text-[11px] text-on-surface-variant">
+                    <span className="block truncate text-[11px] text-on-surface-variant">
                       {t(`chatAdmin.roles.${p.role}`, { defaultValue: p.role })}
+                      {dn(p.context_ar ?? null, p.context_en ?? null)
+                        ? ` · ${t('chatAdmin.parentOf', { children: dn(p.context_ar ?? null, p.context_en ?? null) })}`
+                        : ''}
                     </span>
                   </span>
                   {checked ? (

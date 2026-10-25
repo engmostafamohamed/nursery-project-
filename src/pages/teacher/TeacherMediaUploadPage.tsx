@@ -28,8 +28,9 @@ export function TeacherMediaUploadPage() {
 
   const [files, setFiles] = useState<File[]>([]);
   const [capturedAt, setCapturedAt] = useState(localDateInputValue(new Date()));
-  const [classId, setClassId] = useState('');
-  const [childIds, setChildIds] = useState<string[]>([]);
+  // ?class=&child= (from the teacher's dashboard): start on that class with that child tagged.
+  const [classId, setClassId] = useState(() => searchParams.get('class') ?? '');
+  const [childIds, setChildIds] = useState<string[]>(() => (searchParams.get('child') ? [searchParams.get('child') as string] : []));
   const [activityType, setActivityType] = useState<string>('');
   const [caption, setCaption] = useState('');
   const [visibility, setVisibility] = useState<'all_class' | 'tagged_only'>('all_class');

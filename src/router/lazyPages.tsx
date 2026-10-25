@@ -124,6 +124,12 @@ export const AdminPositionsPage = lazy(() =>
 export const AdminFeaturesPage = lazy(() =>
   import('@/pages/admin/settings/AdminFeaturesPage').then((m) => ({ default: m.AdminFeaturesPage })),
 );
+export const ClassTeamPage = lazy(() =>
+  import('@/pages/admin/settings/ClassTeamPage').then((m) => ({ default: m.ClassTeamPage })),
+);
+export const DailyReportRatesPage = lazy(() =>
+  import('@/pages/admin/DailyReportRatesPage').then((m) => ({ default: m.DailyReportRatesPage })),
+);
 export const AdminRolesPage = lazy(() =>
   import('@/pages/admin/settings/AdminRolesPage').then((m) => ({ default: m.AdminRolesPage })),
 );
@@ -331,6 +337,9 @@ export const DatabasePendingPage = lazy(() =>
 );
 export const TeacherHomePage = lazy(() =>
   import('@/pages/teacher/TeacherHomePage').then((m) => ({ default: m.TeacherHomePage })),
+);
+export const TeacherFamilyMessagesPage = lazy(() =>
+  import('@/pages/teacher/TeacherFamilyMessagesPage').then((m) => ({ default: m.TeacherFamilyMessagesPage })),
 );
 export const TeacherMessagesPage = lazy(() =>
   import('@/pages/teacher/TeacherMessagesPage').then((m) => ({ default: m.TeacherMessagesPage })),

@@ -239,7 +239,7 @@ function FamilyDaysTable({
     [children, codes],
   );
   const rows = useMemo(() => sortFamilyDays(filterFamilyDays(days, filters, byId)), [days, filters, byId]);
-  const pager = usePagination(rows, 15, JSON.stringify(filters));
+  const pager = usePagination(rows, 20, JSON.stringify(filters));
   const set = (patch: Partial<FamilyFilters>) => setFilters((current) => ({ ...current, ...patch }));
 
   const name = (childId: string) => {

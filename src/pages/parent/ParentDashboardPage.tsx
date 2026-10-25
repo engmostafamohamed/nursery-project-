@@ -26,6 +26,7 @@ import { ParentChildSummaryCards } from '@/components/parent/ParentChildSummaryC
 import { ParentDashboardFeedList } from '@/components/parent/ParentDashboardFeedList';
 import { ParentDashboardQuickActions } from '@/components/parent/ParentDashboardQuickActions';
 import { ParentDashboardScheduleSection } from '@/components/parent/ParentDashboardScheduleSection';
+import { ParentFamilyMessagesCard } from '@/components/parent/ParentFamilyMessagesCard';
 import { ParentPasswordResetCard } from '@/components/parent/ParentPasswordResetCard';
 import { Button } from '@/components/ui/button';
 import { ChartLegend } from '@/components/ui/ChartLegend';
@@ -752,6 +753,8 @@ export function ParentDashboardPage() {
           </div>
         </div>
       </section>
+
+      <ParentFamilyMessagesCard />
 
       {childRows.length ? <ParentAttendancePanel children={childRows} /> : null}
 
