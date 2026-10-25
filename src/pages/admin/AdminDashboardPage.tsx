@@ -185,7 +185,7 @@ export function AdminDashboardPage() {
         <DashboardAlertsBar alerts={alerts} isLoading={Boolean(nurseryId) && alertsPending} basePath={adminBasePath} />
       </section>
 
-      {nurseryId ? <AttendanceKpiPanel nurseryId={nurseryId} /> : null}
+      {nurseryId ? <AttendanceKpiPanel nurseryId={nurseryId} basePath={adminBasePath} /> : null}
 
       <section className="grid grid-cols-1 items-start gap-5 xl:grid-cols-12">
         <TableCard

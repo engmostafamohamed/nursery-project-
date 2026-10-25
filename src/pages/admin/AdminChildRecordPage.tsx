@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 
 import { ChildAvatarUpload } from '@/components/admin/ChildAvatarUpload';
 import { ChildBillingTab } from '@/components/admin/children/ChildBillingTab';
@@ -17,6 +17,8 @@ import { useAuthSession } from '@/hooks/useAuthSession';
 import { useNurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { STEP_DATE_TIME } from '@/lib/admissionTimeline';
+import { rangeFromSearch } from '@/lib/attendanceKpiDetails';
+import { MAX_KPI_RANGE_DAYS } from '@/lib/attendancePeriods';
 import { MEDICATION_CONSENT_OPTIONS } from '@/lib/admissions/medicationConsentOptions';
 import { allergyLabel } from '@/lib/allergies';
 import { formatDateTime } from '@/lib/datetime';
@@ -27,6 +29,8 @@ type JsonRecord = Record<string, unknown>;
 
 type ChildRecord = ChildQrInput & {
   avatar_url: string | null;
+  /** The child's unique code (CH-2026-00012). */
+  child_id_number: string | null;
   class_id: string | null;
   status: string | null;
   first_name: string | null;
@@ -139,7 +143,14 @@ type ChildRecordPayload = {
   extraHoursPackage: NameSummary | null;
 };
 
-type ChildRecordTab = 'overview' | 'parents' | 'care' | 'health' | 'emergency' | 'attendance' | 'billing' | 'documents' | 'tools';
+const CHILD_RECORD_TABS = ['overview', 'parents', 'care', 'health', 'emergency', 'attendance', 'billing', 'documents', 'tools'] as const;
+type ChildRecordTab = (typeof CHILD_RECORD_TABS)[number];
+
+/** The tab a link asks for (?tab=attendance, e.g. from the dashboard), else the overview. */
+function tabFromSearch(params: URLSearchParams): ChildRecordTab {
+  const tab = params.get('tab');
+  return CHILD_RECORD_TABS.find((value) => value === tab) ?? 'overview';
+}
 
 function isRecord(value: unknown): value is JsonRecord {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -190,7 +201,10 @@ export function AdminChildRecordPage() {
   const { user } = useAuthSession();
   const { data: profile } = useUserProfile(user?.id);
   const { data: languagePref = 'both' } = useNurseryLanguagePref(profile?.nursery_id);
-  const [tab, setTab] = useState<ChildRecordTab>('overview');
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState<ChildRecordTab>(() => tabFromSearch(searchParams));
+  // The days the dashboard opened this record on (?from=&to=); the attendance tab starts there.
+  const [attendanceRange] = useState(() => rangeFromSearch(searchParams, MAX_KPI_RANGE_DAYS));
   const isAr = i18n.language.startsWith('ar');
   // The admission journey (application → first day), with the exact time of each step.
   const journeyIds = useMemo(() => (childId ? [childId] : []), [childId]);
@@ -479,6 +493,16 @@ export function AdminChildRecordPage() {
                   <span className="material-symbols-outlined text-sm" aria-hidden>school</span>
                   {className}
                 </span>
+                {child.child_id_number ? (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2.5 py-1 font-semibold text-primary"
+                    title={tk('childCode', 'Child code')}
+                  >
+                    <span className="material-symbols-outlined text-sm" aria-hidden>tag</span>
+                    <span className="sr-only">{tk('childCode', 'Child code')}: </span>
+                    <span className="font-mono" dir="ltr">{child.child_id_number}</span>
+                  </span>
+                ) : null}
                 <span className="text-on-surface-variant">
                   {tk('dob', 'Date of birth')}: {fmtDate(child.dob)} · {ageOf(child.dob)} · {showCode(child.gender)}
                 </span>
@@ -850,7 +874,9 @@ export function AdminChildRecordPage() {
         </div>
       ) : null}
 
-      {tab === 'attendance' ? <ChildAttendanceHistory childId={child.id} nurseryId={child.nursery_id} audience="staff" /> : null}
+      {tab === 'attendance' ? (
+        <ChildAttendanceHistory childId={child.id} nurseryId={child.nursery_id} audience="staff" initialRange={attendanceRange} />
+      ) : null}
 
       {tab === 'billing' ? (
         <ChildBillingTab childId={child.id} nurseryId={child.nursery_id} />

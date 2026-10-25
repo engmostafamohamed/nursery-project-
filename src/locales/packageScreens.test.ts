@@ -14,6 +14,8 @@ const root = path.resolve(__dirname, '..');
 const SCREENS = [
   'pages/admin/AdminDealsPage.tsx',
   'pages/admin/AdminPackagesPage.tsx',
+  'components/admin/packages/PackageSubscriptionsPanel.tsx',
+  'components/admin/PeriodFilter.tsx',
   'components/admin/settings/TuitionPackagesEditor.tsx',
   'components/admin/settings/TuitionPackageBillingPeriodsEditor.tsx',
   'components/admin/settings/BulkTuitionAssignDialog.tsx',

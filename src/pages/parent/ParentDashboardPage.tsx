@@ -19,6 +19,7 @@ import { ChatPanel } from '@/components/chat/ChatPanel';
 import { PaymentHistoryTable } from '@/components/financial/PaymentHistoryTable';
 import { FinancialSummaryCard } from '@/components/parent/FinancialSummaryCard';
 import { ParentApplicationsTable } from '@/components/parent/ParentApplicationsTable';
+import { ParentAttendancePanel } from '@/components/parent/ParentAttendancePanel';
 import { ParentChildBillingCard } from '@/components/parent/ParentChildBillingCard';
 import { ParentAdminInboxSection } from '@/components/parent/ParentAdminInboxSection';
 import { ParentChildSummaryCards } from '@/components/parent/ParentChildSummaryCards';
@@ -29,7 +30,7 @@ import { ParentPasswordResetCard } from '@/components/parent/ParentPasswordReset
 import { Button } from '@/components/ui/button';
 import { ChartLegend } from '@/components/ui/ChartLegend';
 import { Skeleton } from '@/components/ui/skeleton';
-import { StatStrip, StatTile } from '@/components/ui/StatTile';
+import { StatTile } from '@/components/ui/StatTile';
 import { useApplicationPackagePayment } from '@/hooks/useApplicationPackagePayment';
 import { useAllChildrenAttendanceSummary } from '@/hooks/useAllChildrenAttendanceSummary';
 import { useApplications } from '@/hooks/useApplications';
@@ -103,16 +104,10 @@ function ParentDashboardAnalyticsPanel({
   children,
   childInsights,
   isLoading,
-  attendanceRate,
-  presentDays,
-  schoolDays,
 }: {
   children: ParentDashboardChildCard[];
   childInsights: Record<string, ChildDashboardInsight>;
   isLoading: boolean;
-  attendanceRate: number;
-  presentDays: number;
-  schoolDays: number;
 }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
@@ -185,32 +180,6 @@ function ParentDashboardAnalyticsPanel({
 
       <div className="grid xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-4 p-4 sm:p-5">
-          <StatStrip
-            items={[
-              {
-                icon: 'how_to_reg',
-                label: t('parent.dashboard.analytics.monthRate', { defaultValue: '30-day attendance' }),
-                value: `${attendanceRate}%`,
-                tone: attendanceRate >= 80 ? 'success' : 'warning',
-                to: '/parent/attendance',
-              },
-              {
-                icon: 'event_available',
-                label: t('parent.dashboard.analytics.presentDays', { defaultValue: 'Present' }),
-                value: presentDays,
-                tone: 'success',
-                to: '/parent/attendance',
-              },
-              {
-                icon: 'event_busy',
-                label: t('parent.dashboard.analytics.absentDays', { defaultValue: 'Absent' }),
-                value: Math.max(0, schoolDays - presentDays),
-                tone: 'error',
-                to: '/parent/attendance',
-              },
-            ]}
-          />
-
           <div className="rounded-lg border border-outline-variant bg-surface-container-lowest p-3 sm:p-4">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-semibold text-on-surface">{t('parent.reports.last7Days')}</p>
@@ -784,13 +753,12 @@ export function ParentDashboardPage() {
         </div>
       </section>
 
+      {childRows.length ? <ParentAttendancePanel children={childRows} /> : null}
+
       <ParentDashboardAnalyticsPanel
         children={childRows}
         childInsights={childInsights}
         isLoading={showChildSkeleton || attendanceSummary.isLoading}
-        attendanceRate={attendanceSummary.summary.ratePct}
-        presentDays={attendanceSummary.summary.presentDays}
-        schoolDays={attendanceSummary.summary.schoolDaysCount}
       />
 
       <ParentAdmissionCyclePanel

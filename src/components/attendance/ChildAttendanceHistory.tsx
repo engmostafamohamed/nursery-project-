@@ -6,6 +6,7 @@ import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useChildAttendanceHistory } from '@/hooks/useChildAttendanceHistory';
 import { averageMinutesToTimeLabel } from '@/lib/attendanceAnalytics';
+import { rangeLabel as periodRangeLabel, type DateRange } from '@/lib/attendancePeriods';
 import type { AttendanceDay } from '@/lib/attendanceApi';
 import { HISTORY_RANGES, historyDays, historyStats, type HistoryRange } from '@/lib/childAttendanceHistory';
 import { getNurseryCalendarDateString } from '@/lib/nurseryDay';
@@ -19,6 +20,8 @@ type Props = {
   nurseryId: string | null | undefined;
   /** Staff also see the days flagged for review. */
   audience: 'staff' | 'parent';
+  /** Exact days to open on (a period chosen on the dashboard); the usual periods stay available. */
+  initialRange?: DateRange | null;
 };
 
 function StatTile({ icon, label, value, hint, tone }: { icon: string; label: string; value: string | number; hint?: string; tone: string }) {
@@ -43,12 +46,17 @@ function StatTile({ icon, label, value, hint, tone }: { icon: string; label: str
  * numbers, the charts, every absence with the family's notice, and the day-by-day log of who
  * brought and picked up the child.
  */
-export function ChildAttendanceHistory({ childId, nurseryId, audience }: Props) {
+export function ChildAttendanceHistory({ childId, nurseryId, audience, initialRange }: Props) {
   const { t, i18n } = useTranslation();
-  const [range, setRange] = useState<HistoryRange>(30);
+  const [range, setRange] = useState<HistoryRange | 'period'>(initialRange ? 'period' : 30);
   // The nursery's calendar day; read once, a lazy initial state keeps render pure.
   const [today] = useState(() => getNurseryCalendarDateString());
-  const report = useChildAttendanceHistory({ childId, nurseryId: nurseryId ?? undefined, days: range });
+  const report = useChildAttendanceHistory({
+    childId,
+    nurseryId: nurseryId ?? undefined,
+    days: range === 'period' ? undefined : range,
+    range: range === 'period' ? initialRange : null,
+  });
 
   const days = useMemo(
     () =>
@@ -66,6 +74,10 @@ export function ChildAttendanceHistory({ childId, nurseryId, audience }: Props) 
     90: t('attendanceHistory.range.days90'),
     180: t('attendanceHistory.range.days180'),
   };
+  const ranges: Array<{ value: HistoryRange | 'period'; label: string }> = [
+    ...(initialRange ? [{ value: 'period' as const, label: periodRangeLabel(initialRange, i18n.language.startsWith('ar') ? 'ar-EG' : 'en-GB') }] : []),
+    ...HISTORY_RANGES.map((value) => ({ value, label: rangeLabel[value] })),
+  ];
 
   return (
     <div className="space-y-4">
@@ -73,8 +85,8 @@ export function ChildAttendanceHistory({ childId, nurseryId, audience }: Props) 
         <p className="max-w-2xl text-sm text-on-surface-variant">
           {audience === 'parent' ? t('attendanceHistory.introParent') : t('attendanceHistory.introStaff')}
         </p>
-        <div role="radiogroup" aria-label={t('attendanceHistory.range.label')} className="inline-flex rounded-xl border border-outline-variant bg-surface p-1">
-          {HISTORY_RANGES.map((value) => (
+        <div role="radiogroup" aria-label={t('attendanceHistory.range.label')} className="inline-flex flex-wrap rounded-xl border border-outline-variant bg-surface p-1">
+          {ranges.map(({ value, label }) => (
             <button
               key={value}
               type="button"
@@ -86,7 +98,7 @@ export function ChildAttendanceHistory({ childId, nurseryId, audience }: Props) 
                 range === value ? 'bg-primary text-primary-foreground' : 'text-on-surface-variant hover:text-on-surface',
               )}
             >
-              {rangeLabel[value]}
+              {label}
             </button>
           ))}
         </div>

@@ -187,6 +187,9 @@ export function AttendanceHistoryCharts({ days }: { days: AttendanceDay[] }) {
                 axisLine={false}
                 reversed={isRtl}
                 minTickGap={16}
+                // The arrival-only rings bring their own data; their days are already on the axis, so
+                // they sit on them instead of being added again at the end.
+                allowDuplicatedCategory={false}
               />
               {/* Morning at the top, like a day planner. */}
               <YAxis

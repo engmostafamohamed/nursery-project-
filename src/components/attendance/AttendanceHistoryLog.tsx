@@ -6,6 +6,7 @@ import { Pagination } from '@/components/ui/Pagination';
 import { usePagination } from '@/hooks/usePagination';
 import { staffName, type AttendanceDay } from '@/lib/attendanceApi';
 import { absenceDays, isAttended, stayMinutes } from '@/lib/childAttendanceHistory';
+import { formatMoneyAmount } from '@/lib/money';
 import { cn } from '@/lib/utils';
 
 type LogFilter = 'all' | 'attended' | 'absent' | 'late';
@@ -299,6 +300,9 @@ export function AttendanceDayLog({ days, showReview }: { days: AttendanceDay[]; 
                     <span className="text-on-surface-variant">
                       · {t('attendance.extraHoursShort', { hours: day.extraHours })}
                       {day.extraHoursCovered > 0 ? ` · ${t('attendance.coveredByPackage', { hours: day.extraHoursCovered })}` : ''}
+                      {day.extraFee > 0 ? ` · ${t('invoice.egpAmount', { amount: formatMoneyAmount(day.extraFee) })}` : ''}
+                      {day.extraFee > 0 && day.invoiceStatus ? ` (${t(`invoice.status.${day.invoiceStatus}`, { defaultValue: day.invoiceStatus })})` : ''}
+                      {day.lateChargeWaived ? ` · ${t('attendance.kpis.details.waived')}` : ''}
                     </span>
                   </p>
                 ) : null}

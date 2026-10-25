@@ -22,6 +22,7 @@ const files = [
   '../pages/parent/ParentInvoicesPage.tsx',
   '../components/parent/InvoiceCard.tsx',
   '../components/parent/ParentChildSummaryCards.tsx',
+  '../components/parent/ParentAttendancePanel.tsx',
   '../components/parent/ParentApplicationsTable.tsx',
   '../components/parent/ParentChildBillingCard.tsx',
   '../components/parent/ParentDashboardScheduleSection.tsx',

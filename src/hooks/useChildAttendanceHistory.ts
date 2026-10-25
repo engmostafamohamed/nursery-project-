@@ -90,8 +90,14 @@ export function summarizeDays(rows: Array<Pick<DayAttendanceRow, 'status' | 'che
   };
 }
 
-export function useChildAttendanceHistory(params: { childId?: string; nurseryId?: string; days?: number }) {
-  const window = useMemo(() => attendanceWindow(params.days ?? DAYS), [params.days]);
+/** `range` (exact days, e.g. a period opened from the dashboard) wins over `days` (the last N days). */
+export function useChildAttendanceHistory(params: { childId?: string; nurseryId?: string; days?: number; range?: { from: string; to: string } | null }) {
+  const rangeFrom = params.range?.from;
+  const rangeTo = params.range?.to;
+  const window = useMemo(
+    () => (rangeFrom && rangeTo ? { from: rangeFrom, to: rangeTo } : attendanceWindow(params.days ?? DAYS)),
+    [params.days, rangeFrom, rangeTo],
+  );
 
   const childQuery = useQuery({
     queryKey: ['child-attendance-child', params.childId, params.nurseryId],

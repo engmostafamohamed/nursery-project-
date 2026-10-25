@@ -11,6 +11,8 @@ import en from './en.json';
 const files = [
   '../pages/admin/AdminDashboardPage.tsx',
   '../components/admin/attendance/AttendanceKpiPanel.tsx',
+  '../components/admin/attendance/AttendanceKpiDetails.tsx',
+  '../components/admin/PeriodFilter.tsx',
   '../components/admin/DashboardAlertsBar.tsx',
   '../components/admin/DashboardQuickActions.tsx',
   '../components/admin/AdminDashboardActivityFeed.tsx',

@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Fragment, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { AttendanceEventsTimeline } from '@/components/admin/attendance/AttendanceEventsTimeline';
@@ -44,6 +44,7 @@ import {
   type AttendanceDay,
   type AttendanceMethod,
 } from '@/lib/attendanceApi';
+import { rangeFromSearch } from '@/lib/attendanceKpiDetails';
 import { addCalendarDaysYmd, getNurseryCalendarDateString } from '@/lib/nurseryDay';
 import { supabase } from '@/lib/supabase';
 import { cn, formatQueryError } from '@/lib/utils';
@@ -77,13 +78,16 @@ export function AdminAttendanceLogsPage() {
   const { data: languagePref = 'both' } = useNurseryLanguagePref(nurseryId);
   const { data: classes } = useNurseryClasses(nurseryId);
   const today = getNurseryCalendarDateString();
-  const [from, setFrom] = useState(addCalendarDaysYmd(today, -6));
-  const [to, setTo] = useState(today);
+  // A link (e.g. the dashboard's "need review") may open the log on its days and filter: ?from=&to=&review=1.
+  const [searchParams] = useSearchParams();
+  const [linked] = useState(() => rangeFromSearch(searchParams, MAX_RANGE_DAYS));
+  const [from, setFrom] = useState(linked?.from ?? addCalendarDaysYmd(today, -6));
+  const [to, setTo] = useState(linked?.to ?? today);
   const [classId, setClassId] = useState('all');
   const [search, setSearch] = useState('');
   const [method, setMethod] = useState<MethodFilter>('all');
   const [lateOnly, setLateOnly] = useState(false);
-  const [reviewOnly, setReviewOnly] = useState(false);
+  const [reviewOnly, setReviewOnly] = useState(() => searchParams.get('review') === '1');
   const [includeAbsences, setIncludeAbsences] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [correcting, setCorrecting] = useState<CorrectionTarget | null>(null);

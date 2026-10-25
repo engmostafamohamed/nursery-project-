@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/select';
 import { StatTile } from '@/components/ui/StatTile';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PackageSubscriptionsPanel } from '@/components/admin/packages/PackageSubscriptionsPanel';
 import { AdminPackageCard } from '@/components/admin/settings/AdminPackageCard';
 import { dealDiscountLabel, localizedName } from '@/components/admin/settings/dealLabels';
 import { ExtraHoursHourlyRateCard } from '@/components/admin/settings/ExtraHoursHourlyRateCard';
@@ -38,6 +40,7 @@ import { useTouchedFields } from '@/hooks/useTouchedFields';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { formatMoneyAmount } from '@/lib/money';
 import { extraHoursPackageFormIssues, hasIssues } from '@/lib/packageForms';
+import type { CatalogPackage } from '@/lib/packageSubscriptions';
 import { cn, formatQueryError, getUserInitials } from '@/lib/utils';
 import {
   useAdminPackages,
@@ -251,6 +254,15 @@ export function AdminPackagesPage() {
     return [...tuitionRows, ...rows].filter((p) => p.deal_id && live.has(p.deal_id)).length;
   }, [dealsQuery.data, tuitionRows, rows]);
   const activeTuition = tuitionRows.filter((p) => p.active).length;
+  // Every package of both kinds, so the subscriptions card also shows the ones nobody has taken.
+  const catalog = useMemo<CatalogPackage[]>(
+    () => [
+      ...tuitionRows.map((p) => ({ id: p.id, kind: 'tuition' as const, name_ar: p.name_ar, name_en: p.name_en, active: p.active })),
+      ...rows.map((p) => ({ id: p.id, kind: 'extra_hours' as const, name_ar: p.name_ar, name_en: p.name_en, active: p.active })),
+    ],
+    [tuitionRows, rows],
+  );
+  const basePath = useLocation().pathname.startsWith('/xo-admin') ? '/xo-admin/nursery' : '/admin';
 
   const hasActiveFilters = Boolean(search || statusFilter !== 'all' || coverageFilter !== 'all' || dealFilter !== 'all');
   const clearFilters = () => {
@@ -394,6 +406,8 @@ export function AdminPackagesPage() {
           />
         </div>
       </PageHeader>
+
+      <PackageSubscriptionsPanel nurseryId={nurseryId} catalog={catalog} basePath={basePath} />
 
       <Tabs value={tab} onValueChange={(value: string) => setTab(value as 'fixed' | 'hours')}>
         <TabsList>

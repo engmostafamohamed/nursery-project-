@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { ChildAttendanceHistory } from '@/components/attendance/ChildAttendanceHistory';
@@ -10,6 +10,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useChildAttendanceHistory } from '@/hooks/useChildAttendanceHistory';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { rangeFromSearch } from '@/lib/attendanceKpiDetails';
+import { MAX_KPI_RANGE_DAYS } from '@/lib/attendancePeriods';
 import { getUserInitials } from '@/lib/utils';
 
 export function AdminChildAttendanceReportPage() {
@@ -17,6 +19,9 @@ export function AdminChildAttendanceReportPage() {
   const { t, i18n } = useTranslation();
   const { user } = useAuthSession();
   const { data: profile } = useUserProfile(user?.id);
+  const [searchParams] = useSearchParams();
+  // The days a link opened this report on (?from=&to=), if any.
+  const [initialRange] = useState(() => rangeFromSearch(searchParams, MAX_KPI_RANGE_DAYS));
 
   const report = useChildAttendanceHistory({
     childId: childId ?? undefined,
@@ -81,7 +86,7 @@ export function AdminChildAttendanceReportPage() {
         </Button>
       </div>
 
-      <ChildAttendanceHistory childId={childId} nurseryId={profile?.nursery_id} audience="staff" />
+      <ChildAttendanceHistory childId={childId} nurseryId={profile?.nursery_id} audience="staff" initialRange={initialRange} />
     </div>
   );
 }

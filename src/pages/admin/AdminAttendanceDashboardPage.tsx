@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { AttendanceKpiPanel } from '@/components/admin/attendance/AttendanceKpiPanel';
@@ -21,6 +22,7 @@ export function AdminAttendanceDashboardPage() {
   const { t } = useTranslation();
   const { user } = useAuthSession();
   const { data: profile } = useUserProfile(user?.id);
+  const basePath = useLocation().pathname.startsWith('/xo-admin') ? '/xo-admin/nursery' : '/admin';
   const [preset, setPreset] = useState<AttendanceDatePreset>('week');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
@@ -89,7 +91,7 @@ export function AdminAttendanceDashboardPage() {
         </Button>
       </div>
 
-      <AttendanceKpiPanel nurseryId={profile?.nursery_id} />
+      <AttendanceKpiPanel nurseryId={profile?.nursery_id} basePath={basePath} />
 
       <div className="flex flex-wrap gap-2">
         {(['week', 'month', 'custom'] as const).map((p) => (
