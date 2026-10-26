@@ -1,11 +1,14 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
+import { MealPlate } from '@/components/daily-reports/MealPlate';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { StatusPill, type PillTone } from '@/components/ui/DataTable';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { ParentDashboardChildCard } from '@/hooks/useParentDashboardChildren';
+import { MEALS } from '@/lib/dailyReport';
 import { formatMoodLabel, moodKey } from '@/lib/dailyReportDisplay';
+import { mealAmountName, questionName } from '@/lib/dailyReportLabels';
 import { formatMoneyAmount } from '@/lib/money';
 import { cn, getUserInitials } from '@/lib/utils';
 
@@ -230,9 +233,25 @@ export function ParentChildSummaryCards({
                       ? t('parent.dashboard.child.mood', { mood: formatMoodLabel(t, child.lastReportMood) })
                       : t('parent.dashboard.child.noMood')}
                   </p>
-                  <p className="mt-0.5 line-clamp-1 text-on-surface-variant">
-                    {child.lastReportMeals ? t('parent.dashboard.child.meals', { summary: child.lastReportMeals }) : t('parent.dashboard.child.noMeals')}
-                  </p>
+                  {child.lastReportMeals ? (
+                    // The last report's plates, filled to what the child ate.
+                    <div className="mt-1 flex items-end gap-1">
+                      {MEALS.map((meal) => {
+                        const amount = child.lastReportMeals?.[meal] ?? null;
+                        return (
+                          <MealPlate
+                            key={meal}
+                            meal={meal}
+                            amount={amount}
+                            size={44}
+                            label={t('dailyReport.sheet.mealLabel', { meal: questionName(t, meal), amount: amount ? mealAmountName(t, amount) : t('dailyReport.sheet.noAnswer') })}
+                          />
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="mt-0.5 line-clamp-1 text-on-surface-variant">{t('parent.dashboard.child.noMeals')}</p>
+                  )}
                   {insight?.relatedUpdate ? (
                     <Link to={insight.relatedUpdate.to} className="mt-1 line-clamp-1 font-semibold text-primary hover:underline">
                       {insight.relatedUpdate.label}

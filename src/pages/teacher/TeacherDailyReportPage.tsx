@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { CompletionBar } from '@/components/daily-reports/CompletionBar';
+import { DailyReportHistory } from '@/components/daily-reports/DailyReportHistory';
 import { ReportDueBanner } from '@/components/daily-reports/ReportDueBanner';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -17,6 +18,7 @@ import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/select';
 import { StatTile } from '@/components/ui/StatTile';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useMyDailyReports, useSendDailyReports } from '@/hooks/useDailyReportWorkflow';
 import { usePagination } from '@/hooks/usePagination';
@@ -43,9 +45,10 @@ const LIST_DAYS_BACK = 30;
 const STAGES: StageFilter[] = ['all', 'open', 'not_started', 'in_progress', 'ready', 'sent'];
 
 /**
- * The teacher's daily reports for a day: an alarm as the end of the day nears, how many reports are
- * sent, ready, in progress or not started, and a table of every child with how far their report is.
- * The complete ones can be picked (or all at once) and sent to the families together.
+ * The teacher's daily reports. The day: an alarm as the end of the day nears, how many reports are
+ * sent, ready, in progress or not started, and a table of every child with how far their report is;
+ * the complete ones can be picked (or all at once) and sent to the families together. The sent
+ * reports (?tab=history): every report sent, found by day or period, class, and child.
  */
 export function TeacherDailyReportPage() {
   const { t, i18n } = useTranslation();
@@ -60,6 +63,8 @@ export function TeacherDailyReportPage() {
   const asked = params.get('date') ?? '';
   // A picked day, else the nursery's today as the server counts it.
   const chosenDay = DATE_RE.test(asked) && asked <= today && asked >= earliest ? asked : null;
+  const tab = params.get('tab') === 'history' ? 'history' : 'day';
+  const setTab = (value: string) => setParams(value === 'history' ? { tab: 'history' } : chosenDay ? { date: chosenDay } : {}, { replace: true });
 
   const query = useMyDailyReports(user?.id, chosenDay);
   const send = useSendDailyReports(user?.id);
@@ -156,13 +161,15 @@ export function TeacherDailyReportPage() {
         description={t('dailyReport.subtitle')}
         actions={
           <>
-            <div className="flex items-center gap-2">
-              <label htmlFor="report-day" className="text-sm font-medium text-on-surface-variant">{t('dailyReport.list.day')}</label>
-              <Input id="report-day" type="date" className="w-44" min={earliest} max={today} value={day} onChange={(e) => setDay(e.target.value)} />
-              {day !== today ? (
-                <Button type="button" variant="ghost" size="sm" onClick={() => setDay(today)}>{t('dailyReport.list.today')}</Button>
-              ) : null}
-            </div>
+            {tab === 'day' ? (
+              <div className="flex items-center gap-2">
+                <label htmlFor="report-day" className="text-sm font-medium text-on-surface-variant">{t('dailyReport.list.day')}</label>
+                <Input id="report-day" type="date" className="w-44" min={earliest} max={today} value={day} onChange={(e) => setDay(e.target.value)} />
+                {day !== today ? (
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setDay(today)}>{t('dailyReport.list.today')}</Button>
+                ) : null}
+              </div>
+            ) : null}
             {canSeeRates ? (
               <Button asChild variant="outline">
                 <Link to="/teacher/report-rates">
@@ -175,176 +182,195 @@ export function TeacherDailyReportPage() {
         }
       />
 
-      {!query.isPending && all.length ? (
-        <ReportDueBanner
-          day={tally}
-          dueAt={dueAt}
-          actions={
-            <>
-              {sendable.length ? (
-                <Button type="button" disabled={send.isPending} onClick={() => void sendReports(sendable.map((r) => r.report_id as string))}>
-                  <MaterialSymbol name="send" className="me-1 text-base rtl:rotate-180" />
-                  {t('dailyReport.list.sendAllReady', { count: sendable.length })}
-                </Button>
-              ) : null}
-              {nextToFill ? (
-                <Button type="button" variant="outline" className="bg-surface text-on-surface" onClick={() => navigate(editLink(nextToFill))}>
-                  <MaterialSymbol name="edit_note" className="me-1 text-base" />
-                  {t('dailyReport.list.fillNext', { name: name(nextToFill) })}
-                </Button>
-              ) : null}
-            </>
-          }
-        />
-      ) : null}
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList>
+          <TabsTrigger value="day">
+            <MaterialSymbol name="today" size="text-base" className="me-1" />
+            {t('dailyReport.history.todayTab')}
+          </TabsTrigger>
+          <TabsTrigger value="history">
+            <MaterialSymbol name="history" size="text-base" className="me-1" />
+            {t('dailyReport.history.tab')}
+          </TabsTrigger>
+        </TabsList>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
-        <StatTile icon="how_to_reg" label={t('dailyReport.tiles.expected')} value={tally.expected} helper={t('dailyReport.tiles.expectedHint')} onClick={() => showStage('open')} active={filters.stage === 'open'} />
-        <StatTile icon="mark_email_read" tone="success" label={t('dailyReport.tiles.sent')} value={tally.sent} helper={t('dailyReport.tiles.rate', { rate: tally.rate })} onClick={() => showStage('sent')} active={filters.stage === 'sent'} />
-        <StatTile icon="task_alt" tone="primary" label={t('dailyReport.tiles.ready')} value={tally.ready} helper={t('dailyReport.tiles.readyHint')} onClick={() => showStage('ready')} active={filters.stage === 'ready'} />
-        <StatTile icon="edit_note" tone="warning" label={t('dailyReport.tiles.inProgress')} value={tally.inProgress} helper={t('dailyReport.tiles.avgCompletion', { value: tally.avgCompletion })} onClick={() => showStage('in_progress')} active={filters.stage === 'in_progress'} />
-        <StatTile icon="pending_actions" tone={tally.notStarted ? 'error' : 'neutral'} label={t('dailyReport.tiles.notStarted')} value={tally.notStarted} onClick={() => showStage('not_started')} active={filters.stage === 'not_started'} />
-      </div>
+        <TabsContent value="history">
+          <DailyReportHistory classes={classes} />
+        </TabsContent>
 
-      {result ? (
-        <section role="status" className="space-y-2 rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
-          <div className="flex items-start justify-between gap-2">
-            <p className="flex items-center gap-2 text-sm font-semibold text-on-surface">
-              <MaterialSymbol name={result.incomplete.length ? 'info' : 'check_circle'} className={result.incomplete.length ? 'text-warning' : 'text-success'} />
-              <span>{t('dailyReport.list.resultSent', { count: result.sent_count })}</span>
-              {result.already_sent ? <span>· {t('dailyReport.list.resultAlready', { count: result.already_sent })}</span> : null}
-            </p>
-            <Button type="button" variant="ghost" size="icon" aria-label={t('dailyReport.list.dismiss')} onClick={() => setResult(null)}>
-              <MaterialSymbol name="close" />
-            </Button>
-          </div>
-          {result.incomplete.length ? (
-            <ul className="space-y-1 text-sm text-on-surface-variant">
-              {result.incomplete.map((r) => (
-                <li key={r.id}>{t('dailyReport.list.resultIncomplete', { name: nameOf(r.child_id), questions: questionList(t, r.missing, lang) })}</li>
-              ))}
-            </ul>
+        <TabsContent value="day" className="space-y-5">
+          {!query.isPending && all.length ? (
+            <ReportDueBanner
+              day={tally}
+              dueAt={dueAt}
+              actions={
+                <>
+                  {sendable.length ? (
+                    <Button type="button" disabled={send.isPending} onClick={() => void sendReports(sendable.map((r) => r.report_id as string))}>
+                      <MaterialSymbol name="send" className="me-1 text-base rtl:rotate-180" />
+                      {t('dailyReport.list.sendAllReady', { count: sendable.length })}
+                    </Button>
+                  ) : null}
+                  {nextToFill ? (
+                    <Button type="button" variant="outline" className="bg-surface text-on-surface" onClick={() => navigate(editLink(nextToFill))}>
+                      <MaterialSymbol name="edit_note" className="me-1 text-base" />
+                      {t('dailyReport.list.fillNext', { name: name(nextToFill) })}
+                    </Button>
+                  ) : null}
+                </>
+              }
+            />
           ) : null}
-        </section>
-      ) : null}
 
-      <TableCard
-        title={t('dailyReport.list.tableTitle')}
-        count={t('dailyReport.list.count', { count: rows.length })}
-        description={t('dailyReport.list.tableHint')}
-        actions={
-          <Button type="button" disabled={!selected.length || send.isPending} onClick={() => void sendReports(selected)}>
-            <MaterialSymbol name="send" className="me-1 text-base rtl:rotate-180" />
-            {send.isPending ? t('dailyReport.editor.sending') : t('dailyReport.list.sendSelected', { count: selected.length })}
-          </Button>
-        }
-        filters={
-          <div className="space-y-3">
-            <FilterBar onClear={() => setFilters(NO_DAY_FILTERS)} canClear={filtered}>
-              <FilterField label={t('dailyReport.list.search')} className="min-w-[14rem] flex-1">
-                <SearchInput value={filters.search} onChange={(search) => setFilters((f) => ({ ...f, search }))} placeholder={t('dailyReport.list.searchPlaceholder')} />
-              </FilterField>
-              {classes.length > 1 ? (
-                <FilterField label={t('dailyReport.list.class')} className="w-full sm:w-56">
-                  <Select value={filters.classId} onChange={(e) => setFilters((f) => ({ ...f, classId: e.target.value }))}>
-                    <option value="">{t('dailyReport.list.allClasses')}</option>
-                    {classes.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-                  </Select>
-                </FilterField>
-              ) : null}
-            </FilterBar>
-            <FilterChips value={filters.stage} onChange={(stage) => setFilters((f) => ({ ...f, stage }))} options={stageOptions} label={t('dailyReport.list.stageFilter')} />
-            {sendError ? <p role="alert" className="text-sm text-error">{sendError}</p> : null}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+            <StatTile icon="how_to_reg" label={t('dailyReport.tiles.expected')} value={tally.expected} helper={t('dailyReport.tiles.expectedHint')} onClick={() => showStage('open')} active={filters.stage === 'open'} />
+            <StatTile icon="mark_email_read" tone="success" label={t('dailyReport.tiles.sent')} value={tally.sent} helper={t('dailyReport.tiles.rate', { rate: tally.rate })} onClick={() => showStage('sent')} active={filters.stage === 'sent'} />
+            <StatTile icon="task_alt" tone="primary" label={t('dailyReport.tiles.ready')} value={tally.ready} helper={t('dailyReport.tiles.readyHint')} onClick={() => showStage('ready')} active={filters.stage === 'ready'} />
+            <StatTile icon="edit_note" tone="warning" label={t('dailyReport.tiles.inProgress')} value={tally.inProgress} helper={t('dailyReport.tiles.avgCompletion', { value: tally.avgCompletion })} onClick={() => showStage('in_progress')} active={filters.stage === 'in_progress'} />
+            <StatTile icon="pending_actions" tone={tally.notStarted ? 'error' : 'neutral'} label={t('dailyReport.tiles.notStarted')} value={tally.notStarted} onClick={() => showStage('not_started')} active={filters.stage === 'not_started'} />
           </div>
-        }
-        pagination={<TablePagination pager={pager} />}
-      >
-        {query.isPending ? (
-          <TableLoading />
-        ) : query.isError ? (
-          <TableEmpty icon="error" title={t(`dailyReport.errors.${dailyReportErrorKey(query.error)}`)} />
-        ) : !rows.length ? (
-          <TableEmpty icon="description" title={all.length ? t('dailyReport.list.noMatch') : t('dailyReport.list.empty')} description={all.length ? undefined : t('dailyReport.list.emptyHint')} />
-        ) : (
-          <DataTable minWidth={980}>
-            <THead>
-              <Th className="w-10">
-                <Checkbox
-                  aria-label={t('dailyReport.list.selectAllReady')}
-                  title={t('dailyReport.list.selectAllReady')}
-                  disabled={!shownSendable.length}
-                  checked={allShownPicked ? true : someShownPicked ? 'indeterminate' : false}
-                  onCheckedChange={(v) => toggleAllShown(v === true)}
-                />
-              </Th>
-              <Th>{t('dailyReport.list.columns.child')}</Th>
-              <Th>{t('dailyReport.list.columns.class')}</Th>
-              <Th>{t('dailyReport.list.columns.attendance')}</Th>
-              <Th>{t('dailyReport.list.columns.completion')}</Th>
-              <Th>{t('dailyReport.list.columns.status')}</Th>
-              <Th>{t('dailyReport.list.columns.saved')}</Th>
-              <Th align="end">{t('dailyReport.list.columns.action')}</Th>
-            </THead>
-            <TBody>
-              {pager.pageItems.map((r) => {
-                const stage = stageOf(r);
-                const sendableRow = canSend(r);
-                return (
-                  <Tr key={r.child_id} onClick={() => navigate(editLink(r))}>
-                    <Td>
-                      <Checkbox
-                        aria-label={t('dailyReport.list.selectChild', { name: name(r) })}
-                        title={sendableRow ? undefined : stage === 'sent' ? t('dailyReport.stage.sent') : t('dailyReport.list.answerAllFirst')}
-                        disabled={!sendableRow}
-                        checked={sendableRow && picked.has(r.report_id as string)}
-                        onCheckedChange={(v) => toggle(r.report_id as string, v === true)}
-                      />
-                    </Td>
-                    <Td>
-                      <p className="font-semibold text-on-surface">{name(r)}</p>
-                      {r.child_code ? <p className="text-xs tabular-nums text-on-surface-variant">{r.child_code}</p> : null}
-                    </Td>
-                    <Td className="text-on-surface-variant">{(lang.startsWith('ar') ? r.class_name_ar || r.class_name_en : r.class_name_en || r.class_name_ar) || '—'}</Td>
-                    <Td>
-                      <StatusPill tone={ATTENDANCE_TONE[r.attendance]}>{attendanceName(t, r.attendance)}</StatusPill>
-                      {r.check_in ? (
-                        <p className="mt-1 text-xs tabular-nums text-on-surface-variant">
-                          {time(r.check_in)}
-                          {r.check_out ? ` – ${time(r.check_out)}` : ''}
-                        </p>
-                      ) : null}
-                    </Td>
-                    <Td>
-                      <CompletionBar
-                        percent={stage === 'not_expected' ? null : percentOf(r.answered, r.required)}
-                        label={t('dailyReport.list.completionOf', { name: name(r) })}
-                        detail={stage === 'not_expected' ? undefined : t('dailyReport.editor.answeredOf', { answered: r.answered, required: r.required })}
-                      />
-                      {stage === 'in_progress' && r.missing.length ? (
-                        <p className="mt-1 max-w-[16rem] truncate text-xs text-warning" title={questionList(t, r.missing, lang)}>
-                          {t('dailyReport.list.missing', { questions: questionList(t, r.missing, lang) })}
-                        </p>
-                      ) : null}
-                    </Td>
-                    <Td>
-                      <StatusPill tone={STAGE_TONE[stage]} icon={STAGE_ICON[stage]}>{stageName(t, stage)}</StatusPill>
-                      {r.published_at ? <p className="mt-1 text-xs tabular-nums text-on-surface-variant">{t('dailyReport.list.sentAt', { time: time(r.published_at) })}</p> : null}
-                    </Td>
-                    <Td className="tabular-nums text-on-surface-variant">{time(r.last_saved_at)}</Td>
-                    <Td align="end">
-                      <Button asChild size="sm" variant={stage === 'sent' || stage === 'not_expected' ? 'ghost' : 'outline'}>
-                        <Link to={editLink(r)}>
-                          {stage === 'sent' ? t('dailyReport.list.view') : stage === 'not_started' || stage === 'not_expected' ? t('dailyReport.list.fill') : t('dailyReport.list.continue')}
-                        </Link>
-                      </Button>
-                    </Td>
-                  </Tr>
-                );
-              })}
-            </TBody>
-          </DataTable>
-        )}
-      </TableCard>
+
+          {result ? (
+            <section role="status" className="space-y-2 rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-2">
+                <p className="flex items-center gap-2 text-sm font-semibold text-on-surface">
+                  <MaterialSymbol name={result.incomplete.length ? 'info' : 'check_circle'} className={result.incomplete.length ? 'text-warning' : 'text-success'} />
+                  <span>{t('dailyReport.list.resultSent', { count: result.sent_count })}</span>
+                  {result.already_sent ? <span>· {t('dailyReport.list.resultAlready', { count: result.already_sent })}</span> : null}
+                </p>
+                <Button type="button" variant="ghost" size="icon" aria-label={t('dailyReport.list.dismiss')} onClick={() => setResult(null)}>
+                  <MaterialSymbol name="close" />
+                </Button>
+              </div>
+              {result.incomplete.length ? (
+                <ul className="space-y-1 text-sm text-on-surface-variant">
+                  {result.incomplete.map((r) => (
+                    <li key={r.id}>{t('dailyReport.list.resultIncomplete', { name: nameOf(r.child_id), questions: questionList(t, r.missing, lang) })}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </section>
+          ) : null}
+
+          <TableCard
+            title={t('dailyReport.list.tableTitle')}
+            count={t('dailyReport.list.count', { count: rows.length })}
+            description={t('dailyReport.list.tableHint')}
+            actions={
+              <Button type="button" disabled={!selected.length || send.isPending} onClick={() => void sendReports(selected)}>
+                <MaterialSymbol name="send" className="me-1 text-base rtl:rotate-180" />
+                {send.isPending ? t('dailyReport.editor.sending') : t('dailyReport.list.sendSelected', { count: selected.length })}
+              </Button>
+            }
+            filters={
+              <div className="space-y-3">
+                <FilterBar onClear={() => setFilters(NO_DAY_FILTERS)} canClear={filtered}>
+                  <FilterField label={t('dailyReport.list.search')} className="min-w-[14rem] flex-1">
+                    <SearchInput value={filters.search} onChange={(search) => setFilters((f) => ({ ...f, search }))} placeholder={t('dailyReport.list.searchPlaceholder')} />
+                  </FilterField>
+                  {classes.length > 1 ? (
+                    <FilterField label={t('dailyReport.list.class')} className="w-full sm:w-56">
+                      <Select value={filters.classId} onChange={(e) => setFilters((f) => ({ ...f, classId: e.target.value }))}>
+                        <option value="">{t('dailyReport.list.allClasses')}</option>
+                        {classes.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+                      </Select>
+                    </FilterField>
+                  ) : null}
+                </FilterBar>
+                <FilterChips value={filters.stage} onChange={(stage) => setFilters((f) => ({ ...f, stage }))} options={stageOptions} label={t('dailyReport.list.stageFilter')} />
+                {sendError ? <p role="alert" className="text-sm text-error">{sendError}</p> : null}
+              </div>
+            }
+            pagination={<TablePagination pager={pager} />}
+          >
+            {query.isPending ? (
+              <TableLoading />
+            ) : query.isError ? (
+              <TableEmpty icon="error" title={t(`dailyReport.errors.${dailyReportErrorKey(query.error)}`)} />
+            ) : !rows.length ? (
+              <TableEmpty icon="description" title={all.length ? t('dailyReport.list.noMatch') : t('dailyReport.list.empty')} description={all.length ? undefined : t('dailyReport.list.emptyHint')} />
+            ) : (
+              <DataTable minWidth={980}>
+                <THead>
+                  <Th className="w-10">
+                    <Checkbox
+                      aria-label={t('dailyReport.list.selectAllReady')}
+                      title={t('dailyReport.list.selectAllReady')}
+                      disabled={!shownSendable.length}
+                      checked={allShownPicked ? true : someShownPicked ? 'indeterminate' : false}
+                      onCheckedChange={(v) => toggleAllShown(v === true)}
+                    />
+                  </Th>
+                  <Th>{t('dailyReport.list.columns.child')}</Th>
+                  <Th>{t('dailyReport.list.columns.class')}</Th>
+                  <Th>{t('dailyReport.list.columns.attendance')}</Th>
+                  <Th>{t('dailyReport.list.columns.completion')}</Th>
+                  <Th>{t('dailyReport.list.columns.status')}</Th>
+                  <Th>{t('dailyReport.list.columns.saved')}</Th>
+                  <Th align="end">{t('dailyReport.list.columns.action')}</Th>
+                </THead>
+                <TBody>
+                  {pager.pageItems.map((r) => {
+                    const stage = stageOf(r);
+                    const sendableRow = canSend(r);
+                    return (
+                      <Tr key={r.child_id} onClick={() => navigate(editLink(r))}>
+                        <Td>
+                          <Checkbox
+                            aria-label={t('dailyReport.list.selectChild', { name: name(r) })}
+                            title={sendableRow ? undefined : stage === 'sent' ? t('dailyReport.stage.sent') : t('dailyReport.list.answerAllFirst')}
+                            disabled={!sendableRow}
+                            checked={sendableRow && picked.has(r.report_id as string)}
+                            onCheckedChange={(v) => toggle(r.report_id as string, v === true)}
+                          />
+                        </Td>
+                        <Td>
+                          <p className="font-semibold text-on-surface">{name(r)}</p>
+                          {r.child_code ? <p className="text-xs tabular-nums text-on-surface-variant">{r.child_code}</p> : null}
+                        </Td>
+                        <Td className="text-on-surface-variant">{(lang.startsWith('ar') ? r.class_name_ar || r.class_name_en : r.class_name_en || r.class_name_ar) || '—'}</Td>
+                        <Td>
+                          <StatusPill tone={ATTENDANCE_TONE[r.attendance]}>{attendanceName(t, r.attendance)}</StatusPill>
+                          {r.check_in ? (
+                            <p className="mt-1 text-xs tabular-nums text-on-surface-variant">
+                              {time(r.check_in)}
+                              {r.check_out ? ` – ${time(r.check_out)}` : ''}
+                            </p>
+                          ) : null}
+                        </Td>
+                        <Td>
+                          <CompletionBar
+                            percent={stage === 'not_expected' ? null : percentOf(r.answered, r.required)}
+                            label={t('dailyReport.list.completionOf', { name: name(r) })}
+                            detail={stage === 'not_expected' ? undefined : t('dailyReport.editor.answeredOf', { answered: r.answered, required: r.required })}
+                          />
+                          {stage === 'in_progress' && r.missing.length ? (
+                            <p className="mt-1 max-w-[16rem] truncate text-xs text-warning" title={questionList(t, r.missing, lang)}>
+                              {t('dailyReport.list.missing', { questions: questionList(t, r.missing, lang) })}
+                            </p>
+                          ) : null}
+                        </Td>
+                        <Td>
+                          <StatusPill tone={STAGE_TONE[stage]} icon={STAGE_ICON[stage]}>{stageName(t, stage)}</StatusPill>
+                          {r.published_at ? <p className="mt-1 text-xs tabular-nums text-on-surface-variant">{t('dailyReport.list.sentAt', { time: time(r.published_at) })}</p> : null}
+                        </Td>
+                        <Td className="tabular-nums text-on-surface-variant">{time(r.last_saved_at)}</Td>
+                        <Td align="end">
+                          <Button asChild size="sm" variant={stage === 'sent' || stage === 'not_expected' ? 'ghost' : 'outline'}>
+                            <Link to={editLink(r)}>
+                              {stage === 'sent' ? t('dailyReport.list.view') : stage === 'not_started' || stage === 'not_expected' ? t('dailyReport.list.fill') : t('dailyReport.list.continue')}
+                            </Link>
+                          </Button>
+                        </Td>
+                      </Tr>
+                    );
+                  })}
+                </TBody>
+              </DataTable>
+            )}
+          </TableCard>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

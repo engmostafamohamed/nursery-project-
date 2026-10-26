@@ -44,6 +44,20 @@ export type SentFamilyMessage = {
 const pick = (ar: string | null | undefined, en: string | null | undefined, lang: string) =>
   (lang.startsWith('ar') ? ar?.trim() || en?.trim() : en?.trim() || ar?.trim()) || null;
 
+/** Who sent something to families, as kept on it: a message, or a sent daily report. */
+export type SenderFields = Pick<
+  ParentFamilyMessage,
+  | 'sender_name_ar'
+  | 'sender_name_en'
+  | 'sender_role'
+  | 'sender_role_title_ar'
+  | 'sender_role_title_en'
+  | 'sender_department'
+  | 'sender_class_names_ar'
+  | 'sender_class_names_en'
+  | 'sender_class_role'
+>;
+
 /** Who sent a message, in the reader's language: the parts a parent sees under the sender's name. */
 export type SenderParts = {
   name: string | null;
@@ -55,14 +69,14 @@ export type SenderParts = {
   place: ClassPlace | null;
 };
 
-export function senderParts(message: ParentFamilyMessage, lang: string): SenderParts {
+export function senderParts(sender: SenderFields, lang: string): SenderParts {
   return {
-    name: pick(message.sender_name_ar, message.sender_name_en, lang),
-    role: message.sender_role,
-    title: pick(message.sender_role_title_ar, message.sender_role_title_en, lang),
-    department: message.sender_department,
-    classes: pick(message.sender_class_names_ar, message.sender_class_names_en, lang),
-    place: message.sender_class_role,
+    name: pick(sender.sender_name_ar, sender.sender_name_en, lang),
+    role: sender.sender_role,
+    title: pick(sender.sender_role_title_ar, sender.sender_role_title_en, lang),
+    department: sender.sender_department,
+    classes: pick(sender.sender_class_names_ar, sender.sender_class_names_en, lang),
+    place: sender.sender_class_role,
   };
 }
 

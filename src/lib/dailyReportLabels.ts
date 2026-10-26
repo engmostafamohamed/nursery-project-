@@ -1,9 +1,75 @@
 import type { TFunction } from 'i18next';
 
-import type { DayAttendance, Question, ReportStage } from './dailyReport';
+import { splitMinutes, type DayAttendance, type MealAmount, type Mood, type NapQuality, type Question, type ReportStage } from './dailyReport';
 import type { PillTone } from './tones';
 
-// The words for a daily report's questions, where a report stands and whether the child came.
+// The words (and emoji and icons) for a daily report's answers and questions, where a report stands
+// and whether the child came.
+
+export function mealAmountName(t: TFunction, amount: MealAmount): string {
+  switch (amount) {
+    case 'none':
+      return t('reports.daily.options.mealAmount.none');
+    case 'quarter':
+      return t('reports.daily.options.mealAmount.quarter');
+    case 'half':
+      return t('reports.daily.options.mealAmount.half');
+    case 'three_quarters':
+      return t('reports.daily.options.mealAmount.three_quarters');
+    default:
+      return t('reports.daily.options.mealAmount.all');
+  }
+}
+
+export function napQualityName(t: TFunction, quality: NapQuality): string {
+  if (quality === 'good') return t('reports.daily.options.napQuality.good');
+  if (quality === 'ok') return t('reports.daily.options.napQuality.ok');
+  return t('reports.daily.options.napQuality.restless');
+}
+
+export function moodName(t: TFunction, mood: Mood): string {
+  switch (mood) {
+    case 'happy':
+      return t('reports.daily.options.mood.happy');
+    case 'content':
+      return t('reports.daily.options.mood.content');
+    case 'fussy':
+      return t('reports.daily.options.mood.fussy');
+    default:
+      return t('reports.daily.options.mood.cranky');
+  }
+}
+
+export const MOOD_EMOJI: Record<Mood, string> = { happy: '😊', content: '😌', fussy: '😣', cranky: '😤' };
+
+export const MOOD_TONE: Record<Mood, PillTone> = { happy: 'success', content: 'primary', fussy: 'warning', cranky: 'error' };
+
+/** An emoji per activity, for its 3D tile; one not in the list gets the "other" star. */
+export const ACTIVITY_EMOJI: Record<string, string> = {
+  art: '🎨',
+  outdoor: '🌳',
+  reading: '📚',
+  music: '🎵',
+  circle_time: '🤝',
+  story_time: '📖',
+  sensory_play: '🧩',
+  free_play: '🧸',
+  other: '⭐',
+};
+
+/** The nap answer's 3D ball: slept, or stayed awake. */
+export const NAP_EMOJI = { slept: '😴', awake: '☀️', night: '🌙' } as const;
+
+/** The toilet question's ball. */
+export const TOILET_EMOJI = '🚼';
+
+/** "2 h 30 min", "45 min", "1 h" — in the reader's language. */
+export function napDurationText(t: TFunction, minutes: number): string {
+  const { hours, minutes: rest } = splitMinutes(minutes);
+  const h = hours ? t('dailyReport.sheet.hours', { count: hours }) : '';
+  const m = rest ? t('dailyReport.sheet.minutes', { count: rest }) : '';
+  return h && m ? t('dailyReport.sheet.hoursAndMinutes', { hours: h, minutes: m }) : h || m;
+}
 
 export function questionName(t: TFunction, question: Question): string {
   switch (question) {

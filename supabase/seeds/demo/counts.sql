@@ -1,0 +1,23 @@
+-- Demo seed · What the dev database holds after a run (read only; the runner prints it).
+select
+  (select count(*) from public.nurseries n where n.chain_id = (select id from public.chains where name = 'Cherries Nurseries')) as branches,
+  (select count(*) from public.classes where deleted_at is null) as classes,
+  (select count(*) from public.users where role in ('branch_admin', 'manager', 'teacher', 'chain_super_admin')) as staff,
+  (select count(*) from public.users where role = 'parent') as parents,
+  (select count(*) from public.children) as children,
+  (select count(*) from public.parent_children) as parent_child_links,
+  (select count(*) from public.authorized_pickups) as authorized_pickups,
+  (select count(*) from public.child_allergies) + (select count(*) from public.child_chronic_conditions) as health_records,
+  (select count(*) from public.tuition_packages) as tuition_packages,
+  (select count(*) from public.child_tuition_subscriptions) as tuition_subscriptions,
+  (select count(*) from public.child_packages) as extra_hour_packages,
+  (select count(*) from public.attendance_records) as attendance_records,
+  (select count(*) from public.attendance_absence_reports) as absence_reports,
+  (select count(*) from public.daily_reports where status = 'published') as sent_daily_reports,
+  (select count(*) from public.invoices) as invoices,
+  (select count(*) from public.payment_attempts) as payments,
+  (select count(*) from public.events) as events,
+  (select count(*) from public.permissions) as event_permissions,
+  (select count(*) from public.courses) as courses,
+  (select count(*) from public.course_enrollments) as course_enrollments,
+  pg_size_pretty(pg_database_size(current_database())) as database_size;

@@ -1,25 +1,15 @@
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { cardFromRow, type DailyReportCard } from '@/lib/dailyReportCard';
 import { supabase } from '@/lib/supabase';
 import { awardReviewPoints } from '@/lib/loyaltyPoints';
 
-export type ParentReportItem = {
-  id: string;
-  childId: string;
-  childName: string;
-  reportDate: string;
-  status: 'draft' | 'published';
-  meals: Record<string, unknown>;
-  nap: Record<string, unknown>;
-  mood: Record<string, unknown>;
-  toilet: Record<string, unknown>;
-  activities: Record<string, unknown>;
-  feeding: Record<string, unknown>;
-  specialNotes: string | null;
-  teacherName: string;
-  publishedAt: string | null;
-};
+/** A sent report as the family reads it (see DailyReportCard); always has an id. */
+export type ParentReportItem = DailyReportCard & { id: string };
+
+/** The notifications a sent report creates for the family (send_daily_reports). */
+export const DAILY_REPORT_NOTIFICATION_TYPE = 'daily_report';
 
 export type ParentReaction = {
   id: string;
@@ -51,53 +41,22 @@ export function useParentReports(params: {
       const childRes = await supabase.from('children').select('id, full_name_ar, full_name_en').in('id', childIds);
       if (childRes.error) throw childRes.error;
       const childRows = (childRes.data ?? []) as { id: string; full_name_ar: string; full_name_en: string }[];
-      const childMap = new Map(childRows.map((c) => [c.id, c.full_name_ar || c.full_name_en]));
 
-      let q = supabase
-        .from('daily_reports')
-        .select('id, child_id, report_date, status, meals_json, nap_json, mood_json, toilet_json, activities_json, feeding_json, special_notes, teacher_id, published_at')
-        .eq('nursery_id', params.nurseryId)
-        .eq('status', 'published')
-        .in('child_id', childIds);
-      if (params.childId) q = q.eq('child_id', params.childId);
-      if (params.fromDate) q = q.gte('report_date', params.fromDate);
-      if (params.toDate) q = q.lte('report_date', params.toDate);
-      q = q.order('report_date', { ascending: params.sort === 'oldest' });
-      const reportRes = await q;
+      // Through get_parent_daily_reports: each report with the child's code and class of that day and
+      // who sent it, and never a copy the service worker kept from before.
+      const reportRes = await supabase.rpc('get_parent_daily_reports' as never, {
+        p_child_id: params.childId || null,
+        p_from: params.fromDate || null,
+        p_to: params.toDate || null,
+        p_limit: 500,
+      } as never);
       if (reportRes.error) throw reportRes.error;
-      const reportRows = (reportRes.data ?? []) as Array<Record<string, unknown>>;
-
-      const teacherIds = [...new Set(reportRows.map((r) => String(r.teacher_id ?? '')).filter(Boolean))];
-      const teachersRes = teacherIds.length
-        ? await supabase.from('users').select('id, name_ar, name_en').in('id', teacherIds)
-        : { data: [], error: null };
-      if (teachersRes.error) throw teachersRes.error;
-      const teacherMap = new Map(
-        ((teachersRes.data ?? []) as Array<Record<string, unknown>>).map((u) => [
-          String(u.id),
-          String(u.name_ar ?? u.name_en ?? 'Teacher'),
-        ]),
-      );
-
-      const reports = reportRows.map((r) => ({
-        id: String(r.id),
-        childId: String(r.child_id),
-        childName: childMap.get(String(r.child_id)) ?? 'Child',
-        reportDate: String(r.report_date),
-        status: String(r.status) as 'draft' | 'published',
-        meals: (r.meals_json as Record<string, unknown>) ?? {},
-        nap: (r.nap_json as Record<string, unknown>) ?? {},
-        mood: (r.mood_json as Record<string, unknown>) ?? {},
-        toilet: (r.toilet_json as Record<string, unknown>) ?? {},
-        activities: (r.activities_json as Record<string, unknown>) ?? {},
-        feeding: (r.feeding_json as Record<string, unknown>) ?? {},
-        specialNotes: (r.special_notes as string | null) ?? null,
-        teacherName: teacherMap.get(String(r.teacher_id ?? '')) ?? 'Teacher',
-        publishedAt: (r.published_at as string | null) ?? null,
-      }));
+      const newestFirst = ((reportRes.data ?? []) as Array<Record<string, unknown>>)
+        .map(cardFromRow)
+        .filter((card): card is ParentReportItem => Boolean(card.id));
 
       return {
-        reports,
+        reports: params.sort === 'oldest' ? [...newestFirst].reverse() : newestFirst,
         children: childRows.map((c) => ({ id: c.id, name: c.full_name_ar || c.full_name_en })),
       };
     },
@@ -169,7 +128,7 @@ export function useParentReports(params: {
         .from('notifications')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', params.parentId)
-        .eq('type', 'daily_report_published')
+        .eq('type', DAILY_REPORT_NOTIFICATION_TYPE)
         .eq('read', false);
       if (res.error) throw res.error;
       return res.count ?? 0;

@@ -21,6 +21,7 @@ import { parentNurseryLabel, useParentNursery } from '@/hooks/useParentNursery';
 import { useParentInAppNotifications } from '@/hooks/useParentInAppNotifications';
 import { useNotificationsCenter } from '@/hooks/useNotificationsCenter';
 import { useParentPushNotifications } from '@/hooks/useParentPushNotifications';
+import { DAILY_REPORT_NOTIFICATION_TYPE } from '@/hooks/useParentReports';
 import { endSession } from '@/lib/sessionExpiry';
 import { supabase } from '@/lib/supabase';
 import { isHelpPanelEnabled } from '@/lib/helpAiPreferences';
@@ -90,7 +91,7 @@ export function ParentLayout() {
         .from('notifications')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', user.id)
-        .eq('type', 'daily_report_published')
+        .eq('type', DAILY_REPORT_NOTIFICATION_TYPE)
         .eq('read', false);
       if (res.error) throw res.error;
       return res.count ?? 0;

@@ -183,8 +183,8 @@ reset role;
 select is(
   (select format('%s %s', n.template_key, n.template_params->'child'->>'en') from public.notifications n
     where n.user_id = '00000000-0000-4000-6000-000000000a06' and n.type = 'daily_report'),
-  'daily_report_sent Laila',
-  'the family is told'
+  'daily_report_sent_by Laila',
+  'the family is told (and by whom: daily_report_template_and_history.test.sql)'
 );
 
 -- However it is done, an incomplete report cannot be sent.

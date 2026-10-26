@@ -5,11 +5,11 @@ import { StatusPill } from '@/components/ui/DataTable';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { senderDepartmentName, senderPlaceName, senderRoleName } from '@/lib/familyMessageLabels';
-import { childrenOf, senderParts, type ParentFamilyMessage } from '@/lib/familyMessages';
+import { childrenOf, senderParts, type ParentFamilyMessage, type SenderFields } from '@/lib/familyMessages';
 import { getUserInitials } from '@/lib/utils';
 
-/** The sender, with role, title, department and classes as separate badges. */
-export function FamilyMessageSender({ message }: { message: ParentFamilyMessage }) {
+/** The sender, with role, title, department and classes as separate badges (a message's or a daily report's). */
+export function FamilyMessageSender({ message }: { message: SenderFields }) {
   const { t, i18n } = useTranslation();
   const parts = senderParts(message, i18n.language);
   const role = senderRoleName(t, parts.role);

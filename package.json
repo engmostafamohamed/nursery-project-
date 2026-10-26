@@ -14,6 +14,7 @@
     "test:e2e": "playwright test",
     "preview": "vite preview",
     "seed:demo": "tsx scripts/seed-demo-checkpoint1.ts",
+    "seed:demo-data": "tsx scripts/seed-demo/run.ts",
     "check:ai-endpoint": "node scripts/check-ai-assistant-endpoint.mjs",
     "api:openapi": "node scripts/api/export-openapi.mjs",
     "ops:integrity": "node scripts/ops/run-integrity-check.mjs",

@@ -3100,9 +3100,11 @@
       "childNotInClass": "هذا الطفل ليس في فصلك.",
       "options": {
         "mealAmount": {
-          "none": "لا شيء",
-          "some": "بعض",
-          "all": "الكل"
+          "quarter": "ربع",
+          "half": "نصف",
+          "three_quarters": "ثلاثة أرباع",
+          "none": "لم يأكل",
+          "all": "الطبق كامل"
         },
         "napQuality": {
           "good": "جيد",
@@ -3424,7 +3426,6 @@
         "attendanceOut": "دخول {{in}} · خروج {{out}}",
         "mood": "المزاج: {{mood}}",
         "noMood": "آخر تقرير: لم يُسجّل المزاج",
-        "meals": "الوجبات: {{summary}}",
         "noMeals": "آخر تقرير: لم تُسجّل الوجبات",
         "unreadBadge": "{{count}} غير مقروء (الحساب)",
         "noUnread": "لا إشعارات غير مقروءة"
@@ -6201,6 +6202,86 @@
     }
   },
   "dailyReport": {
+    "sheet": {
+      "eyebrow": "التقرير اليومي",
+      "previewBadge": "معاينة",
+      "childCode": "الكود",
+      "class": "الفصل",
+      "sentBy": "أرسله",
+      "sentAt": "أُرسل الساعة {{time}}",
+      "notSentYet": "لم يُرسل بعد",
+      "fromSender": "من {{name}} · {{role}}",
+      "meals": "الوجبات",
+      "mealLabel": "{{meal}}: {{amount}}",
+      "noAnswer": "لم تتم الإجابة",
+      "napLabel": "نام {{duration}}",
+      "noNap": "لم ينم اليوم",
+      "hours_zero": "{{count}} ساعة",
+      "hours_one": "ساعة",
+      "hours_two": "ساعتان",
+      "hours_few": "{{count}} ساعات",
+      "hours_many": "{{count}} ساعة",
+      "hours_other": "{{count}} ساعة",
+      "minutes_zero": "{{count}} دقيقة",
+      "minutes_one": "دقيقة",
+      "minutes_two": "دقيقتان",
+      "minutes_few": "{{count}} دقائق",
+      "minutes_many": "{{count}} دقيقة",
+      "minutes_other": "{{count}} دقيقة",
+      "hoursAndMinutes": "{{hours}} و{{minutes}}",
+      "toiletNone": "ولا مرة",
+      "toiletCount_zero": "ولا مرة",
+      "toiletCount_one": "مرة واحدة",
+      "toiletCount_two": "مرتان",
+      "toiletCount_few": "{{count}} مرات",
+      "toiletCount_many": "{{count}} مرة",
+      "toiletCount_other": "{{count}} مرة",
+      "bottleMl": "{{ml}} مل",
+      "nursing_zero": "لم يرضع",
+      "nursing_one": "رضع مرة واحدة",
+      "nursing_two": "رضع مرتين",
+      "nursing_few": "رضع {{count}} مرات",
+      "nursing_many": "رضع {{count}} مرة",
+      "nursing_other": "رضع {{count}} مرة",
+      "note": "ملاحظة للأسرة"
+    },
+    "history": {
+      "todayTab": "تقارير اليوم",
+      "tab": "التقارير المرسلة",
+      "title": "التقارير المرسلة",
+      "hint": "كل تقرير أُرسل للأسر: ابحث بيوم أو طفل أو فصل، وافتحه كما تراه الأسرة.",
+      "count_zero": "لا تقارير",
+      "count_one": "تقرير واحد",
+      "count_two": "تقريران",
+      "count_few": "{{count}} تقارير",
+      "count_many": "{{count}} تقريرًا",
+      "count_other": "{{count}} تقرير",
+      "mode": "البحث بـ",
+      "modeDay": "يوم محدد",
+      "modePeriod": "فترة",
+      "day": "اليوم",
+      "from": "من",
+      "to": "إلى",
+      "search": "الطفل",
+      "searchPlaceholder": "الاسم أو الكود",
+      "class": "الفصل",
+      "allClasses": "كل الفصول",
+      "columns": {
+        "date": "اليوم",
+        "child": "الطفل",
+        "class": "الفصل",
+        "sentBy": "أرسله",
+        "sentAt": "وقت الإرسال",
+        "mood": "المزاج",
+        "action": "التقرير"
+      },
+      "open": "عرض",
+      "empty": "لا توجد تقارير مرسلة في هذه الفترة",
+      "emptyHint": "اختر يومًا آخر أو فترة أطول.",
+      "noMatch": "لا يوجد تقرير مرسل يطابق البحث",
+      "rangeInvalid": "اختر فترة لا تزيد عن سنة، من اليوم الأقدم إلى الأحدث.",
+      "dialogTitle": "تقرير مرسل"
+    },
     "title": "التقارير اليومية",
     "subtitle": "املأ تقرير كل طفل خلال اليوم — كل تعديل يُحفظ تلقائيًا. وفي آخر اليوم أرسل التقارير المكتملة إلى أولياء الأمور.",
     "percent": "{{value}}%",
@@ -6301,6 +6382,9 @@
       "emptyHint": "عندما يضيفك المدير أو رئيس المعلمين إلى فصل، يظهر أطفاله هنا."
     },
     "editor": {
+      "mealSwipe": "اسحب للاختيار",
+      "preview": "كما تراه الأسرة",
+      "previewTitle": "التقرير كما ستراه الأسرة",
       "title": "التقرير اليومي لـ {{name}}",
       "invalidRouteHint": "افتح التقرير من قائمة التقارير اليومية.",
       "notInClassHint": "يمكنك كتابة تقارير أطفال فصولك فقط.",
@@ -6411,6 +6495,7 @@
       "limited": "يُعرض أول {{count}} فقط."
     },
     "errors": {
+      "search_invalid": "البحث طويل جدًا.",
       "child_not_in_your_class": "هذا الطفل ليس في فصولك.",
       "already_sent": "أُرسل هذا التقرير من قبل ولا يمكن تعديله.",
       "date_invalid": "يمكن كتابة التقارير لليوم أو لآخر 7 أيام.",
@@ -6423,6 +6508,10 @@
     }
   },
   "notificationTemplates": {
+    "daily_report_sent_by": {
+      "title": "التقرير اليومي لـ {{child}}",
+      "body": "تقرير يوم {{date}} من {{sender}}: الوجبات والقيلولة والمزاج والأنشطة."
+    },
     "demo_message_password_reset": {
       "title": "رمز التحقق (بريد تجريبي)",
       "body": "رمزك هو {{code}}. في الوضع التجريبي لا تُرسل رسائل البريد، لذلك تظهر الرسالة هنا."

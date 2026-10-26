@@ -14,6 +14,7 @@ import {
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
+import { MealPlate } from '@/components/daily-reports/MealPlate';
 import { ParentReportDetailModal } from '@/components/parent/ParentReportDetailModal';
 import { Button } from '@/components/ui/button';
 import { TableCard, TableEmpty, TablePagination } from '@/components/ui/DataTable';
@@ -24,22 +25,21 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { StatTile } from '@/components/ui/StatTile';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { usePagination } from '@/hooks/usePagination';
-import { useParentReports, type ParentReportItem } from '@/hooks/useParentReports';
+import { DAILY_REPORT_NOTIFICATION_TYPE, useParentReports, type ParentReportItem } from '@/hooks/useParentReports';
+import { useSenderLine } from '@/hooks/useSenderLine';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import {
-  formatActivityTag,
-  formatMealSlot,
-  formatMoodLabel,
-  formatNapQuality,
-  moodKey,
-} from '@/lib/dailyReportDisplay';
+import { MEALS, type Mood } from '@/lib/dailyReport';
+import { childNameOf, classNameOf } from '@/lib/dailyReportCard';
+import { formatActivityTag, formatMoodLabel } from '@/lib/dailyReportDisplay';
+import { mealAmountName, moodName, napDurationText, questionName } from '@/lib/dailyReportLabels';
 import { CHART_CURSOR, CHART_GRID_STROKE, CHART_SERIES, CHART_TOOLTIP_STYLE, chartColor, chartDirection } from '@/lib/chartTheme';
 import { dayHeading, groupByDay } from '@/lib/dayGroups';
+import { senderParts } from '@/lib/familyMessages';
 import { supabase } from '@/lib/supabase';
 import { cn, getUserInitials } from '@/lib/utils';
 
 /** Icon and colours per mood, so a report's mood reads at a glance. */
-const MOOD_STYLE: Record<ReturnType<typeof moodKey>, { icon: string; pill: string }> = {
+const MOOD_STYLE: Record<Mood, { icon: string; pill: string }> = {
   happy: { icon: 'sentiment_very_satisfied', pill: 'bg-success/10 text-success' },
   content: { icon: 'sentiment_satisfied', pill: 'bg-primary/10 text-primary' },
   fussy: { icon: 'sentiment_neutral', pill: 'bg-warning/10 text-warning' },
@@ -53,18 +53,6 @@ function formatDateLabel(value: string, locale: string, options?: Intl.DateTimeF
   );
 }
 
-function ReportFact({ icon, label, value }: { icon: string; label: string; value: string }) {
-  return (
-    <div className="min-w-0 rounded-lg bg-surface-container-lowest px-3 py-2">
-      <p className="flex items-center gap-1 text-[11px] font-semibold text-on-surface-variant">
-        <MaterialSymbol name={icon} size="text-sm" className="text-primary" />
-        {label}
-      </p>
-      <p className="mt-1 truncate text-sm font-semibold text-on-surface" title={value}>{value}</p>
-    </div>
-  );
-}
-
 function ReportCard({
   report,
   locale,
@@ -75,55 +63,67 @@ function ReportCard({
   onOpen: (report: ParentReportItem) => void;
 }) {
   const { t } = useTranslation();
-  const mood = formatMoodLabel(t, report.mood.mood);
-  const moodStyle = MOOD_STYLE[moodKey(report.mood.mood)];
-  const notes = report.specialNotes?.trim();
+  const senderLine = useSenderLine();
+  const a = report.answers;
+  const name = childNameOf(report, locale) || '—';
+  const className_ = classNameOf(report, locale);
+  const mood = a.mood.mood;
+  const moodStyle = mood ? MOOD_STYLE[mood] : null;
+  const notes = a.specialNotes.trim();
   const publishedTime = report.publishedAt
     ? new Date(report.publishedAt).toLocaleTimeString(locale.startsWith('ar') ? 'ar-EG' : 'en-GB', { hour: 'numeric', minute: '2-digit', hour12: true })
     : null;
-  const napMinutes = Number(report.nap.duration_minutes ?? 0);
-  const activities = (
-    (report.activities.tags as string[] | undefined) ??
-    (report.activities.participated_in as string[] | undefined) ??
-    []
-  ).map((tag) => formatActivityTag(t, tag));
+  const napMinutes = a.nap.napped && a.nap.durationMinutes ? a.nap.durationMinutes : null;
+  const activities = a.activities.tags.map((tag) => formatActivityTag(t, tag));
+  const sender = report.sender ? senderParts(report.sender, locale) : null;
 
   return (
     <article className="group flex overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm transition hover:border-primary/40 hover:shadow-md">
       <button type="button" className="flex w-full flex-col p-4 text-start outline-none focus-visible:bg-surface-container-lowest" onClick={() => onOpen(report)}>
         <div className="flex w-full items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary" aria-hidden>
-              {getUserInitials(report.childName, null)}
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-semibold text-primary" aria-hidden>
+              {report.avatarUrl ? <img src={report.avatarUrl} alt="" className="h-full w-full object-cover" /> : getUserInitials(name, null)}
             </span>
             <div className="min-w-0">
-              <p className="truncate text-base font-semibold text-on-surface" title={report.childName}>{report.childName}</p>
-              <p className="mt-0.5 flex items-center gap-1 text-xs text-on-surface-variant">
-                <MaterialSymbol name="school" size="text-sm" />
-                {report.teacherName}
+              <p className="truncate text-base font-semibold text-on-surface" title={name}>{name}</p>
+              <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-on-surface-variant">
+                {className_ ? (
+                  <span className="inline-flex items-center gap-1">
+                    <MaterialSymbol name="school" size="text-sm" />
+                    {className_}
+                  </span>
+                ) : null}
+                {report.childCode ? <span dir="ltr" className="tabular-nums">{report.childCode}</span> : null}
               </p>
             </div>
           </div>
-          {mood ? (
+          {mood && moodStyle ? (
             <span className={cn('inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold', moodStyle.pill)}>
               <MaterialSymbol name={moodStyle.icon} size="text-base" />
-              {mood}
+              {moodName(t, mood)}
             </span>
           ) : null}
         </div>
 
-        <div className="mt-4 grid w-full grid-cols-3 gap-2">
-          <ReportFact
-            icon="restaurant"
-            label={t('parent.reports.sections.meals')}
-            value={formatMealSlot(t, report.meals.lunch as Record<string, unknown> | undefined) || '-'}
-          />
-          <ReportFact
-            icon="bedtime"
-            label={t('parent.reports.sections.nap')}
-            value={(napMinutes ? `${napMinutes} ${t('parent.reports.minutes')}` : formatNapQuality(t, report.nap.quality)) || '-'}
-          />
-          <ReportFact icon="toys" label={t('parent.reports.sections.activities')} value={activities[0] || '-'} />
+        {/* The day at a glance: the three plates and the nap */}
+        <div className="mt-4 flex w-full items-end justify-between gap-2 rounded-lg bg-surface-container-lowest px-3 py-3">
+          <div className="flex items-end gap-1">
+            {MEALS.map((meal, i) => (
+              <MealPlate
+                key={meal}
+                meal={meal}
+                amount={a.meals[meal].amount}
+                size={64}
+                delayMs={i * 120}
+                label={t('dailyReport.sheet.mealLabel', { meal: questionName(t, meal), amount: a.meals[meal].amount ? mealAmountName(t, a.meals[meal].amount) : t('dailyReport.sheet.noAnswer') })}
+              />
+            ))}
+          </div>
+          <p className="flex shrink-0 items-center gap-1 text-xs font-semibold text-on-surface">
+            <MaterialSymbol name="bedtime" size="text-base" className="text-primary" />
+            {napMinutes ? napDurationText(t, napMinutes) : a.nap.napped === false ? t('dailyReport.sheet.noNap') : '—'}
+          </p>
         </div>
 
         <div className="mt-3 w-full flex-1">
@@ -132,10 +132,9 @@ function ReportCard({
               <MaterialSymbol name="format_quote" size="text-base" className="mt-0.5 shrink-0 text-primary" />
               <span className="line-clamp-2">{notes}</span>
             </p>
-          ) : activities.length > 1 ? (
-            // No note: the activities the tile had no room for.
+          ) : activities.length ? (
             <ul className="flex flex-wrap gap-1.5">
-              {activities.slice(1, 4).map((activity) => (
+              {activities.slice(0, 4).map((activity) => (
                 <li key={activity} className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
                   {activity}
                 </li>
@@ -143,6 +142,14 @@ function ReportCard({
             </ul>
           ) : null}
         </div>
+        {sender ? (
+          <p className="mt-3 flex w-full min-w-0 items-center gap-1.5 text-xs text-on-surface-variant" title={senderLine(report.sender!)}>
+            <MaterialSymbol name="send" size="text-sm" className="shrink-0 text-primary rtl:rotate-180" />
+            <span className="truncate">
+              {t('dailyReport.sheet.fromSender', { name: sender.name ?? t('familyMessages.unknownSender'), role: senderLine(report.sender!) })}
+            </span>
+          </p>
+        ) : null}
         <div className="mt-3 flex w-full items-center justify-between gap-3 border-t border-outline-variant pt-3">
           <p className="flex items-center gap-1 text-xs text-on-surface-variant">
             <MaterialSymbol name="schedule" size="text-sm" />
@@ -200,7 +207,7 @@ export function ParentDailyReportsPage() {
       .from('notifications')
       .update({ read: true } as never)
       .eq('user_id', userId)
-      .eq('type', 'daily_report_published')
+      .eq('type', DAILY_REPORT_NOTIFICATION_TYPE)
       .eq('read', false);
   }, [userId]);
 
@@ -240,7 +247,8 @@ export function ParentDailyReportsPage() {
   const moodRows = useMemo(() => {
     const counts = new Map<string, number>();
     reports.reports.forEach((report) => {
-      const label = formatMoodLabel(t, report.mood.mood);
+      if (!report.answers.mood.mood) return;
+      const label = formatMoodLabel(t, report.answers.mood.mood);
       counts.set(label, (counts.get(label) ?? 0) + 1);
     });
     return [...counts.entries()].map(([name, value]) => ({ name, value }));
@@ -318,7 +326,7 @@ export function ParentDailyReportsPage() {
             icon="child_care"
             label={t('parent.reports.childrenCovered', { defaultValue: 'Children covered' })}
             value={uniqueChildrenWithReports || reports.children.length}
-            helper={latestReport?.childName ?? t('parent.reports.allChildren')}
+            helper={latestReport ? childNameOf(latestReport, i18n.language) : t('parent.reports.allChildren')}
           />
         </div>
       </section>
@@ -442,7 +450,7 @@ export function ParentDailyReportsPage() {
           latestReport ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
               <MaterialSymbol name="school" size="text-sm" />
-              {t('parent.reports.latestFrom', { defaultValue: 'Latest from {{teacher}}', teacher: latestReport.teacherName })}
+              {t('parent.reports.latestFrom', { defaultValue: 'Latest from {{teacher}}', teacher: latestReport.sender ? senderParts(latestReport.sender, i18n.language).name ?? '—' : '—' })}
             </span>
           ) : null
         }
@@ -491,6 +499,8 @@ export function ParentDailyReportsPage() {
         onNext={() => {
           if (activeIndex >= 0 && activeIndex < reports.reports.length - 1) openReport(reports.reports[activeIndex + 1]);
         }}
+        hasPrev={activeIndex > 0}
+        hasNext={activeIndex >= 0 && activeIndex < reports.reports.length - 1}
         onReact={(payload) => (activeReport ? reports.saveReaction({ reportId: activeReport.id, ...payload }) : Promise.resolve())}
       />
     </div>

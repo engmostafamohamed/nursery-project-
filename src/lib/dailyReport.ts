@@ -2,13 +2,19 @@
 // required questions (the same rules as daily_report_missing in the database), how far a report is,
 // what the server is sent and read back, and the teacher's day (get_my_daily_reports).
 
-export type MealAmount = 'none' | 'some' | 'all';
+/** How much of the plate the child ate, in quarters. */
+export type MealAmount = 'none' | 'quarter' | 'half' | 'three_quarters' | 'all';
 export type NapQuality = 'good' | 'ok' | 'restless';
 export type Mood = 'happy' | 'content' | 'fussy' | 'cranky';
 export type Meal = 'breakfast' | 'lunch' | 'snacks';
 
 export const MEALS: Meal[] = ['breakfast', 'lunch', 'snacks'];
-export const MEAL_AMOUNTS: MealAmount[] = ['none', 'some', 'all'];
+export const MEAL_AMOUNTS: MealAmount[] = ['none', 'quarter', 'half', 'three_quarters', 'all'];
+/** The share of the plate each answer fills, 0–1. */
+export const MEAL_SHARE: Record<MealAmount, number> = { none: 0, quarter: 0.25, half: 0.5, three_quarters: 0.75, all: 1 };
+
+/** The portions of food on the plate for an answer: one per quarter, 0–4 (none when not answered). */
+export const mealPortions = (amount: MealAmount | null) => (amount ? Math.round(MEAL_SHARE[amount] * 4) : 0);
 export const NAP_QUALITIES: NapQuality[] = ['good', 'ok', 'restless'];
 export const MOODS: Mood[] = ['happy', 'content', 'fussy', 'cranky'];
 export const ACTIVITY_TAGS = ['art', 'outdoor', 'reading', 'music', 'circle_time', 'story_time', 'sensory_play', 'free_play', 'other'] as const;
@@ -104,29 +110,53 @@ const obj = (value: unknown): Json => (value && typeof value === 'object' && !Ar
 const str = (value: unknown) => (value == null ? '' : String(value));
 const num = (value: unknown): number | null => (typeof value === 'number' && Number.isFinite(value) ? value : null);
 
-// Reports written before the questions were required used other words for some answers.
-function mealAmount(slot: Json): MealAmount | null {
-  const v = str(slot.amount ?? slot.appetite);
-  if (v === 'none' || v === 'some' || v === 'all') return v;
+// Reports written before the questions were required, or before meals were answered in quarters,
+// used other words for some answers.
+export function parseMealAmount(value: unknown): MealAmount | null {
+  const v = str(value);
+  if ((MEAL_AMOUNTS as string[]).includes(v)) return v as MealAmount;
+  if (v === 'some') return 'half';
   if (v === 'ate_all') return 'all';
   if (v === 'did_not_eat') return 'none';
   return null;
 }
 
-function napQuality(v: unknown): NapQuality | null {
+const mealAmount = (slot: Json): MealAmount | null => parseMealAmount(slot.amount ?? slot.appetite);
+
+export function parseNapQuality(v: unknown): NapQuality | null {
   const s = str(v);
   if (s === 'good' || s === 'ok' || s === 'restless') return s;
   if (s === 'slept_well') return 'good';
   return null;
 }
 
-function mood(v: unknown): Mood | null {
+export function parseMood(v: unknown): Mood | null {
   const s = str(v);
   if (s === 'happy' || s === 'content' || s === 'fussy' || s === 'cranky') return s;
   if (s === 'neutral' || s === 'tired') return 'content';
   if (s === 'sad') return 'fussy';
   if (s === 'upset') return 'cranky';
   return null;
+}
+
+const NAP_SEGMENTS_MAX = 8;
+
+/**
+ * A nap as one segment per hour, each 0–1 full: 150 minutes is [1, 1, 0.5]. Shown as that many
+ * bars filling one after another; no nap (or no time) is none.
+ */
+export function napSegments(minutes: number | null | undefined): number[] {
+  if (minutes == null || !Number.isFinite(minutes) || minutes <= 0) return [];
+  const capped = Math.min(minutes, NAP_SEGMENTS_MAX * 60);
+  const full = Math.floor(capped / 60);
+  const rest = Math.round(((capped % 60) / 60) * 100) / 100;
+  return [...Array<number>(full).fill(1), ...(rest > 0 ? [rest] : [])];
+}
+
+/** 150 minutes → { hours: 2, minutes: 30 }. */
+export function splitMinutes(total: number): { hours: number; minutes: number } {
+  const whole = Math.max(0, Math.round(total));
+  return { hours: Math.floor(whole / 60), minutes: whole % 60 };
 }
 
 /** A saved daily_reports row as answers; nothing missing is filled in. */
@@ -144,10 +174,10 @@ export function fromRow(row: Json | null | undefined): DailyReportAnswers {
   a.nap = {
     napped: typeof nap.napped === 'boolean' ? nap.napped : null,
     durationMinutes: num(nap.duration_minutes),
-    quality: napQuality(nap.quality),
+    quality: parseNapQuality(nap.quality),
     notes: str(nap.notes),
   };
-  a.mood = { mood: mood(moodJson.mood), notes: str(moodJson.notes) };
+  a.mood = { mood: parseMood(moodJson.mood), notes: str(moodJson.notes) };
   a.toilet = { changeCount: num(toilet.change_count) ?? num(toilet.diaper_changes), notes: str(toilet.notes) };
   const tags = Array.isArray(activities.tags) ? activities.tags : Array.isArray(activities.participated_in) ? activities.participated_in : [];
   a.activities = { tags: [...new Set(tags.map(String))], freeText: str(activities.free_text ?? activities.other_activity), notes: str(activities.notes) };
@@ -290,6 +320,7 @@ export function dailyReportErrorKey(error: unknown): string {
     'daily_report_none_selected',
     'daily_report_forbidden',
     'daily_report_child_not_found',
+    'daily_report_search_invalid',
   ];
   const hit = known.find((code) => message.includes(code));
   return hit ? hit.replace('daily_report_', '') : 'failed';

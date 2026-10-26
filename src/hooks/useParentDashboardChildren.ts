@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { fetchAttendanceDays } from '@/lib/attendanceApi';
-import { formatMealsSummary, formatMoodSummary } from '@/lib/parentDashboardFormat';
+import { fromRow, type Meal, type MealAmount } from '@/lib/dailyReport';
+import { formatMoodSummary } from '@/lib/parentDashboardFormat';
 import { getNurseryCalendarDateString } from '@/lib/nurseryDay';
 import { supabase } from '@/lib/supabase';
 
@@ -15,9 +16,16 @@ export type ParentDashboardChildCard = {
   /** off: the nursery is closed today (weekend or holiday), so the child is not absent. */
   attendanceLabel: 'absent' | 'checked_in' | 'checked_out' | 'off';
   lastReportMood: string;
-  lastReportMeals: string;
+  /** How much of each meal the child ate in the last sent report; null without one. */
+  lastReportMeals: Record<Meal, MealAmount | null> | null;
   lastReportDate: string | null;
 };
+
+/** The amounts of a report's meals, read like every other screen reads them (old words included). */
+function mealAmounts(mealsJson: Record<string, unknown>): Record<Meal, MealAmount | null> {
+  const { meals } = fromRow({ meals_json: mealsJson });
+  return { breakfast: meals.breakfast.amount, lunch: meals.lunch.amount, snacks: meals.snacks.amount };
+}
 
 export function useParentDashboardChildren(parentId: string | undefined, nurseryId: string | undefined) {
   return useQuery({
@@ -107,7 +115,7 @@ export function useParentDashboardChildren(parentId: string | undefined, nursery
           checkOut,
           attendanceLabel,
           lastReportMood: lr ? formatMoodSummary(lr.mood_json) : '',
-          lastReportMeals: lr ? formatMealsSummary(lr.meals_json) : '',
+          lastReportMeals: lr ? mealAmounts(lr.meals_json) : null,
           lastReportDate: lr?.report_date ?? null,
         };
       });

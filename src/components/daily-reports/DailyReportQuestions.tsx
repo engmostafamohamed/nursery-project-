@@ -1,6 +1,10 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { MealAmountSlider } from '@/components/daily-reports/MealAmountSlider';
+import { MealPlate } from '@/components/daily-reports/MealPlate';
+import { NapHours } from '@/components/daily-reports/NapHours';
+import { Drop3D, Orb3D, Tile3D } from '@/components/daily-reports/Shapes3D';
 import { Button } from '@/components/ui/button';
 import { FieldError, invalidFieldClass } from '@/components/ui/FieldError';
 import { Input } from '@/components/ui/input';
@@ -9,44 +13,30 @@ import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Textarea } from '@/components/ui/textarea';
 import {
   ACTIVITY_TAGS,
-  MEAL_AMOUNTS,
   MEALS,
   MOODS,
   NAP_QUALITIES,
   type DailyReportAnswers,
   type Meal,
-  type MealAmount,
-  type Mood,
-  type NapQuality,
   type Question,
 } from '@/lib/dailyReport';
-import { questionName } from '@/lib/dailyReportLabels';
+import { formatActivityTag } from '@/lib/dailyReportDisplay';
+import {
+  ACTIVITY_EMOJI,
+  MOOD_EMOJI,
+  MOOD_TONE,
+  mealAmountName,
+  moodName,
+  NAP_EMOJI,
+  napDurationText,
+  napQualityName,
+  questionName,
+} from '@/lib/dailyReportLabels';
+import type { PillTone } from '@/lib/tones';
 import { cn } from '@/lib/utils';
 
-type T = ReturnType<typeof useTranslation>['t'];
-
-const MOOD_EMOJI: Record<Mood, string> = { happy: '😊', content: '😌', fussy: '😣', cranky: '😤' };
 const NAP_MAX_MINUTES = 300;
 const TOILET_MAX = 30;
-
-function mealAmountName(t: T, amount: MealAmount): string {
-  if (amount === 'none') return t('reports.daily.options.mealAmount.none');
-  if (amount === 'some') return t('reports.daily.options.mealAmount.some');
-  return t('reports.daily.options.mealAmount.all');
-}
-
-function napQualityName(t: T, quality: NapQuality): string {
-  if (quality === 'good') return t('reports.daily.options.napQuality.good');
-  if (quality === 'ok') return t('reports.daily.options.napQuality.ok');
-  return t('reports.daily.options.napQuality.restless');
-}
-
-function moodName(t: T, mood: Mood): string {
-  if (mood === 'happy') return t('reports.daily.options.mood.happy');
-  if (mood === 'content') return t('reports.daily.options.mood.content');
-  if (mood === 'fussy') return t('reports.daily.options.mood.fussy');
-  return t('reports.daily.options.mood.cranky');
-}
 
 /** A whole number from an input, kept between min and max; empty is "not answered". */
 function wholeNumber(raw: string, min: number, max: number): number | null {
@@ -84,6 +74,46 @@ function Choices<V extends string | boolean>({
               selected ? 'border-primary bg-primary text-primary-foreground shadow-sm' : 'border-outline-variant bg-surface text-on-surface hover:bg-surface-high',
             )}
           >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** One choice among a few, as 3D balls with an emoji (a radio group); the picked one stands out. */
+function OrbChoices<V extends string | boolean>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: V | null;
+  options: { value: V; label: string; emoji: string; tone: PillTone }[];
+  onChange: (value: V) => void;
+}) {
+  return (
+    <div role="radiogroup" aria-label={label} className="flex flex-wrap gap-3">
+      {options.map((o) => {
+        const selected = o.value === value;
+        return (
+          <button
+            key={String(o.value)}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            onClick={() => onChange(o.value)}
+            className={cn(
+              'flex w-24 flex-col items-center gap-1.5 rounded-2xl px-2 pb-2 pt-3 text-sm font-semibold transition-[background,box-shadow] disabled:cursor-not-allowed',
+              selected ? 'bg-surface-container-lowest text-on-surface ring-2 ring-primary' : 'text-on-surface-variant hover:bg-surface-container-lowest',
+            )}
+          >
+            {/* Picking a ball makes it pop. */}
+            <Orb3D key={selected ? 'on' : 'off'} tone={o.tone} size={56} animate={selected} className={selected ? undefined : 'opacity-60 grayscale-[0.5]'}>
+              {o.emoji}
+            </Orb3D>
             {o.label}
           </button>
         );
@@ -181,37 +211,45 @@ export function DailyReportQuestions({
         status={<Required answered={!MEALS.some(isMissing)} />}
       >
         <div className="divide-y divide-outline-variant">
-          {MEALS.map((meal) => (
-            <div key={meal} id={`q-${meal}`} className="grid scroll-mt-24 gap-3 py-3 first:pt-0 last:pb-0 lg:grid-cols-[10rem_1fr_16rem] lg:items-center">
-              <div>
-                <p className="text-sm font-semibold text-on-surface">{questionName(t, meal)}</p>
-                {isMissing(meal) && !readOnly ? <p className="text-xs text-warning">{t('dailyReport.editor.pickOne')}</p> : null}
+          {MEALS.map((meal) => {
+            const amount = value.meals[meal].amount;
+            return (
+              // The plate fills to the amount picked, as the family will see it.
+              <div key={meal} id={`q-${meal}`} className="grid scroll-mt-24 gap-4 py-5 first:pt-0 last:pb-0 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] sm:items-center sm:gap-6">
+                <MealPlate
+                  meal={meal}
+                  amount={amount}
+                  size={224}
+                  className="mx-auto max-w-[14rem] sm:mx-0"
+                  label={t('dailyReport.sheet.mealLabel', { meal: questionName(t, meal), amount: amount ? mealAmountName(t, amount) : t('dailyReport.sheet.noAnswer') })}
+                />
+                <div className="min-w-0 space-y-2">
+                  <div className="flex flex-wrap items-baseline gap-x-2">
+                    <p className="text-sm font-semibold text-on-surface">{questionName(t, meal)}</p>
+                    {isMissing(meal) && !readOnly ? <p className="text-xs text-warning">{t('dailyReport.editor.pickOne')}</p> : null}
+                  </div>
+                  <MealAmountSlider label={questionName(t, meal)} value={amount} onChange={(picked) => setMeal(meal, { amount: picked })} />
+                  <Input
+                    aria-label={t('dailyReport.editor.noteFor', { question: questionName(t, meal) })}
+                    placeholder={t('dailyReport.editor.notePlaceholder')}
+                    value={value.meals[meal].notes}
+                    maxLength={300}
+                    onChange={(e) => setMeal(meal, { notes: e.target.value })}
+                  />
+                </div>
               </div>
-              <Choices
-                label={questionName(t, meal)}
-                value={value.meals[meal].amount}
-                options={MEAL_AMOUNTS.map((a) => ({ value: a, label: mealAmountName(t, a) }))}
-                onChange={(amount) => setMeal(meal, { amount })}
-              />
-              <Input
-                aria-label={t('dailyReport.editor.noteFor', { question: questionName(t, meal) })}
-                placeholder={t('dailyReport.editor.notePlaceholder')}
-                value={value.meals[meal].notes}
-                maxLength={300}
-                onChange={(e) => setMeal(meal, { notes: e.target.value })}
-              />
-            </div>
-          ))}
+            );
+          })}
         </div>
       </QuestionCard>
 
       <QuestionCard id="q-nap" icon="bedtime" title={questionName(t, 'nap')} hint={t('dailyReport.editor.napHint')} status={<Required answered={!isMissing('nap')} />}>
-        <Choices
+        <OrbChoices
           label={t('dailyReport.editor.napped')}
           value={nap.napped}
           options={[
-            { value: true, label: t('dailyReport.editor.nappedYes') },
-            { value: false, label: t('dailyReport.editor.nappedNo') },
+            { value: true, label: t('dailyReport.editor.nappedYes'), emoji: NAP_EMOJI.slept, tone: 'primary' },
+            { value: false, label: t('dailyReport.editor.nappedNo'), emoji: NAP_EMOJI.awake, tone: 'warning' },
           ]}
           onChange={(napped) => onChange({ ...value, nap: { ...nap, napped } })}
         />
@@ -243,24 +281,23 @@ export function DailyReportQuestions({
               />
               <FieldError message={napQualityMissing && !readOnly ? t('dailyReport.editor.napQualityNeeded') : null} />
             </div>
+            {nap.durationMinutes ? (
+              // A bar per hour, as the family will see it.
+              <div className="flex items-end gap-4 rounded-lg bg-surface-container-lowest px-4 py-3 md:col-span-2">
+                <NapHours minutes={nap.durationMinutes} label={t('dailyReport.sheet.napLabel', { duration: napDurationText(t, nap.durationMinutes) })} />
+                <p className="pb-5 text-lg font-bold text-on-surface">{napDurationText(t, nap.durationMinutes)}</p>
+              </div>
+            ) : null}
           </div>
         ) : null}
         <NoteInput id="nap-note" value={nap.notes} onChange={(notes) => onChange({ ...value, nap: { ...nap, notes } })} />
       </QuestionCard>
 
       <QuestionCard id="q-mood" icon="mood" title={questionName(t, 'mood')} hint={t('dailyReport.editor.moodHint')} status={<Required answered={!isMissing('mood')} />}>
-        <Choices
+        <OrbChoices
           label={questionName(t, 'mood')}
           value={value.mood.mood}
-          options={MOODS.map((m) => ({
-            value: m,
-            label: (
-              <>
-                <span aria-hidden className="text-lg">{MOOD_EMOJI[m]}</span>
-                {moodName(t, m)}
-              </>
-            ),
-          }))}
+          options={MOODS.map((m) => ({ value: m, label: moodName(t, m), emoji: MOOD_EMOJI[m], tone: MOOD_TONE[m] }))}
           onChange={(mood) => onChange({ ...value, mood: { ...value.mood, mood } })}
         />
         <NoteInput id="mood-note" value={value.mood.notes} onChange={(notes) => onChange({ ...value, mood: { ...value.mood, notes } })} />
@@ -309,11 +346,19 @@ export function DailyReportQuestions({
             {t('dailyReport.editor.toiletNone')}
           </Button>
         </div>
+        {value.toilet.changeCount ? (
+          // A drop per visit, as the family will see it; a new visit drops in.
+          <span aria-hidden="true" className="flex flex-wrap items-end gap-1.5 rounded-lg bg-surface-container-lowest px-3 py-2">
+            {Array.from({ length: Math.min(value.toilet.changeCount, 12) }, (_, i) => (
+              <Drop3D key={i} size={30} />
+            ))}
+          </span>
+        ) : null}
         <NoteInput id="toilet-note" value={value.toilet.notes} onChange={(notes) => onChange({ ...value, toilet: { ...value.toilet, notes } })} />
       </QuestionCard>
 
       <QuestionCard id="q-activities" icon="palette" title={questionName(t, 'activities')} hint={t('dailyReport.editor.activitiesHint')} status={<Required answered={!isMissing('activities')} />}>
-        <div className="flex flex-wrap gap-2" role="group" aria-label={questionName(t, 'activities')}>
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-5" role="group" aria-label={questionName(t, 'activities')}>
           {ACTIVITY_TAGS.map((tag) => {
             const on = value.activities.tags.includes(tag);
             return (
@@ -322,13 +367,10 @@ export function DailyReportQuestions({
                 type="button"
                 aria-pressed={on}
                 onClick={() => toggleTag(tag)}
-                className={cn(
-                  'inline-flex min-h-11 items-center gap-1 rounded-full border px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60',
-                  on ? 'border-primary bg-primary/10 text-primary' : 'border-outline-variant bg-surface text-on-surface hover:bg-surface-high',
-                )}
+                className="rounded-2xl text-start outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed"
               >
-                {on ? <MaterialSymbol name="check" className="text-base" /> : null}
-                {t(`reports.daily.options.activities.${tag}`)}
+                {/* A picked activity stands up as a 3D tile (and pops). */}
+                <Tile3D key={on ? 'on' : 'off'} emoji={ACTIVITY_EMOJI[tag]} label={formatActivityTag(t, tag)} selected={on} animate={on} />
               </button>
             );
           })}

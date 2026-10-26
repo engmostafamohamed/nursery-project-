@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { MyDailyReport, SaveResult, SendResult } from '@/lib/dailyReport';
+import { cardFromRow, type DailyReportCard } from '@/lib/dailyReportCard';
+import type { DailyReportHistoryRow } from '@/lib/dailyReportHistory';
 import type { DailyReportStats } from '@/lib/dailyReportStats';
 import type { DateRange } from '@/lib/attendancePeriods';
 import { supabase } from '@/lib/supabase';
@@ -60,7 +62,44 @@ export function useSendDailyReports(userId: string | undefined) {
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: ['my-daily-reports', userId ?? null] });
       void qc.invalidateQueries({ queryKey: ['daily-report-stats'] });
+      void qc.invalidateQueries({ queryKey: ['daily-report-history', userId ?? null] });
     },
+  });
+}
+
+/**
+ * The sent reports a teacher can look back on, a page at a time (get_daily_report_history). Null
+ * `query` (an invalid period) asks for nothing.
+ */
+export function useDailyReportHistory(
+  userId: string | undefined,
+  query: { from: string; to: string; classId: string; search: string; limit: number; offset: number } | null,
+) {
+  return useQuery({
+    queryKey: ['daily-report-history', userId ?? null, query],
+    queryFn: async () =>
+      (await rpc<DailyReportHistoryRow[] | null>('get_daily_report_history', {
+        p_from: query!.from,
+        p_to: query!.to,
+        p_class_id: query!.classId || null,
+        p_search: query!.search.trim() || null,
+        p_limit: query!.limit,
+        p_offset: query!.offset,
+      })) ?? [],
+    enabled: Boolean(userId && query),
+    placeholderData: (previous) => previous,
+  });
+}
+
+/** One report as the family sees it, with its child and sender (get_daily_report); null when nothing was saved. */
+export function useDailyReportCard(userId: string | undefined, childId: string | null, day: string | null) {
+  return useQuery({
+    queryKey: ['daily-report-card', userId ?? null, childId, day],
+    queryFn: async (): Promise<DailyReportCard | null> => {
+      const row = await rpc<Record<string, unknown> | null>('get_daily_report', { p_child_id: childId, p_report_date: day });
+      return row ? cardFromRow(row) : null;
+    },
+    enabled: Boolean(userId && childId && day),
   });
 }
 

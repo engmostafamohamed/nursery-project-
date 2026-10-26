@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import i18n from '@/lib/i18n';
 
 import { formatActivityTag, formatMealSlot, formatMoodLabel, formatNapQuality } from './dailyReportDisplay';
-import { formatMealsSummary, formatMoodSummary } from './parentDashboardFormat';
+import { formatMoodSummary } from './parentDashboardFormat';
 import { generateDailyReportShareText } from './reportShare';
 
 const t = i18n.getFixedT('en');
@@ -15,8 +15,12 @@ describe('daily report answers', () => {
     [{ amount: 'none' }, 'None'],
     [{ appetite: 'ate_all' }, 'All'],
     [{ appetite: 'did_not_eat' }, 'None'],
-    [{ amount: 'a little' }, 'Some'],
-    [undefined, 'Some'],
+    [{ amount: 'quarter' }, 'A quarter'],
+    [{ amount: 'three_quarters' }, 'Three quarters'],
+    // Before the quarters: "some" (and anything unreadable) reads as half the plate.
+    [{ amount: 'some' }, 'Half'],
+    [{ amount: 'a little' }, 'Half'],
+    [undefined, 'Half'],
   ])('a meal of %o shows "%s"', (slot, label) => {
     expect(formatMealSlot(t, slot)).toBe(label);
   });
@@ -59,12 +63,6 @@ describe('parent dashboard summary', () => {
     expect(formatMoodSummary({ mood: { mood: 'tired' } })).toBe('tired');
     expect(formatMoodSummary({ mood: '  ' })).toBe('');
     expect(formatMoodSummary(undefined)).toBe('');
-  });
-
-  it('lists only the meals that have an answer', () => {
-    const meals = { breakfast: { appetite: 'all' }, lunch: {}, snacks: { appetite: 'some' } };
-    expect(formatMealsSummary(meals)).toBe('B:all · S:some');
-    expect(formatMealsSummary(undefined)).toBe('');
   });
 });
 

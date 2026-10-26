@@ -1,52 +1,28 @@
 import type { TFunction } from 'i18next';
 
-function mealKeyFromRaw(raw: unknown): string {
-  const o = raw as Record<string, unknown> | undefined;
-  const v = o?.amount ?? o?.appetite ?? raw;
-  const s = String(v ?? '');
-  if (s === 'none' || s === 'some' || s === 'all') return s;
-  if (s === 'ate_all') return 'all';
-  if (s === 'did_not_eat') return 'none';
-  return 'some';
-}
+import { parseMealAmount, parseMood, parseNapQuality, type Mood } from './dailyReport';
+import { mealAmountName, moodName, napQualityName } from './dailyReportLabels';
 
+// The words for a stored daily report answer, for screens that read the raw JSON. The mapping of
+// old and new words is dailyReport.ts's, and the words are dailyReportLabels.ts's, so every screen
+// reads a report the same way.
+
+/** A meal slot ({ amount } or the older { appetite }); no answer reads as half the plate. */
 export function formatMealSlot(t: TFunction, slot: Record<string, unknown> | undefined): string {
-  const k = mealKeyFromRaw(slot);
-  return t(`reports.daily.options.mealAmount.${k}`);
+  return mealAmountName(t, parseMealAmount(slot?.amount ?? slot?.appetite) ?? 'half');
 }
-
-const NAP_QUALITY_MAP: Record<string, 'good' | 'ok' | 'restless'> = {
-  good: 'good',
-  ok: 'ok',
-  restless: 'restless',
-  slept_well: 'good',
-  did_not_sleep: 'ok',
-};
 
 export function formatNapQuality(t: TFunction, raw: unknown): string {
-  const s = String(raw ?? '');
-  const k = NAP_QUALITY_MAP[s] ?? 'ok';
-  return t(`reports.daily.options.napQuality.${k}`);
+  return napQualityName(t, parseNapQuality(raw) ?? 'ok');
 }
 
-const MOOD_MAP: Record<string, 'happy' | 'content' | 'fussy' | 'cranky'> = {
-  happy: 'happy',
-  content: 'content',
-  fussy: 'fussy',
-  cranky: 'cranky',
-  neutral: 'content',
-  sad: 'fussy',
-  tired: 'content',
-  upset: 'cranky',
-};
-
-/** The mood a report's raw value maps to (unknown values read as happy, as in formatMoodLabel). */
-export function moodKey(raw: unknown): 'happy' | 'content' | 'fussy' | 'cranky' {
-  return MOOD_MAP[String(raw ?? '')] ?? 'happy';
+/** The mood a report's raw value maps to (unknown values read as happy). */
+export function moodKey(raw: unknown): Mood {
+  return parseMood(raw) ?? 'happy';
 }
 
 export function formatMoodLabel(t: TFunction, raw: unknown): string {
-  return t(`reports.daily.options.mood.${moodKey(raw)}`);
+  return moodName(t, moodKey(raw));
 }
 
 export function formatActivityTag(t: TFunction, tag: string): string {

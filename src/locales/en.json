@@ -3072,8 +3072,10 @@
       "childNotInClass": "This child is not in your class.",
       "options": {
         "mealAmount": {
+          "quarter": "A quarter",
+          "half": "Half",
+          "three_quarters": "Three quarters",
           "none": "None",
-          "some": "Some",
           "all": "All"
         },
         "napQuality": {
@@ -3380,7 +3382,6 @@
         "attendanceOut": "In {{in}} · Out {{out}}",
         "mood": "Mood: {{mood}}",
         "noMood": "Latest report: mood not recorded",
-        "meals": "Meals: {{summary}}",
         "noMeals": "Latest report: meals not recorded",
         "unreadBadge": "{{count}} unread (account)",
         "noUnread": "No unread notifications"
@@ -6102,6 +6103,66 @@
     }
   },
   "dailyReport": {
+    "sheet": {
+      "eyebrow": "Daily report",
+      "previewBadge": "Preview",
+      "childCode": "Code",
+      "class": "Class",
+      "sentBy": "Sent by",
+      "sentAt": "Sent at {{time}}",
+      "notSentYet": "Not sent yet",
+      "fromSender": "From {{name}} · {{role}}",
+      "meals": "Meals",
+      "mealLabel": "{{meal}}: {{amount}}",
+      "noAnswer": "Not answered",
+      "napLabel": "Slept {{duration}}",
+      "noNap": "No nap today",
+      "hours_one": "{{count}} h",
+      "hours_other": "{{count}} h",
+      "minutes_one": "{{count}} min",
+      "minutes_other": "{{count}} min",
+      "hoursAndMinutes": "{{hours}} {{minutes}}",
+      "toiletNone": "No visits",
+      "toiletCount_one": "Once",
+      "toiletCount_other": "{{count}} times",
+      "bottleMl": "{{ml}} ml",
+      "nursing_one": "Nursed once",
+      "nursing_other": "Nursed {{count}} times",
+      "note": "Note to the family"
+    },
+    "history": {
+      "todayTab": "Reports of the day",
+      "tab": "Sent reports",
+      "title": "Sent reports",
+      "hint": "Every report sent to the families: find one by day, child or class, and open it as the family sees it.",
+      "count_one": "{{count}} report",
+      "count_other": "{{count}} reports",
+      "mode": "Find by",
+      "modeDay": "One day",
+      "modePeriod": "A period",
+      "day": "Day",
+      "from": "From",
+      "to": "To",
+      "search": "Child",
+      "searchPlaceholder": "Name or code",
+      "class": "Class",
+      "allClasses": "All classes",
+      "columns": {
+        "date": "Day",
+        "child": "Child",
+        "class": "Class",
+        "sentBy": "Sent by",
+        "sentAt": "Sent at",
+        "mood": "Mood",
+        "action": "Report"
+      },
+      "open": "Open",
+      "empty": "No sent reports in this period",
+      "emptyHint": "Pick another day or a longer period.",
+      "noMatch": "No sent report matches this search",
+      "rangeInvalid": "Pick a period of at most a year, from the earlier day to the later one.",
+      "dialogTitle": "Sent report"
+    },
     "title": "Daily reports",
     "subtitle": "Fill in each child's report during the day — every change is saved as you go. At the end of the day, send the complete ones to the families.",
     "percent": "{{value}}%",
@@ -6202,6 +6263,9 @@
       "emptyHint": "Once the admin or the head of teachers puts you in a class, its children appear here."
     },
     "editor": {
+      "mealSwipe": "Swipe to choose",
+      "preview": "How the family sees it",
+      "previewTitle": "The report as the family will see it",
       "title": "{{name}}'s daily report",
       "invalidRouteHint": "Open the report from the daily reports list.",
       "notInClassHint": "You can write reports only for the children of your classes.",
@@ -6312,6 +6376,7 @@
       "limited": "Showing the first {{count}}."
     },
     "errors": {
+      "search_invalid": "The search is too long.",
       "child_not_in_your_class": "This child is not in your classes.",
       "already_sent": "This report was already sent and can no longer be changed.",
       "date_invalid": "Reports can be written for today or the past 7 days.",
@@ -6324,6 +6389,10 @@
     }
   },
   "notificationTemplates": {
+    "daily_report_sent_by": {
+      "title": "{{child}}'s daily report",
+      "body": "{{sender}} sent the report for {{date}}: meals, nap, mood and activities."
+    },
     "demo_message_password_reset": {
       "title": "Your verification code (demo email)",
       "body": "Your code is {{code}}. In demo mode emails are not sent, so the email appears here."

@@ -11,13 +11,19 @@ import {
   emptyAnswers,
   filterDay,
   fromRow,
+  MEAL_AMOUNTS,
+  MEAL_SHARE,
   missingQuestions,
+  napSegments,
   nextChild,
   NO_DAY_FILTERS,
+  parseMealAmount,
   reportDay,
+  splitMinutes,
   stageOf,
   toPayload,
   type DailyReportAnswers,
+  type MealAmount,
   type MyDailyReport,
 } from './dailyReport';
 import { rateTone, searchRows } from './dailyReportStats';
@@ -25,7 +31,7 @@ import { rateTone, searchRows } from './dailyReportStats';
 function filled(): DailyReportAnswers {
   const a = emptyAnswers();
   a.meals.breakfast.amount = 'all';
-  a.meals.lunch.amount = 'some';
+  a.meals.lunch.amount = 'half';
   a.meals.snacks.amount = 'none';
   a.nap = { napped: true, durationMinutes: 60, quality: 'good', notes: '' };
   a.mood.mood = 'happy';
@@ -121,6 +127,66 @@ describe('saving and reading back', () => {
     expect(a.mood.mood).toBe('fussy');
     expect(a.toilet.changeCount).toBe(3);
     expect(a.activities).toMatchObject({ tags: ['music'], freeText: 'Dance' });
+  });
+});
+
+describe('meals in quarters of the plate', () => {
+  it.each([
+    ['none', 'none', 0],
+    ['quarter', 'quarter', 0.25],
+    ['half', 'half', 0.5],
+    ['three_quarters', 'three_quarters', 0.75],
+    ['all', 'all', 1],
+    // Reports from before the quarters said "some": shown as half the plate.
+    ['some', 'half', 0.5],
+  ])('"%s" is %s of the plate', (stored, amount, share) => {
+    const parsed = parseMealAmount(stored);
+    expect(parsed).toBe(amount);
+    expect(MEAL_SHARE[parsed as MealAmount]).toBe(share);
+  });
+
+  it('anything else is no answer', () => {
+    for (const v of ['lots', '', null, undefined, 3, 'ALL']) expect(parseMealAmount(v)).toBeNull();
+  });
+
+  it('offers the five amounts in order, emptiest first', () => {
+    expect(MEAL_AMOUNTS).toEqual(['none', 'quarter', 'half', 'three_quarters', 'all']);
+    expect(MEAL_AMOUNTS.map((x) => MEAL_SHARE[x])).toEqual([0, 0.25, 0.5, 0.75, 1]);
+  });
+
+  it('a quarter-plate report is complete and reads back as saved', () => {
+    const a = filled();
+    a.meals.breakfast.amount = 'quarter';
+    a.meals.lunch.amount = 'three_quarters';
+    expect(missingQuestions(a)).toEqual([]);
+    const p = toPayload(a);
+    expect(fromRow({ meals_json: p.meals }).meals.lunch.amount).toBe('three_quarters');
+  });
+});
+
+describe('a nap as a bar per hour', () => {
+  it.each([
+    [150, [1, 1, 0.5]],
+    [60, [1]],
+    [45, [0.75]],
+    [125, [1, 1, 0.08]],
+    [0, []],
+    [null, []],
+    [-30, []],
+    [NaN, []],
+  ])('%s minutes → %j', (minutes, segments) => {
+    expect(napSegments(minutes as number | null)).toEqual(segments);
+  });
+
+  it('never draws more than eight bars', () => {
+    expect(napSegments(20 * 60)).toEqual([1, 1, 1, 1, 1, 1, 1, 1]);
+  });
+
+  it('splits minutes into hours and minutes', () => {
+    expect(splitMinutes(150)).toEqual({ hours: 2, minutes: 30 });
+    expect(splitMinutes(45)).toEqual({ hours: 0, minutes: 45 });
+    expect(splitMinutes(120)).toEqual({ hours: 2, minutes: 0 });
+    expect(splitMinutes(-5)).toEqual({ hours: 0, minutes: 0 });
   });
 });
 

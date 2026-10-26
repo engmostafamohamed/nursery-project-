@@ -5,9 +5,11 @@ import { toast } from 'sonner';
 
 import { CompletionBar } from '@/components/daily-reports/CompletionBar';
 import { DailyReportQuestions } from '@/components/daily-reports/DailyReportQuestions';
+import { DailyReportSheet } from '@/components/daily-reports/DailyReportSheet';
 import { Button } from '@/components/ui/button';
 import { confirm } from '@/components/ui/confirm';
 import { StatusPill } from '@/components/ui/DataTable';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -20,7 +22,9 @@ import {
   useSaveDailyReport,
   useSendDailyReports,
 } from '@/hooks/useDailyReportWorkflow';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { completion, dailyReportErrorKey, fromRow, nextChild, toPayload, type DailyReportAnswers, type SaveResult } from '@/lib/dailyReport';
+import type { DailyReportCard } from '@/lib/dailyReportCard';
 import { ATTENDANCE_TONE, attendanceName, questionList, questionName } from '@/lib/dailyReportLabels';
 import { addCalendarDaysYmd, getNurseryCalendarDateString } from '@/lib/nurseryDay';
 import { cn } from '@/lib/utils';
@@ -79,6 +83,8 @@ function ReportEditor({ childId, day }: { childId: string; day: string }) {
   const savedId = useRef<string | null>(null);
   const [sentAt, setSentAt] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const { data: profile } = useUserProfile(user?.id);
 
   // Filled once from the saved report; later refetches must not overwrite what is being typed.
   if (rowQuery.isSuccess && answers === null) {
@@ -170,6 +176,34 @@ function ReportEditor({ childId, day }: { childId: string; day: string }) {
       />
     );
   }
+
+  // The report as the family will receive it, from what is filled in now, sent by this teacher.
+  const preview: DailyReportCard = {
+    id: reportId,
+    childId,
+    childNameAr: me.full_name_ar,
+    childNameEn: me.full_name_en,
+    avatarUrl: me.avatar_url,
+    childCode: me.child_code,
+    classNameAr: me.class_name_ar,
+    classNameEn: me.class_name_en,
+    reportDate: day,
+    publishedAt: sentAt,
+    sender: profile
+      ? {
+          sender_name_ar: profile.name_ar,
+          sender_name_en: profile.name_en,
+          sender_role: profile.role,
+          sender_role_title_ar: null,
+          sender_role_title_en: null,
+          sender_department: profile.department ?? null,
+          sender_class_names_ar: me.class_name_ar,
+          sender_class_names_en: me.class_name_en,
+          sender_class_role: null,
+        }
+      : null,
+    answers,
+  };
 
   const saveLine =
     autosave.status === 'saving'
@@ -270,6 +304,10 @@ function ReportEditor({ childId, day }: { childId: string; day: string }) {
             ) : null}
             {sendError ? <p role="alert" className="text-xs text-error">{sendError}</p> : null}
           </div>
+          <Button type="button" variant="ghost" onClick={() => setPreviewOpen(true)}>
+            <MaterialSymbol name="visibility" className="me-1 text-base" />
+            {t('dailyReport.editor.preview')}
+          </Button>
           {!readOnly ? (
             <div className="flex flex-wrap items-center gap-2">
               <span
@@ -299,6 +337,18 @@ function ReportEditor({ childId, day }: { childId: string; day: string }) {
           ) : null}
         </div>
       </div>
+
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-h-[92vh] max-w-3xl overflow-y-auto p-0 sm:p-0">
+          <DialogHeader className="sr-only">
+            <DialogTitle>{t('dailyReport.editor.previewTitle')}</DialogTitle>
+            <DialogDescription>{name}</DialogDescription>
+          </DialogHeader>
+          <div className="p-3 sm:p-5">
+            <DailyReportSheet card={preview} preview={!sentAt} />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
