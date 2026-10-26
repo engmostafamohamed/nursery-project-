@@ -5,16 +5,21 @@ name: Dev database
 # This workflow keeps the dev database in step with supabase/migrations:
 #   pull request that changes migrations -> preview them on dev (dry run, nothing applied)
 #   push to main that changes migrations -> apply them to dev
+# A change to this workflow or the shared steps runs it too, so the pipeline is checked as it changes.
 # Secrets: GitHub environment "dev" -> SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD.
 on:
   push:
     branches: [main]
     paths:
       - "supabase/migrations/**"
+      - ".github/workflows/dev.yml"
+      - ".github/workflows/supabase-migrate.yml"
   pull_request:
     branches: [main]
     paths:
       - "supabase/migrations/**"
+      - ".github/workflows/dev.yml"
+      - ".github/workflows/supabase-migrate.yml"
   workflow_dispatch:
 
 permissions:
@@ -29,6 +34,8 @@ jobs:
     # Pull requests from forks never get the dev secrets.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
     uses: ./.github/workflows/supabase-migrate.yml
+    # A called workflow gets no secrets unless they are passed on, not even its environment's.
+    secrets: inherit
     with:
       environment: dev
       project-ref: hlhlpjecinkqqsqrjpcj

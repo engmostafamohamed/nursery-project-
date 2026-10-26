@@ -5,6 +5,8 @@ name: Supabase migrations (shared)
 # holds that environment's secrets under the same names:
 #   SUPABASE_ACCESS_TOKEN   personal access token of the Supabase account
 #   SUPABASE_DB_PASSWORD    database password of that environment's project
+# The caller must pass `secrets: inherit`: without it this workflow sees none of them, even with
+# the environment set on its job.
 on:
   workflow_call:
     inputs:

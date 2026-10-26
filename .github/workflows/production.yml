@@ -54,6 +54,8 @@ jobs:
   migrations:
     needs: check
     uses: ./.github/workflows/supabase-migrate.yml
+    # A called workflow gets no secrets unless they are passed on, not even its environment's.
+    secrets: inherit
     with:
       environment: production
       project-ref: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
