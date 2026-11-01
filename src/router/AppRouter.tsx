@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
-import { Navigate, Route, Routes, useParams, useSearchParams } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation, useParams, useSearchParams } from 'react-router-dom';
 
+import { AppErrorBoundary } from '@/components/shared/AppErrorBoundary';
 import { ServiceWorkerNavigateBridge } from '@/components/shared/ServiceWorkerNavigateBridge';
 import { PageRouteSkeleton } from '@/components/shared/PageRouteSkeleton';
 import { RootLayout } from '@/components/layout/RootLayout';
@@ -30,13 +31,17 @@ function LegacyParentPayRedirect() {
 }
 
 export function AppRouter() {
+  // A screen that crashes shows the error screen; going to another page tries again.
+  const { pathname } = useLocation();
   return (
     <>
       <ServiceWorkerNavigateBridge />
+      <AppErrorBoundary resetKey={pathname}>
       <Suspense fallback={<PageRouteSkeleton />}>
       <Routes>
         <Route element={<RootLayout />}>
           <Route path="/login" element={<P.LoginPage />} />
+          <Route path="/reset-password" element={<P.ResetPasswordPage />} />
           <Route path="/signup" element={<P.ParentSignUpPage />} />
           <Route path="/signup/success" element={<P.SignupSuccessPage />} />
           <Route path="/public/inquiry/:nurseryId" element={<P.PublicInquiryFormPage />} />
@@ -311,6 +316,7 @@ export function AppRouter() {
         </Route>
       </Routes>
     </Suspense>
+      </AppErrorBoundary>
     </>
   );
 }

@@ -22,6 +22,7 @@ import { useAdminDashboardEnhancedStats } from '@/hooks/useAdminDashboardEnhance
 import { useAdminDashboardRealtime } from '@/hooks/useAdminDashboardRealtime';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useNurserySettings } from '@/hooks/useNurserySettings';
+import { useCan, usePermissionsReady } from '@/hooks/usePermissions';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { formatMoneyAmount } from '@/lib/money';
 
@@ -52,10 +53,16 @@ export function AdminDashboardPage() {
   const adminPath = (path: string) => `${adminBasePath}${path}`;
   const locale = i18n.language;
 
-  const { data: stats, isPending: statsPending } = useAdminDashboardEnhancedStats(nurseryId);
-  const { data: charts, isPending: chartsPending } = useAdminDashboardCharts(nurseryId);
-  const { data: alerts, isPending: alertsPending } = useAdminDashboardAlerts(nurseryId);
-  const { data: feedItems = [], isPending: feedPending } = useAdminDashboardActivityFeed(nurseryId);
+  // The nursery's money (revenue, payments, overdue invoices) only for people allowed the financial
+  // overview; the database hides the attendance fees the same way (money_visible).
+  const permissionsReady = usePermissionsReady();
+  const canSeeFinance = useCan('dashboard_finance');
+  const canSeeMoney = permissionsReady ? canSeeFinance : undefined;
+
+  const { data: stats, isPending: statsPending } = useAdminDashboardEnhancedStats(nurseryId, canSeeMoney);
+  const { data: charts, isPending: chartsPending } = useAdminDashboardCharts(nurseryId, canSeeMoney);
+  const { data: alerts, isPending: alertsPending } = useAdminDashboardAlerts(nurseryId, canSeeMoney);
+  const { data: feedItems = [], isPending: feedPending } = useAdminDashboardActivityFeed(nurseryId, canSeeMoney);
   const { settings, updateSettings, isSaving: settingsSaving } = useNurserySettings(nurseryId);
 
   useAdminDashboardRealtime(nurseryId, queryClient);
@@ -170,13 +177,22 @@ export function AdminDashboardPage() {
                 media: formatInt(pendingBreakdown.media, locale),
               })}
             />
-            <StatTile
-              to={adminPath('/invoices')}
-              icon="payments"
-              label={t('admin.dashboard.statRevenueMonth')}
-              value={t('invoice.egpAmount', { amount: formatMoneyAmount(stats?.revenueThisMonth ?? 0) })}
-              tone="success"
-            />
+            {stats?.revenueThisMonth != null ? (
+              <StatTile
+                to={adminPath('/invoices')}
+                icon="payments"
+                label={t('admin.dashboard.statRevenueMonth')}
+                value={t('invoice.egpAmount', { amount: formatMoneyAmount(stats.revenueThisMonth) })}
+                tone="success"
+              />
+            ) : (
+              <StatTile
+                to={adminPath('/admissions/applications')}
+                icon="assignment_ind"
+                label={t('admin.dashboard.statApplicationsMonth')}
+                value={formatInt(stats?.applicationsThisMonth ?? 0, locale)}
+              />
+            )}
           </div>
         )}
       </PageHeader>

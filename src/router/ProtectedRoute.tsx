@@ -1,7 +1,9 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 
 import { PageSkeleton } from '@/components/PageSkeleton';
+import { useAuthSession } from '@/hooks/useAuthSession';
 import { useRouteGuard } from '@/hooks/useRouteGuard';
+import { mustChangePassword } from '@/lib/passwordReset';
 import type { UserRole } from '@/types/user';
 
 interface ProtectedRouteProps {
@@ -10,6 +12,7 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
   const status = useRouteGuard(allowedRoles);
+  const { user } = useAuthSession();
   const location = useLocation();
   const isPreview =
     import.meta.env.DEV &&
@@ -36,6 +39,11 @@ export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
 
   if (status === 'database') {
     return <Navigate to="/error" replace />;
+  }
+
+  // Signed in with a first password someone else gave them: they choose their own first.
+  if (mustChangePassword(user)) {
+    return <Navigate to="/reset-password" replace />;
   }
 
   if (status === 'forbidden') {

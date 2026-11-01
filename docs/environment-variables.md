@@ -61,13 +61,14 @@ npx supabase secrets set --env-file supabase/functions/.env.production.local --p
 | `VITE_SUPABASE_URL` | رابط مشروع Supabase بتاع production |
 | `VITE_SUPABASE_ANON_KEY` | المفتاح العام (publishable) |
 | `VITE_SUPABASE_LEGACY_ANON_KEY` | الـ anon key القديم (JWT) لو مفاتيح `sb_publishable_*` رجعت 401 مع الدوال |
-| `VITE_SHOW_DEMO_ACCOUNTS` | **`false`**. لازم، علشان صفحة الدخول ماتعرضش الحسابات التجريبية |
+| `VITE_SHOW_DEMO_ACCOUNTS` | **`false`** أو ممسوح. بيتحدد وقت الـ build: من غير `true` لوحة الحسابات التجريبية (وكلمة سرها) مابتدخلش في الكود المنشور أصلًا. على جهازك (`npm run dev`) بتظهر دايمًا |
 | `VITE_VAPID_PUBLIC_KEY` | لإشعارات المتصفح (شوف الملحوظة في آخر الملف) |
 
 ## 3. إعدادات Supabase (من الـ Dashboard، مش متغيرات)
 
-- **Authentication ← URL Configuration:** الـ Site URL دلوقتي `http://localhost:3000`. غيّره لعنوان الموقع، وضيف نفس العنوان في Redirect URLs. ده بيأثر على لينكات تأكيد الحساب واستعادة كلمة السر.
-- **Authentication ← SMTP:** إيميلات Supabase نفسها (تأكيد الحساب، واستعادة كلمة السر) عليها حد إرسال صغير من غير SMTP خاص. ممكن تستخدم نفس حساب Resend.
+- **Authentication ← URL Configuration:** الـ Site URL دلوقتي `http://localhost:3000`. غيّره لعنوان الموقع، وضيف `https://<الموقع>/**` في Redirect URLs. لينك "نسيت كلمة المرور؟" بيفتح `/reset-password`، ولو العنوان مش في القائمة Supabase بيودّي الشخص للـ Site URL بدل الصفحة. على dev القائمة فيها `http://localhost:5000/**` و`http://localhost:3000/**`.
+- **Authentication ← SMTP:** إيميلات Supabase نفسها (تأكيد الحساب، واستعادة كلمة السر) من غير SMTP خاص بتوصل لأعضاء فريق المشروع بس، وبحد إيميلين في الساعة. يعني "نسيت كلمة المرور؟" مش هيوصل لأولياء الأمور والموظفين غير بعد ما تحط SMTP. ممكن تستخدم نفس حساب Resend.
+- **مين مابيوصلوش إيميل الاستعادة:** ولي الأمر اللي بيدخل باسم مستخدم، والموظف اللي اتسجل من غير إيميل (عنوانه `…@staff.placeholder.xo`). الصفحة بتقولهم تحت الخانة يطلبوا من الحضانة كلمة سر جديدة.
 
 ## 4. البيئات: dev دلوقتي، وproduction بعدين
 

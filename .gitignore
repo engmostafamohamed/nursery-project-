@@ -39,3 +39,6 @@ supabase/.temp/
 # Browser tests (Playwright)
 test-results/
 playwright-report/
+
+# Internal documents (system guide PDFs and their sources): kept off GitHub on purpose
+/documents/

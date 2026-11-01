@@ -23,10 +23,12 @@ export type AdminDashboardEnhancedStats = {
   /**
    * pendingApprovals is the sum of three unrelated queues, so the card that shows it
    * needs the split to say where the work actually is and where to link.
+   * payments: only for people who see the money (otherwise 0).
    */
   pendingBreakdown: { media: number; applications: number; payments: number };
   applicationsThisMonth: number;
-  revenueThisMonth: number;
+  /** null for people who do not see the nursery's money (not read at all). */
+  revenueThisMonth: number | null;
 };
 
 /** Start of this and last calendar month in the nursery's timezone, as UTC instants. */
@@ -44,9 +46,13 @@ async function countRows(query: PromiseLike<{ count: number | null; error: unkno
   return count ?? 0;
 }
 
-export function useAdminDashboardEnhancedStats(nurseryId: string | undefined) {
+/**
+ * canSeeMoney: the viewer may see the nursery's finances (dashboard_finance); undefined while
+ * their permissions load, and nothing is read until it is known.
+ */
+export function useAdminDashboardEnhancedStats(nurseryId: string | undefined, canSeeMoney: boolean | undefined) {
   return useQuery({
-    queryKey: ['admin-dashboard-enhanced-stats', nurseryId],
+    queryKey: ['admin-dashboard-enhanced-stats', nurseryId, canSeeMoney],
     queryFn: async (): Promise<AdminDashboardEnhancedStats> => {
       if (!nurseryId) {
         return {
@@ -60,7 +66,7 @@ export function useAdminDashboardEnhancedStats(nurseryId: string | undefined) {
           pendingApprovals: 0,
           pendingBreakdown: { media: 0, applications: 0, payments: 0 },
           applicationsThisMonth: 0,
-          revenueThisMonth: 0,
+          revenueThisMonth: canSeeMoney ? 0 : null,
         };
       }
 
@@ -82,17 +88,19 @@ export function useAdminDashboardEnhancedStats(nurseryId: string | undefined) {
           () => null,
         ),
         // Completed payments this month on this nursery's invoices (filtered through the invoice join).
-        fetchAllRows<{ amount: string | number }>((start, end) =>
-          supabase
-            .from('payments')
-            .select('id, amount, invoices!inner(nursery_id)')
-            .eq('invoices.nursery_id', nurseryId)
-            .eq('status', 'completed')
-            .gte('paid_at', startThisIso)
-            .order('id')
-            .range(start, end)
-            .returns<Array<{ amount: string | number }>>(),
-        ),
+        canSeeMoney
+          ? fetchAllRows<{ amount: string | number }>((start, end) =>
+              supabase
+                .from('payments')
+                .select('id, amount, invoices!inner(nursery_id)')
+                .eq('invoices.nursery_id', nurseryId)
+                .eq('status', 'completed')
+                .gte('paid_at', startThisIso)
+                .order('id')
+                .range(start, end)
+                .returns<Array<{ amount: string | number }>>(),
+            )
+          : Promise.resolve(null),
       ]);
 
       // A queue the user cannot read (permissions) counts as empty rather than failing the dashboard.
@@ -104,11 +112,13 @@ export function useAdminDashboardEnhancedStats(nurseryId: string | undefined) {
             .select('id', { count: 'exact', head: true })
             .eq('nursery_id', nurseryId)
             .in('status', ['submitted', 'under_review', 'documents_pending']),
-          supabase
-            .from('payment_attempts')
-            .select('id', { count: 'exact', head: true })
-            .eq('nursery_id', nurseryId)
-            .eq('status', 'pending_confirmation'),
+          canSeeMoney
+            ? supabase
+                .from('payment_attempts')
+                .select('id', { count: 'exact', head: true })
+                .eq('nursery_id', nurseryId)
+                .eq('status', 'pending_confirmation')
+            : Promise.resolve({ count: 0, error: null }),
         ].map((query) => countRows(query).catch(() => 0)),
       );
 
@@ -127,10 +137,10 @@ export function useAdminDashboardEnhancedStats(nurseryId: string | undefined) {
         pendingApprovals: media + applications + paymentsPending,
         pendingBreakdown: { media, applications, payments: paymentsPending },
         applicationsThisMonth,
-        revenueThisMonth: payments.reduce((sum, row) => sum + Number(row.amount), 0),
+        revenueThisMonth: payments ? payments.reduce((sum, row) => sum + Number(row.amount), 0) : null,
       };
     },
-    enabled: Boolean(nurseryId),
+    enabled: Boolean(nurseryId) && canSeeMoney !== undefined,
     staleTime: 1000 * 60,
   });
 }

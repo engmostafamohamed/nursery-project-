@@ -38,6 +38,7 @@ import { useNurseryChildrenPicker } from '@/hooks/useNurseryChildrenPicker';
 import { usePagination } from '@/hooks/usePagination';
 import { useTouchedFields } from '@/hooks/useTouchedFields';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { extraHoursAssignErrorKey } from '@/lib/extraHoursPackage';
 import { formatMoneyAmount } from '@/lib/money';
 import { extraHoursPackageFormIssues, hasIssues } from '@/lib/packageForms';
 import type { CatalogPackage } from '@/lib/packageSubscriptions';
@@ -97,7 +98,10 @@ function ManageChildrenDialog({
               name: isAr ? pkg.name_ar || pkg.name_en : pkg.name_en || pkg.name_ar,
             })}
           </DialogTitle>
-          <DialogDescription>{t('packages.manageChildrenHint')}</DialogDescription>
+          <DialogDescription>
+            {t('packages.manageChildrenHint')}
+            {pkg.price > 0 ? ' ' + t('packages.assignBillsParent') : ''}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="mt-4 flex gap-2">
@@ -115,11 +119,11 @@ function ManageChildrenDialog({
             disabled={!pick || assign.isPending}
             onClick={async () => {
               try {
-                await assign.mutateAsync(pick);
+                const { invoiceId } = await assign.mutateAsync(pick);
                 setPick('');
-                toast.success(t('packages.childAssigned'));
-              } catch {
-                toast.error(t('packages.saveFailed'));
+                toast.success(invoiceId ? t('packages.childAssignedInvoiced') : t('packages.childAssigned'));
+              } catch (error) {
+                toast.error(t(extraHoursAssignErrorKey(error)));
               }
             }}
           >

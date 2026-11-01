@@ -15,6 +15,7 @@ type Props = {
 /**
  * The dashboard trends: daily attendance (7 days), revenue (30 days) and children per class.
  * Each chart is one series, so it is one colour and its card title names it (no legend).
+ * Revenue only for people who see the nursery's money (revenue30 is null otherwise).
  */
 export function DashboardMiniCharts({ data, isLoading }: Props) {
   const { t, i18n } = useTranslation();
@@ -45,7 +46,8 @@ export function DashboardMiniCharts({ data, isLoading }: Props) {
   const withRate = attendance.filter((p) => p.total > 0);
   const averageRate = withRate.length ? Math.round(withRate.reduce((sum, p) => sum + p.ratePercent, 0) / withRate.length) : null;
 
-  const revenue = data.revenue30.map((p) => ({ ...p, label: dayLabel(p.date, { day: 'numeric', month: 'short' }) }));
+  const showRevenue = data.revenue30 !== null;
+  const revenue = (data.revenue30 ?? []).map((p) => ({ ...p, label: dayLabel(p.date, { day: 'numeric', month: 'short' }) }));
   const revenueTotal = revenue.reduce((sum, p) => sum + p.amount, 0);
 
   const classes = data.enrollmentByClass.slice(0, 6);
@@ -53,7 +55,7 @@ export function DashboardMiniCharts({ data, isLoading }: Props) {
   const totalEnrolled = data.enrollmentByClass.reduce((sum, p) => sum + p.count, 0);
 
   return (
-    <div className="grid gap-5 lg:grid-cols-3">
+    <div className={showRevenue ? 'grid gap-5 lg:grid-cols-3' : 'grid gap-5 lg:grid-cols-2'}>
       <TableCard
         title={t('admin.dashboard.charts.attendanceTitle')}
         count={averageRate != null ? t('admin.dashboard.charts.averageRate', { rate: averageRate }) : undefined}
@@ -77,6 +79,7 @@ export function DashboardMiniCharts({ data, isLoading }: Props) {
         </div>
       </TableCard>
 
+      {showRevenue ? (
       <TableCard
         title={t('admin.dashboard.charts.revenueTitle')}
         count={money(revenueTotal)}
@@ -105,6 +108,7 @@ export function DashboardMiniCharts({ data, isLoading }: Props) {
           </ResponsiveContainer>
         </div>
       </TableCard>
+      ) : null}
 
       <TableCard
         title={t('admin.dashboard.charts.enrollmentTitle')}

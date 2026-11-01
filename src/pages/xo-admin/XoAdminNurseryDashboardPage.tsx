@@ -39,13 +39,13 @@ export function XoAdminNurseryDashboardPage() {
   const nurseryPath = (path: string) => `${nurseryBasePath}${path}`;
 
   const { data: nurseryStats, isPending: nurseryStatsPending } =
-    useAdminDashboardEnhancedStats(nurseryId);
+    useAdminDashboardEnhancedStats(nurseryId, true);
   const { data: nurseryCharts, isPending: nurseryChartsPending } =
-    useAdminDashboardCharts(nurseryId);
+    useAdminDashboardCharts(nurseryId, true);
   const { data: nurseryAlerts, isPending: nurseryAlertsPending } =
-    useAdminDashboardAlerts(nurseryId);
+    useAdminDashboardAlerts(nurseryId, true);
   const { data: nurseryFeedItems = [], isPending: nurseryFeedPending } =
-    useAdminDashboardActivityFeed(nurseryId);
+    useAdminDashboardActivityFeed(nurseryId, true);
 
   useAdminDashboardRealtime(nurseryId, queryClient);
 

@@ -12,15 +12,19 @@ type EdgeSuccess = {
   user_id: string;
   staff_profile_id: string;
   employee_id: string;
+  /** Only for a new account: where they sign in and their first password, shown once. */
+  sign_in?: { email: string; temp_password: string };
   schedule_error?: string;
 };
+
+export type StaffSignIn = { email: string; tempPassword: string };
 
 export async function submitStaffOnboarding(
   v: StaffOnboardingFormValues,
   nurseryId: string,
   t: TFunction,
   files: StaffOnboardingFileBundle,
-): Promise<{ employeeId: string }> {
+): Promise<{ employeeId: string; signIn: StaffSignIn | null }> {
   const payload = buildStaffOnboardingCompletePayload(v, nurseryId);
   const { data, error } = await supabase.functions.invoke('staff-onboarding-complete', {
     body: payload,
@@ -101,5 +105,8 @@ export async function submitStaffOnboarding(
     if (idErr) throw idErr;
   }
 
-  return { employeeId };
+  return {
+    employeeId,
+    signIn: result.sign_in ? { email: result.sign_in.email, tempPassword: result.sign_in.temp_password } : null,
+  };
 }

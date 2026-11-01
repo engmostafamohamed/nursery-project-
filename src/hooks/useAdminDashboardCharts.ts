@@ -13,16 +13,18 @@ export type EnrollmentClassPoint = { classId: string; labelAr: string; labelEn: 
 
 export type AdminDashboardCharts = {
   attendance7: AttendanceDayPoint[];
-  revenue30: RevenueDayPoint[];
+  /** null for people who do not see the nursery's money (not read at all). */
+  revenue30: RevenueDayPoint[] | null;
   enrollmentByClass: EnrollmentClassPoint[];
 };
 
-export function useAdminDashboardCharts(nurseryId: string | undefined) {
+/** canSeeMoney: as for useAdminDashboardEnhancedStats. */
+export function useAdminDashboardCharts(nurseryId: string | undefined, canSeeMoney: boolean | undefined) {
   return useQuery({
-    queryKey: ['admin-dashboard-charts', nurseryId],
+    queryKey: ['admin-dashboard-charts', nurseryId, canSeeMoney],
     queryFn: async (): Promise<AdminDashboardCharts> => {
       if (!nurseryId) {
-        return { attendance7: [], revenue30: [], enrollmentByClass: [] };
+        return { attendance7: [], revenue30: canSeeMoney ? [] : null, enrollmentByClass: [] };
       }
 
       const today = getNurseryCalendarDateString();
@@ -59,26 +61,28 @@ export function useAdminDashboardCharts(nurseryId: string | undefined) {
 
       // Completed payments on this nursery's invoices (filtered through the invoice join), bucketed
       // by the nursery's calendar day.
-      const payments = await fetchAllRows<{ amount: string | number; paid_at: string }>((start, end) =>
-        supabase
-          .from('payments')
-          .select('id, amount, paid_at, invoices!inner(nursery_id)')
-          .eq('invoices.nursery_id', nurseryId)
-          .eq('status', 'completed')
-          .gte('paid_at', nurseryDayStartIso(thirtyAgo))
-          .order('id')
-          .range(start, end)
-          .returns<Array<{ amount: string | number; paid_at: string }>>(),
-      );
+      const payments = canSeeMoney
+        ? await fetchAllRows<{ amount: string | number; paid_at: string }>((start, end) =>
+            supabase
+              .from('payments')
+              .select('id, amount, paid_at, invoices!inner(nursery_id)')
+              .eq('invoices.nursery_id', nurseryId)
+              .eq('status', 'completed')
+              .gte('paid_at', nurseryDayStartIso(thirtyAgo))
+              .order('id')
+              .range(start, end)
+              .returns<Array<{ amount: string | number; paid_at: string }>>(),
+          )
+        : [];
       for (const p of payments) {
         const day = getNurseryCalendarDateString(new Date(p.paid_at));
         if (!revenueByDay.has(day)) continue;
         revenueByDay.set(day, (revenueByDay.get(day) ?? 0) + Number(p.amount));
       }
 
-      const revenue30: RevenueDayPoint[] = [...revenueByDay.entries()]
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([date, amount]) => ({ date, amount }));
+      const revenue30: RevenueDayPoint[] | null = canSeeMoney
+        ? [...revenueByDay.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([date, amount]) => ({ date, amount }))
+        : null;
 
       const enrollRes = await supabase
         .from('children')
@@ -113,7 +117,7 @@ export function useAdminDashboardCharts(nurseryId: string | undefined) {
 
       return { attendance7, revenue30, enrollmentByClass };
     },
-    enabled: Boolean(nurseryId),
+    enabled: Boolean(nurseryId) && canSeeMoney !== undefined,
     staleTime: 1000 * 60 * 5,
   });
 }

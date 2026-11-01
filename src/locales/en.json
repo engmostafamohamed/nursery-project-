@@ -70,6 +70,18 @@
     "documentsOptional": "Documents (optional — can upload later)",
     "canUploadLater": "You can add these details after creating the staff profile.",
     "submit": "Submit",
+    "signIn": {
+      "title": "Sign-in details",
+      "description": "Give these to the new staff member. They choose their own password the first time they sign in.",
+      "email": "Sign-in address",
+      "password": "First password",
+      "copy_email": "Copy the sign-in address",
+      "copy_password": "Copy the first password",
+      "onlyOnce": "This password is shown only now. Copy it or write it down before closing; if it's lost, the staff member uses \"Forgot password?\" (with a real email).",
+      "copyBoth": "Copy both",
+      "copied": "Copied",
+      "done": "Done"
+    },
     "success": "Staff profile created. Employee ID: {{id}}",
     "submitError": "Could not complete onboarding.",
     "schedulePartialFail": "Some schedule rows could not be saved.",
@@ -494,7 +506,59 @@
     "featureTwoDescription": "Share daily updates, events, and alerts from one dashboard.",
     "emailOrUsername": "Username or email",
     "emailOrUsernamePlaceholder": "username or you@example.com",
+    "reset": {
+      "requestTitle": "Reset your password",
+      "requestBody": "Enter your account's email address and we'll send it a link to choose a new password.",
+      "send": "Send the link",
+      "backToSignIn": "Back to sign in",
+      "sentTitle": "Check your email",
+      "sentBody": "If an account uses {{email}}, a link to choose a new password is on its way to it.",
+      "sentHint": "The link works once and expires within an hour. Nothing yet? Check your spam folder, or ask again in a few minutes.",
+      "emailProblems": {
+        "required": "Enter your email address.",
+        "username": "Enter an email address, not a username. If you sign in with a username, ask your nursery to reset your password.",
+        "invalid": "This email address is not complete (for example: name@example.com).",
+        "noMailbox": "This sign-in address can't receive email. Ask your nursery to give you a new password."
+      },
+      "errors": {
+        "tooManyRequests": "Too many requests. Wait a few minutes and try again.",
+        "samePassword": "Choose a password different from your current one.",
+        "weakPassword": "This password is too easy to guess. Choose a longer one, mixing letters and numbers.",
+        "linkExpired": "This link has expired or was already used. Ask for a new one.",
+        "failed": "Something went wrong. Try again."
+      },
+      "expiredTitle": "This link has expired",
+      "expiredBody": "Password links work once and for one hour. Ask for a new link and use the latest email.",
+      "requestAgain": "Ask for a new link",
+      "firstSignInTitle": "Choose your own password",
+      "firstSignInBody": "You signed in with a first password from your nursery. Choose your own to continue; only you will know it.",
+      "newPasswordTitle": "Choose a new password",
+      "newPasswordBody": "Use it from now on to sign in.",
+      "newPassword": "New password",
+      "confirmPassword": "Type it again",
+      "passwordHint": "At least {{min}} characters.",
+      "passwordProblems": {
+        "required": "Enter a new password.",
+        "tooShort": "Use at least {{min}} characters."
+      },
+      "confirmProblems": {
+        "required": "Type the password again.",
+        "mismatch": "The two passwords don't match."
+      },
+      "save": "Save password",
+      "saved": "Password saved.",
+      "signOutInstead": "Sign out"
+    },
     "sessionExpired": "Your session expired. Please sign in again."
+  },
+  "appError": {
+    "title": "Something went wrong on this page",
+    "body": "The rest of the app is fine. Try again, reload the page, or go back to the home page.",
+    "newVersionTitle": "A new version is available",
+    "newVersionBody": "The app was updated while this page was open. Reload to continue.",
+    "reload": "Reload",
+    "retry": "Try again",
+    "home": "Home page"
   },
   "nurseries": {
     "list": {
@@ -1132,6 +1196,7 @@
       "statAttendanceToday": "Attendance today",
       "statAttendanceHint": "{{present}} present of {{total}} active children",
       "statPendingApprovals": "Pending approvals",
+      "statApplicationsMonth": "Applications this month",
       "statRevenueMonth": "Revenue this month",
       "alerts": {
         "title": "Alerts & attention",
@@ -5790,6 +5855,7 @@
       },
       "inExtraNow": "In extra hours now",
       "inExtraNowHint": "Still here after pickup time",
+      "extraTodayHintHours": "{{hours}} h",
       "extraTodayHint": "{{hours}} h · {{fee}}",
       "extraChildren": "Children with extra hours",
       "extraChildrenHint": "{{hours}} h on {{days}} days",
@@ -5808,6 +5874,7 @@
       "outstanding": "Outstanding",
       "needsReview": "Need review",
       "scans": "{{qr}} by QR · {{manual}} manual",
+      "topLateRowHours": "{{days}} days · {{hours}} h",
       "topLateRow": "{{days}} days · {{hours}} h · {{fee}}"
     }
   },
@@ -6965,6 +7032,14 @@
     "manageChildrenHint": "Assigning a child moves them off any other active package.",
     "selectChild": "Select a child to assign",
     "assign": "Assign",
+    "childAssignedInvoiced": "Child assigned. An invoice was sent to the parent who pays.",
+    "assignBillsParent": "Assigning a paid package sends an invoice for its price (less any running deal) to the child's paying parent.",
+    "assignErrors": {
+      "noParent": "This child has no parent on file to bill. Link a parent first.",
+      "packageGone": "This package is no longer offered.",
+      "childGone": "This child was not found.",
+      "forbidden": "You don't have permission to assign packages."
+    },
     "childAssigned": "Child assigned to package.",
     "childRemoved": "Child removed from package.",
     "noChildren": "No children assigned yet.",

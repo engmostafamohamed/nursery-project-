@@ -4,15 +4,17 @@ import { getNurseryCalendarDateString } from '@/lib/nurseryDay';
 import { supabase } from '@/lib/supabase';
 
 export type AdminDashboardAlerts = {
+  /** 0 for people who do not see the nursery's money (not read at all). */
   overdueInvoices: number;
   applicationsNeedingDocs: number;
   teachersNotCheckedIn: number;
   upcomingEventsSoon: number;
 };
 
-export function useAdminDashboardAlerts(nurseryId: string | undefined) {
+/** canSeeMoney: as for useAdminDashboardEnhancedStats. */
+export function useAdminDashboardAlerts(nurseryId: string | undefined, canSeeMoney: boolean | undefined) {
   return useQuery({
-    queryKey: ['admin-dashboard-alerts', nurseryId],
+    queryKey: ['admin-dashboard-alerts', nurseryId, canSeeMoney],
     queryFn: async (): Promise<AdminDashboardAlerts> => {
       if (!nurseryId) {
         return {
@@ -25,18 +27,23 @@ export function useAdminDashboardAlerts(nurseryId: string | undefined) {
 
       const today = getNurseryCalendarDateString();
 
-      const overdueStatusRes = await supabase
-        .from('invoices')
-        .select('id', { count: 'exact', head: true })
-        .eq('nursery_id', nurseryId)
-        .eq('status', 'overdue');
+      const none = { count: 0, error: null };
+      const overdueStatusRes = canSeeMoney
+        ? await supabase
+            .from('invoices')
+            .select('id', { count: 'exact', head: true })
+            .eq('nursery_id', nurseryId)
+            .eq('status', 'overdue')
+        : none;
 
-      const overduePendingRes = await supabase
-        .from('invoices')
-        .select('id', { count: 'exact', head: true })
-        .eq('nursery_id', nurseryId)
-        .eq('status', 'pending')
-        .lt('due_date', today);
+      const overduePendingRes = canSeeMoney
+        ? await supabase
+            .from('invoices')
+            .select('id', { count: 'exact', head: true })
+            .eq('nursery_id', nurseryId)
+            .eq('status', 'pending')
+            .lt('due_date', today)
+        : none;
 
       if (overdueStatusRes.error) throw overdueStatusRes.error;
       if (overduePendingRes.error) throw overduePendingRes.error;
@@ -92,7 +99,7 @@ export function useAdminDashboardAlerts(nurseryId: string | undefined) {
         upcomingEventsSoon: eventsRes.count ?? 0,
       };
     },
-    enabled: Boolean(nurseryId),
+    enabled: Boolean(nurseryId) && canSeeMoney !== undefined,
     staleTime: 1000 * 60,
   });
 }

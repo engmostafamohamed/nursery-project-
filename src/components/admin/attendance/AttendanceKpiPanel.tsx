@@ -19,6 +19,8 @@ import { cn } from '@/lib/utils';
 /** Seven tiles fit a row from xl up once the icon sits above the text. */
 const TILE = 'xl:flex-col xl:items-start xl:gap-2';
 const GRID = 'grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 sm:p-5 lg:grid-cols-4 xl:grid-cols-7';
+/** A period without its three money tiles. */
+const GRID_FOUR = 'grid grid-cols-2 gap-3 p-4 sm:p-5 lg:grid-cols-4';
 
 type TileProps = { selected: KpiTile | null; onSelect: (tile: KpiTile) => void };
 
@@ -49,6 +51,8 @@ export function AttendanceKpiPanel({ nurseryId, basePath = '/admin' }: { nursery
   const shownDays = period.shown;
   const isToday = period.choice === 'today';
   const daysValid = shownDays !== null && shownDays.from <= shownDays.to;
+  // The server empties the fees for people not allowed the nursery's finances, and says so.
+  const moneyVisible = live.data?.money_visible !== false && stats.data?.money_visible !== false;
 
 
   return (
@@ -78,7 +82,7 @@ export function AttendanceKpiPanel({ nurseryId, basePath = '/admin' }: { nursery
       ) : !range ? (
         <p className="px-4 py-6 text-sm text-on-surface-variant sm:px-5">{t('periodFilter.chooseDates')}</p>
       ) : (
-        <PeriodTiles stats={stats} selected={selected} onSelect={selectTile} />
+        <PeriodTiles stats={stats} moneyVisible={moneyVisible} selected={selected} onSelect={selectTile} />
       )}
 
       {selected && nurseryId && daysValid ? (
@@ -89,6 +93,7 @@ export function AttendanceKpiPanel({ nurseryId, basePath = '/admin' }: { nursery
           mode={isToday ? 'today' : 'period'}
           range={shownDays}
           basePath={basePath}
+          moneyVisible={moneyVisible}
           title={tileLabel(t, selected, isToday)}
           onClose={() => setSelected(null)}
           onOpenDay={openDay}
@@ -169,7 +174,7 @@ function LoadError({ onRetry }: { onRetry: () => void }) {
 
 function useMoney() {
   const { t } = useTranslation();
-  return (n: number) => t('invoice.egpAmount', { amount: formatMoneyAmount(Number(n ?? 0)) });
+  return (n: number | null) => t('invoice.egpAmount', { amount: formatMoneyAmount(Number(n ?? 0)) });
 }
 
 /**
@@ -208,19 +213,30 @@ function TodayTiles({
         icon="more_time"
         label={t('attendance.kpis.extraToday')}
         value={extraChildren ?? '—'}
-        helper={t('attendance.kpis.extraTodayHint', { hours: today.extra_hours_today, fee: money(today.extra_fee_today) })}
+        helper={
+          today.extra_fee_today == null
+            ? t('attendance.kpis.extraTodayHintHours', { hours: today.extra_hours_today })
+            : t('attendance.kpis.extraTodayHint', { hours: today.extra_hours_today, fee: money(today.extra_fee_today) })
+        }
         tone={today.extra_hours_today > 0 ? 'warning' : 'neutral'}
       />
     </div>
   );
 }
 
-/** The period's attendance, the children who took extra hours and the money of those hours. */
+/**
+ * The period's attendance, the children who took extra hours and the money of those hours (for
+ * people who see the nursery's money).
+ */
 function PeriodTiles({
   stats,
+  moneyVisible,
   selected,
   onSelect,
-}: TileProps & { stats: { data?: PeriodKpis; isPending: boolean; isError: boolean; isPlaceholderData: boolean; refetch: () => unknown } }) {
+}: TileProps & {
+  stats: { data?: PeriodKpis; isPending: boolean; isError: boolean; isPlaceholderData: boolean; refetch: () => unknown };
+  moneyVisible: boolean;
+}) {
   const { t } = useTranslation();
   const money = useMoney();
   if (stats.isPending) return <TileSkeletons />;
@@ -228,7 +244,7 @@ function PeriodTiles({
   const s = stats.data;
   const pick = (tile: PeriodTile) => ({ className: TILE, onClick: () => onSelect(tile), active: selected === tile });
   return (
-    <div className={cn(GRID, 'transition-opacity', stats.isPlaceholderData && 'opacity-60')} aria-busy={stats.isPlaceholderData}>
+    <div className={cn(moneyVisible ? GRID : GRID_FOUR, 'transition-opacity', stats.isPlaceholderData && 'opacity-60')} aria-busy={stats.isPlaceholderData}>
       <StatTile
         {...pick('attended')}
         icon="how_to_reg"
@@ -252,15 +268,19 @@ function PeriodTiles({
         tone={s.extra_hours_children > 0 ? 'warning' : 'neutral'}
         helper={t('attendance.kpis.extraChildrenHint', { hours: s.extra_hours, days: s.extra_hours_days })}
       />
-      <StatTile {...pick('billed')} icon="payments" label={t('attendance.kpis.billed')} value={money(s.extra_fee_billed)} helper={t('attendance.kpis.billedHours', { hours: s.extra_hours_billed })} />
-      <StatTile {...pick('collected')} icon="price_check" label={t('attendance.kpis.collected')} value={money(s.extra_fee_collected)} tone="success" />
-      <StatTile
-        {...pick('outstanding')}
-        icon="receipt_long"
-        label={t('attendance.kpis.outstanding')}
-        value={money(s.extra_fee_outstanding)}
-        tone={s.extra_fee_outstanding > 0 ? 'error' : 'success'}
-      />
+      {moneyVisible ? (
+        <>
+          <StatTile {...pick('billed')} icon="payments" label={t('attendance.kpis.billed')} value={money(s.extra_fee_billed)} helper={t('attendance.kpis.billedHours', { hours: s.extra_hours_billed })} />
+          <StatTile {...pick('collected')} icon="price_check" label={t('attendance.kpis.collected')} value={money(s.extra_fee_collected)} tone="success" />
+          <StatTile
+            {...pick('outstanding')}
+            icon="receipt_long"
+            label={t('attendance.kpis.outstanding')}
+            value={money(s.extra_fee_outstanding)}
+            tone={(s.extra_fee_outstanding ?? 0) > 0 ? 'error' : 'success'}
+          />
+        </>
+      ) : null}
       <StatTile
         {...pick('review')}
         icon="flag"
@@ -292,7 +312,9 @@ function TopLate({ rows, title, linkTo }: { rows: TopLateRow[]; title: string; l
                 {i18n.language === 'ar' ? row.full_name_ar || row.full_name_en : row.full_name_en || row.full_name_ar}
               </span>
               <span className="shrink-0 text-xs text-on-surface-variant">
-                {t('attendance.kpis.topLateRow', { days: row.late_days, hours: row.extra_hours, fee: formatMoneyAmount(row.extra_fee) })}
+                {row.extra_fee == null
+                  ? t('attendance.kpis.topLateRowHours', { days: row.late_days, hours: row.extra_hours })
+                  : t('attendance.kpis.topLateRow', { days: row.late_days, hours: row.extra_hours, fee: formatMoneyAmount(row.extra_fee) })}
               </span>
             </Link>
           </li>

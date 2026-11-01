@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { adminDealsKey } from '@/hooks/useAdminDeals';
+import { assignExtraHoursPackage } from '@/lib/extraHoursPackage';
 import { supabase } from '@/lib/supabase';
 
 export const packagesKey = (nurseryId: string | null | undefined) =>
@@ -194,21 +195,10 @@ export function usePackageAssignments(
   });
 
   const assign = useMutation({
+    // One active package per child: the server ends the current one, and bills the new one.
     mutationFn: async (childId: string) => {
-      if (!packageId || !nurseryId) throw new Error('Missing context');
-      // Enforce one active package per child: clear any existing active one.
-      await supabase
-        .from('child_packages')
-        .update({ status: 'cancelled' } as never)
-        .eq('child_id', childId)
-        .eq('status', 'active');
-      const { error } = await supabase.from('child_packages').insert({
-        package_id: packageId,
-        child_id: childId,
-        nursery_id: nurseryId,
-        status: 'active',
-      } as never);
-      if (error) throw error;
+      if (!packageId) throw new Error('Missing package');
+      return assignExtraHoursPackage(childId, packageId);
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: key });

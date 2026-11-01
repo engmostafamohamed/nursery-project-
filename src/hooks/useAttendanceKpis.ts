@@ -3,7 +3,8 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { DateRange } from '@/lib/attendancePeriods';
 import { supabase } from '@/lib/supabase';
 
-export type TopLateRow = { child_id: string; full_name_ar: string; full_name_en: string; late_days: number; extra_hours: number; extra_fee: number };
+/** extra_fee: null for people who do not see the nursery's money (money_visible false). */
+export type TopLateRow = { child_id: string; full_name_ar: string; full_name_en: string; late_days: number; extra_hours: number; extra_fee: number | null };
 
 export type Kpis = {
   today: {
@@ -17,7 +18,7 @@ export type Kpis = {
     absent: number;
     late_now: number;
     extra_hours_today: number;
-    extra_fee_today: number;
+    extra_fee_today: number | null;
   };
   month: {
     month_start: string;
@@ -29,14 +30,16 @@ export type Kpis = {
     extra_hours: number;
     extra_hours_covered: number;
     extra_hours_billed: number;
-    extra_fee_billed: number;
-    extra_fee_collected: number;
-    extra_fee_outstanding: number;
+    extra_fee_billed: number | null;
+    extra_fee_collected: number | null;
+    extra_fee_outstanding: number | null;
     needs_review: number;
     qr_scans: number;
     manual_entries: number;
   };
   top_late: TopLateRow[];
+  /** False for people not allowed the nursery's finances: every fee above is then null. */
+  money_visible?: boolean;
 };
 
 /** Attendance and extra-hours numbers for a period (get_attendance_period_kpis). */
@@ -57,14 +60,19 @@ export type PeriodKpis = {
   extra_hours: number;
   extra_hours_covered: number;
   extra_hours_billed: number;
-  /** The period's own extra-hours charges, of which collected (invoice paid) and outstanding (pending or overdue). */
-  extra_fee_billed: number;
-  extra_fee_collected: number;
-  extra_fee_outstanding: number;
+  /**
+   * The period's own extra-hours charges, of which collected (invoice paid) and outstanding (pending
+   * or overdue). Null for people who do not see the money.
+   */
+  extra_fee_billed: number | null;
+  extra_fee_collected: number | null;
+  extra_fee_outstanding: number | null;
   needs_review: number;
   qr_scans: number;
   manual_entries: number;
   top_late: TopLateRow[];
+  /** False for people not allowed the nursery's finances (see Kpis). */
+  money_visible?: boolean;
 };
 
 /** Live attendance numbers for today and the current month (get_attendance_kpis). */

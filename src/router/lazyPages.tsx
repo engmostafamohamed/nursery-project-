@@ -231,6 +231,9 @@ export const OnboardingInviteTeacherPage = lazy(() =>
   import('@/pages/admin/onboarding/OnboardingInviteTeacherPage').then((m) => ({ default: m.OnboardingInviteTeacherPage })),
 );
 export const LoginPage = lazy(() => import('@/pages/auth/LoginPage').then((m) => ({ default: m.LoginPage })));
+export const ResetPasswordPage = lazy(() =>
+  import('@/pages/auth/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })),
+);
 export const ParentSignUpPage = lazy(() =>
   import('@/pages/auth/ParentSignUpPage').then((m) => ({ default: m.ParentSignUpPage })),
 );

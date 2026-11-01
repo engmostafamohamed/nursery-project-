@@ -15,7 +15,8 @@ import { generateEmployeeId } from './mapStaffOnboardingToProfile';
 import { STAFF_ONBOARDING_STORAGE_KEY, getDefaultStaffOnboardingValues } from './staffOnboardingDefaults';
 import { emptyStaffOnboardingFiles, type StaffOnboardingFileBundle } from './staffOnboardingFiles';
 import { StaffOnboardingStepPanels } from './StaffOnboardingStepPanels';
-import { submitStaffOnboarding } from './submitStaffOnboarding';
+import { StaffSignInDetailsDialog } from './StaffSignInDetailsDialog';
+import { submitStaffOnboarding, type StaffSignIn } from './submitStaffOnboarding';
 import { focusFirstStaffInvalidField } from './staffOnboardingFocus';
 import { getStaffStepFieldErrors } from './staffOnboardingStepFieldErrors';
 import { staffOnboardingFullSchema } from './staffOnboardingValidation';
@@ -33,6 +34,8 @@ export function StaffOnboardingWizard() {
   const { data: nurseryLang } = useNurseryLanguagePref(nurseryId);
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  // A new account's first password, shown once before leaving the wizard.
+  const [signIn, setSignIn] = useState<StaffSignIn | null>(null);
   const [staffFiles, setStaffFiles] = useState<StaffOnboardingFileBundle>(() => emptyStaffOnboardingFiles());
   const [staffFileErrors, setStaffFileErrors] = useState<
     Partial<Record<keyof StaffOnboardingFileBundle, string>>
@@ -192,11 +195,12 @@ export function StaffOnboardingWizard() {
     }
     setSubmitting(true);
     try {
-      const { employeeId } = await submitStaffOnboarding(values, nurseryId, t, staffFiles);
+      const result = await submitStaffOnboarding(values, nurseryId, t, staffFiles);
       clearDraft();
       setStaffFiles(emptyStaffOnboardingFiles());
-      toast.success(t('staffOnboarding.success', { id: employeeId }));
-      navigate('/admin/staff');
+      toast.success(t('staffOnboarding.success', { id: result.employeeId }));
+      if (result.signIn) setSignIn(result.signIn);
+      else navigate('/admin/staff');
     } catch (err: unknown) {
       toast.error(t('staffOnboarding.submitError'), { description: String(err) });
     } finally {
@@ -210,6 +214,13 @@ export function StaffOnboardingWizard() {
 
   return (
     <FormProvider {...form}>
+      <StaffSignInDetailsDialog
+        signIn={signIn}
+        onDone={() => {
+          setSignIn(null);
+          navigate('/admin/staff');
+        }}
+      />
       <form onSubmit={onSubmit} className="space-y-6">
         <div className="flex gap-1">
           {Array.from({ length: TOTAL }, (_, i) => (

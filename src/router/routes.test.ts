@@ -71,8 +71,8 @@ describe('who can open each area', () => {
     }
   });
 
-  it('sign-in and sign-up stay public', () => {
-    for (const open of ['/login', '/signup', '/signup/success']) {
+  it('sign-in, sign-up and choosing a new password stay public', () => {
+    for (const open of ['/login', '/signup', '/signup/success', '/reset-password']) {
       expect(routes.find((r) => r.path === open)?.roles, open).toBeNull();
     }
   });
@@ -82,7 +82,7 @@ describe('admin screens need a permission', () => {
   // Screens every staff member may open. Anything else under /admin must map to a feature in
   // routeFeatures.ts, or a manager without that permission could open it.
   const OPEN_ADMIN_SCREENS = [
-    '/admin', // known gap: the dashboard shows money totals to teachers (task T1.5)
+    '/admin', // the dashboard: its money figures need dashboard_finance (money_visible on the server)
     '/admin/onboarding',
     '/admin/onboarding/details',
     '/admin/onboarding/hours',

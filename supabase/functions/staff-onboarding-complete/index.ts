@@ -13,16 +13,7 @@ import {
   positionToDepartment,
   type StaffOnboardingCompletePayload,
 } from './mapStaffProfile.ts';
-
-// function randomPassword(): string {
-//   const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%';
-//   return Array.from({ length: 16 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-// }
-
-/** Shared default password for all newly onboarded staff. They sign in with
- *  this immediately (and it shows on the login page's demo panel); staff are
- *  expected to change it from inside the app afterward. */
-const DEFAULT_STAFF_PASSWORD = 'Demo2026!';
+import { tempPassword } from './tempPassword.ts';
 
 function timeWithSeconds(t: string): string {
   return t.length === 5 ? `${t}:00` : t;
@@ -114,6 +105,8 @@ Deno.serve(async (req) => {
 
     let userId: string;
     let createdNewAuthUser = false;
+    // A new account's sign-in details, returned once so the admin can hand them over.
+    let signIn: { email: string; temp_password: string } | undefined;
 
     if (b.userMode === 'new') {
       if (!b.newNameAr?.trim() || !b.newMobile?.trim()) {
@@ -121,12 +114,13 @@ Deno.serve(async (req) => {
       }
       const email = b.newEmail?.trim() || `${b.newMobile.replace(/\D/g, '')}@staff.placeholder.xo`;
 
-      // Pre-check: if an auth user with this email already exists, return a
+      // Pre-check: if an account with this email already exists, return a
       // friendly error instead of the cryptic 422 from auth.admin.createUser.
       // Common cause: re-clicking Submit with the same mobile number after a
       // prior successful onboarding (placeholder email derived from mobile).
-      const { data: existingPage } = await admin.auth.admin.listUsers({ page: 1, perPage: 1, email } as never);
-      const existing = (existingPage as { users?: Array<{ id: string; email?: string | null }> } | null)?.users?.[0];
+      // Looked up on the profile rows: auth.admin.listUsers has no email filter (it
+      // returned whichever account came first, so every new staff member was refused).
+      const { data: existing } = await admin.from('users').select('id').eq('email', email.toLowerCase()).maybeSingle();
       if (existing) {
         return jsonResponse({
           error: 'staff_already_exists',
@@ -135,12 +129,13 @@ Deno.serve(async (req) => {
         }, 409);
       }
 
-      const password = DEFAULT_STAFF_PASSWORD;
+      // Each person gets their own first password, and must choose a new one at first sign-in.
+      const password = tempPassword();
       const { data: created, error: createErr } = await admin.auth.admin.createUser({
         email,
         password,
         email_confirm: true,
-        user_metadata: { name_ar: b.newNameAr, name_en: b.newNameEn, phone: b.newMobile },
+        user_metadata: { name_ar: b.newNameAr, name_en: b.newNameEn, phone: b.newMobile, must_change_password: true },
       });
       if (createErr || !created.user) {
         // Race condition fallback: another simultaneous request beat us to it.
@@ -151,6 +146,7 @@ Deno.serve(async (req) => {
       }
       userId = created.user.id;
       createdNewAuthUser = true;
+      signIn = { email, temp_password: password };
 
       const { error: updErr } = await admin
         .from('users')
@@ -238,6 +234,7 @@ Deno.serve(async (req) => {
       user_id: userId,
       staff_profile_id: staffProfileId,
       employee_id: employeeId,
+      ...(signIn ? { sign_in: signIn } : {}),
       ...(scheduleError ? { schedule_error: scheduleError } : {}),
     });
   } catch (e) {

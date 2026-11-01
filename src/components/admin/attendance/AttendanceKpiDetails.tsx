@@ -76,6 +76,8 @@ type Props = {
   range: DateRange;
   /** Where the admin's pages live: /admin, or /xo-admin/nursery for XO staff. */
   basePath: string;
+  /** The viewer sees fees and invoices (the server empties them for everyone else). */
+  moneyVisible: boolean;
   title: string;
   onClose: () => void;
   /** From the days table: show who attended on that day. */
@@ -87,10 +89,10 @@ type Props = {
  * number counts, searchable by the child's name or code or a parent's name or phone, and by class.
  * Every row with a child opens that child's record on their attendance.
  */
-export function AttendanceKpiDetails({ nurseryId, tile, mode, range, basePath, title, onClose, onOpenDay }: Props) {
+export function AttendanceKpiDetails({ nurseryId, tile, mode, range, basePath, moneyVisible, title, onClose, onOpenDay }: Props) {
   const singleDay = range.from === range.to;
   const openChild = (childId: string) => childRecordLink(basePath, childId, range);
-  const common = { nurseryId, range, title, onClose, openChild };
+  const common = { nurseryId, range, title, onClose, openChild, moneyVisible };
 
   let body: ReactNode;
   if (mode === 'today' || (tile === 'attended' && singleDay)) {
@@ -117,7 +119,13 @@ type ListProps = {
   title: string;
   onClose: () => void;
   openChild: (childId: string) => string;
+  moneyVisible: boolean;
 };
+
+/** Fees and invoices only for people who see the nursery's money. */
+function moneyColumns<T>(columns: Column<T>[], moneyVisible: boolean): Column<T>[] {
+  return moneyVisible ? columns : columns.filter((column) => column.key !== 'fee' && column.key !== 'invoice');
+}
 
 // -----------------------------------------------------------------------------------------------
 // Shared pieces
@@ -361,7 +369,7 @@ function RowsTable<T>({
 // -----------------------------------------------------------------------------------------------
 // One day: today's numbers, and "attendance" for a single day
 
-function DayChildren({ nurseryId, day, tile, title, onClose, openChild }: ListProps & { day: string; tile: TodayTile }) {
+function DayChildren({ nurseryId, day, tile, title, onClose, openChild, moneyVisible }: ListProps & { day: string; tile: TodayTile }) {
   const { t } = useTranslation();
   const format = useDetailFormat();
   const navigate = useNavigate();
@@ -532,7 +540,7 @@ function DayChildren({ nurseryId, day, tile, title, onClose, openChild }: ListPr
       { key: 'invoice', header: t('attendance.kpis.details.columns.invoice'), cell: (r: DayChildRow) => <InvoicePill status={r.invoice_status} /> },
     ],
   };
-  const columns = columnsByTile[tile];
+  const columns = moneyColumns(columnsByTile[tile], moneyVisible);
 
   return (
     <>
@@ -865,7 +873,7 @@ function PeriodDays({
 // -----------------------------------------------------------------------------------------------
 // A period: the children who took extra hours
 
-function PeriodExtraHours({ nurseryId, range, title, onClose, openChild }: ListProps) {
+function PeriodExtraHours({ nurseryId, range, title, onClose, openChild, moneyVisible }: ListProps) {
   const { t } = useTranslation();
   const format = useDetailFormat();
   const navigate = useNavigate();
@@ -874,7 +882,7 @@ function PeriodExtraHours({ nurseryId, range, title, onClose, openChild }: ListP
   const list = useListFilters(all);
   const hours = Math.round(all.reduce((sum, row) => sum + row.hours, 0) * 100) / 100;
 
-  const columns: Column<ChildExtraHours>[] = [
+  const columns: Column<ChildExtraHours>[] = moneyColumns<ChildExtraHours>([
     { key: 'child', header: t('attendance.kpis.details.columns.child'), cell: (r) => <ChildCell row={r} /> },
     { key: 'father', header: t('attendance.kpis.details.columns.father'), cell: (r) => <FatherCell row={r} /> },
     { key: 'days', header: t('attendance.kpis.details.columns.days'), align: 'end', cell: (r) => <span className="font-semibold tabular-nums">{r.days}</span> },
@@ -883,7 +891,7 @@ function PeriodExtraHours({ nurseryId, range, title, onClose, openChild }: ListP
     { key: 'billed', header: t('attendance.kpis.details.columns.billedHours'), align: 'end', cell: (r) => <span className="tabular-nums">{r.billed_hours}</span> },
     { key: 'fee', header: t('attendance.kpis.details.columns.fee'), align: 'end', cell: (r) => <span className="whitespace-nowrap font-semibold tabular-nums">{format.money(r.fee)}</span> },
     { key: 'last', header: t('attendance.kpis.details.columns.lastDay'), cell: (r) => <span className="whitespace-nowrap">{format.date(r.last_day)}</span> },
-  ];
+  ], moneyVisible);
 
   return (
     <>
@@ -924,6 +932,7 @@ function PeriodRecords({
   onClose,
   openChild,
   logLink,
+  moneyVisible,
 }: ListProps & { tile: RecordTile; logLink: string }) {
   const { t } = useTranslation();
   const format = useDetailFormat();
@@ -1003,7 +1012,7 @@ function PeriodRecords({
       left,
     ],
   };
-  const columns = tile === 'late' ? columnsByTile.billed : columnsByTile[tile];
+  const columns = moneyColumns(tile === 'late' ? columnsByTile.billed : columnsByTile[tile], moneyVisible);
 
   return (
     <>

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { assignExtraHoursPackage } from '@/lib/extraHoursPackage';
 import { supabase } from '@/lib/supabase';
 
 import type { BillingPeriodKind } from './useAdminTuitionBillingPeriods';
@@ -294,14 +295,11 @@ export function useAdminChildBilling(childId: string | null | undefined, nursery
     onSuccess: invalidate,
   });
 
+  // Replaces the child's package and bills the paying parent, on the server.
   const assignExtraHours = useMutation({
     mutationFn: async (packageId: string) => {
-      if (!childId || !nurseryId) throw new Error('Missing context');
-      await supabase.from('child_packages').update({ status: 'cancelled' } as never).eq('child_id', childId).eq('status', 'active');
-      const { error } = await supabase
-        .from('child_packages')
-        .insert({ package_id: packageId, child_id: childId, nursery_id: nurseryId, status: 'active' } as never);
-      if (error) throw error;
+      if (!childId) throw new Error('Missing child');
+      return assignExtraHoursPackage(childId, packageId);
     },
     onSuccess: invalidate,
   });

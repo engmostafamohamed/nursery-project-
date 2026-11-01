@@ -23,6 +23,7 @@ import type { BillingPeriodKind } from '@/hooks/useAdminTuitionBillingPeriods';
 import { useExtraHoursLedger } from '@/hooks/useExtraHoursLedger';
 import { formatDate } from '@/lib/datetime';
 import { summarizeInvoices } from '@/lib/familyFinance';
+import { extraHoursAssignErrorKey } from '@/lib/extraHoursPackage';
 import { formatMoneyAmount } from '@/lib/money';
 
 const PERIOD_LABELS: Record<BillingPeriodKind, string> = {
@@ -116,11 +117,11 @@ export function ChildBillingTab({ childId, nurseryId }: { childId: string; nurse
       return;
     }
     try {
-      await assignExtraHours.mutateAsync(selectedExtraHoursPackageId);
-      toast.success('Extra-hours package assigned.');
+      const { invoiceId } = await assignExtraHours.mutateAsync(selectedExtraHoursPackageId);
+      toast.success(invoiceId ? t('packages.childAssignedInvoiced') : t('packages.childAssigned'));
       setExtraHoursDialogOpen(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not assign the package.');
+      toast.error(t(extraHoursAssignErrorKey(error)));
     }
   };
 
@@ -354,6 +355,9 @@ export function ChildBillingTab({ childId, nurseryId }: { childId: string; nurse
                 </option>
               ))}
             </Select>
+            {(extraHoursChoices.find((pkg) => pkg.id === selectedExtraHoursPackageId)?.price ?? 0) > 0 ? (
+              <p className="text-xs text-on-surface-variant">{t('packages.assignBillsParent')}</p>
+            ) : null}
           </div>
           <DialogFooter className="mt-5">
             <Button

@@ -71,9 +71,10 @@ async function fetchUserNamesMap(ids: string[]): Promise<Map<string, UserNames>>
   return map;
 }
 
-export function useAdminDashboardActivityFeed(nurseryId: string | undefined) {
+/** canSeeMoney: payments join the feed only for people who see the nursery's money. */
+export function useAdminDashboardActivityFeed(nurseryId: string | undefined, canSeeMoney: boolean | undefined) {
   return useQuery({
-    queryKey: ['admin-dashboard-activity-feed', nurseryId],
+    queryKey: ['admin-dashboard-activity-feed', nurseryId, canSeeMoney],
     queryFn: async (): Promise<DashboardFeedItem[]> => {
       if (!nurseryId) return [];
 
@@ -137,7 +138,7 @@ export function useAdminDashboardActivityFeed(nurseryId: string | undefined) {
               .order('check_in', { ascending: false })
               .limit(6)
           : Promise.resolve({ data: [], error: null }),
-        supabase.from('invoices').select('id').eq('nursery_id', nurseryId),
+        canSeeMoney ? supabase.from('invoices').select('id').eq('nursery_id', nurseryId) : Promise.resolve({ data: [], error: null }),
       ]);
 
       if (childrenRecent.error) throw childrenRecent.error;
@@ -316,7 +317,7 @@ export function useAdminDashboardActivityFeed(nurseryId: string | undefined) {
       items.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
       return items.slice(0, 10);
     },
-    enabled: Boolean(nurseryId),
+    enabled: Boolean(nurseryId) && canSeeMoney !== undefined,
     staleTime: 1000 * 45,
   });
 }
