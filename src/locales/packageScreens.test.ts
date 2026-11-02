@@ -15,6 +15,8 @@ const SCREENS = [
   'pages/admin/AdminDealsPage.tsx',
   'pages/admin/AdminPackagesPage.tsx',
   'components/admin/packages/PackageSubscriptionsPanel.tsx',
+  'components/admin/packages/PackageSubscriptionStats.tsx',
+  'components/admin/packages/SubscriptionsTable.tsx',
   'components/admin/PeriodFilter.tsx',
   'components/admin/settings/TuitionPackagesEditor.tsx',
   'components/admin/settings/TuitionPackageBillingPeriodsEditor.tsx',

@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { ActionGate } from '@/components/shared/ActionGate';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { useContentLibrary } from '@/hooks/useContentLibrary';
 import { useSettings } from '@/lib/useSettings';
 
@@ -23,9 +24,9 @@ export function AdminContentLibraryPage() {
       <ActionGate feature="content_library" action="create">
       <section className="space-y-2 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
         <Input placeholder={t('library.title')} value={title} onChange={(e) => setTitle(e.target.value)} />
-        <select className="h-11 rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={category} onChange={(e) => setCategory(e.target.value as 'parenting_tips' | 'activities' | 'recipes' | 'health')}>
+        <Select className="h-11 rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={category} onChange={(e) => setCategory(e.target.value as 'parenting_tips' | 'activities' | 'recipes' | 'health')}>
           {(['parenting_tips', 'activities', 'recipes', 'health'] as const).map((c) => <option key={c} value={c}>{t(`library.categories.${c}`)}</option>)}
-        </select>
+        </Select>
         <Input placeholder={t('library.content')} value={content} onChange={(e) => setContent(e.target.value)} />
         <Input placeholder={t('library.mediaUrl')} value={mediaUrl} onChange={(e) => setMediaUrl(e.target.value)} />
         <Button

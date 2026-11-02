@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import { newIdempotencyKey } from '@/lib/paymentApi';
 
 type StaffOption = {
@@ -49,7 +50,7 @@ export function PayslipForm({ staffOptions, nurseryId, onSubmit }: Props) {
     <div className="space-y-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
       <div className="space-y-2">
         <Label>{t('payroll.staff')}</Label>
-        <select
+        <Select
           className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm"
           value={staffId}
           onChange={(e) => {
@@ -59,15 +60,15 @@ export function PayslipForm({ staffOptions, nurseryId, onSubmit }: Props) {
           }}
         >
           {staffOptions.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
+        </Select>
       </div>
       <div className="grid gap-2 md:grid-cols-2">
         <div className="space-y-2"><Label>{t('payroll.periodMonth')}</Label><Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} /></div>
         <div className="space-y-2">
           <Label>{t('payroll.paymentMethod')}</Label>
-          <select className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={method} onChange={(e) => setMethod(e.target.value as 'cash' | 'bank_transfer' | 'check')}>
+          <Select className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={method} onChange={(e) => setMethod(e.target.value as 'cash' | 'bank_transfer' | 'check')}>
             {(['cash', 'bank_transfer', 'check'] as const).map((m) => <option key={m} value={m}>{t(`payroll.methods.${m}`)}</option>)}
-          </select>
+          </Select>
         </div>
       </div>
       <div className="grid gap-2 md:grid-cols-3">

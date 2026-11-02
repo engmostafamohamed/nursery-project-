@@ -5900,12 +5900,11 @@
     "title": "Package subscriptions",
     "description": "Who is subscribed to each package, and how much of the total is paid, awaiting confirmation or unpaid.",
     "loadError": "Couldn't load the subscriptions.",
-    "hint": "Choose a number or a package to see its subscriptions.",
-    "byPackage": "By package",
-    "noPackages": "No packages yet.",
+    "hint": "Choose a number to see its subscriptions. Each package's own numbers are on its card below.",
     "noInvoices": "No invoices in this period",
-    "subscriptionsWord": "subscriptions",
-    "notOffered": "Not on offer",
+    "card": {
+      "viewSubscriptions": "View subscriptions"
+    },
     "packagePaid": "{{paid}} paid of {{billed}}",
     "packageUnpaid": "{{amount}} unpaid",
     "kind": {
@@ -5913,10 +5912,6 @@
       "all": "All packages",
       "tuition": "Fixed packages",
       "extra_hours": "Extra-hours packages"
-    },
-    "kindShort": {
-      "tuition": "Fixed",
-      "extra_hours": "Extra hours"
     },
     "tiles": {
       "subscriptions": "Subscriptions",

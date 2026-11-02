@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select } from '@/components/ui/select';
 import type { UserRole } from '@/types/enums';
 import type { BroadcastChannel } from '@/types/tables/batch3';
 
@@ -68,7 +69,7 @@ export function AdminBroadcastFormSections({
       <CardContent className="space-y-4 pt-6">
         <div className="space-y-2">
           <Label>{t('broadcastPage.audienceLabel')}</Label>
-          <select
+          <Select
             className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm"
             value={audienceMode}
             onChange={(e) => onAudienceMode(e.target.value as AudienceMode)}
@@ -76,13 +77,13 @@ export function AdminBroadcastFormSections({
             <option value="all_parents">{t('broadcastPage.audienceAllParents')}</option>
             <option value="class">{t('broadcastPage.audienceClass')}</option>
             <option value="role">{t('broadcastPage.audienceRole')}</option>
-          </select>
+          </Select>
         </div>
 
         {audienceMode === 'class' ? (
           <div className="space-y-2">
             <Label>{t('broadcastPage.selectClass')}</Label>
-            <select
+            <Select
               className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm"
               value={classId}
               onChange={(e) => onClassId(e.target.value)}
@@ -93,14 +94,14 @@ export function AdminBroadcastFormSections({
                   {classLabel(row)}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         ) : null}
 
         {audienceMode === 'role' ? (
           <div className="space-y-2">
             <Label>{t('broadcastPage.selectRole')}</Label>
-            <select
+            <Select
               className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm"
               value={rolePick}
               onChange={(e) => onRolePick(e.target.value as UserRole)}
@@ -108,7 +109,7 @@ export function AdminBroadcastFormSections({
               <option value="parent">{t('broadcastPage.roleParent')}</option>
               <option value="teacher">{t('broadcastPage.roleTeacher')}</option>
               <option value="branch_admin">{t('broadcastPage.roleBranchAdmin')}</option>
-            </select>
+            </Select>
           </div>
         ) : null}
 

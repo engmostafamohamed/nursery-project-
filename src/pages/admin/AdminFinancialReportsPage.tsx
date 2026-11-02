@@ -10,6 +10,7 @@ import { RevenueChart } from '@/components/admin/reports/RevenueChart';
 import { PaymentHistoryTable } from '@/components/financial/PaymentHistoryTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { startEndForPreset, useFinancialReports, type RangePreset } from '@/hooks/useFinancialReports';
 import { usePaymentHistory } from '@/hooks/usePaymentHistory';
@@ -120,11 +121,11 @@ export function AdminFinancialReportsPage() {
       </div>
 
       <div className="grid gap-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-3 md:grid-cols-4">
-        <select className="h-11 rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={preset} onChange={(e) => setPreset(e.target.value as RangePreset)}>
+        <Select className="h-11 rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={preset} onChange={(e) => setPreset(e.target.value as RangePreset)}>
           {(['this_month', 'last_month', 'this_quarter', 'last_quarter', 'this_year', 'custom'] as const).map((p) => (
             <option key={p} value={p}>{t(`reports.financial.presets.${p}`)}</option>
           ))}
-        </select>
+        </Select>
         <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
         <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
       </div>

@@ -9,6 +9,7 @@ import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { parentDisplayNameFromProfile, useParentAccountProfile, type ParentContactProfile } from '@/hooks/useParentAccountProfile';
 import { parentNurseryLabel, useParentNursery } from '@/hooks/useParentNursery';
@@ -437,7 +438,7 @@ export function ParentProfilePage() {
             <Label htmlFor="parent-profile-marital-status">
               {t('parent.profile.maritalStatus', { defaultValue: 'Marital status' })}
             </Label>
-            <select
+            <Select
               id="parent-profile-marital-status"
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-on-surface ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               value={form.maritalStatus}
@@ -449,7 +450,7 @@ export function ParentProfilePage() {
                   {t(`parent.profile.maritalStatuses.${status}`, { defaultValue: status })}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div className="space-y-2 md:col-span-3">
             <Label htmlFor="parent-profile-emergency-contact">{t('applications.emergencyContact')}</Label>
@@ -511,7 +512,7 @@ export function ParentProfilePage() {
               <Label htmlFor="parent-profile-phone-owner">
                 {t('parent.profile.phoneOwner', { defaultValue: 'Save phone as' })}
               </Label>
-              <select
+              <Select
                 id="parent-profile-phone-owner"
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-on-surface ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 value={phoneOwner}
@@ -520,7 +521,7 @@ export function ParentProfilePage() {
                 <option value="father">{t('signup.father')}</option>
                 <option value="mother">{t('signup.mother')}</option>
                 <option value="account">{t('parent.profile.accountOnly', { defaultValue: 'Account only' })}</option>
-              </select>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="parent-profile-phone-code">

@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
+import { Select } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useActiveNurseryId } from '@/hooks/useActiveNurseryId';
 import { useAuthSession } from '@/hooks/useAuthSession';
@@ -399,7 +400,7 @@ export function RemindersPage() {
                 {t('reminders.fieldHours')}
               </span>
               {/* Add-hour dropdown: each already-selected hour is rendered disabled. */}
-              <select
+              <Select
                 value=""
                 onChange={(e) => {
                   if (e.target.value !== '') addHour(Number(e.target.value));
@@ -412,7 +413,7 @@ export function RemindersPage() {
                     {formatHour(h)}
                   </option>
                 ))}
-              </select>
+              </Select>
               {form.hours_of_day.length > 0 ? (
                 <div className="mt-2.5 flex flex-wrap gap-2">
                   {form.hours_of_day.map((h) => (

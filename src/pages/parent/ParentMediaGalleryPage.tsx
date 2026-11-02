@@ -6,6 +6,7 @@ import { ParentMediaDetailModal } from '@/components/parent/ParentMediaDetailMod
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Input } from '@/components/ui/input';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { Select } from '@/components/ui/select';
 import { PARENT_MEDIA_ACTIVITY_FILTER_KEYS } from '@/constants/mediaActivities';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useParentMedia, type ParentMediaItem, type ParentMediaSort } from '@/hooks/useParentMedia';
@@ -94,7 +95,7 @@ export function ParentMediaGalleryPage() {
       </div>
 
       <div className="grid gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest p-3 md:grid-cols-5">
-        <select
+        <Select
           className="h-11 rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm"
           value={childId}
           onChange={(e) => setChildId(e.target.value)}
@@ -105,10 +106,10 @@ export function ParentMediaGalleryPage() {
               {c.name}
             </option>
           ))}
-        </select>
+        </Select>
         <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
         <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
-        <select
+        <Select
           className="h-11 rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm"
           value={activityType}
           onChange={(e) => setActivityType(e.target.value)}
@@ -119,8 +120,8 @@ export function ParentMediaGalleryPage() {
               {t(`media.activity.${k}`)}
             </option>
           ))}
-        </select>
-        <select
+        </Select>
+        <Select
           className="h-11 rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm"
           value={sort}
           onChange={(e) => setSort(e.target.value as ParentMediaSort)}
@@ -128,7 +129,7 @@ export function ParentMediaGalleryPage() {
           <option value="newest">{t('parent.media.sortNewest')}</option>
           <option value="oldest">{t('parent.media.sortOldest')}</option>
           <option value="most_viewed">{t('parent.media.sortMostViewed')}</option>
-        </select>
+        </Select>
       </div>
 
       {!media.isLoading && !media.media.length ? (

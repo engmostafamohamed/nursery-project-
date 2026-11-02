@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { confirm } from '@/components/ui/confirm';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { FilterMenu } from '@/components/ui/FilterMenu';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -187,53 +188,6 @@ function stepHasActiveQuestions(step: RegistrationTemplateStep, questions: Regis
   return questions.some((question) => question.step === step && question.active);
 }
 
-/** A custom-styled stand-in for the native `<select>` — scoped to this file so the rest of
- * the app's `<Select>` usages (several of which spread react-hook-form's `register()` onto a
- * real `<select>` element) are untouched. Matches the Template picker dropdown above it. */
-function InlineSelect<T extends string>({
-  value,
-  disabled,
-  options,
-  onChange,
-  className,
-}: {
-  value: T;
-  disabled?: boolean;
-  options: { value: T; label: string; disabled?: boolean }[];
-  onChange: (value: T) => void;
-  className?: string;
-}) {
-  const current = options.find((option) => option.value === value);
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={disabled}
-          className={cn('h-12 w-full justify-between bg-surface-container-lowest font-normal', className)}
-        >
-          <span className="truncate">{current?.label ?? value}</span>
-          <MaterialSymbol name="expand_more" size="text-base" className="shrink-0 text-on-surface-variant" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width] min-w-[160px]">
-        {options.map((option) => (
-          <DropdownMenuItem
-            key={option.value}
-            disabled={option.disabled}
-            onSelect={() => onChange(option.value)}
-            className={cn('justify-between', option.value === value && 'bg-primary/5 font-medium text-primary')}
-          >
-            {option.label}
-            {option.value === value ? <MaterialSymbol name="check" size="text-base" /> : null}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
 function QuestionCard({
   question,
   locked,
@@ -344,7 +298,7 @@ function QuestionCard({
                   Managed by the nursery list
                 </div>
               ) : (
-                <InlineSelect
+                <FilterMenu
                   value={question.type}
                   disabled={locked}
                   onChange={(type) => onChange({ type })}
@@ -1038,7 +992,7 @@ export function ParentRegistrationTemplatesEditor({ nurseryId }: { nurseryId?: s
                   </div>
                   <div className="min-w-[160px] max-w-[220px] flex-1 space-y-1.5">
                     <Label>Status</Label>
-                    <InlineSelect
+                    <FilterMenu
                       value={draft.status}
                       disabled={locked}
                       onChange={(status) => setDraft((prev) => (prev ? { ...prev, status } : prev))}

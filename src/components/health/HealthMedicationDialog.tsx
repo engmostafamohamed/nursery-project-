@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import type { ChildMedicationsRow, MedicationAdminMethod, ParentConsentStatus } from '@/types/tables/child_health';
 
 type Props = {
@@ -87,7 +88,7 @@ export function HealthMedicationDialog({ open, onOpenChange, initial, onSubmit, 
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="meth">{t('health.fields.method')}</Label>
-            <select
+            <Select
               id="meth"
               className="h-10 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm"
               value={fields.administration_method}
@@ -98,7 +99,7 @@ export function HealthMedicationDialog({ open, onOpenChange, initial, onSubmit, 
                   {t(`health.method.${m}`)}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="st">{t('health.fields.storage')}</Label>
@@ -110,7 +111,7 @@ export function HealthMedicationDialog({ open, onOpenChange, initial, onSubmit, 
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="cs">{t('health.fields.consent')}</Label>
-            <select
+            <Select
               id="cs"
               className="h-10 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm"
               value={fields.parent_consent_status}
@@ -121,7 +122,7 @@ export function HealthMedicationDialog({ open, onOpenChange, initial, onSubmit, 
                   {t(`health.consent.${c}`)}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
         <DialogFooter>

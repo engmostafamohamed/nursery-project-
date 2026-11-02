@@ -328,16 +328,94 @@
   border-color: rgb(var(--primary) / 0.7);
   --tw-ring-color: rgb(var(--primary) / 0.22);
 }
-/* Native selects are appearance-none, so they had no dropdown arrow. */
-.signup-surface select:not([multiple]) {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238e8ea2' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+/* Every dropdown in the app looks like the menus built on DropdownMenu (InlineSelect in the
+   registration templates editor, FilterMenu): a boxed field with the expand_more arrow at its end,
+   in the theme's secondary text colour. Native selects keep working with forms (react-hook-form's
+   register, labels, autofill, tests). The selector outranks a padding utility such as px-3, so the
+   text never runs under the arrow. */
+select:not([multiple]):not([size]) {
+  appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960' fill='%235b5b6e'%3E%3Cpath d='M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 0.875rem center;
-  background-size: 1.125rem;
+  background-position: right 0.75rem center;
+  background-size: 1.25rem;
   padding-inline-end: 2.5rem;
 }
-[dir='rtl'] .signup-surface select:not([multiple]) {
-  background-position: left 0.875rem center;
+[data-theme='soft'] select:not([multiple]):not([size]) {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960' fill='%2357534e'%3E%3Cpath d='M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z'/%3E%3C/svg%3E");
+}
+[data-theme='dark'] select:not([multiple]):not([size]) {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960' fill='%23a5afbe'%3E%3Cpath d='M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z'/%3E%3C/svg%3E");
+}
+[dir='rtl'] select:not([multiple]):not([size]) {
+  background-position: left 0.75rem center;
+}
+select:disabled {
+  cursor: not-allowed;
+}
+
+/* Where the browser lets the open list be styled (Chrome and Edge), it is the same menu as
+   DropdownMenuContent: as wide as the field, a light panel with a border and shadow, and the
+   chosen row tinted in the primary colour with a check at its end. Other browsers open their own
+   list under the same field. */
+@supports (appearance: base-select) {
+  select:not([multiple]):not([size]),
+  select:not([multiple]):not([size])::picker(select) {
+    appearance: base-select;
+  }
+  select:not([multiple]):not([size])::picker-icon {
+    display: none;
+  }
+  /* The closed field keeps one line, like the native one; a long choice is cut at the arrow
+     instead of wrapping out of the box. The open list's rows wrap again. */
+  select:not([multiple]):not([size]) {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  select:not([multiple]):not([size])::picker(select) {
+    margin-block: 0.25rem;
+    padding: 0.25rem;
+    border: 1px solid rgb(var(--border-subtle));
+    border-radius: 0.375rem;
+    background: rgb(var(--surface-low));
+    color: rgb(var(--foreground));
+    box-shadow: var(--shadow-md);
+  }
+  select:not([multiple]):not([size]) option {
+    white-space: normal;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 0.125rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    cursor: pointer;
+  }
+  select:not([multiple]):not([size]) option:checked {
+    background: rgb(var(--primary) / 0.05);
+    color: rgb(var(--primary));
+    font-weight: 500;
+  }
+  select:not([multiple]):not([size]) option:is(:hover, :focus-visible) {
+    background: rgb(var(--surface-high));
+    outline: none;
+  }
+  select:not([multiple]):not([size]) option:disabled {
+    cursor: default;
+    opacity: 0.5;
+  }
+  /* The check sits at the row's end, drawn like the Material "check" icon the menus use. */
+  select:not([multiple]):not([size]) option::checkmark {
+    order: 1;
+    margin-inline-start: auto;
+    content: '';
+    width: 1rem;
+    height: 1rem;
+    background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
 }
 
 @media print {

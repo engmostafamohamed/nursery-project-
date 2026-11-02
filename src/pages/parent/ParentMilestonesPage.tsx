@@ -7,6 +7,7 @@ import { MilestoneShareCard } from '@/components/parent/MilestoneShareCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Input } from '@/components/ui/input';
 import { Pagination } from '@/components/ui/Pagination';
+import { Select } from '@/components/ui/select';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useMilestones, type MilestoneCategory } from '@/hooks/useMilestones';
 import { usePagination } from '@/hooks/usePagination';
@@ -41,14 +42,14 @@ export function ParentMilestonesPage() {
       <h1 className="text-lg font-semibold text-on-surface">{t('milestones.parentTitle')}</h1>
       <div className="grid gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest p-3 md:grid-cols-4">
         {milestone.children.length > 1 ? (
-          <select className="h-11 rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={childId} onChange={(e) => setChildId(e.target.value)}>
+          <Select className="h-11 rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={childId} onChange={(e) => setChildId(e.target.value)}>
             <option value="">{t('milestones.allChildren')}</option>
             {milestone.children.map((c) => <option key={c.id} value={c.id}>{i18n.language === 'ar' ? c.full_name_ar : c.full_name_en}</option>)}
-          </select>
+          </Select>
         ) : <div />}
-        <select className="h-11 rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={category} onChange={(e) => setCategory(e.target.value as MilestoneCategory | 'all')}>
+        <Select className="h-11 rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={category} onChange={(e) => setCategory(e.target.value as MilestoneCategory | 'all')}>
           {categories.map((c) => <option key={c} value={c}>{c === 'all' ? t('milestones.allCategories') : t(`milestones.categories.${c}`)}</option>)}
-        </select>
+        </Select>
         <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
         <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
       </div>

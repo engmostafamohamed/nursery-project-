@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { LoyaltyDashboard } from '@/components/parent/LoyaltyDashboard';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Select } from '@/components/ui/select';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useLoyalty } from '@/hooks/useLoyalty';
 import { formatDate } from '@/lib/datetime';
@@ -33,10 +34,10 @@ export function ParentRewardsPage() {
       <section className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold">{t('loyalty.history')}</h2>
-          <select className="h-9 rounded-lg border border-outline-variant bg-surface text-foreground px-2 text-xs" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+          <Select className="h-9 rounded-lg border border-outline-variant bg-surface text-foreground px-2 text-xs" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
             <option value="all">{t('common.all')}</option>
             {(['earned', 'redeemed', 'expired', 'bonus'] as const).map((k) => <option key={k} value={k}>{t(`loyalty.transactionTypes.${k}`)}</option>)}
-          </select>
+          </Select>
         </div>
         <div className="space-y-2">
           {rows.map((tx) => (

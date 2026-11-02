@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select } from '@/components/ui/select';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { templateNotificationRow } from '@/lib/notificationText';
 import { isValidIsoDate } from '@/lib/onboardingDateBounds';
@@ -160,16 +161,16 @@ export function AdminInvoiceCreatePage() {
               onChange={(e) => setParentSearch(e.target.value)}
               placeholder={t('invoice.create.searchParent')}
             />
-            <select className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={parentId} onChange={(e) => setParentId(e.target.value)}>
+            <Select className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={parentId} onChange={(e) => setParentId(e.target.value)}>
               <option value="">{t('invoice.create.selectParent')}</option>
               {filteredParents.map((parent) => <option key={parent.id} value={parent.id}>{parent.name}</option>)}
-            </select>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label>{t('invoice.create.type')}</Label>
-            <select className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={invoiceType} onChange={(e) => setInvoiceType(e.target.value as 'monthly' | 'extra_hours' | 'other')}>
+            <Select className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={invoiceType} onChange={(e) => setInvoiceType(e.target.value as 'monthly' | 'extra_hours' | 'other')}>
               {(['monthly', 'extra_hours', 'other'] as const).map((type) => <option key={type} value={type}>{t(`invoice.types.${type}`)}</option>)}
-            </select>
+            </Select>
           </div>
         </div>
 

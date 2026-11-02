@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select } from '@/components/ui/select';
 import { MILESTONE_TEMPLATES, type MilestoneCategory } from '@/hooks/useMilestones';
 
 export type MilestoneFormValue = {
@@ -32,9 +33,9 @@ export function MilestoneForm({ value, childAge, onChange, onSubmit }: Props) {
     <div className="space-y-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
       <div className="space-y-2">
         <Label>{t('milestones.category')}</Label>
-        <select className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={value.category} onChange={(e) => onChange({ ...value, category: e.target.value as MilestoneCategory })}>
+        <Select className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={value.category} onChange={(e) => onChange({ ...value, category: e.target.value as MilestoneCategory })}>
           {categories.map((c) => <option key={c} value={c}>{t(`milestones.categories.${c}`)}</option>)}
-        </select>
+        </Select>
       </div>
       <div className="space-y-2">
         <Label>{t('milestones.milestoneText')}</Label>

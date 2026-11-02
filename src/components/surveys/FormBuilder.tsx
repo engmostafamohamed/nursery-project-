@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { Select } from '@/components/ui/select';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import type { AnswersMap, FormQuestion, QuestionType, SurveyType } from '@/types/survey';
@@ -620,7 +621,7 @@ function ConditionalEditor({
         {t('survey.builder.conditional')}
       </p>
       <div className="space-y-2">
-        <select
+        <Select
           className="h-9 w-full rounded-lg border border-outline-variant bg-surface px-3 text-sm text-foreground"
           value={rule?.questionId ?? ''}
           onChange={(e) => {
@@ -643,11 +644,11 @@ function ConditionalEditor({
               {q.label || t('survey.builder.untitledQuestion')}
             </option>
           ))}
-        </select>
+        </Select>
 
         {rule?.questionId && (
           <div className="grid grid-cols-2 gap-2">
-            <select
+            <Select
               className="h-9 rounded-lg border border-outline-variant bg-surface px-3 text-sm text-foreground"
               value={rule.operator}
               onChange={(e) =>
@@ -658,8 +659,8 @@ function ConditionalEditor({
             >
               <option value="eq">{t('survey.builder.conditionOperatorEq')}</option>
               <option value="neq">{t('survey.builder.conditionOperatorNeq')}</option>
-            </select>
-            <select
+            </Select>
+            <Select
               className="h-9 rounded-lg border border-outline-variant bg-surface px-3 text-sm text-foreground"
               value={rule.value}
               onChange={(e) =>
@@ -672,7 +673,7 @@ function ConditionalEditor({
                   {v}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         )}
       </div>

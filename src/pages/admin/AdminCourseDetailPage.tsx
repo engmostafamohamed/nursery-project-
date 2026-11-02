@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
+import { Select } from '@/components/ui/select';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import {
@@ -400,7 +401,7 @@ export function AdminCourseDetailPage() {
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setEnrollModalOpen(false)}>
               <div className="w-full max-w-sm rounded-2xl bg-surface p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
                 <h2 className="mb-4 text-base font-semibold text-on-surface">{t('admin.courses.detail.enrollModalTitle')}</h2>
-                <select
+                <Select
                   className="h-11 w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface"
                   value={selectedChildId}
                   onChange={(e) => setSelectedChildId(e.target.value)}
@@ -411,7 +412,7 @@ export function AdminCourseDetailPage() {
                       {isAr ? c.full_name_ar || c.full_name_en : c.full_name_en || c.full_name_ar}
                     </option>
                   ))}
-                </select>
+                </Select>
                 <div className="mt-4 flex gap-2">
                   <Button variant="outline" className="flex-1" onClick={() => setEnrollModalOpen(false)}>
                     {t('common.cancel')}

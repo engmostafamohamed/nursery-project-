@@ -6,6 +6,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select } from '@/components/ui/select';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useAdminCalendarEvents } from '@/hooks/useAdminCalendarEvents';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -110,7 +111,7 @@ export function AdminCalendarPage() {
           </div>
           <p className="text-sm font-semibold text-on-surface">{monthLabel}</p>
           <div className="flex gap-2">
-            <select
+            <Select
               className="h-9 rounded-lg border border-outline-variant bg-surface text-foreground px-2 text-xs"
               value={currentMonth.getMonth()}
               onChange={(e) => setCurrentMonth(new Date(currentMonth.getFullYear(), Number(e.target.value), 1))}
@@ -120,14 +121,14 @@ export function AdminCalendarPage() {
                   {new Intl.DateTimeFormat(locale, { month: 'short' }).format(new Date(2026, m, 1))}
                 </option>
               ))}
-            </select>
-            <select
+            </Select>
+            <Select
               className="h-9 rounded-lg border border-outline-variant bg-surface text-foreground px-2 text-xs"
               value={currentMonth.getFullYear()}
               onChange={(e) => setCurrentMonth(new Date(Number(e.target.value), currentMonth.getMonth(), 1))}
             >
               {years.map((year) => <option key={year} value={year}>{year}</option>)}
-            </select>
+            </Select>
           </div>
         </div>
 

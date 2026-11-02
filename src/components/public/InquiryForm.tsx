@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import { useInquiries } from '@/hooks/useInquiries';
 
 type Props = {
@@ -76,17 +77,17 @@ export function InquiryForm({ nurseryId }: Props) {
         <div className="space-y-2"><Label>{t('admissions.childDob')}</Label><Input type="date" value={form.child_dob} onChange={(e) => setForm((p) => ({ ...p, child_dob: e.target.value }))} /></div>
         <div className="space-y-2">
           <Label>{t('admissions.preferredClass')}</Label>
-          <select className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={form.preferred_class} onChange={(e) => setForm((p) => ({ ...p, preferred_class: e.target.value }))}>
+          <Select className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={form.preferred_class} onChange={(e) => setForm((p) => ({ ...p, preferred_class: e.target.value }))}>
             <option value="">{t('admissions.selectClass')}</option>
             {preferredClassOptions.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
-          </select>
+          </Select>
         </div>
         <div className="space-y-2"><Label>{t('admissions.preferredStartDate')}</Label><Input type="date" value={form.preferred_start_date} onChange={(e) => setForm((p) => ({ ...p, preferred_start_date: e.target.value }))} /></div>
         <div className="space-y-2">
           <Label>{t('admissions.source')}</Label>
-          <select className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={form.source} onChange={(e) => setForm((p) => ({ ...p, source: e.target.value as typeof p.source }))}>
+          <Select className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={form.source} onChange={(e) => setForm((p) => ({ ...p, source: e.target.value as typeof p.source }))}>
             {(['website', 'referral', 'walk_in', 'social_media', 'other'] as const).map((s) => <option key={s} value={s}>{t(`admissions.sources.${s}`)}</option>)}
-          </select>
+          </Select>
         </div>
       </div>
       <div className="space-y-2">

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
+import { Select } from '@/components/ui/select';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useDismissHealthAlert, useHealthAlerts } from '@/hooks/useHealthAlerts';
 import { useNurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
@@ -157,7 +158,7 @@ export function AdminHealthAlertsDashboardPage() {
         <CardContent className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           <label className="flex flex-col gap-1 text-sm">
             <span>{t('health.dashboard.filterType')}</span>
-            <select
+            <Select
               className="h-10 rounded-lg border border-outline-variant bg-surface-container-lowest px-3"
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
@@ -168,11 +169,11 @@ export function AdminHealthAlertsDashboardPage() {
                   {t(`health.dashboard.types.${x}`)}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
           <label className="flex flex-col gap-1 text-sm">
             <span>{t('health.dashboard.filterClass')}</span>
-            <select
+            <Select
               className="h-10 rounded-lg border border-outline-variant bg-surface-container-lowest px-3"
               value={classFilter}
               onChange={(e) => setClassFilter(e.target.value)}
@@ -183,11 +184,11 @@ export function AdminHealthAlertsDashboardPage() {
                   {languagePref === 'ar' ? c.name_ar : languagePref === 'en' ? c.name_en : `${c.name_ar} / ${c.name_en}`}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
           <label className="flex flex-col gap-1 text-sm">
             <span>{t('health.dashboard.sortUrgency')}</span>
-            <select
+            <Select
               className="h-10 rounded-lg border border-outline-variant bg-surface-container-lowest px-3"
               value={urgencyFilter}
               onChange={(e) => setUrgencyFilter(e.target.value)}
@@ -198,7 +199,7 @@ export function AdminHealthAlertsDashboardPage() {
                   {t(`health.dashboard.urgency.${u}`)}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
           <div className="flex flex-1 items-end gap-2">
             <Button type="button" variant="secondary" onClick={() => void bulkNotify()} disabled={filtered.length === 0}>

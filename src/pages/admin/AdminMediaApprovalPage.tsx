@@ -10,6 +10,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { Select } from '@/components/ui/select';
 import { useMediaApproval, type AdminMediaItem } from '@/hooks/useMediaApproval';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { approveMedia, rejectMedia } from '@/lib/mediaApproval';
@@ -115,14 +116,14 @@ export function AdminMediaApprovalPage() {
       </h1>
 
       <div className="grid gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest p-3 md:grid-cols-4">
-        <select className="h-11 rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={classId} onChange={(e) => setClassId(e.target.value)}>
+        <Select className="h-11 rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={classId} onChange={(e) => setClassId(e.target.value)}>
           <option value="">{t('admin.media.filterClass')}</option>
           {(filtersMeta.data?.classes ?? []).map((c) => <option key={c.id} value={c.id}>{c.name_ar || c.name_en}</option>)}
-        </select>
-        <select className="h-11 rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={teacherId} onChange={(e) => setTeacherId(e.target.value)}>
+        </Select>
+        <Select className="h-11 rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={teacherId} onChange={(e) => setTeacherId(e.target.value)}>
           <option value="">{t('admin.media.filterTeacher')}</option>
           {(filtersMeta.data?.teachers ?? []).map((u) => <option key={u.id} value={u.id}>{u.full_name_ar || u.full_name_en}</option>)}
-        </select>
+        </Select>
         <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
         <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
       </div>

@@ -1,4 +1,5 @@
 import type { FieldMapping } from '@/hooks/useBulkImport';
+import { Select } from '@/components/ui/select';
 
 type Props = {
   headers: string[];
@@ -25,14 +26,14 @@ export function ColumnMapper({ headers, mapping, onChange }: Props) {
       {fields.map((f) => (
         <label key={f} className="flex items-center justify-between gap-2 rounded-lg border border-outline-variant bg-surface text-foreground p-2 text-xs">
           <span>{f}</span>
-          <select
+          <Select
             className="h-8 rounded border border-outline-variant px-2"
             value={mapping[f]}
             onChange={(e) => onChange({ ...mapping, [f]: e.target.value })}
           >
             <option value="">--</option>
             {headers.map((h) => <option key={h} value={h}>{h}</option>)}
-          </select>
+          </Select>
         </label>
       ))}
     </div>

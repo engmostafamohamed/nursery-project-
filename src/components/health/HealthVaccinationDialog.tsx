@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import type { ChildVaccinationsRow } from '@/types/tables/child_health';
 
 type Props = {
@@ -80,7 +81,7 @@ export function HealthVaccinationDialog({ open, onOpenChange, initial, onSubmit,
         <div className="space-y-3 py-2">
           <div className="space-y-1.5">
             <Label htmlFor="vac">{t('health.fields.vaccineName')}</Label>
-            <select
+            <Select
               id="vac"
               className="h-10 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm"
               value={fields.preset}
@@ -91,7 +92,7 @@ export function HealthVaccinationDialog({ open, onOpenChange, initial, onSubmit,
                   {t(`health.mohVaccines.${k}`)}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           {fields.preset === 'other' && (
             <div className="space-y-1.5">

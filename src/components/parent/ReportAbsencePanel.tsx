@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { Select } from '@/components/ui/select';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { addCalendarDaysYmd, getNurseryCalendarDateString } from '@/lib/nurseryDay';
 import { supabase } from '@/lib/supabase';
@@ -146,7 +147,7 @@ export function ReportAbsencePanel({ children, defaultChildId }: { children: Chi
         {children.length > 1 ? (
           <div className="space-y-2">
             <Label>{t('attendance.absence.child')}</Label>
-            <select
+            <Select
               className={cn('h-11 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm', shown.child && fieldErrorClass)}
               value={childId}
               onChange={(e) => setChildId(e.target.value)}
@@ -156,7 +157,7 @@ export function ReportAbsencePanel({ children, defaultChildId }: { children: Chi
               {children.map((c) => (
                 <option key={c.id} value={c.id}>{childName(c.id)}</option>
               ))}
-            </select>
+            </Select>
             {shown.child ? <p className="text-xs font-medium text-error">{shown.child}</p> : null}
           </div>
         ) : null}
@@ -175,7 +176,7 @@ export function ReportAbsencePanel({ children, defaultChildId }: { children: Chi
         </div>
         <div className="space-y-2">
           <Label>{t('attendance.absence.reason')}</Label>
-          <select
+          <Select
             className="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm"
             value={reason}
             onChange={(e) => setReason(e.target.value as AbsenceReason)}
@@ -183,7 +184,7 @@ export function ReportAbsencePanel({ children, defaultChildId }: { children: Chi
             {REASONS.map((r) => (
               <option key={r} value={r}>{t(`attendance.absence.reasons.${r}`)}</option>
             ))}
-          </select>
+          </Select>
         </div>
         <div className="space-y-2">
           <Label>{t('attendance.absence.note')}</Label>

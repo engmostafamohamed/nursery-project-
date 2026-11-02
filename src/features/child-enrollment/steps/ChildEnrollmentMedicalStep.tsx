@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select } from '@/components/ui/select';
 
 import { defaultAllergyRow } from '../childEnrollmentDefaults';
 import type { ChildEnrollmentFormValues } from '../childEnrollmentTypes';
@@ -41,7 +42,7 @@ export function ChildEnrollmentMedicalStep() {
     <div className="space-y-6">
       <div className="space-y-1">
         <Label>{t('childEnrollment.step2.bloodType')}</Label>
-        <select
+        <Select
           className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm"
           {...register('bloodType')}
         >
@@ -51,7 +52,7 @@ export function ChildEnrollmentMedicalStep() {
               {b}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       <section className="space-y-2">
@@ -65,7 +66,7 @@ export function ChildEnrollmentMedicalStep() {
               <div key={field.id} className="grid gap-2 rounded-lg border border-outline-variant p-3 md:grid-cols-2">
                 <div className="space-y-1 md:col-span-2">
                   <Label>{t('childEnrollment.step2.allergen')}</Label>
-                  <select
+                  <Select
                     className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm"
                     {...register(`allergies.${index}.allergenKey` as const)}
                   >
@@ -74,7 +75,7 @@ export function ChildEnrollmentMedicalStep() {
                         {t(`childEnrollment.allergens.${k}`)}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
                 {allergiesWatch[index]?.allergenKey === 'other' ? (
                   <div className="space-y-1 md:col-span-2">
@@ -84,7 +85,7 @@ export function ChildEnrollmentMedicalStep() {
                 ) : null}
                 <div className="space-y-1">
                   <Label>{t('childEnrollment.step2.severity')}</Label>
-                  <select
+                  <Select
                     className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm"
                     {...register(`allergies.${index}.severity` as const)}
                   >
@@ -93,7 +94,7 @@ export function ChildEnrollmentMedicalStep() {
                         {t(`childEnrollment.severity.${k}`)}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
                 <div className="space-y-1 md:col-span-2">
                   <Label>{t('childEnrollment.step2.notes')}</Label>

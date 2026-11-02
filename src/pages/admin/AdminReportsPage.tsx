@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
+import { Select } from '@/components/ui/select';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useNurseryChildrenPicker } from '@/hooks/useNurseryChildrenPicker';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -506,7 +507,7 @@ function ReportEditor({
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <label className="col-span-2 block sm:col-span-1">
           <span className="mb-1 block text-xs text-on-surface-variant">{t('reports.child')}</span>
-          <select
+          <Select
             value={childId}
             onChange={(e) => setChildId(e.target.value)}
             disabled={Boolean(existing)}
@@ -518,7 +519,7 @@ function ReportEditor({
                 {isAr ? c.full_name_ar || c.full_name_en : c.full_name_en || c.full_name_ar}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label className="block">
           <span className="mb-1 block text-xs text-on-surface-variant">{t('reports.term')}</span>
@@ -584,7 +585,7 @@ function ReportEditor({
                 <span className="flex-1 text-sm text-on-surface">
                   {isAr ? it.label_ar || it.label_en : it.label_en || it.label_ar}
                 </span>
-                <select
+                <Select
                   value={grades[it.id] ?? ''}
                   onChange={(e) =>
                     setGrades((g) => ({ ...g, [it.id]: e.target.value }))
@@ -597,7 +598,7 @@ function ReportEditor({
                       {g.code}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             ))}
           </div>

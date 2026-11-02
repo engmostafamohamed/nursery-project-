@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select } from '@/components/ui/select';
 
 type Props = {
   open: boolean;
@@ -58,10 +59,10 @@ export function InquiryDetailModal({ open, onOpenChange, inquiry, classes, onUpd
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={() => void onUpdate({ id, updates: { admin_notes: note } }).then(() => toast.success(t('admissions.noteSaved')))}>{t('admissions.addNote')}</Button>
           <Button size="sm" variant="outline" onClick={() => onScheduleInterview(id)}>{t('admissions.scheduleInterview')}</Button>
-          <select className="h-9 rounded-lg border border-outline-variant bg-surface text-foreground px-2 text-xs" value={waitlistClassId} onChange={(e) => setWaitlistClassId(e.target.value)}>
+          <Select className="h-9 rounded-lg border border-outline-variant bg-surface text-foreground px-2 text-xs" value={waitlistClassId} onChange={(e) => setWaitlistClassId(e.target.value)}>
             <option value="">{t('admissions.selectClass')}</option>
             {classes.map((c) => <option key={String(c.id)} value={String(c.id)}>{String(c.name_ar ?? c.name_en ?? '-')}</option>)}
-          </select>
+          </Select>
           <Button size="sm" variant="outline" onClick={() => waitlistClassId ? onMoveToWaitlist(id, waitlistClassId) : toast.error(t('admissions.selectClass'))}>{t('admissions.moveToWaitlist')}</Button>
           <Button size="sm" variant="outline" onClick={() => toast.message(t('common.comingSoon'))}>{t('admissions.sendEmail')}</Button>
           <Button size="sm" onClick={() => onCreateApplication(id)}>{t('admissions.convertToApplication')}</Button>

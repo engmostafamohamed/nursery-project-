@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select } from '@/components/ui/select';
 import { useSingleFlight } from '@/hooks/useSingleFlight';
 import { newIdempotencyKey, paymentError } from '@/lib/paymentApi';
 
@@ -115,7 +116,7 @@ export function InvoiceActionsMenu({ disabled, amountLabel, onView, onMarkPaid, 
           <div className="space-y-3">
             <div className="space-y-2">
               <Label>{t('invoice.markPaid.paymentMethod')}</Label>
-              <select
+              <Select
                 className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm"
                 value={paymentMethod}
                 onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
@@ -125,7 +126,7 @@ export function InvoiceActionsMenu({ disabled, amountLabel, onView, onMarkPaid, 
                     {t(`invoice.paymentMethods.${method}`)}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>{t('invoice.markPaid.paymentDate')}</Label>

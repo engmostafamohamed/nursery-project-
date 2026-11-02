@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select } from '@/components/ui/select';
 
 import type { ChildEnrollmentFormValues } from '../childEnrollmentTypes';
 
@@ -19,14 +20,14 @@ export function ChildEnrollmentDevStep() {
       <Input placeholder={t('childEnrollment.step5.homeLang')} {...register('homeLanguage')} />
       <div className="space-y-1">
         <Label>{t('childEnrollment.step5.toilet')}</Label>
-        <select className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" {...register('toiletTraining')}>
+        <Select className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" {...register('toiletTraining')}>
           <option value="">{t('childEnrollment.step2.select')}</option>
           {TOILET.map((x) => (
             <option key={x} value={x}>
               {t(`childEnrollment.step5.toiletOpts.${x}`)}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
       <Input type="number" placeholder={t('childEnrollment.step5.nap')} {...register('napMinutes')} />
       <Textarea placeholder={t('childEnrollment.step5.temperament')} className="md:col-span-2" rows={2} {...register('temperament')} />

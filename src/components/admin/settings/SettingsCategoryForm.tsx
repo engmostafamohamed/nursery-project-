@@ -1,6 +1,7 @@
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Select } from '@/components/ui/select';
 import type { NurserySettingsRow } from '@/types/tables/nursery_settings';
 
 import { InstaPayQrUploadField } from './InstaPayQrUploadField';
@@ -63,7 +64,7 @@ export function SettingsCategoryForm({
       return (
         <div className="space-y-2">
           <Label>{label}</Label>
-          <select
+          <Select
             className="h-12 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm"
             value={String(value ?? '')}
             onChange={(e) => onChange(field.key, e.target.value)}
@@ -73,7 +74,7 @@ export function SettingsCategoryForm({
                 {t(`settings.options.${String(field.key)}.${option}`)}
               </option>
             ))}
-          </select>
+          </Select>
           <p className="text-xs text-on-surface-variant">{helper}</p>
         </div>
       );

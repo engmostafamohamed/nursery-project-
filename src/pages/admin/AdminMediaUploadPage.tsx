@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { Select } from '@/components/ui/select';
 import { MEDIA_ACTIVITY_KEYS } from '@/constants/mediaActivities';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useMediaUpload } from '@/hooks/useMediaUpload';
@@ -120,7 +121,7 @@ export function AdminMediaUploadPage() {
           </div>
           <div className="space-y-2">
             <Label>{t('media.upload.class')}</Label>
-            <select
+            <Select
               className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm"
               value={classId}
               onChange={(e) => setClassId(e.target.value)}
@@ -131,7 +132,7 @@ export function AdminMediaUploadPage() {
                   {i18n.language === 'ar' ? c.name_ar : c.name_en}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
 
@@ -177,7 +178,7 @@ export function AdminMediaUploadPage() {
         <div className="grid gap-3 md:grid-cols-2">
           <div className="space-y-2">
             <Label>{t('media.upload.activity')}</Label>
-            <select
+            <Select
               className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm"
               value={activityType}
               onChange={(e) => setActivityType(e.target.value)}
@@ -188,7 +189,7 @@ export function AdminMediaUploadPage() {
                   {t(`media.activity.${k}`)}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           {activityType === 'custom' ? (
             <div className="space-y-2">

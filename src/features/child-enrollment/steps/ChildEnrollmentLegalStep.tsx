@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 
 import type { ChildEnrollmentFileBundle } from '../childEnrollmentFiles';
 import type { ChildEnrollmentFormValues } from '../childEnrollmentTypes';
@@ -21,13 +22,13 @@ export function ChildEnrollmentLegalStep({ files, onFilesChange }: Props) {
     <div className="space-y-4">
       <div className="space-y-1">
         <Label>{t('childEnrollment.step6.custody')}</Label>
-        <select className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" {...register('custodyStatus')}>
+        <Select className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" {...register('custodyStatus')}>
           <option value="both">{t('childEnrollment.step6.custodyBoth')}</option>
           <option value="father">{t('childEnrollment.step6.custodyFather')}</option>
           <option value="mother">{t('childEnrollment.step6.custodyMother')}</option>
           <option value="guardian">{t('childEnrollment.step6.custodyGuardian')}</option>
           <option value="court_order">{t('childEnrollment.step6.custodyCourt')}</option>
-        </select>
+        </Select>
       </div>
       {custody === 'court_order' ? (
         <div className="space-y-1">

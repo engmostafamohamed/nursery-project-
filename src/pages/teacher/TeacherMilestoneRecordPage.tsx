@@ -9,6 +9,7 @@ import { useMilestones } from '@/hooks/useMilestones';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { localizedNames, templateNotificationRow } from '@/lib/notificationText';
 import { supabase } from '@/lib/supabase';
+import { Select } from '@/components/ui/select';
 
 export function TeacherMilestoneRecordPage() {
   const { t, i18n } = useTranslation();
@@ -74,7 +75,7 @@ export function TeacherMilestoneRecordPage() {
       <h1 className="text-lg font-semibold text-on-surface">{t('milestones.recordTitle')}</h1>
       <div className="space-y-2 rounded-3xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm">
         <label className="text-sm">{t('milestones.child')}</label>
-        <select
+        <Select
           className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm"
           value={childId}
           onChange={(e) => {
@@ -84,7 +85,7 @@ export function TeacherMilestoneRecordPage() {
         >
           <option value="">{t('milestones.selectChild')}</option>
           {milestones.children.map((c) => <option key={c.id} value={c.id}>{i18n.language === 'ar' ? c.full_name_ar : c.full_name_en}</option>)}
-        </select>
+        </Select>
       </div>
       <MilestoneForm value={form} childAge={childAge} onChange={setForm} onSubmit={onSubmit} />
     </div>

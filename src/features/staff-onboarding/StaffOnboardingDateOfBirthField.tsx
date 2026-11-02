@@ -3,6 +3,7 @@ import { Controller, useFormContext, useFormState, type ControllerRenderProps } 
 import { useTranslation } from 'react-i18next';
 
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import { staffDateOfBirthBounds } from '@/lib/onboardingDateBounds';
 import { cn } from '@/lib/utils';
 
@@ -79,7 +80,7 @@ function DateOfBirthPickers({
     <div className="space-y-1" data-staff-field="dateOfBirth">
       <Label htmlFor="staff-dob-year">{t('staffOnboarding.step5.dob')} *</Label>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <select
+        <Select
           id="staff-dob-year"
           aria-invalid={Boolean(err)}
           aria-describedby={err ? 'dateOfBirth-err' : undefined}
@@ -106,8 +107,8 @@ function DateOfBirthPickers({
               {y}
             </option>
           ))}
-        </select>
-        <select
+        </Select>
+        <Select
           id="staff-dob-month"
           aria-invalid={Boolean(err)}
           aria-describedby={err ? 'dateOfBirth-err' : undefined}
@@ -137,8 +138,8 @@ function DateOfBirthPickers({
               {mo.label}
             </option>
           ))}
-        </select>
-        <select
+        </Select>
+        <Select
           id="staff-dob-day"
           aria-invalid={Boolean(err)}
           aria-describedby={err ? 'dateOfBirth-err' : undefined}
@@ -167,7 +168,7 @@ function DateOfBirthPickers({
               {d}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
       {err ? (
         <p id="dateOfBirth-err" className="mt-1 text-sm text-error" role="alert">

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Textarea } from '@/components/ui/textarea';
+import { Select } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import type { AnswerValue, AnswersMap, FormQuestion } from '@/types/survey';
 
@@ -317,7 +318,7 @@ function QuestionStep({ question, answer, onChange, error }: QuestionStepProps) 
         )}
 
         {question.type === 'dropdown' && (
-          <select
+          <Select
             className="h-11 w-full rounded-xl border border-outline-variant bg-surface px-4 text-sm text-foreground"
             value={String(answer ?? '')}
             onChange={(e) => onChange(e.target.value)}
@@ -328,7 +329,7 @@ function QuestionStep({ question, answer, onChange, error }: QuestionStepProps) 
                 {opt}
               </option>
             ))}
-          </select>
+          </Select>
         )}
 
         {question.type === 'linear_scale' && (

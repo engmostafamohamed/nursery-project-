@@ -22,6 +22,8 @@ import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
+import { PackageSubscriptionStats } from '@/components/admin/packages/PackageSubscriptionStats';
+import type { PackageSubscriptionsView } from '@/hooks/usePackageSubscriptionsView';
 import {
   useAdminTuitionPackages,
   type TuitionFeature,
@@ -91,11 +93,14 @@ export function TuitionPackagesEditor({
   nurseryId,
   assignOpen,
   onAssignOpenChange,
+  subscriptions,
 }: {
   nurseryId?: string | null;
   /** Lets the page open the "assign to children" dialog too (e.g. from a stat tile). */
   assignOpen?: boolean;
   onAssignOpenChange?: (open: boolean) => void;
+  /** The Packages page's subscriptions: each card then shows its own (instead of a children count). */
+  subscriptions?: PackageSubscriptionsView;
 }) {
   const { t, i18n } = useTranslation();
   const isAr = i18n.language.startsWith('ar');
@@ -389,9 +394,10 @@ export function TuitionPackagesEditor({
                   description={isAr ? pkg.description_ar || pkg.description_en : pkg.description_en || pkg.description_ar}
                   features={pkg.features_json.map((feature) => (isAr ? feature.ar || feature.en : feature.en || feature.ar)).filter(Boolean)}
                   emptyHint={t('packageCard.noDetails')}
+                  subscriptions={subscriptions ? <PackageSubscriptionStats view={subscriptions} packageId={pkg.id} /> : undefined}
                   facts={[
                     ...(hoursRangeLabel ? [{ icon: 'schedule', label: hoursRangeLabel }] : []),
-                    { icon: 'groups', label: t('packages.assignedCount', { count: pkg.subscribed_count }) },
+                    ...(subscriptions ? [] : [{ icon: 'groups', label: t('packages.assignedCount', { count: pkg.subscribed_count }) }]),
                   ]}
                   actions={
                     <>

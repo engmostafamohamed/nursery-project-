@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useCommunity } from '@/hooks/useCommunity';
 import { useSettings } from '@/lib/useSettings';
@@ -25,9 +26,9 @@ export function ParentCommunityPage() {
         <Input placeholder={t('community.title')} value={title} onChange={(e) => setTitle(e.target.value)} />
         <Input placeholder={t('community.content')} value={content} onChange={(e) => setContent(e.target.value)} />
         <div className="grid gap-2 md:grid-cols-2">
-          <select className="h-11 rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={postType} onChange={(e) => setPostType(e.target.value as 'announcement' | 'tip' | 'question')}>
+          <Select className="h-11 rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={postType} onChange={(e) => setPostType(e.target.value as 'announcement' | 'tip' | 'question')}>
             {(['tip', 'question'] as const).map((p) => <option key={p} value={p}>{t(`community.postTypes.${p}`)}</option>)}
-          </select>
+          </Select>
           <Button
             onClick={() => {
               if (!nurseryId || !user?.id || !title || !content) return;

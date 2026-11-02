@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import type { AllergySeverity, ChildAllergiesRow } from '@/types/tables/child_health';
 
 type Props = {
@@ -76,7 +77,7 @@ export function HealthAllergyDialog({ open, onOpenChange, initial, onSubmit, isB
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="sev">{t('health.fields.severity')}</Label>
-            <select
+            <Select
               id="sev"
               className="h-10 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm"
               value={fields.severity}
@@ -87,7 +88,7 @@ export function HealthAllergyDialog({ open, onOpenChange, initial, onSubmit, isB
                   {t(`health.severity.allergy.${s}`)}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="treat">{t('health.fields.treatment')}</Label>

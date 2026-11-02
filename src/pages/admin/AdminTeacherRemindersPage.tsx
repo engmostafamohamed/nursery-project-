@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
+import { Select } from '@/components/ui/select';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import {
@@ -191,7 +192,7 @@ export function AdminTeacherRemindersPage() {
               <span className="mb-1 block text-xs font-medium text-on-surface-variant">
                 {t('teacherReminders.fieldTeacher')}
               </span>
-              <select
+              <Select
                 value={form.teacher_id}
                 onChange={(e) => setForm((f) => ({ ...f, teacher_id: e.target.value }))}
                 className="h-10 w-full rounded-xl border border-outline-variant bg-surface px-3 text-sm outline-none focus:ring-1 focus:ring-primary"
@@ -202,7 +203,7 @@ export function AdminTeacherRemindersPage() {
                     {tc.name_en || tc.name_ar || tc.id}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

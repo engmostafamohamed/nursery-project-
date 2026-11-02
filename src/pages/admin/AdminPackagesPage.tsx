@@ -21,6 +21,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/select';
 import { StatTile } from '@/components/ui/StatTile';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PackageSubscriptionStats, PackageSubscriptionsDialog } from '@/components/admin/packages/PackageSubscriptionStats';
 import { PackageSubscriptionsPanel } from '@/components/admin/packages/PackageSubscriptionsPanel';
 import { AdminPackageCard } from '@/components/admin/settings/AdminPackageCard';
 import { dealDiscountLabel, localizedName } from '@/components/admin/settings/dealLabels';
@@ -35,6 +36,7 @@ import { useAdminTuitionPackages } from '@/hooks/useAdminTuitionPackages';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useBulkTuitionAssignment } from '@/hooks/useBulkTuitionAssignment';
 import { useNurseryChildrenPicker } from '@/hooks/useNurseryChildrenPicker';
+import { usePackageSubscriptionsView } from '@/hooks/usePackageSubscriptionsView';
 import { usePagination } from '@/hooks/usePagination';
 import { useTouchedFields } from '@/hooks/useTouchedFields';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -258,7 +260,7 @@ export function AdminPackagesPage() {
     return [...tuitionRows, ...rows].filter((p) => p.deal_id && live.has(p.deal_id)).length;
   }, [dealsQuery.data, tuitionRows, rows]);
   const activeTuition = tuitionRows.filter((p) => p.active).length;
-  // Every package of both kinds, so the subscriptions card also shows the ones nobody has taken.
+  // Every package of both kinds, so a package nobody has taken still gets its (zero) numbers.
   const catalog = useMemo<CatalogPackage[]>(
     () => [
       ...tuitionRows.map((p) => ({ id: p.id, kind: 'tuition' as const, name_ar: p.name_ar, name_en: p.name_en, active: p.active })),
@@ -266,6 +268,8 @@ export function AdminPackagesPage() {
     ],
     [tuitionRows, rows],
   );
+  // One period for the totals card and every package card, so their numbers always agree.
+  const subscriptions = usePackageSubscriptionsView(nurseryId, catalog);
   const basePath = useLocation().pathname.startsWith('/xo-admin') ? '/xo-admin/nursery' : '/admin';
 
   const hasActiveFilters = Boolean(search || statusFilter !== 'all' || coverageFilter !== 'all' || dealFilter !== 'all');
@@ -411,7 +415,7 @@ export function AdminPackagesPage() {
         </div>
       </PageHeader>
 
-      <PackageSubscriptionsPanel nurseryId={nurseryId} catalog={catalog} basePath={basePath} />
+      <PackageSubscriptionsPanel view={subscriptions} basePath={basePath} />
 
       <Tabs value={tab} onValueChange={(value: string) => setTab(value as 'fixed' | 'hours')}>
         <TabsList>
@@ -427,7 +431,12 @@ export function AdminPackagesPage() {
 
         <TabsContent value="fixed" className="space-y-5">
           <PackageSectionTextsCard nurseryId={nurseryId} section="tuition" />
-          <TuitionPackagesEditor nurseryId={nurseryId} assignOpen={assignOpen} onAssignOpenChange={setAssignOpen} />
+          <TuitionPackagesEditor
+            nurseryId={nurseryId}
+            assignOpen={assignOpen}
+            onAssignOpenChange={setAssignOpen}
+            subscriptions={subscriptions}
+          />
         </TabsContent>
 
         <TabsContent value="hours" className="space-y-5">
@@ -517,6 +526,7 @@ export function AdminPackagesPage() {
                       deal={deal ? { label: live ? dealLabel : t('deals.inactiveSuffix', { label: dealLabel }), live } : null}
                       description={isAr ? p.description_ar || p.description_en : p.description_en || p.description_ar}
                       emptyHint={t('packageCard.noDescription')}
+                      subscriptions={<PackageSubscriptionStats view={subscriptions} packageId={p.id} />}
                       facts={[
                         {
                           icon: 'more_time',
@@ -529,7 +539,6 @@ export function AdminPackagesPage() {
                               ? t('packages.validityLabel', { value: p.validity_value, unit: t(`packages.validityUnit.${p.validity_unit}`) })
                               : t('packages.validityNever'),
                         },
-                        { icon: 'groups', label: t('packages.assignedCount', { count: p.assigned_count }) },
                       ]}
                       actions={
                         <>
@@ -606,7 +615,7 @@ export function AdminPackagesPage() {
                   <span className="mb-1 block text-xs font-medium text-on-surface-variant">
                     {t('packages.fieldType')}
                   </span>
-                  <select
+                  <Select
                     value={form.coverage_type}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, coverage_type: e.target.value as CoverageType }))
@@ -615,7 +624,7 @@ export function AdminPackagesPage() {
                   >
                     <option value="unlimited">{t('packages.optUnlimited')}</option>
                     <option value="hours_quota">{t('packages.optQuota')}</option>
-                  </select>
+                  </Select>
                 </label>
                 <label className="block">
                   <span className="mb-1 block text-xs font-medium text-on-surface-variant">
@@ -683,7 +692,7 @@ export function AdminPackagesPage() {
                   <span className="mb-1 block text-xs font-medium text-on-surface-variant">
                     {t('packages.fieldValidityUnit')}
                   </span>
-                  <select
+                  <Select
                     value={form.validity_unit ?? ''}
                     aria-invalid={Boolean(validityUnitError)}
                     onBlur={() => fields.touch('validityUnit')}
@@ -699,7 +708,7 @@ export function AdminPackagesPage() {
                     <option value="">{t('packages.validityNever')}</option>
                     <option value="months">{t('packages.validityUnit.months')}</option>
                     <option value="years">{t('packages.validityUnit.years')}</option>
-                  </select>
+                  </Select>
                   <FieldError message={validityUnitError} className="mt-1" />
                 </label>
               </div>
@@ -767,6 +776,8 @@ export function AdminPackagesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <PackageSubscriptionsDialog view={subscriptions} basePath={basePath} />
 
       {managePkg && nurseryId ? (
         <ManageChildrenDialog

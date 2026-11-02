@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import { childDateOfBirthBounds } from '@/lib/onboardingDateBounds';
 import { cn } from '@/lib/utils';
 
@@ -69,7 +70,7 @@ export function ChildEnrollmentChildStep({ files, onFilesChange }: Props) {
         </div>
         <div className="space-y-1">
           <Label htmlFor="child-gender">{t('childEnrollment.step1.gender')} *</Label>
-          <select
+          <Select
             id="child-gender"
             aria-invalid={Boolean(genderErr)}
             className={cn(
@@ -81,7 +82,7 @@ export function ChildEnrollmentChildStep({ files, onFilesChange }: Props) {
             <option value="">{t('childEnrollment.step2.select')}</option>
             <option value="male">{t('common.genderMale')}</option>
             <option value="female">{t('common.genderFemale')}</option>
-          </select>
+          </Select>
           {genderErr ? (
             <p className="text-sm text-destructive" role="alert">
               {t(genderErr)}

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { Select } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
 type Props = {
@@ -80,7 +81,7 @@ export function Pagination({
         {canResize ? (
           <label className="flex items-center gap-2 text-xs text-on-surface-variant">
             {t('common.rowsPerPage')}
-            <select
+            <Select
               value={pageSize}
               onChange={(e) => onPageSizeChange?.(Number(e.target.value))}
               className="h-9 rounded-lg border border-outline-variant bg-surface px-2 text-xs font-medium text-on-surface"
@@ -88,7 +89,7 @@ export function Pagination({
               {pageSizeOptions.map((size) => (
                 <option key={size} value={size}>{size}</option>
               ))}
-            </select>
+            </Select>
           </label>
         ) : null}
         {pageCount > 1 ? (

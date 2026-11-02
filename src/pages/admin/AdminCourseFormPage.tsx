@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
+import { Select } from '@/components/ui/select';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useNurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
@@ -278,7 +279,7 @@ function AdminCourseFormPage({ mode }: { mode: 'create' | 'edit' }) {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="category">{t('admin.courses.form.category')}</Label>
-            <select
+            <Select
               id="category"
               className="h-11 w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface"
               {...form.register('category')}
@@ -286,11 +287,11 @@ function AdminCourseFormPage({ mode }: { mode: 'create' | 'edit' }) {
               {CATEGORIES.map((c) => (
                 <option key={c} value={c}>{t(`admin.courses.categories.${c}`)}</option>
               ))}
-            </select>
+            </Select>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="status">{t('admin.courses.form.status')}</Label>
-            <select
+            <Select
               id="status"
               className="h-11 w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface"
               {...form.register('status')}
@@ -298,14 +299,14 @@ function AdminCourseFormPage({ mode }: { mode: 'create' | 'edit' }) {
               {STATUSES.map((s) => (
                 <option key={s} value={s}>{t(`admin.courses.status.${s}`)}</option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
 
         {/* Teacher */}
         <div className="space-y-1.5">
           <Label htmlFor="teacher_user_id">{t('admin.courses.form.teacher')}</Label>
-          <select
+          <Select
             id="teacher_user_id"
             className="h-11 w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface"
             {...form.register('teacher_user_id')}
@@ -314,7 +315,7 @@ function AdminCourseFormPage({ mode }: { mode: 'create' | 'edit' }) {
             {teachers.map((u) => (
               <option key={u.id} value={u.id}>{u.name_en || u.name_ar}</option>
             ))}
-          </select>
+          </Select>
         </div>
 
         {/* Price + Max Students */}

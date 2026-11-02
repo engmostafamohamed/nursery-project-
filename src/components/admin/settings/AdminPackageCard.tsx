@@ -27,6 +27,8 @@ type Props = {
   features?: string[];
   /** Shown when there is neither a description nor features, nudging the admin to add them. */
   emptyHint: string;
+  /** Who is subscribed and how much is paid, above the facts (the Packages page). */
+  subscriptions?: ReactNode;
   /** Short facts at the bottom: hours, coverage, validity, children. */
   facts: Array<{ icon: string; label: string }>;
   actions: ReactNode;
@@ -47,6 +49,7 @@ export function AdminPackageCard({
   description,
   features = [],
   emptyHint,
+  subscriptions,
   facts,
   actions,
 }: Props) {
@@ -140,6 +143,7 @@ export function AdminPackageCard({
       ) : null}
 
       <div className="mt-auto pt-4">
+        {subscriptions}
         <ul className="flex flex-wrap gap-1.5">
           {facts.map((fact) => (
             <li

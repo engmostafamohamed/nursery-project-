@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { ActionGate } from '@/components/shared/ActionGate';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { useInventory } from '@/hooks/useInventory';
 import { useSettings } from '@/lib/useSettings';
 
@@ -23,9 +24,9 @@ export function AdminInventoryPage() {
       <ActionGate feature="inventory" action="create">
       <section className="grid gap-2 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 md:grid-cols-4">
         <Input placeholder={t('inventory.itemName')} value={itemName} onChange={(e) => setItemName(e.target.value)} />
-        <select className="h-11 rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={category} onChange={(e) => setCategory(e.target.value as 'supplies' | 'toys' | 'furniture' | 'food')}>
+        <Select className="h-11 rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={category} onChange={(e) => setCategory(e.target.value as 'supplies' | 'toys' | 'furniture' | 'food')}>
           {(['supplies', 'toys', 'furniture', 'food'] as const).map((c) => <option key={c} value={c}>{t(`inventory.categories.${c}`)}</option>)}
-        </select>
+        </Select>
         <Input type="number" value={quantity} onChange={(e) => setQuantity(Number(e.target.value || 0))} />
         <Input type="number" value={threshold} onChange={(e) => setThreshold(Number(e.target.value || 0))} />
         <Button

@@ -15,6 +15,7 @@ dist-ssr
 .env.*
 !.env.example
 !.env.production.example
+docs
 
 # Editor directories and files
 .claude/

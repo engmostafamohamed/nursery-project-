@@ -2,6 +2,10 @@ import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
+/**
+ * The app's dropdown: a native select boxed like Input. The arrow and, where the browser allows
+ * it, the open list's look (matching FilterMenu) come from `select` rules in index.css.
+ */
 const Select = React.forwardRef<HTMLSelectElement, React.ComponentProps<'select'>>(
   ({ className, children, ...props }, ref) => (
     <select

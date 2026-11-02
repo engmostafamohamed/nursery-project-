@@ -15,6 +15,7 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
 }
 
 import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { usePositions } from '@/hooks/usePositions';
@@ -185,7 +186,7 @@ export function StaffOnboardingStepPanels({
           ) : (
             <div className="space-y-2" data-staff-field="existingUserId">
               <Label htmlFor="existingUserId">{t('staffOnboarding.step1.pickParent')} *</Label>
-              <select
+              <Select
                 id="existingUserId"
                 aria-invalid={Boolean(errors.existingUserId)}
                 aria-describedby={errors.existingUserId ? 'existingUserId-err' : undefined}
@@ -201,7 +202,7 @@ export function StaffOnboardingStepPanels({
                     {p.name_ar} / {p.name_en} — {p.phone ?? '—'}
                   </option>
                 ))}
-              </select>
+              </Select>
               {errors.existingUserId?.message ? (
                 <p id="existingUserId-err" className="mt-1 text-sm text-error" role="alert">
                   {translateStaffFieldErrorMessage(t, errors.existingUserId.message as string)}
@@ -230,7 +231,7 @@ export function StaffOnboardingStepPanels({
             <StaffOnboardingDateOfBirthField />
             <div className="space-y-1" data-staff-field="gender">
               <Label htmlFor="staff-gender">{t('staffOnboarding.step5.gender')} *</Label>
-              <select
+              <Select
                 id="staff-gender"
                 aria-invalid={Boolean(errors.gender)}
                 className={cn(
@@ -244,7 +245,7 @@ export function StaffOnboardingStepPanels({
                 </option>
                 <option value="male">{t('common.genderMale')}</option>
                 <option value="female">{t('common.genderFemale')}</option>
-              </select>
+              </Select>
               {errors.gender?.message ? (
                 <p className="mt-1 text-sm text-error" role="alert">
                   {translateStaffFieldErrorMessage(t, errors.gender.message as string)}
@@ -253,7 +254,7 @@ export function StaffOnboardingStepPanels({
             </div>
             <div className="space-y-1" data-staff-field="maritalStatus">
               <Label htmlFor="staff-marital">{t('staffOnboarding.step5.marital')}</Label>
-              <select
+              <Select
                 id="staff-marital"
                 className={cn(
                   'h-11 w-full rounded-lg border border-outline-variant bg-surface px-3 text-sm text-foreground',
@@ -266,7 +267,7 @@ export function StaffOnboardingStepPanels({
                 <option value="married">{t('staffOnboarding.marital.married')}</option>
                 <option value="divorced">{t('staffOnboarding.marital.divorced')}</option>
                 <option value="widowed">{t('staffOnboarding.marital.widowed')}</option>
-              </select>
+              </Select>
             </div>
             <Field name="dependents" label={t('staffOnboarding.step5.dependents')} type="number" min="0" max="20" />
           </div>
@@ -285,7 +286,7 @@ export function StaffOnboardingStepPanels({
           <Field name="employeeId" label={t('staffOnboarding.step2.employeeId')} placeholder="EMP-XXXXXX" />
           <div className="space-y-1" data-staff-field="position">
             <Label htmlFor="staff-position">{t('staffOnboarding.step2.position')} *</Label>
-            <select
+            <Select
               id="staff-position"
               aria-invalid={Boolean(errors.position)}
               className={cn(
@@ -301,7 +302,7 @@ export function StaffOnboardingStepPanels({
                   {lang === 'ar' ? p.name_ar : p.name_en}
                 </option>
               ))}
-            </select>
+            </Select>
             {errors.position?.message ? (
               <p className="mt-1 text-sm text-error" role="alert">
                 {translateStaffFieldErrorMessage(t, errors.position.message as string)}
@@ -323,7 +324,7 @@ export function StaffOnboardingStepPanels({
           </div>
           <div className="space-y-1">
             <Label htmlFor="staff-employment-type">{t('staffOnboarding.step2.employmentType')}</Label>
-            <select
+            <Select
               id="staff-employment-type"
               className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm"
               {...register('employmentType')}
@@ -333,7 +334,7 @@ export function StaffOnboardingStepPanels({
               <option value="temporary">{t('staffOnboarding.employment.temporary')}</option>
               <option value="contract">{t('staffOnboarding.employment.contract')}</option>
               <option value="intern">{t('staffOnboarding.employment.intern')}</option>
-            </select>
+            </Select>
           </div>
           <Field name="startDate" label={t('staffOnboarding.step2.startDate')} type="date" required ariaRequired />
         </div>
@@ -464,7 +465,7 @@ export function StaffOnboardingStepPanels({
                 <Label htmlFor="staff-criminal-status">
                   {t('staffOnboarding.step6.criminalStatus')} *
                 </Label>
-                <select
+                <Select
                   id="staff-criminal-status"
                   aria-invalid={Boolean(errors.criminalStatus)}
                   className={cn(
@@ -477,7 +478,7 @@ export function StaffOnboardingStepPanels({
                   <option value="clear">{t('staffOnboarding.criminalStatusOptions.clear')}</option>
                   <option value="pending">{t('staffOnboarding.criminalStatusOptions.pending')}</option>
                   <option value="concerns">{t('staffOnboarding.criminalStatusOptions.concerns')}</option>
-                </select>
+                </Select>
                 {errors.criminalStatus?.message ? (
                   <p className="mt-1 text-sm text-error" role="alert">
                     {translateStaffFieldErrorMessage(t, errors.criminalStatus.message as string)}
@@ -540,11 +541,11 @@ export function StaffOnboardingStepPanels({
         </p>
         <div className="space-y-1">
           <Label>{t('staffOnboarding.step3.paymentMethod')}</Label>
-          <select className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" {...register('paymentMethod')}>
+          <Select className="h-11 w-full rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" {...register('paymentMethod')}>
             <option value="bank_transfer">{t('staffOnboarding.payment.bank')}</option>
             <option value="cash">{t('staffOnboarding.payment.cash')}</option>
             <option value="check">{t('staffOnboarding.payment.check')}</option>
-          </select>
+          </Select>
         </div>
         {paymentMethod === 'bank_transfer' && (
           <div className="grid gap-3 md:grid-cols-2">

@@ -9,6 +9,7 @@ import { StatusPill, TableCard } from '@/components/ui/DataTable';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatTile } from '@/components/ui/StatTile';
 import { useAttendanceKpis, useAttendancePeriodKpis, type Kpis, type PeriodKpis, type TopLateRow } from '@/hooks/useAttendanceKpis';
+import { useMoney } from '@/hooks/useMoney';
 import { usePeriodState } from '@/hooks/usePeriodState';
 import { toLocalDateString } from '@/lib/attendanceAnalytics';
 import { childRecordLink, keepTile, PERIOD_TILES, TODAY_TILES, type KpiTile, type PeriodTile, type TodayTile } from '@/lib/attendanceKpiDetails';
@@ -170,11 +171,6 @@ function LoadError({ onRetry }: { onRetry: () => void }) {
       </Button>
     </div>
   );
-}
-
-function useMoney() {
-  const { t } = useTranslation();
-  return (n: number | null) => t('invoice.egpAmount', { amount: formatMoneyAmount(Number(n ?? 0)) });
 }
 
 /**
