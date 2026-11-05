@@ -39,3 +39,15 @@ export async function upsertPushSubscription(
     return { error: e instanceof Error ? e : new Error('push_subscription_failed') };
   }
 }
+
+export async function deletePushSubscription(
+  userId: string,
+  endpoint: string,
+): Promise<{ error: Error | null }> {
+  const { error } = await supabase
+    .from('user_push_subscriptions')
+    .delete()
+    .eq('user_id', userId)
+    .eq('endpoint', endpoint);
+  return { error };
+}

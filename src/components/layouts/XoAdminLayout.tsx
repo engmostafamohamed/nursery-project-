@@ -7,6 +7,7 @@ import { AdminUserMenu } from '@/components/admin/AdminUserMenu';
 import { HelpAiBundle } from '@/components/help/HelpAiBundle';
 import { BackButton } from '@/components/shared/BackButton';
 import { OfflineIndicator } from '@/components/shared/OfflineIndicator';
+import { PushNotificationsHost } from '@/components/shared/PushNotificationsHost';
 import { PWAInstallPrompt } from '@/components/shared/PWAInstallPrompt';
 import { Button } from '@/components/ui/button';
 import { LanguageToggle } from '@/components/LanguageToggle';
@@ -365,6 +366,7 @@ export function XoAdminLayout() {
         role="admin"
       />
       <ReminderAlertHost />
+      <PushNotificationsHost />
       <HelpAiBundle layoutRole="admin" />
       <ChatWidget
         role="admin"

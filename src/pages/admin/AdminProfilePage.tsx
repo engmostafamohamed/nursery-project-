@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
+import { PushNotificationsCard } from '@/components/settings/PushNotificationsCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -130,6 +131,8 @@ export function AdminProfilePage() {
           {saveMutation.isPending ? t('common.saving') : t('admin.profile.save')}
         </Button>
       </form>
+      {/* Managers and teacher-managers have no /admin/settings; this page is open to everyone here. */}
+      <PushNotificationsCard />
     </div>
   );
 }

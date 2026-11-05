@@ -10,15 +10,14 @@ import { ReminderAlertHost } from '@/components/notifications/ReminderAlertHost'
 import { BackButton } from '@/components/shared/BackButton';
 import { FeatureRouteGuard } from '@/components/shared/FeatureRouteGuard';
 import { OfflineIndicator } from '@/components/shared/OfflineIndicator';
+import { PushNotificationsHost } from '@/components/shared/PushNotificationsHost';
 import { PWAInstallPrompt } from '@/components/shared/PWAInstallPrompt';
 import { UserMenu } from '@/components/shared/UserMenu';
-import { Button } from '@/components/ui/button';
 import { ChatWidget } from '@/components/chat/ChatWidget';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useNurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
 import { useAllowedFeatures, usePermissionsReady } from '@/hooks/usePermissions';
-import { useWebPushSetup } from '@/hooks/useWebPushSetup';
 import { useNotificationsCenter } from '@/hooks/useNotificationsCenter';
 import { useUnreadMessagesCount } from '@/hooks/useUnreadMessagesCount';
 import { isHelpPanelEnabled } from '@/lib/helpAiPreferences';
@@ -86,7 +85,6 @@ export function TeacherLayout() {
     () => notifications.filter((item) => !item.read).length,
     [notifications],
   );
-  const { showPrompt, enablePush, dismissPrompt } = useWebPushSetup(user?.id);
 
   // Dynamic feature-based filtering from the role the nursery admin gave this user.
   // Until the grants load, allowedSet is null and both arrays render fully
@@ -230,16 +228,6 @@ export function TeacherLayout() {
 
       <main className="mx-auto max-w-4xl px-4 py-6 lg:max-w-none lg:px-8">
         <PWAInstallPrompt />
-        {showPrompt ? (
-          <div className="mb-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
-            <p className="text-sm font-semibold text-on-surface">{t('push.promptTitle')}</p>
-            <p className="mt-1 text-xs text-on-surface-variant">{t('push.promptBodyTeacher')}</p>
-            <div className="mt-3 flex gap-2">
-              <Button size="sm" onClick={() => void enablePush()}>{t('push.allow')}</Button>
-              <Button size="sm" variant="outline" onClick={dismissPrompt}>{t('push.notNow')}</Button>
-            </div>
-          </div>
-        ) : null}
         <FeatureRouteGuard homePath="/teacher">
           <Outlet />
         </FeatureRouteGuard>
@@ -364,6 +352,7 @@ export function TeacherLayout() {
         role="teacher"
       />
       <ReminderAlertHost />
+      <PushNotificationsHost />
       <HelpAiBundle layoutRole="teacher" />
       <ChatWidget
         role="teacher"

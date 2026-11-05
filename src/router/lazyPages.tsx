@@ -417,8 +417,8 @@ export const XoAdminPaymentsPage = lazy(() =>
 export const XoAdminSettingsPage = lazy(() =>
   import('@/pages/xo-admin/XoAdminSettingsPage').then((m) => ({ default: m.XoAdminSettingsPage })),
 );
-export const HelpAiPreferencesPage = lazy(() =>
-  import('@/pages/shared/HelpAiPreferencesPage').then((m) => ({ default: m.HelpAiPreferencesPage })),
+export const PreferencesPage = lazy(() =>
+  import('@/pages/shared/PreferencesPage').then((m) => ({ default: m.PreferencesPage })),
 );
 export const RemindersPage = lazy(() =>
   import('@/pages/shared/RemindersPage').then((m) => ({ default: m.RemindersPage })),

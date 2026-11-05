@@ -325,13 +325,15 @@ export async function confirmAndApprove(n: TestNursery, app: { applicationId: st
 
 /** Signs in through the login form, in English, and waits for the role's home page. */
 export async function signIn(page: Page, person: Person) {
-  await page.addInitScript(() => {
+  await page.addInitScript((userId) => {
     try {
       window.localStorage.setItem('xo_i18nextLng', 'en');
+      // Already answered, so the first-use popup stays out of the way (see push-notifications.spec.ts).
+      window.localStorage.setItem(`xo_push_choice:${userId}`, 'off');
     } catch {
       /* private mode */
     }
-  });
+  }, person.id);
   await page.goto('/login');
   await page.locator('#email').fill(person.email);
   await page.locator('#password').fill(person.password);

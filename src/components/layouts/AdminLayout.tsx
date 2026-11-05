@@ -11,6 +11,7 @@ import { ReminderAlertHost } from '@/components/notifications/ReminderAlertHost'
 import { BackButton } from '@/components/shared/BackButton';
 import { FeatureRouteGuard } from '@/components/shared/FeatureRouteGuard';
 import { OfflineIndicator } from '@/components/shared/OfflineIndicator';
+import { PushNotificationsHost } from '@/components/shared/PushNotificationsHost';
 import { PWAInstallPrompt } from '@/components/shared/PWAInstallPrompt';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -477,6 +478,7 @@ export function AdminLayout() {
         role="admin"
       />
       <ReminderAlertHost />
+      <PushNotificationsHost />
       <HelpAiBundle layoutRole="admin" />
       <ChatWidget
         role="admin"

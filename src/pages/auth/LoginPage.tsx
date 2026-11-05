@@ -145,7 +145,12 @@ export function LoginPage() {
   };
 
   if (loading) return <PageSkeleton />;
-  if (session) return <Navigate to={returnTo && returnTo !== '/login' ? returnTo : '/'} replace />;
+  if (session) {
+    if (!returnTo || returnTo === '/login') return <Navigate to="/" replace />;
+    // The page may be left over from whoever used this browser before; ProtectedRoute reads this
+    // to send them home instead of refusing them.
+    return <Navigate to={returnTo} replace state={{ afterSignIn: true }} />;
+  }
 
   return (
     <div className="min-h-screen bg-background">

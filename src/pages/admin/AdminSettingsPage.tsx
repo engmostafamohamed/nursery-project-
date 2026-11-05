@@ -8,6 +8,7 @@ import { ParentRegistrationTemplatesEditor } from '@/components/admin/settings/P
 import { TuitionPackagesEditor } from '@/components/admin/settings/TuitionPackagesEditor';
 import { TenantExportCard } from '@/components/admin/settings/TenantExportCard';
 import { HelpAiPreferencesCard } from '@/components/settings/HelpAiPreferencesCard';
+import { PushNotificationsCard } from '@/components/settings/PushNotificationsCard';
 import {
   DEFAULT_SETTINGS,
   getTabConfig,
@@ -241,6 +242,7 @@ export function AdminSettingsPage() {
       </Dialog>
     </div>
     <TenantExportCard enabled={Boolean(profile?.nursery_id)} />
+    <PushNotificationsCard />
     <HelpAiPreferencesCard />
     </div>
   );

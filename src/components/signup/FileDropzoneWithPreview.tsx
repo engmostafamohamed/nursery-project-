@@ -1,18 +1,23 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Label } from '@/components/ui/label';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import {
+  MAX_SIGNUP_DOCUMENTS_BYTES,
+  prepareSignupFile,
+  SIGNUP_FILE_TYPES,
+  type SignupFileProblem,
+} from '@/features/parent-signup/signupFileLimits';
 import { cn } from '@/lib/utils';
-
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
-const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
 
 type Props = {
   label: string;
   hint?: string;
   file: File | null;
   onChange: (file: File | null) => void;
+  /** What this file may take: the room the form's other files leave (see signupFreeBytes). */
+  freeBytes: number;
   required?: boolean;
   error?: string;
 };
@@ -23,10 +28,11 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function FileDropzoneWithPreview({ label, hint, file, onChange, required, error }: Props) {
+export function FileDropzoneWithPreview({ label, hint, file, onChange, freeBytes, required, error }: Props) {
   const { t } = useTranslation();
   const [preview, setPreview] = useState<{ file: File; url: string } | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [preparing, setPreparing] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -41,40 +47,58 @@ export function FileDropzoneWithPreview({ label, hint, file, onChange, required,
   // A preview made for an earlier file is never shown.
   const previewUrl = preview && preview.file === file ? preview.url : null;
 
-  const validateAndSet = useCallback(
-    (next: File | null) => {
-      setLocalError(null);
-      if (!next) {
-        onChange(null);
-        return;
-      }
-      if (!ACCEPTED_TYPES.includes(next.type)) {
-        setLocalError(t('signup.fileUpload.invalidType'));
-        return;
-      }
-      if (next.size > MAX_FILE_SIZE_BYTES) {
-        setLocalError(t('signup.fileUpload.tooLarge'));
-        return;
-      }
-      onChange(next);
-    },
-    [onChange, t],
-  );
+  const problemMessage = (problem: SignupFileProblem): string => {
+    switch (problem.reason) {
+      case 'invalid_type':
+        return t('signup.fileUpload.invalidType');
+      case 'too_large':
+        return t('signup.fileUpload.tooLarge', { size: formatBytes(problem.sizeBytes), max: formatBytes(problem.maxBytes) });
+      case 'no_room':
+        return t('signup.fileUpload.noRoom', {
+          size: formatBytes(problem.sizeBytes),
+          free: formatBytes(problem.freeBytes),
+          total: formatBytes(MAX_SIGNUP_DOCUMENTS_BYTES),
+        });
+    }
+  };
+
+  const choose = async (next: File | undefined) => {
+    if (!next) return;
+    setLocalError(null);
+    setPreparing(true);
+    const prepared = await prepareSignupFile(next, freeBytes);
+    setPreparing(false);
+    if (prepared.problem) {
+      setLocalError(problemMessage(prepared.problem));
+      return;
+    }
+    onChange(prepared.file);
+  };
+
+  const remove = () => {
+    setLocalError(null);
+    onChange(null);
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    validateAndSet(e.target.files?.[0] ?? null);
+    const next = e.target.files?.[0];
+    // So choosing the same file again, after making room for it, still reaches here.
+    e.target.value = '';
+    void choose(next);
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setDragOver(false);
-    validateAndSet(e.dataTransfer.files?.[0] ?? null);
+    if (!preparing) void choose(e.dataTransfer.files?.[0]);
   };
 
   const effectiveError = error ?? localError;
   const isPdf = useMemo(() => file && file.type === 'application/pdf', [file]);
 
-  const openPicker = () => inputRef.current?.click();
+  const openPicker = () => {
+    if (!preparing) inputRef.current?.click();
+  };
 
   return (
     <div className="space-y-1.5">
@@ -102,7 +126,7 @@ export function FileDropzoneWithPreview({ label, hint, file, onChange, required,
           </div>
           <button
             type="button"
-            onClick={() => validateAndSet(null)}
+            onClick={remove}
             className="rounded-full p-1.5 text-on-surface-variant hover:bg-surface-container hover:text-error"
             aria-label={t('signup.fileUpload.remove')}
           >
@@ -126,15 +150,23 @@ export function FileDropzoneWithPreview({ label, hint, file, onChange, required,
           }}
           role="button"
           tabIndex={0}
+          aria-busy={preparing}
           className={cn(
-            'flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 transition-colors',
+            'flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 transition-colors',
+            preparing ? 'cursor-progress' : 'cursor-pointer',
             dragOver
               ? 'border-primary bg-primary/5'
               : 'border-outline-variant bg-surface-container-lowest hover:border-primary/60 hover:bg-primary/5',
+            effectiveError && !dragOver && 'border-error/50',
           )}
         >
-          <MaterialSymbol name="cloud_upload" className="text-4xl text-on-surface-variant" />
-          <p className="text-sm font-medium text-on-surface">{t('signup.fileUpload.dropOrBrowse')}</p>
+          <MaterialSymbol
+            name={preparing ? 'progress_activity' : 'cloud_upload'}
+            className={cn('text-4xl text-on-surface-variant', preparing && 'animate-spin')}
+          />
+          <p className="text-sm font-medium text-on-surface">
+            {t(preparing ? 'signup.fileUpload.preparing' : 'signup.fileUpload.dropOrBrowse')}
+          </p>
           <p className="text-xs text-on-surface-variant">{t('signup.fileUpload.accepted')}</p>
         </div>
       )}
@@ -142,13 +174,13 @@ export function FileDropzoneWithPreview({ label, hint, file, onChange, required,
       <input
         ref={inputRef}
         type="file"
-        accept={ACCEPTED_TYPES.join(',')}
+        accept={SIGNUP_FILE_TYPES.join(',')}
         onChange={handleInputChange}
         className="hidden"
       />
 
       {hint && !effectiveError && <p className="text-xs text-on-surface-variant">{hint}</p>}
-      {effectiveError && <p className="text-xs text-error">{effectiveError}</p>}
+      {effectiveError && <p role="alert" className="text-xs text-error">{effectiveError}</p>}
     </div>
   );
 }

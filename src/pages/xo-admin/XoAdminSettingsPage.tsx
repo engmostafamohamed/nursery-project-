@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { AdminNurseryPicker } from '@/components/admin/AdminNurseryPicker';
 import { TenantExportCard } from '@/components/admin/settings/TenantExportCard';
 import { HelpAiPreferencesCard } from '@/components/settings/HelpAiPreferencesCard';
+import { PushNotificationsCard } from '@/components/settings/PushNotificationsCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useActiveNurseryId } from '@/hooks/useActiveNurseryId';
@@ -131,7 +132,10 @@ export function XoAdminSettingsPage() {
           </CardContent>
         </Card>
 
-        <HelpAiPreferencesCard />
+        <div className="space-y-4">
+          <PushNotificationsCard />
+          <HelpAiPreferencesCard />
+        </div>
       </section>
 
       <section className="space-y-3">

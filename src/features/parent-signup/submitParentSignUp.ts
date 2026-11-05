@@ -7,10 +7,9 @@ import {
   buildRegistrationAnswers,
   type RegistrationTemplatePayload,
 } from './registrationTemplates';
+import { SIGNUP_IMAGE_TARGET_MB, signupRequestTooLarge } from './signupFileLimits';
 import type { ApplicationPackageBillingPeriod } from '@/hooks/useApplicationPackagePayment';
 import { isWalletProvider, type ParentPaymentMethodCode } from '@/lib/paymentApi';
-
-const MAX_TOTAL_FILE_PAYLOAD_BYTES = 4.5 * 1024 * 1024;
 
 export class SignupPaymentAfterCreateError extends Error {}
 
@@ -80,24 +79,19 @@ type SignupFilePayload = {
 
 async function fileToPayload(file: File | null): Promise<SignupFilePayload | null> {
   if (!file) return null;
-  const uploadFile = await compressImageForUpload(file);
-  const buffer = await uploadFile.arrayBuffer();
+  const buffer = await file.arrayBuffer();
   let binary = '';
   const bytes = new Uint8Array(buffer);
   for (const byte of bytes) binary += String.fromCharCode(byte);
   return {
-    name: uploadFile.name,
-    type: uploadFile.type || 'application/octet-stream',
+    name: file.name,
+    type: file.type || 'application/octet-stream',
     base64: btoa(binary),
   };
 }
 
-function estimatePayloadSize(files: Array<SignupFilePayload | null>): number {
-  return files.reduce((total, file) => total + (file?.base64.length ?? 0), 0);
-}
-
 async function filesToPayload(files: ParentSignUpFileBundle) {
-  const payload = {
+  return {
     childPhoto: await fileToPayload(files.childPhoto),
     fatherIdPhoto: await fileToPayload(files.fatherIdPhoto),
     motherIdPhoto: await fileToPayload(files.motherIdPhoto),
@@ -109,13 +103,6 @@ async function filesToPayload(files: ParentSignUpFileBundle) {
     pickupPerson1Photo: await fileToPayload(files.pickupPerson1Photo),
     pickupPerson2Photo: await fileToPayload(files.pickupPerson2Photo),
   };
-
-  const totalSize = estimatePayloadSize(Object.values(payload));
-  if (totalSize > MAX_TOTAL_FILE_PAYLOAD_BYTES) {
-    throw new Error('signupFilesTooLarge');
-  }
-
-  return payload;
 }
 
 async function readFunctionError(response?: Response): Promise<{ message: string | null; accountCreated: boolean }> {
@@ -182,13 +169,15 @@ export async function submitParentSignUp(
   const hasMother = v.motherFullName.trim().length > 0;
   const visibleFiles = filesForTemplate(files, registrationTemplate);
 
-  const filePayload = await filesToPayload(visibleFiles);
-  const walletReceiptPayload = payment && isWalletProvider(payment.method)
-    ? await fileToPayload(payment.walletReceipt ?? null)
+  // The fields shrink their own files when chosen; the receipt's input is shared with invoices.
+  const walletReceipt = payment?.walletReceipt && isWalletProvider(payment.method)
+    ? await compressImageForUpload(payment.walletReceipt, SIGNUP_IMAGE_TARGET_MB)
     : null;
-  if (walletReceiptPayload && estimatePayloadSize([...Object.values(filePayload), walletReceiptPayload]) > MAX_TOTAL_FILE_PAYLOAD_BYTES) {
+  if (signupRequestTooLarge(visibleFiles, walletReceipt)) {
     throw new Error('signupFilesTooLarge');
   }
+  const filePayload = await filesToPayload(visibleFiles);
+  const walletReceiptPayload = await fileToPayload(walletReceipt);
 
   // Staff screens read food_allergies as one line, so flatten the picked list.
   const allergySummary = v.hasAllergy

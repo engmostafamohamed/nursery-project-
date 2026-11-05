@@ -1608,6 +1608,7 @@
         "nextInvoiceOn": "Next invoice {{date}}",
         "package": "Package",
         "primaryPhone": "Primary phone",
+        "parentSignInName": "Parent sign-in name",
         "firstName": "First name",
         "middleName": "Middle name",
         "lastName": "Last name",
@@ -7387,11 +7388,20 @@
   "push": {
     "promptTitle": "Enable notifications",
     "promptBody": "Enable notifications to get alerts when your child checks in",
+    "promptBodyStaff": "Enable notifications for class updates, messages, and attendance.",
+    "promptHint": "You can change this any time from your settings or profile page.",
     "allow": "Allow",
     "notNow": "Not Now",
     "batchedTitle": "Attendance updates",
     "batchedBody": "{{count}} check-ins happened in the last 2 minutes.",
-    "promptBodyTeacher": "Enable notifications for class updates, messages, and attendance."
+    "settingsTitle": "Notifications",
+    "settingsSubtitle": "This applies to this device only.",
+    "settingsToggle": "Show notifications on this device",
+    "settingsBlocked": "Notifications are blocked in this browser. Allow them for this site in the browser's settings, then reload the page.",
+    "settingsUnsupported": "This browser cannot show notifications."
+  },
+  "preferencesPage": {
+    "title": "Settings"
   },
   "pwa": {
     "installTitle": "Install XO Nursery",
@@ -8495,9 +8505,11 @@
     },
     "fileUpload": {
       "dropOrBrowse": "Drop file here or click to browse",
-      "accepted": "JPG, PNG, WEBP, or PDF — up to 10 MB",
+      "accepted": "JPG, PNG, or WEBP up to 10 MB, or PDF. All files together: up to 3 MB.",
       "invalidType": "Unsupported file type",
-      "tooLarge": "File is too large (max 10 MB)",
+      "tooLarge": "This file is {{size}}. The limit is {{max}}.",
+      "noRoom": "This file is {{size}}, but only {{free}} is left of the {{total}} allowed for all files. Choose a smaller file or remove another one.",
+      "preparing": "Preparing your file…",
       "remove": "Remove file"
     },
     "medicationConsents": {

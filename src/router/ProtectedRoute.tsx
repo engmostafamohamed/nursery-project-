@@ -47,7 +47,9 @@ export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
   }
 
   if (status === 'forbidden') {
-    return <Navigate to="/unauthorized" replace />;
+    // Just signed in and sent back to a page this account may not open: they never asked for it.
+    const afterSignIn = (location.state as { afterSignIn?: boolean } | null)?.afterSignIn === true;
+    return <Navigate to={afterSignIn ? '/' : '/unauthorized'} replace />;
   }
 
   return <Outlet />;

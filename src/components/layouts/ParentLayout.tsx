@@ -8,10 +8,10 @@ import { HelpAiBundle } from '@/components/help/HelpAiBundle';
 import { NotificationCenterDrawer } from '@/components/notifications/NotificationCenterDrawer';
 import { BackButton } from '@/components/shared/BackButton';
 import { OfflineIndicator } from '@/components/shared/OfflineIndicator';
+import { PushNotificationsHost } from '@/components/shared/PushNotificationsHost';
 import { PWAInstallPrompt } from '@/components/shared/PWAInstallPrompt';
 import { UserMenu } from '@/components/shared/UserMenu';
 import { ThemeSwitcher } from '@/components/theme-switcher';
-import { Button } from '@/components/ui/button';
 import { ChatWidget } from '@/components/chat/ChatWidget';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -20,7 +20,6 @@ import { parentDisplayNameFromProfile, useParentAccountProfile } from '@/hooks/u
 import { parentNurseryLabel, useParentNursery } from '@/hooks/useParentNursery';
 import { useParentInAppNotifications } from '@/hooks/useParentInAppNotifications';
 import { useNotificationsCenter } from '@/hooks/useNotificationsCenter';
-import { useParentPushNotifications } from '@/hooks/useParentPushNotifications';
 import { DAILY_REPORT_NOTIFICATION_TYPE } from '@/hooks/useParentReports';
 import { endSession } from '@/lib/sessionExpiry';
 import { supabase } from '@/lib/supabase';
@@ -107,7 +106,6 @@ export function ParentLayout() {
     () => inAppNotifications.filter((item) => !item.read).length,
     [inAppNotifications],
   );
-  const { showPrompt, enablePush, dismissPrompt } = useParentPushNotifications(user?.id);
 
   const handleLogout = async () => {
     // Always ends the session here, even when the server cannot be reached.
@@ -231,16 +229,6 @@ export function ParentLayout() {
 
       <main className="print-main mx-auto w-full max-w-4xl px-2 py-3 sm:px-4 sm:py-6 lg:max-w-none lg:px-8">
         <PWAInstallPrompt />
-        {showPrompt ? (
-          <div className="mb-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
-            <p className="text-sm font-semibold text-on-surface">{t('push.promptTitle')}</p>
-            <p className="mt-1 text-xs text-on-surface-variant">{t('push.promptBody')}</p>
-            <div className="mt-3 flex gap-2">
-              <Button size="sm" onClick={() => void enablePush()}>{t('push.allow')}</Button>
-              <Button size="sm" variant="outline" onClick={dismissPrompt}>{t('push.notNow')}</Button>
-            </div>
-          </div>
-        ) : null}
         <Outlet />
       </main>
 
@@ -377,6 +365,7 @@ export function ParentLayout() {
         userId={user?.id}
         role="parent"
       />
+      <PushNotificationsHost />
       <HelpAiBundle layoutRole="parent" />
       <ChatWidget
         role="parent"

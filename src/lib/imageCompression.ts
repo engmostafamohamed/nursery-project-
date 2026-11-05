@@ -10,10 +10,10 @@ const DEFAULT_OPTIONS = {
   initialQuality: 0.85,
 };
 
-export async function compressImageForUpload(file: File): Promise<File> {
+export async function compressImageForUpload(file: File, maxSizeMB = DEFAULT_OPTIONS.maxSizeMB): Promise<File> {
   if (!COMPRESSIBLE_TYPES.has(file.type)) return file;
   try {
-    const compressed = await imageCompression(file, DEFAULT_OPTIONS);
+    const compressed = await imageCompression(file, { ...DEFAULT_OPTIONS, maxSizeMB });
     return new File([compressed], replaceExtension(file.name, 'jpg'), {
       type: 'image/jpeg',
       lastModified: Date.now(),

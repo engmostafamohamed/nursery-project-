@@ -432,6 +432,8 @@ export function AdminChildRecordPage() {
   const extraHoursName = extraHoursPackage ? localized(extraHoursPackage.name_ar, extraHoursPackage.name_en) || dash : dash;
   const avatarSrc = child.avatar_url ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(getUserInitials(childName, null))}&background=eceef0&color=191c1e`;
   const parentName = (p: ParentLink) => localized(p.user?.name_ar, p.user?.name_en) || dash;
+  // What each parent types to sign in: their username, or their email if they registered before usernames.
+  const parentSignInNames = parents.map((p) => p.user?.username || p.user?.email).filter(Boolean).join(' · ');
   const enrolledOn = child.enrollment_date ?? child.created_at;
   const journeyRow = journey.byChild.get(child.id);
   // The joining moment with its time when known, otherwise the enrollment day.
@@ -538,7 +540,7 @@ export function AdminChildRecordPage() {
           </div>
         </div>
 
-        <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4 sm:p-5">
+        <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3 sm:p-5">
           <FactTile icon="school" label={tk('class', 'Class')} value={className} />
           <FactTile icon="how_to_reg" label={tk('enrolledOn', 'Enrolled on')} value={enrolledOnLabel} />
           <FactTile icon="cake" label={tk('age', 'Age')} value={ageOf(child.dob)} />
@@ -547,6 +549,7 @@ export function AdminChildRecordPage() {
           <FactTile icon="calendar_month" label={tk('academicYear', 'Academic year')} value={show(child.academic_year)} />
           <FactTile icon="inventory_2" label={tk('tuitionPlan', 'Tuition plan')} value={tuitionPlanShort} />
           <FactTile icon="call" label={tk('primaryPhone', 'Primary phone')} value={show(text(mother, 'mobile') || text(father, 'mobile') || parents.find((p) => p.user?.phone)?.user?.phone)} />
+          <FactTile icon="account_circle" label={tk('parentSignInName', 'Parent sign-in name')} value={show(parentSignInNames)} />
         </div>
       </section>
 

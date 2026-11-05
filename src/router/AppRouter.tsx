@@ -178,7 +178,7 @@ export function AppRouter() {
               <Route path="meals" element={<P.ParentMealsPage />} />
               <Route path="community" element={<P.ParentCommunityPage />} />
               <Route path="library" element={<P.ParentContentLibraryPage />} />
-              <Route path="settings" element={<P.HelpAiPreferencesPage />} />
+              <Route path="settings" element={<P.PreferencesPage />} />
             </Route>
           </Route>
 
@@ -208,7 +208,7 @@ export function AppRouter() {
               <Route path="community" element={<P.TeacherCommunityPage />} />
               <Route path="reminders" element={<P.RemindersPage />} />
               <Route path="profile" element={<P.TeacherProfilePage />} />
-              <Route path="settings" element={<P.HelpAiPreferencesPage />} />
+              <Route path="settings" element={<P.PreferencesPage />} />
             </Route>
           </Route>
 

@@ -25,6 +25,7 @@ import { ALLERGY_OPTIONS, OTHER_ALLERGY_VALUE, allergyLabel } from '@/lib/allerg
 import { egyptianMobilePattern } from '@/lib/phoneValidation';
 import { cn } from '@/lib/utils';
 
+import { signupFreeBytes } from '@/features/parent-signup/signupFileLimits';
 import { parentSignUpDefaults } from '@/features/parent-signup/parentSignUpDefaults';
 import {
   nurseryArrivalTime,
@@ -537,6 +538,7 @@ function StepChild({ form, t, files, setFiles, nurseries, nurseriesLoading, nurs
           <FileDropzoneWithPreview
             label={templateFieldLabel(template, 'childPhoto', t('signup.childPhoto'))}
             file={files.childPhoto}
+            freeBytes={signupFreeBytes(files, 'childPhoto')}
             onChange={(f) => setFiles((prev) => ({ ...prev, childPhoto: f }))}
             required={isTemplateFieldRequired(template, 'childPhoto')}
           />
@@ -928,6 +930,7 @@ function StepDocuments({ t, files, setFiles, activeRegistrationTemplate }: StepP
           <FileDropzoneWithPreview
             label={templateFieldLabel(template, 'birthCertificate', t('signup.birthCertificate'))}
             file={files.birthCertificate}
+            freeBytes={signupFreeBytes(files, 'birthCertificate')}
             onChange={(f) => setFiles((prev) => ({ ...prev, birthCertificate: f }))}
             required={isTemplateFieldRequired(template, 'birthCertificate', true)}
           />
@@ -936,6 +939,7 @@ function StepDocuments({ t, files, setFiles, activeRegistrationTemplate }: StepP
           <FileDropzoneWithPreview
             label={templateFieldLabel(template, 'vaccinationCard', t('signup.vaccinationCard'))}
             file={files.vaccinationCard}
+            freeBytes={signupFreeBytes(files, 'vaccinationCard')}
             onChange={(f) => setFiles((prev) => ({ ...prev, vaccinationCard: f }))}
             required={isTemplateFieldRequired(template, 'vaccinationCard', true)}
           />
@@ -944,6 +948,7 @@ function StepDocuments({ t, files, setFiles, activeRegistrationTemplate }: StepP
           <FileDropzoneWithPreview
             label={templateFieldLabel(template, 'fatherIdPhoto', t('signup.fatherIdPhoto'))}
             file={files.fatherIdPhoto}
+            freeBytes={signupFreeBytes(files, 'fatherIdPhoto')}
             onChange={(f) => setFiles((prev) => ({ ...prev, fatherIdPhoto: f }))}
             required={isTemplateFieldRequired(template, 'fatherIdPhoto') && !hasParentId}
           />
@@ -952,6 +957,7 @@ function StepDocuments({ t, files, setFiles, activeRegistrationTemplate }: StepP
           <FileDropzoneWithPreview
             label={templateFieldLabel(template, 'motherIdPhoto', t('signup.motherIdPhoto'))}
             file={files.motherIdPhoto}
+            freeBytes={signupFreeBytes(files, 'motherIdPhoto')}
             onChange={(f) => setFiles((prev) => ({ ...prev, motherIdPhoto: f }))}
             required={isTemplateFieldRequired(template, 'motherIdPhoto') && !hasParentId}
           />
@@ -960,6 +966,7 @@ function StepDocuments({ t, files, setFiles, activeRegistrationTemplate }: StepP
           <FileDropzoneWithPreview
             label={templateFieldLabel(template, 'proofOfAddress', t('signup.proofOfAddress'))}
             file={files.proofOfAddress}
+            freeBytes={signupFreeBytes(files, 'proofOfAddress')}
             onChange={(f) => setFiles((prev) => ({ ...prev, proofOfAddress: f }))}
             required={isTemplateFieldRequired(template, 'proofOfAddress', true)}
           />
@@ -968,6 +975,7 @@ function StepDocuments({ t, files, setFiles, activeRegistrationTemplate }: StepP
           <FileDropzoneWithPreview
             label={templateFieldLabel(template, 'medicalReport', t('signup.medicalReport'))}
             file={files.medicalReport}
+            freeBytes={signupFreeBytes(files, 'medicalReport')}
             onChange={(f) => setFiles((prev) => ({ ...prev, medicalReport: f }))}
             required={isTemplateFieldRequired(template, 'medicalReport')}
           />
@@ -976,6 +984,7 @@ function StepDocuments({ t, files, setFiles, activeRegistrationTemplate }: StepP
           <FileDropzoneWithPreview
             label={templateFieldLabel(template, 'otherDocument', t('signup.otherDocument'))}
             file={files.otherDocument}
+            freeBytes={signupFreeBytes(files, 'otherDocument')}
             onChange={(f) => setFiles((prev) => ({ ...prev, otherDocument: f }))}
             required={isTemplateFieldRequired(template, 'otherDocument')}
           />
@@ -1271,6 +1280,7 @@ function StepPickups({ form, t, files, setFiles, activeRegistrationTemplate }: S
               <FileDropzoneWithPreview
                 label={templateFieldLabel(template, 'pickupPerson1Photo', t('signup.pickupPhoto'))}
                 file={files.pickupPerson1Photo}
+                freeBytes={signupFreeBytes(files, 'pickupPerson1Photo')}
                 onChange={(f) => setFiles((prev) => ({ ...prev, pickupPerson1Photo: f }))}
                 required={isTemplateFieldRequired(template, 'pickupPerson1Photo', true)}
               />
@@ -1314,6 +1324,7 @@ function StepPickups({ form, t, files, setFiles, activeRegistrationTemplate }: S
               <FileDropzoneWithPreview
                 label={templateFieldLabel(template, 'pickupPerson2Photo', t('signup.pickupPhoto'))}
                 file={files.pickupPerson2Photo}
+                freeBytes={signupFreeBytes(files, 'pickupPerson2Photo')}
                 onChange={(f) => setFiles((prev) => ({ ...prev, pickupPerson2Photo: f }))}
                 required={isTemplateFieldRequired(template, 'pickupPerson2Photo', true)}
               />
