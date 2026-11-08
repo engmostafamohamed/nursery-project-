@@ -241,14 +241,6 @@
   box-shadow: 0 40px 60px -10px rgb(0 0 0 / 0.4);
 }
 
-.card-hover {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.card-hover:hover {
-  background: rgb(var(--surface-high));
-  transform: translateY(-2px);
-}
-
 .admin-sidebar-scroll {
   scrollbar-width: thin;
   scrollbar-color: rgb(255 255 255 / 0.38) transparent;

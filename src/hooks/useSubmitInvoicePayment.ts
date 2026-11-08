@@ -16,6 +16,7 @@ export type SubmitPaymentInput = {
 /** Refreshes everything a parent payment changes, whichever way it was paid. */
 export function invalidatePaymentQueries(queryClient: QueryClient, parentId: string | undefined) {
   void queryClient.invalidateQueries({ queryKey: ['parent-invoices', parentId] });
+  void queryClient.invalidateQueries({ queryKey: ['parent-billing'] });
   void queryClient.invalidateQueries({ queryKey: ['parent-pending-payment-attempts', parentId] });
   void queryClient.invalidateQueries({ queryKey: ['invoice-details'] });
   void queryClient.invalidateQueries({ queryKey: ['payment-history'] });

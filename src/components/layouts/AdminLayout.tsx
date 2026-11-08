@@ -106,9 +106,18 @@ const moreNavGroups: { titleKey: string; items: NavItem[] }[] = [
       { to: '/admin/staff/onboarding', key: 'staffOnboarding', icon: 'assignment_ind', feature: 'staff_onboarding' },
       { to: '/admin/admissions/import', key: 'admissionsImport', icon: 'upload_file', feature: 'admissions' },
       { to: '/admin/inventory', key: 'inventory', icon: 'inventory_2', feature: 'inventory' },
-      { to: '/admin/meals', key: 'meals', icon: 'restaurant', feature: 'meals' },
       { to: '/admin/qr-codes', key: 'qrCodes', icon: 'qr_code_2', feature: 'qr_code' },
       { to: '/admin/calendar', key: 'calendar', icon: 'calendar_month', feature: 'event_calendar' },
+    ],
+  },
+  {
+    titleKey: 'moreGroupFoodAndBeverage',
+    items: [
+      { to: '/admin/meals', key: 'meals', icon: 'restaurant', feature: 'meals' },
+      { to: '/admin/meal-plans', key: 'mealPlans', icon: 'restaurant_menu', feature: 'meals' },
+      { to: '/admin/kitchen', key: 'kitchenStock', icon: 'kitchen', feature: 'meals' },
+      { to: '/admin/food-alerts', key: 'foodAlerts', icon: 'no_food', feature: 'health_alerts' },
+      { to: '/admin/health/alerts', key: 'healthAlerts', icon: 'medical_services', feature: 'health_alerts' },
     ],
   },
   {
@@ -119,7 +128,6 @@ const moreNavGroups: { titleKey: string; items: NavItem[] }[] = [
       { to: '/admin/reports/financial', key: 'reportsFinancial', icon: 'monitoring', feature: 'financial_reports' },
       { to: '/admin/attendance/dashboard', key: 'attendanceDashboard', icon: 'monitoring', feature: 'dashboard_attendance' },
       { to: '/admin/attendance/logs', key: 'attendanceLogs', icon: 'receipt_long', feature: 'dashboard_attendance' },
-      { to: '/admin/health/alerts', key: 'healthAlerts', icon: 'medical_services', feature: 'health_alerts' },
       { to: '/admin/loyalty', key: 'loyalty', icon: 'workspace_premium', feature: 'loyalty' },
       { to: '/admin/messages/broadcasts', key: 'broadcastHistory', icon: 'history', feature: 'broadcast_messages' },
       { to: '/admin/teacher-reminders', key: 'teacherReminders', icon: 'notifications_active', feature: 'notifications' },

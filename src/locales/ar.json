@@ -833,31 +833,199 @@
     "dashboard": {
       "title": "لوحة تحكم مدير XO",
       "subtitle": "نظرة عامة على جميع الحضانات في المنصة.",
-      "heroAria": "نظرة عامة على مقاييس المنصة",
       "errorLoading": "تعذر تحميل لوحة التحكم. يرجى المحاولة مرة أخرى.",
-      "totalNurseries": "إجمالي الحضانات",
-      "activeOutOfTotal": "{{active}} نشطة من {{total}}",
-      "activeSubscriptions": "الاشتراكات النشطة",
-      "trialNurseriesLabel": "{{count}} في الفترة التجريبية",
-      "totalUsers": "إجمالي المستخدمين",
-      "userBreakdown": "{{parents}} ولي أمر · {{teachers}} معلم",
-      "platformHealth": "صحة المنصة",
-      "activeEnrollmentsLabel": "تسجيلات الأطفال النشطة",
       "recentSignups": "أحدث التسجيلات",
       "viewAllNurseries": "عرض الكل",
       "noRecentSignups": "لا توجد تسجيلات حديثة.",
-      "planUnknown": "الباقة غير محددة",
-      "quickStats": "إحصائيات سريعة",
-      "pendingInquiries": "الاستفسارات المعلقة",
-      "pendingApplications": "الطلبات المعلقة",
-      "overdueInvoices": "الفواتير المتأخرة",
-      "nurseriesByPlan": "الحضانات حسب الباقة",
-      "noPlanData": "لا توجد بيانات باقات بعد.",
-      "planCardLabel": "حضانة",
       "selectedNurseryTitle": "لوحة تحكم الحضانة المحددة",
       "selectedNurserySubtitle": "إدارة الحضانة المحددة حالياً من نفس لوحة تحكم XO.",
       "selectedNurseryEmpty": "اختر حضانة لعرض لوحة التشغيل الخاصة بها.",
-      "backToPlatform": "العودة إلى لوحة تحكم المنصة"
+      "backToPlatform": "العودة إلى لوحة تحكم المنصة",
+      "allNurseries": "كل الحضانات",
+      "empty": "لا توجد بيانات بعد.",
+      "month": "الشهر",
+      "day": "اليوم",
+      "group": "الفئة",
+      "sections": {
+        "money": "المالية",
+        "children": "الأطفال والحضور",
+        "nurseries": "الحضانات والمستخدمون"
+      },
+      "tiles": {
+        "nurseries": "الحضانات",
+        "nurseriesHint": "{{active}} نشطة · {{trial}} تجريبية · {{fresh}} جديدة هذا الشهر",
+        "children": "الأطفال النشطون",
+        "childrenHint": "{{current}} انضموا هذا الشهر · {{previous}} الشهر الماضي",
+        "users": "المستخدمون",
+        "usersHint": "{{parents}} ولي أمر · {{staff}} من الموظفين",
+        "collected": "المحصَّل هذا الشهر",
+        "collectedLastMonth": "الشهر الماضي: {{amount}}"
+      },
+      "strip": {
+        "attendance": "الحضور، آخر 30 يومًا",
+        "attendanceHint": "في الأيام التي فتحت فيها كل حضانة",
+        "outstanding": "المستحق",
+        "overdue": "المتأخر",
+        "applications": "طلبات في الانتظار",
+        "inquiries": "استفسارات جديدة"
+      },
+      "money": {
+        "trendTitle": "المفوتَر والمحصَّل، 12 شهرًا",
+        "trendHint": "المفوتَر: الفواتير حسب شهر استحقاقها. المحصَّل: المدفوعات المكتملة حسب شهر دفعها.",
+        "billed": "المفوتَر",
+        "collected": "المحصَّل",
+        "collectedIn": "{{amount}} محصَّلة في {{month}}",
+        "statusTitle": "الفواتير حسب الحالة",
+        "statusHint": "الفواتير المفتوحة تعرض المتبقي عليها، والفواتير الملغاة غير محسوبة.",
+        "statusEmpty": "لا توجد فواتير بعد.",
+        "invoiceCount_zero": "لا توجد فواتير",
+        "invoiceCount_one": "فاتورة واحدة",
+        "invoiceCount_two": "فاتورتان",
+        "invoiceCount_few": "{{formatted}} فواتير",
+        "invoiceCount_many": "{{formatted}} فاتورة",
+        "invoiceCount_other": "{{formatted}} فاتورة",
+        "invoices": "الفواتير",
+        "stillOwed": "المستحق",
+        "agingTitle": "المتأخرات حسب مدة التأخير",
+        "agingHint": "ما تبقى على الفواتير المتأخرة، حسب عدد الأيام بعد تاريخ الاستحقاق",
+        "agingEmpty": "لا توجد فواتير متأخرة.",
+        "aging": {
+          "1": "متأخرة 1–30 يومًا",
+          "2": "متأخرة 31–60 يومًا",
+          "3": "متأخرة 61–90 يومًا",
+          "4": "متأخرة أكثر من 90 يومًا"
+        },
+        "agingShort": {
+          "1": "1–30",
+          "2": "31–60",
+          "3": "61–90",
+          "4": "+90"
+        },
+        "methodsTitle": "طرق الدفع، 12 شهرًا",
+        "methodsHint": "المدفوعات المكتملة حسب المبلغ",
+        "methodsEmpty": "لا توجد مدفوعات مكتملة في آخر 12 شهرًا.",
+        "paymentCount_zero": "لا توجد مدفوعات",
+        "paymentCount_one": "دفعة واحدة",
+        "paymentCount_two": "دفعتان",
+        "paymentCount_few": "{{formatted}} دفعات",
+        "paymentCount_many": "{{formatted}} دفعة",
+        "paymentCount_other": "{{formatted}} دفعة",
+        "methods": {
+          "instapay": "InstaPay",
+          "card": "بطاقة",
+          "cash": "نقدًا",
+          "manual": "سجّلتها الحضانة",
+          "bank_transfer": "تحويل بنكي",
+          "paymob": "Paymob",
+          "other": "أخرى"
+        }
+      },
+      "children": {
+        "attendanceTitle": "الحضور اليومي، آخر 30 يومًا",
+        "attendanceHint": "الأطفال الذين سُجّل حضورهم من الأطفال النشطين، في الأيام التي فتحت فيها كل حضانة. الأيام التي لم يُسجَّل فيها حضور تبقى فارغة.",
+        "attendanceAverage": "متوسط {{rate}}",
+        "attendanceEmpty": "لا يوجد تسجيل حضور في آخر 30 يومًا.",
+        "rate": "الحضور",
+        "presentOf": "حضر {{present}} من {{expected}} طفل",
+        "closedDay": "لا يوجد تسجيل حضور في هذا اليوم",
+        "enrollmentTitle": "الأطفال الجدد، 12 شهرًا",
+        "enrollmentHint": "الأطفال حسب شهر انضمامهم إلى حضانتهم",
+        "joined": "انضموا",
+        "profileTitle": "الأطفال النشطون حسب العمر",
+        "childrenLabel": "الأطفال",
+        "childrenCount_zero": "لا يوجد أطفال",
+        "childrenCount_one": "طفل واحد",
+        "childrenCount_two": "طفلان",
+        "childrenCount_few": "{{formatted}} أطفال",
+        "childrenCount_many": "{{formatted}} طفلًا",
+        "childrenCount_other": "{{formatted}} طفل",
+        "girls": "بنات",
+        "boys": "أولاد",
+        "age": {
+          "0": "أقل من سنة",
+          "1": "سنة واحدة",
+          "2": "سنتان",
+          "3": "3 سنوات",
+          "4": "4 سنوات",
+          "5": "5 سنوات فأكثر"
+        },
+        "ageShort": {
+          "0": "<1",
+          "1": "1",
+          "2": "2",
+          "3": "3",
+          "4": "4",
+          "5": "+5"
+        }
+      },
+      "admissions": {
+        "title": "القبول، 12 شهرًا",
+        "hint": "الاستفسارات الواردة والطلبات المرسلة والطلبات المقبولة",
+        "inquiries": "الاستفسارات",
+        "applications": "الطلبات المرسلة",
+        "approved": "المقبولة",
+        "approvalRate": "{{rate}} مقبولة",
+        "waiting_zero": "لا توجد طلبات في الانتظار",
+        "waiting_one": "طلب واحد في الانتظار",
+        "waiting_two": "طلبان في الانتظار",
+        "waiting_few": "{{formatted}} طلبات في الانتظار",
+        "waiting_many": "{{formatted}} طلبًا في الانتظار",
+        "waiting_other": "{{formatted}} طلب في الانتظار",
+        "newInquiries_zero": "لا توجد استفسارات جديدة",
+        "newInquiries_one": "استفسار جديد واحد",
+        "newInquiries_two": "استفساران جديدان",
+        "newInquiries_few": "{{formatted}} استفسارات جديدة",
+        "newInquiries_many": "{{formatted}} استفسارًا جديدًا",
+        "newInquiries_other": "{{formatted}} استفسار جديد"
+      },
+      "network": {
+        "tableTitle": "الحضانات في لمحة",
+        "tableHint": "رتّب حسب أي عمود، وافتح أي حضانة لإدارتها.",
+        "col": {
+          "nursery": "الحضانة",
+          "children": "الأطفال",
+          "ratio": "أطفال لكل معلم",
+          "attendance": "الحضور، 30 يومًا",
+          "collected": "المحصَّل هذا الشهر",
+          "outstanding": "المستحق",
+          "overdue": "فواتير متأخرة"
+        },
+        "teacherCount_zero": "بدون معلمين",
+        "teacherCount_one": "معلم واحد",
+        "teacherCount_two": "معلمان",
+        "teacherCount_few": "{{formatted}} معلمين",
+        "teacherCount_many": "{{formatted}} معلمًا",
+        "teacherCount_other": "{{formatted}} معلم",
+        "showAll_zero": "عرض الكل",
+        "showAll_one": "عرض الكل ({{formatted}})",
+        "showAll_two": "عرض الكل ({{formatted}})",
+        "showAll_few": "عرض الكل ({{formatted}})",
+        "showAll_many": "عرض الكل ({{formatted}})",
+        "showAll_other": "عرض الكل ({{formatted}})",
+        "showFewer": "عرض أقل",
+        "citiesTitle": "الحضانات حسب المدينة",
+        "cityCount_zero": "لا توجد مدن",
+        "cityCount_one": "مدينة واحدة",
+        "cityCount_two": "مدينتان",
+        "cityCount_few": "{{formatted}} مدن",
+        "cityCount_many": "{{formatted}} مدينة",
+        "cityCount_other": "{{formatted}} مدينة",
+        "cityNotSet": "المدينة غير محددة",
+        "otherCities": "مدن أخرى",
+        "subscriptionsTitle": "الاشتراكات",
+        "subscriptionsHint": "حالة اشتراك كل حضانة وباقتها",
+        "byStatus": "حسب الحالة",
+        "byPlan": "حسب الباقة",
+        "notSet": "غير محدد",
+        "noSubscription": "بدون اشتراك",
+        "usersTitle": "المستخدمون حسب الدور",
+        "usersNew_zero": "لم ينضم أحد هذا الشهر",
+        "usersNew_one": "انضم مستخدم واحد هذا الشهر",
+        "usersNew_two": "انضم مستخدمان هذا الشهر",
+        "usersNew_few": "انضم {{formatted}} مستخدمين هذا الشهر",
+        "usersNew_many": "انضم {{formatted}} مستخدمًا هذا الشهر",
+        "usersNew_other": "انضم {{formatted}} مستخدم هذا الشهر"
+      }
     },
     "settingsPage": {
       "title": "إعدادات الإدارة العليا",
@@ -987,6 +1155,10 @@
       "loyalty": "الولاء",
       "surveys": "الاستبيانات",
       "inventory": "المخزون",
+      "moreGroupFoodAndBeverage": "الأطعمة والمشروبات (F&B)",
+      "foodAlerts": "تنبيهات حساسية الطعام",
+      "mealPlans": "خطط الوجبات",
+      "kitchenStock": "مخزون المطبخ",
       "meals": "الوجبات",
       "community": "المجتمع",
       "library": "المكتبة",
@@ -2561,6 +2733,7 @@
   },
   "invoice": {
     "itemKinds": {
+      "meal_plan": "الوجبات",
       "late_pickup": "ساعات إضافية لتأخر الاستلام · {{date}}",
       "loyalty_discount": "خصم نقاط الولاء ({{points}} نقطة)",
       "tuition": "رسوم دراسية",
@@ -3249,6 +3422,530 @@
     "parentSubtitle": "تقارير التقييم الفصلية لطفلك.",
     "parentEmptyTitle": "لا توجد تقارير بعد",
     "parentEmptyDesc": "ستظهر تقارير الفترة هنا بمجرد إرسالها من الحضانة."
+  },
+  "parentBilling": {
+    "notFoundHint": "ربما حُذفت، أو أن الرابط غير صحيح.",
+    "state": {
+      "paid": "مدفوعة",
+      "in_review": "بانتظار التأكيد",
+      "overdue": "متأخرة",
+      "due": "مطلوب دفعها",
+      "cancelled": "ملغاة"
+    },
+    "hero": {
+      "owe": "المطلوب منك",
+      "nothingToPay": "لا يوجد شيء لدفعه الآن",
+      "allClear": "كل شيء مدفوع",
+      "overdue_zero": "لا توجد فواتير متأخرة",
+      "overdue_one": "فاتورة واحدة متأخرة · {{amount}}",
+      "overdue_two": "فاتورتان متأخرتان · {{amount}}",
+      "overdue_few": "{{count}} فواتير متأخرة · {{amount}}",
+      "overdue_many": "{{count}} فاتورة متأخرة · {{amount}}",
+      "overdue_other": "{{count}} فاتورة متأخرة · {{amount}}",
+      "nextDue": "الاستحقاق القادم {{date}} · {{amount}}",
+      "inReview": "{{amount}} أُرسلت وبانتظار تأكيد الحضانة",
+      "payOverdue": "ادفع المتأخر",
+      "payNext": "ادفع الفاتورة القادمة"
+    },
+    "list": {
+      "openInvoice": "فتح الفاتورة {{number}}",
+      "lateDays_zero": "متأخرة اليوم",
+      "lateDays_one": "متأخرة يومًا واحدًا",
+      "lateDays_two": "متأخرة يومين",
+      "lateDays_few": "متأخرة {{count}} أيام",
+      "lateDays_many": "متأخرة {{count}} يومًا",
+      "lateDays_other": "متأخرة {{count}} يوم",
+      "dueOn": "تستحق {{date}}",
+      "partInReview": "{{amount}} بانتظار التأكيد",
+      "pay": "ادفع",
+      "filterLabel": "عرض الفواتير",
+      "filters": {
+        "all": "كل الفواتير",
+        "open": "مطلوب دفعها",
+        "paid": "مدفوعة"
+      }
+    },
+    "actions": {
+      "more": "إجراءات أخرى",
+      "print": "طباعة",
+      "share": "مشاركة",
+      "image": "حفظ كصورة",
+      "pdf": "تنزيل PDF",
+      "receipt": "تنزيل الإيصال",
+      "linkCopied": "تم نسخ الرابط"
+    },
+    "pay": {
+      "eyebrow": "دفع فاتورة",
+      "viewInvoice": "عرض الفاتورة",
+      "progress": "الخطوة {{step}} من {{total}}",
+      "steps": {
+        "amount": "المبلغ",
+        "points": "النقاط",
+        "method": "الطريقة",
+        "confirm": "التأكيد"
+      },
+      "titles": {
+        "amount": "كم تريد أن تدفع؟",
+        "points": "هل تستخدم نقاطك؟",
+        "method": "كيف ستدفع؟",
+        "confirm": "راجِع وأرسل"
+      },
+      "alreadySentTitle": "أرسلت دفعة لهذه الفاتورة من قبل",
+      "alreadySentLine": "{{amount}} في {{date}}، بانتظار تأكيد الحضانة",
+      "alreadySentHint": "ادفع الباقي فقط إذا كانت هذه دفعة جديدة.",
+      "payAll": "ادفع كل المتبقي",
+      "payPart": "ادفع جزءًا منه بدلًا من ذلك",
+      "partLabel": "المبلغ الذي ستدفعه (حتى {{max}})",
+      "partErrors": {
+        "required": "اكتب المبلغ الذي تريد دفعه.",
+        "invalid": "اكتب رقمًا، مثل 1500 أو 1500.50.",
+        "too_small": "يجب أن يكون المبلغ أكبر من صفر.",
+        "too_large": "يمكنك دفع حتى {{max}}."
+      },
+      "back": "رجوع",
+      "next": "التالي",
+      "skipPoints": "المتابعة بدون نقاط",
+      "send": "أرسل الدفعة · {{amount}}"
+    },
+    "points": {
+      "balance": "لديك {{points}} نقطة",
+      "rate": "قيمة النقطة {{amount}}",
+      "applied": "تم تطبيق الخصم: {{amount}} من هذه الفاتورة",
+      "howMany": "عدد النقاط (من {{min}} إلى {{max}})",
+      "useMost": "استخدم الحد الأقصى",
+      "discountIs": "هذا يخصم {{amount}}",
+      "apply": "طبّق الخصم · {{amount}}",
+      "final": "يُخصم المبلغ من الفاتورة فورًا ولا يمكن التراجع عنه.",
+      "notEnough": "يمكنك استخدام النقاط عندما يكون لديك {{min}} نقطة على الأقل يمكن استخدامها على هذه الفاتورة.",
+      "errors": {
+        "whole_number": "اكتب عددًا صحيحًا من النقاط.",
+        "below_minimum": "استخدم {{min}} نقطة على الأقل.",
+        "above_maximum": "يمكنك استخدام حتى {{max}} نقطة على هذه الفاتورة."
+      }
+    },
+    "confirm": {
+      "youPay": "ستدفع",
+      "invoice": "الفاتورة",
+      "pointsDiscount": "خصم النقاط",
+      "method": "الطريقة",
+      "reference": "رقم العملية",
+      "reviewNote": "تراجع الحضانة دفعتك ثم تؤكدها، وسيصلك إشعار عند التأكيد."
+    },
+    "outcome": {
+      "sent": {
+        "title": "تم إرسال الدفعة",
+        "body": "ستراجعها الحضانة وتؤكدها، وسيصلك إشعار عند التأكيد."
+      },
+      "already_sent": {
+        "title": "هذه الدفعة أُرسلت من قبل",
+        "body": "هي بانتظار تأكيد الحضانة، ولا داعي لإرسالها مرة أخرى."
+      },
+      "waiting": {
+        "title": "بانتظار الحضانة",
+        "body": "كل المتبقي على هذه الفاتورة أُرسل وبانتظار تأكيد الحضانة."
+      },
+      "paid_with_points": {
+        "title": "دُفعت بنقاطك",
+        "body": "غطّت نقاطك المتبقي، وأصبحت الفاتورة مدفوعة."
+      },
+      "paid": {
+        "title": "هذه الفاتورة مدفوعة",
+        "body": "لا يوجد شيء متبقٍ عليها."
+      },
+      "cancelled": {
+        "title": "هذه الفاتورة أُلغيت",
+        "body": "لا يوجد شيء لدفعه. إذا كان هذا خطأ، تواصل مع الحضانة."
+      },
+      "backToInvoices": "العودة إلى فواتيري",
+      "viewInvoice": "عرض الفاتورة"
+    },
+    "details": {
+      "amount": "المبلغ",
+      "paid": "المدفوع",
+      "inReview": "بانتظار التأكيد",
+      "left": "المتبقي",
+      "pay": "ادفع {{amount}}",
+      "reviewTitle": "بانتظار تأكيد الحضانة",
+      "reviewHint": "سيصلك إشعار عندما تؤكدها الحضانة.",
+      "lines": "تفاصيل الفاتورة",
+      "history": "المدفوعات والتذكيرات",
+      "paymentLine": "دُفع {{amount}} عن طريق {{method}}",
+      "reminderLine": "أرسلت الحضانة تذكيرًا",
+      "noHistory": "لا توجد مدفوعات أو تذكيرات بعد."
+    }
+  },
+  "fnb": {
+    "eyebrow": "الأطعمة والمشروبات",
+    "meals": {
+      "breakfast": "الإفطار",
+      "lunch": "الغداء",
+      "snacks": "الوجبة الخفيفة"
+    },
+    "allergens": {
+      "contains": "يحتوي على",
+      "childrenCount_zero": "لا يوجد أطفال لديهم حساسية",
+      "childrenCount_one": "طفل واحد هنا لديه حساسية",
+      "childrenCount_two": "طفلان هنا لديهما حساسية",
+      "childrenCount_few": "{{count}} أطفال هنا لديهم حساسية",
+      "childrenCount_many": "{{count}} طفلًا هنا لديهم حساسية",
+      "childrenCount_other": "{{count}} طفل هنا لديهم حساسية",
+      "milk": "حليب",
+      "eggs": "بيض",
+      "peanuts": "فول سوداني",
+      "tree_nuts": "مكسرات",
+      "gluten": "جلوتين (قمح)",
+      "soy": "صويا",
+      "fish": "سمك",
+      "shellfish": "قشريات",
+      "sesame": "سمسم",
+      "strawberry": "فراولة",
+      "citrus": "حمضيات"
+    },
+    "severity": {
+      "life_threatening": "تهدد الحياة",
+      "severe": "شديدة",
+      "moderate": "متوسطة",
+      "mild": "خفيفة"
+    },
+    "status": {
+      "draft": "مسودة",
+      "published": "منشور"
+    },
+    "ownFood": "يُحضر طعامه من البيت",
+    "week": {
+      "this": "هذا الأسبوع",
+      "next": "الأسبوع القادم",
+      "last": "الأسبوع الماضي",
+      "previous": "الأسبوع السابق",
+      "following": "الأسبوع التالي",
+      "backToThis": "هذا الأسبوع"
+    },
+    "menu": {
+      "title": "المنيو الأسبوعي",
+      "subtitle": "خطّط وجبات كل يوم، وحدّد مكونات كل طبق، ثم انشر المنيو لأولياء الأمور.",
+      "alertsLink": "تنبيهات الحساسية",
+      "draftHint": "أولياء الأمور لا يرون هذا الأسبوع بعد.",
+      "publishedHint": "أولياء الأمور يرون هذا الأسبوع.",
+      "publish": "انشر لأولياء الأمور",
+      "unpublish": "إخفاء عن أولياء الأمور",
+      "published": "نُشر المنيو، وتم إبلاغ أولياء الأمور.",
+      "unpublished": "المنيو مخفي عن أولياء الأمور.",
+      "copyLast": "انسخ الأسبوع الماضي",
+      "copied": "تم نسخ أطباق الأسبوع الماضي.",
+      "saveFirst": "احفظ تعديلاتك قبل النشر."
+    },
+    "editor": {
+      "dishName": "اسم الطبق",
+      "dishPlaceholder": "مثال: أرز بالخضار",
+      "addDish": "أضف إلى {{meal}}",
+      "notes": "ملاحظة لأولياء الأمور (اختياري)",
+      "notesPlaceholder": "مثال: تُقدَّم الفاكهة يوميًا.",
+      "save": "احفظ المنيو",
+      "saving": "جارٍ الحفظ…",
+      "saved": "تم حفظ المنيو.",
+      "unsaved": "لديك تعديلات لم تُحفظ.",
+      "allSaved": "كل شيء محفوظ.",
+      "notSafeFor_zero": "آمن لكل الأطفال",
+      "notSafeFor_one": "غير آمن لطفل واحد",
+      "notSafeFor_two": "غير آمن لطفلين",
+      "notSafeFor_few": "غير آمن لـ {{count}} أطفال",
+      "notSafeFor_many": "غير آمن لـ {{count}} طفلًا",
+      "notSafeFor_other": "غير آمن لـ {{count}} طفل",
+      "issues": {
+        "name_required": "اكتب اسم الطبق أو احذفه.",
+        "name_too_long": "اجعل الاسم أقل من {{max}} حرفًا."
+      },
+      "discardTitle": "المغادرة بدون حفظ؟",
+      "discardBody": "ستفقد تعديلاتك على هذا الأسبوع.",
+      "discard": "مغادرة",
+      "add": "إضافة",
+      "newDish": "إضافة طبق",
+      "editDishTitle": "تعديل الطبق",
+      "editDish": "تعديل {{name}}",
+      "containsLabel": "ماذا يحتوي؟",
+      "countsHint": "الرقم على مسبب الحساسية هو عدد الأطفال هنا الذين لديهم حساسية منه.",
+      "safeForAll": "آمن لكل الأطفال هنا.",
+      "deleteDish": "حذف الطبق",
+      "done": "تم"
+    },
+    "file": {
+      "title": "ملف المنيو",
+      "none": "لا توجد صورة أو ملف PDF للمنيو بعد.",
+      "hint": "صورة أو ملف PDF للمنيو، حتى {{max}} ميجابايت. تُصغَّر الصور تلقائيًا.",
+      "add": "أضف صورة أو PDF",
+      "replace": "استبدال",
+      "remove": "حذف",
+      "open": "فتح",
+      "uploading": "جارٍ الرفع…",
+      "saved": "تم حفظ ملف المنيو.",
+      "openFailed": "تعذّر فتح الملف. حاول مرة أخرى.",
+      "removeTitle": "حذف ملف المنيو؟",
+      "removeBody": "لن يراه أولياء الأمور لهذا الأسبوع.",
+      "errors": {
+        "invalid_type": "اختر صورة (JPG أو PNG أو WebP) أو ملف PDF.",
+        "too_large": "حجم الملف أكبر من {{max}} ميجابايت."
+      }
+    },
+    "view": {
+      "today": "اليوم",
+      "emptyParent": "لم تنشر الحضانة منيو هذا الأسبوع بعد.",
+      "emptyStaff": "لا يوجد منيو لهذا الأسبوع بعد.",
+      "dayEmpty": "لا توجد أطباق لهذا اليوم.",
+      "allergicLine": "لدى {{name}} حساسية ({{allergens}})",
+      "pickDay": "اختر يومًا"
+    },
+    "alerts": {
+      "title": "تنبيهات حساسية الطعام",
+      "subtitle": "الأطفال الذين يجب ألا يأكلوا طبقًا في المنيو، وما يجب فعله إذا ظهرت عليهم الحساسية.",
+      "menuLink": "المنيو الأسبوعي",
+      "period": "الفترة",
+      "periods": {
+        "today": "اليوم",
+        "this_week": "هذا الأسبوع",
+        "next_week": "الأسبوع القادم"
+      },
+      "none": "لا يوجد طفل لديه حساسية من أي شيء في منيو هذه الفترة.",
+      "item": "{{meal}}: {{dish}} — {{allergen}}",
+      "reaction": "رد الفعل",
+      "treatment": "إذا ظهرت الحساسية",
+      "unmatchedTitle": "حساسيات لا تُقارن بالمنيو",
+      "unmatchedHint": "هذه ليست أطعمة نعرفها (مثل الأدوية أو الأتربة)، فراجعها بنفسك.",
+      "unmatchedCount_zero": "لا يوجد أطفال",
+      "unmatchedCount_one": "طفل واحد",
+      "unmatchedCount_two": "طفلان",
+      "unmatchedCount_few": "{{count}} أطفال",
+      "unmatchedCount_many": "{{count}} طفلًا",
+      "unmatchedCount_other": "{{count}} طفل"
+    },
+    "report": {
+      "title": "تنبيه حساسية في وجبات اليوم",
+      "seeMenu": "عرض منيو اليوم"
+    },
+    "teacher": {
+      "title": "الوجبات",
+      "subtitle": "تنبيهات الحساسية لفصولك اليوم، ومنيو الأسبوع.",
+      "todayAlerts": "تنبيهات الحساسية اليوم",
+      "weekMenu": "منيو الأسبوع"
+    },
+    "parent": {
+      "subtitle": "وجبات الحضانة لهذا الأسبوع، مع تمييز الأطباق التي يجب ألا يأكلها طفلك.",
+      "plansTitle": "خطط وجبات أطفالك"
+    },
+    "plans": {
+      "title": "خطط الوجبات",
+      "subtitle": "خطط الوجبات التي تقدمها الحضانة وسعرها الشهري. الخطة المدفوعة تُضاف إلى فاتورة الطفل الشهرية.",
+      "add": "إضافة خطة وجبات",
+      "tiles": {
+        "monthly": "خطط الوجبات شهريًا",
+        "monthlyHint_zero": "لا يوجد أطفال يدفعون",
+        "monthlyHint_one": "من طفل واحد يدفع",
+        "monthlyHint_two": "من طفلين يدفعان",
+        "monthlyHint_few": "من {{count}} أطفال يدفعون",
+        "monthlyHint_many": "من {{count}} طفلًا يدفعون",
+        "monthlyHint_other": "من {{count}} طفل يدفعون",
+        "withPlan": "أطفال لديهم خطة",
+        "withPlanHint": "{{included}} ضمن باقتهم",
+        "none": "بدون خطة",
+        "notBilled": "غير مُفوترة",
+        "notBilledHint": "خطة مدفوعة بدون فاتورة شهرية"
+      },
+      "offered": "الخطط المتاحة",
+      "childrenOnPlan_zero": "لا يوجد أطفال على هذه الخطة",
+      "childrenOnPlan_one": "طفل واحد على هذه الخطة",
+      "childrenOnPlan_two": "طفلان على هذه الخطة",
+      "childrenOnPlan_few": "{{count}} أطفال على هذه الخطة",
+      "childrenOnPlan_many": "{{count}} طفلًا على هذه الخطة",
+      "childrenOnPlan_other": "{{count}} طفل على هذه الخطة",
+      "inactive": "غير متاحة",
+      "month": "شهر",
+      "childrenTitle": "خطط الأطفال",
+      "childrenCount_zero": "لا يوجد أطفال",
+      "childrenCount_one": "طفل واحد",
+      "childrenCount_two": "طفلان",
+      "childrenCount_few": "{{count}} أطفال",
+      "childrenCount_many": "{{count}} طفلًا",
+      "childrenCount_other": "{{count}} طفل",
+      "childrenHint": "افتح أي طفل لتعطيه خطة أو تغيّرها أو توقفها. يبدأ التغيير من اليوم.",
+      "filterLabel": "الخطة",
+      "filters": {
+        "all": "كل الأطفال",
+        "charged": "يدفعون خطة",
+        "included": "ضمن الباقة",
+        "none": "بدون خطة",
+        "not_billed": "غير مُفوترة"
+      },
+      "noChildren": "لا يوجد أطفال يطابقون هذه الفلاتر.",
+      "columns": {
+        "plan": "خطة الوجبات",
+        "price": "شهريًا",
+        "since": "منذ"
+      },
+      "noPlan": "بدون خطة وجبات",
+      "includedShort": "ضمن الباقة",
+      "notBilledShort": "غير مُفوترة",
+      "changeFor": "تغيير خطة وجبات {{name}}",
+      "newTitle": "خطة وجبات جديدة",
+      "editTitle": "تعديل خطة الوجبات",
+      "dialogHint": "يرى أولياء الأمور الاسم بلغتهم.",
+      "nameAr": "الاسم بالعربية",
+      "nameEn": "الاسم بالإنجليزية",
+      "meals": "وجبات هذه الخطة",
+      "price": "السعر الشهري",
+      "perMonth": "جنيه / شهر",
+      "priceHint": "يُضاف إلى الفاتورة الشهرية لكل طفل على هذه الخطة.",
+      "priceChangeHint": "السعر الجديد يُطبَّق على الأطفال الذين يحصلون على الخطة من الآن، والباقون يحتفظون بسعرهم.",
+      "active": "متاحة",
+      "activeHint": "أوقفها لتتوقف عن إعطائها؛ الأطفال الذين لديهم الخطة يحتفظون بها.",
+      "save": "حفظ",
+      "saved": "تم حفظ خطة الوجبات.",
+      "issues": {
+        "name_ar_required": "اكتب الاسم بالعربية.",
+        "name_en_required": "اكتب الاسم بالإنجليزية.",
+        "name_too_long": "اجعل الاسم أقل من {{max}} حرفًا.",
+        "meals_required": "اختر وجبة واحدة على الأقل.",
+        "price_invalid": "اكتب سعرًا من 0 إلى {{max}}، مثل 800."
+      },
+      "childTitle": "خطة وجبات {{name}}",
+      "childHint": "تبدأ الخطة من اليوم، وتنتهي خطة الطفل السابقة أمس.",
+      "pricePerMonth": "{{amount}} / شهر",
+      "included": "ضمن باقة الرسوم الدراسية",
+      "includedHint": "بدون رسوم: الباقة تغطي هذه الوجبات بالفعل.",
+      "billingNote": "سيُضاف {{amount}} إلى كل فاتورة شهرية، بدءًا من الفاتورة القادمة.",
+      "noTuitionNote": "هذا الطفل ليس لديه خطة رسوم دراسية، فلا توجد فاتورة شهرية تُضاف إليها الوجبات. فوترها يدويًا، أو أعطِ الطفل خطة رسوم.",
+      "childSaved": "تم حفظ خطة وجبات الطفل.",
+      "childStopped": "تم إيقاف خطة وجبات الطفل."
+    },
+    "kitchen": {
+      "title": "مخزون المطبخ",
+      "subtitle": "الأطعمة والمشروبات ومستلزمات المطبخ: ما يوشك على النفاد أو انتهاء الصلاحية، وكل توريد واستخدام.",
+      "newItem": "إضافة صنف",
+      "editItem": "تعديل الصنف",
+      "newItemHint": "يبدأ من صفر. سجّل أول توريد بعد إضافته.",
+      "editItemHint": "لتغيير الكمية، سجّل توريدًا أو استخدامًا أو جردًا.",
+      "name": "الصنف",
+      "namePlaceholder": "مثال: أرز",
+      "category": "الفئة",
+      "categories": {
+        "food": "أطعمة",
+        "drinks": "مشروبات",
+        "kitchen_supplies": "مستلزمات المطبخ"
+      },
+      "unit": "الوحدة",
+      "units": {
+        "kg": "كجم",
+        "g": "جم",
+        "liter": "لتر",
+        "piece": "قطعة",
+        "pack": "عبوة",
+        "box": "علبة",
+        "can": "علبة صفيح",
+        "bottle": "زجاجة",
+        "dozen": "دستة"
+      },
+      "lowLevel": "ينخفض عند",
+      "lowLevelHint": "نبّه عندما يتبقى هذا القدر أو أقل (0: لا تنبيه).",
+      "expiry": "تاريخ الانتهاء",
+      "optional": "اختياري.",
+      "saveItem": "حفظ الصنف",
+      "itemSaved": "تم حفظ الصنف.",
+      "issues": {
+        "name_required": "اكتب اسم الصنف.",
+        "name_too_long": "اجعل الاسم أقل من 80 حرفًا.",
+        "unit_required": "اكتب الوحدة، مثل كجم.",
+        "level_invalid": "اكتب رقمًا، مثل 2."
+      },
+      "modes": {
+        "restock": "توريد",
+        "take": "استخدام",
+        "count": "جرد"
+      },
+      "inStock": "في المخزون: {{quantity}} {{unit}}",
+      "why": "ماذا حدث",
+      "kinds": {
+        "restocked": "تم التوريد",
+        "used": "تم الاستخدام",
+        "spoiled": "تم التخلص منه",
+        "counted": "تم الجرد"
+      },
+      "quantity": "الكمية",
+      "countedQuantity": "الكمية الموجودة الآن",
+      "quantityIssues": {
+        "required": "اكتب الكمية.",
+        "invalid": "اكتب رقمًا، مثل 2.5.",
+        "zero": "يجب أن تكون الكمية أكبر من صفر.",
+        "more_than_stock": "الموجود في المخزون {{quantity}} {{unit}} فقط."
+      },
+      "after": "يتبقى {{quantity}} {{unit}}",
+      "expiryRestockHint": "تاريخ هذا التوريد يحل محل تاريخ انتهاء الصنف.",
+      "note": "ملاحظة",
+      "notePlaceholder": "مثال: من التوريد الأسبوعي",
+      "record": "تسجيل",
+      "movementSaved": "تم تسجيل التغيير.",
+      "tiles": {
+        "items": "الأصناف",
+        "out": "نفد من المخزون",
+        "low": "على وشك النفاد",
+        "expiry": "الصلاحية",
+        "expiryHint": "{{expired}} منتهية · {{soon}} تنتهي قريبًا"
+      },
+      "needsAttention": "يحتاج انتباهًا",
+      "allItems": "كل الأصناف",
+      "itemCount_zero": "لا توجد أصناف",
+      "itemCount_one": "صنف واحد",
+      "itemCount_two": "صنفان",
+      "itemCount_few": "{{count}} أصناف",
+      "itemCount_many": "{{count}} صنفًا",
+      "itemCount_other": "{{count}} صنف",
+      "searchPlaceholder": "اسم الصنف…",
+      "allCategories": "كل الفئات",
+      "show": "عرض",
+      "empty": "لا توجد أصناف في المطبخ بعد.",
+      "emptyFiltered": "لا توجد أصناف تطابق هذه الفلاتر.",
+      "emptyHint": "أضف الأطعمة والمشروبات والمستلزمات التي يحتفظ بها المطبخ.",
+      "columns": {
+        "item": "الصنف",
+        "inStock": "في المخزون",
+        "status": "الحالة",
+        "expiry": "ينتهي"
+      },
+      "flags": {
+        "expired": "منتهي الصلاحية",
+        "out": "نفد",
+        "low": "منخفض",
+        "expiringSoon": "ينتهي قريبًا",
+        "ok": "جيد"
+      },
+      "lowAt": "ينخفض عند {{quantity}}",
+      "deleteTitle": "حذف {{name}}؟",
+      "deleteBody": "سيُحذف الصنف وسجله.",
+      "deleted": "تم حذف الصنف.",
+      "history": "آخر التغييرات",
+      "historyCount_zero": "لا توجد تغييرات",
+      "historyCount_one": "تغيير واحد",
+      "historyCount_two": "تغييران",
+      "historyCount_few": "{{count}} تغييرات",
+      "historyCount_many": "{{count}} تغييرًا",
+      "historyCount_other": "{{count}} تغيير",
+      "leftAfter": "تبقى {{quantity}} {{unit}}"
+    },
+    "errors": {
+      "failed": "حدث خطأ. حاول مرة أخرى.",
+      "menu_forbidden": "ليس لديك صلاحية لتعديل المنيو.",
+      "menu_invalid_dishes": "تعذّر حفظ المنيو. راجع الأطباق.",
+      "menu_invalid_dish": "هناك طبق بدون اسم أو في يوم خاطئ.",
+      "menu_invalid_allergen": "هناك طبق بمسبب حساسية غير معروف.",
+      "menu_notes_too_long": "الملاحظة طويلة جدًا.",
+      "menu_week_empty": "أضف أطباقًا أو ملف منيو قبل النشر.",
+      "menu_week_not_empty": "هذا الأسبوع به أطباق بالفعل، فلم يُنسخ الأسبوع الماضي فوقها.",
+      "menu_copy_source_empty": "لا توجد أطباق في الأسبوع الماضي لنسخها.",
+      "menu_invalid_file": "تعذّر حفظ الملف. اختر صورة أو ملف PDF حتى 5 ميجابايت.",
+      "meal_plan_invalid": "راجع اسم الخطة ووجباتها وسعرها.",
+      "meal_plan_not_found": "هذه الخطة لم تعد متاحة.",
+      "kitchen_item_invalid": "راجع اسم الصنف وفئته ووحدته.",
+      "kitchen_item_not_found": "هذا الصنف حُذف.",
+      "kitchen_invalid_quantity": "راجع الكمية.",
+      "kitchen_not_enough": "لا توجد هذه الكمية في المخزون."
+    }
   },
   "parent": {
     "children": {
@@ -4223,6 +4920,7 @@
     },
     "nav": {
       "bottomBarLabel": "أقسام تطبيق المعلم",
+      "meals": "الوجبات",
       "home": "الرئيسية",
       "inbox": "الوارد",
       "attendance": "الحضور",
@@ -5454,19 +6152,7 @@
     }
   },
   "meals": {
-    "adminTitle": "خطط الوجبات",
-    "parentTitle": "قائمة هذا الأسبوع",
-    "savePlan": "حفظ قائمة الأسبوع",
-    "saved": "تم حفظ خطة الوجبات.",
-    "weekOf": "أسبوع",
-    "noPlan": "لا توجد خطة وجبات حالياً.",
-    "days": {
-      "sunday": "الأحد",
-      "monday": "الاثنين",
-      "tuesday": "الثلاثاء",
-      "wednesday": "الأربعاء",
-      "thursday": "الخميس"
-    }
+    "parentTitle": "قائمة هذا الأسبوع"
   },
   "community": {
     "adminTitle": "لوحة المجتمع",
@@ -6701,6 +7387,10 @@
     "payment_gateway_needs_review": {
       "title": "دفعة أونلاين تحتاج مراجعة",
       "body": "أبلغت Paymob عن مبلغ {{amount}} للفاتورة {{invoice_number}} (العملية {{transaction}}) ولم يمكن تطبيقه تلقائيًا. راجعها في لوحة Paymob."
+    },
+    "menu_published": {
+      "title": "منيو الأسبوع جاهز",
+      "body": "نشرت الحضانة منيو الأسبوع الذي يبدأ {{week_start}}."
     },
     "invoice_paid": {
       "title": "تم تأكيد السداد",
@@ -8173,7 +8863,49 @@
         "low": "منخفض"
       },
       "empty": "لا توجد تنبيهات نشطة.",
-      "selectForBulk": "صفِّ التنبيهات ثم أرسل إشعارًا جماعيًا لأولياء الأمور."
+      "selectForBulk": "صفِّ التنبيهات ثم أرسل إشعارًا جماعيًا لأولياء الأمور.",
+      "groups": {
+        "allergies": "حساسية خطيرة",
+        "medicines": "أدوية منتهية",
+        "vaccinations": "تطعيمات متأخرة",
+        "contacts": "جهات اتصال ناقصة"
+      },
+      "groupHints": {
+        "allergies": "شديدة أو تهدد الحياة",
+        "medicines": "أدوية انتهت صلاحيتها",
+        "vaccinations": "تطعيمات لم تُعطَ في موعدها",
+        "contacts": "لا جهة طوارئ أو طبيب"
+      },
+      "allAlerts": "كل التنبيهات",
+      "count_zero": "لا توجد تنبيهات",
+      "count_one": "تنبيه واحد",
+      "count_two": "تنبيهان",
+      "count_few": "{{count}} تنبيهات",
+      "count_many": "{{count}} تنبيهًا",
+      "count_other": "{{count}} تنبيه",
+      "searchChild": "اسم الطفل…",
+      "urgencyAll": "كل الدرجات",
+      "emptyFiltered": "لا توجد تنبيهات تطابق هذه الفلاتر.",
+      "noClass": "بدون فصل",
+      "openRecord": "فتح السجل الصحي",
+      "resolveTitle": "اعتبار هذا التنبيه معالجًا؟",
+      "resolveBody": "سيختفي تنبيه \"{{kind}}\" الخاص بـ {{child}} من القائمة، ويعود إذا ظل السجل يحتاجه لاحقًا.",
+      "resolved": "تم اعتبار التنبيه معالجًا.",
+      "bulkTitle": "إبلاغ أولياء الأمور؟",
+      "bulkBody_zero": "لا توجد تنبيهات.",
+      "bulkBody_one": "سيُطلب من ولي أمر الطفل في هذا التنبيه تحديث السجل الصحي.",
+      "bulkBody_two": "سيُطلب من أولياء أمور الأطفال في التنبيهين تحديث السجلات الصحية.",
+      "bulkBody_few": "سيُطلب من أولياء أمور الأطفال في {{count}} تنبيهات تحديث السجلات الصحية.",
+      "bulkBody_many": "سيُطلب من أولياء أمور الأطفال في {{count}} تنبيهًا تحديث السجلات الصحية.",
+      "bulkBody_other": "سيُطلب من أولياء أمور الأطفال في {{count}} تنبيه تحديث السجلات الصحية.",
+      "bulkConfirm": "إبلاغ أولياء الأمور",
+      "notifyShown_zero": "إبلاغ أولياء الأمور",
+      "notifyShown_one": "إبلاغ أولياء الأمور (١)",
+      "notifyShown_two": "إبلاغ أولياء الأمور (٢)",
+      "notifyShown_few": "إبلاغ أولياء الأمور ({{count}})",
+      "notifyShown_many": "إبلاغ أولياء الأمور ({{count}})",
+      "notifyShown_other": "إبلاغ أولياء الأمور ({{count}})",
+      "noParent": "لا يوجد حساب ولي أمر مرتبط بهذا الطفل."
     },
     "toast": {
       "printReady": "جارٍ فتح نافذة الطباعة. اختر «حفظ كـ PDF» للتصدير.",

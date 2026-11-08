@@ -60,8 +60,17 @@ const NAV_SECTIONS: NavSection[] = [
       { key: 'courses',            to: '/xo-admin/nursery/courses',               icon: 'school',                 tKey: 'admin.nav.courses' },
       { key: 'packages',           to: '/xo-admin/nursery/packages',              icon: 'package_2',              tKey: 'admin.nav.packages' },
       { key: 'inventory',          to: '/xo-admin/nursery/inventory',             icon: 'inventory_2',            tKey: 'admin.nav.inventory' },
-      { key: 'meals',              to: '/xo-admin/nursery/meals',                 icon: 'restaurant',             tKey: 'admin.nav.meals' },
       { key: 'qrCodes',            to: '/xo-admin/nursery/qr-codes',              icon: 'qr_code_2',              tKey: 'admin.nav.qrCodes' },
+    ],
+  },
+  {
+    key: 'foodAndBeverage',
+    labelKey: 'admin.nav.moreGroupFoodAndBeverage',
+    items: [
+      { key: 'meals',              to: '/xo-admin/nursery/meals',                 icon: 'restaurant',             tKey: 'admin.nav.meals' },
+      { key: 'mealPlans',          to: '/xo-admin/nursery/meal-plans',            icon: 'restaurant_menu',        tKey: 'admin.nav.mealPlans' },
+      { key: 'kitchenStock',       to: '/xo-admin/nursery/kitchen',               icon: 'kitchen',                tKey: 'admin.nav.kitchenStock' },
+      { key: 'foodAlerts',         to: '/xo-admin/nursery/food-alerts',           icon: 'no_food',                tKey: 'admin.nav.foodAlerts' },
       { key: 'healthAlerts',       to: '/xo-admin/nursery/health/alerts',         icon: 'medical_services',       tKey: 'admin.nav.healthAlerts' },
     ],
   },

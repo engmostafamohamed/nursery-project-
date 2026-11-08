@@ -2,187 +2,148 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
-import { InvoiceCard } from '@/components/parent/InvoiceCard';
 import { Button } from '@/components/ui/button';
 import { TableCard, TableEmpty, TableLoading, TablePagination } from '@/components/ui/DataTable';
 import { FilterBar, SearchInput } from '@/components/ui/FilterBar';
 import { FilterField } from '@/components/ui/FilterField';
-import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/select';
-import { StatTile } from '@/components/ui/StatTile';
-import { useAuthSession } from '@/hooks/useAuthSession';
+import { Skeleton } from '@/components/ui/skeleton';
+import { BalanceHero } from '@/features/parent-billing/BalanceHero';
+import { InvoiceListItem } from '@/features/parent-billing/InvoiceListItem';
+import { billingSummary, isPayable, localName, type BillingInvoice } from '@/features/parent-billing/parentBilling';
+import { useParentBilling } from '@/features/parent-billing/useParentBilling';
 import { usePagination } from '@/hooks/usePagination';
 import { useParentChildren } from '@/hooks/useParentChildren';
-import {
-  useParentInvoices,
-  type ParentInvoiceSort,
-  type ParentInvoiceStatusFilter,
-} from '@/hooks/useParentInvoices';
-import { formatDate } from '@/lib/datetime';
-import { formatMoneyAmount } from '@/lib/money';
+import { invoiceItemDescription, invoiceRawItems } from '@/lib/invoiceItems';
+import { cn } from '@/lib/utils';
 
+type StatusFilter = 'all' | 'open' | 'paid';
+type Sort = 'due_soon' | 'newest';
+const STATUS_FILTERS: StatusFilter[] = ['all', 'open', 'paid'];
+
+/** The parent's bills: what they owe at the top, then every invoice in short cards. */
 export function ParentInvoicesPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const isPreview = import.meta.env.DEV && searchParams.get('preview') === 'true';
-  const qs = isPreview ? '?preview=true' : '';
-  const { user } = useAuthSession();
   const initialStatus = searchParams.get('status');
-  const initialChildId = searchParams.get('child') ?? '';
   const highlightId = searchParams.get('highlight');
-  const [status, setStatus] = useState<ParentInvoiceStatusFilter>(
-    initialStatus === 'pending' || initialStatus === 'paid' ? initialStatus : 'all',
-  );
-  const [sort, setSort] = useState<ParentInvoiceSort>('due_soon');
-  const [selectedChildId, setSelectedChildId] = useState(initialChildId);
+  const [status, setStatus] = useState<StatusFilter>(initialStatus === 'pending' ? 'open' : initialStatus === 'paid' ? 'paid' : 'all');
+  const [sort, setSort] = useState<Sort>('due_soon');
+  const [childId, setChildId] = useState(searchParams.get('child') ?? '');
   const [search, setSearch] = useState('');
 
+  const billing = useParentBilling();
+  const all = useMemo(() => billing.data ?? [], [billing.data]);
   const childrenQuery = useParentChildren();
   const children = useMemo(() => childrenQuery.data ?? [], [childrenQuery.data]);
-  const invoicesQuery = useParentInvoices({
-    parentId: user?.id,
-    childId: selectedChildId || undefined,
-    status,
-    sort,
-  });
+  const isArabic = i18n.language.startsWith('ar');
+  const childName = useMemo(
+    () => new Map(children.map((c) => [c.id, localName({ name_ar: c.nameAr, name_en: c.nameEn }, isArabic)])),
+    [children, isArabic],
+  );
 
-  const childNameById = useMemo(() => {
-    const isAr = i18n.language.startsWith('ar');
-    return new Map(children.map((child) => [child.id, (isAr ? child.nameAr || child.nameEn : child.nameEn || child.nameAr) || '']));
-  }, [children, i18n.language]);
+  // The figures at the top count the chosen child's invoices, whatever the status filter.
+  const forChild = useMemo(() => (childId ? all.filter((i) => i.childIds.includes(childId)) : all), [all, childId]);
+  const summary = useMemo(() => billingSummary(forChild), [forChild]);
 
-  const invoices = useMemo(() => {
+  const shown = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const rows = term
-      ? invoicesQuery.data.filter((row) => row.invoiceNumber.toLowerCase().includes(term) || row.description.toLowerCase().includes(term))
-      : invoicesQuery.data;
-    if (sort !== 'due_soon') return rows;
-    // Soonest first: the invoices still to pay come first, then paid and cancelled ones, latest first.
-    const settled = (row: (typeof rows)[number]) => row.status === 'paid' || row.status === 'cancelled';
-    return [...rows.filter((row) => !settled(row)), ...rows.filter(settled).reverse()];
-  }, [invoicesQuery.data, search, sort]);
+    const matches = (i: BillingInvoice) => {
+      if (!term) return true;
+      const first = invoiceRawItems(i.lineItems)[0];
+      return i.invoiceNumber.toLowerCase().includes(term) || (first ? invoiceItemDescription(first, i18n.language).toLowerCase().includes(term) : false);
+    };
+    const rows = forChild.filter(
+      (i) => matches(i) && (status === 'all' || (status === 'paid' ? i.status === 'paid' : i.status === 'pending' || i.status === 'overdue')),
+    );
+    if (sort === 'newest') return [...rows].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    // Soonest first: what is still to pay by due date, then the rest, latest first.
+    const open = rows.filter(isPayable).sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+    const rest = rows.filter((i) => !isPayable(i)).sort((a, b) => b.dueDate.localeCompare(a.dueDate));
+    return [...open, ...rest];
+  }, [forChild, search, status, sort, i18n.language]);
 
-  const pager = usePagination(invoices, 6, `${status}|${sort}|${selectedChildId}|${search}`);
+  const pager = usePagination(shown, 10, `${status}|${sort}|${childId}|${search}`);
   const { page, pageSize, setPage } = pager;
-
-  // Paying always goes through the pay page: amount, method and reference, then a confirmation.
-  const handlePayNow = (invoiceId: string) => {
-    const returnTo = encodeURIComponent('/parent/invoices');
-    navigate(`/parent/invoices/${invoiceId}/pay?returnTo=${returnTo}${isPreview ? '&preview=true' : ''}`);
-  };
 
   // A link to one invoice (?highlight=) opens the page it is on, then scrolls to it once.
   const highlightShown = useRef(false);
   useEffect(() => {
-    if (!highlightId || invoicesQuery.isLoading || highlightShown.current) return;
-    const index = invoices.findIndex((row) => row.id === highlightId);
+    if (!highlightId || billing.isLoading || highlightShown.current) return;
+    const index = shown.findIndex((i) => i.id === highlightId);
     if (index < 0) return;
-    const targetPage = Math.floor(index / pageSize) + 1;
-    if (page !== targetPage) {
-      setPage(targetPage);
+    const target = Math.floor(index / pageSize) + 1;
+    if (page !== target) {
+      setPage(target);
       return;
     }
     highlightShown.current = true;
     document.getElementById(`invoice-card-${highlightId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, [highlightId, invoicesQuery.isLoading, invoices, page, pageSize, setPage]);
+  }, [highlightId, billing.isLoading, shown, page, pageSize, setPage]);
 
-  // The tiles count every invoice of the chosen child, so they stay put while the status filter changes.
-  const summary = useMemo(() => {
-    const rows = selectedChildId ? invoicesQuery.allData.filter((row) => row.childIds.includes(selectedChildId)) : invoicesQuery.allData;
-    const dueRows = rows.filter((row) => (row.status === 'pending' || row.status === 'overdue') && row.balance > 0);
-    return {
-      total: rows.length,
-      totalDue: dueRows.reduce((sum, row) => sum + row.balance, 0),
-      dueCount: dueRows.length,
-      overdueCount: dueRows.filter((row) => row.status === 'overdue').length,
-      paidCount: rows.filter((row) => row.status === 'paid').length,
-      nextDue: [...dueRows].sort((a, b) => +new Date(a.dueDate) - +new Date(b.dueDate))[0],
-    };
-  }, [invoicesQuery.allData, selectedChildId]);
-
-  const money = (amount: number) => t('invoice.egpAmount', { amount: formatMoneyAmount(amount) });
-  const toggleStatus = (value: ParentInvoiceStatusFilter) => setStatus((current) => (current === value ? 'all' : value));
-  const filtersActive = status !== 'all' || Boolean(selectedChildId) || Boolean(search.trim()) || sort !== 'due_soon';
+  const pay = (invoiceId: string) => navigate(`/parent/invoices/${invoiceId}/pay?returnTo=${encodeURIComponent('/parent/invoices')}`);
+  const filtersActive = status !== 'all' || Boolean(childId) || Boolean(search.trim()) || sort !== 'due_soon';
   const clearFilters = () => {
     setStatus('all');
-    setSelectedChildId('');
+    setChildId('');
     setSearch('');
     setSort('due_soon');
   };
-  const hasInvoices = invoicesQuery.allData.length > 0;
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-5 pb-28">
-      <PageHeader
-        icon="receipt_long"
-        eyebrow={t('parent.dashboard.sectionFinancial')}
-        title={t('parent.invoices.title')}
-        description={t('parent.invoices.subtitle')}
-        actions={
-          <Button asChild variant="outline">
-            <Link to="/parent/payment-record">
-              <span className="material-symbols-outlined me-1 text-base" aria-hidden>history</span>
-              {t('parent.paymentRecord.title')}
-            </Link>
-          </Button>
-        }
-      >
-        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-          <StatTile icon="receipt_long" label={t('parent.invoices.allInvoices')} value={summary.total} onClick={() => setStatus('all')} active={status === 'all'} />
-          <StatTile
-            icon="account_balance_wallet"
-            label={t('parent.invoices.totalDue')}
-            value={money(summary.totalDue)}
-            tone={summary.overdueCount > 0 ? 'error' : summary.totalDue > 0 ? 'warning' : 'success'}
-            helper={
-              summary.overdueCount > 0
-                ? t('parent.invoices.overdueCount', { count: summary.overdueCount })
-                : t('parent.invoices.openCount', { count: summary.dueCount })
-            }
-            onClick={() => toggleStatus('pending')}
-            active={status === 'pending'}
-          />
-          <StatTile
-            icon="event_upcoming"
-            label={t('parent.invoices.nextDue')}
-            value={summary.nextDue ? formatDate(summary.nextDue.dueDate) : '—'}
-            helper={summary.nextDue ? money(summary.nextDue.balance) : t('parent.invoices.nothingDue')}
-            tone={summary.nextDue ? 'primary' : 'neutral'}
-          />
-          <StatTile
-            icon="task_alt"
-            label={t('invoice.status.paid')}
-            value={summary.paidCount}
-            tone="success"
-            onClick={() => toggleStatus('paid')}
-            active={status === 'paid'}
-          />
-        </div>
-      </PageHeader>
+    <div className="mx-auto w-full max-w-4xl space-y-4 pb-28">
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-on-surface">{t('parent.invoices.title')}</h1>
+        <Button asChild variant="ghost" size="sm">
+          <Link to="/parent/payment-record">
+            <span className="material-symbols-outlined me-1 text-base" aria-hidden>history</span>
+            {t('parent.paymentRecord.title')}
+          </Link>
+        </Button>
+      </div>
+
+      {billing.isLoading ? <Skeleton className="h-36 rounded-xl" /> : <BalanceHero summary={summary} onPay={pay} />}
+
+      <div role="tablist" aria-label={t('parentBilling.list.filterLabel')} className="flex gap-2 overflow-x-auto">
+        {STATUS_FILTERS.map((value) => (
+          <button
+            key={value}
+            type="button"
+            role="tab"
+            aria-selected={status === value}
+            onClick={() => setStatus(value)}
+            className={cn(
+              'shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
+              status === value ? 'border-primary bg-primary text-primary-foreground' : 'border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-container-lowest',
+            )}
+          >
+            {t(`parentBilling.list.filters.${value}`)}
+          </button>
+        ))}
+      </div>
 
       <TableCard
-        title={t(`invoice.statusTabs.${status}`)}
-        count={t('parent.invoices.resultsCount', { count: invoices.length })}
+        title={t(`parentBilling.list.filters.${status}`)}
+        count={t('parent.invoices.resultsCount', { count: shown.length })}
         filters={
-          hasInvoices ? (
+          all.length ? (
             <FilterBar onClear={clearFilters} canClear={filtersActive}>
               <FilterField label={t('common.search')} className="sm:flex-[2]">
                 <SearchInput value={search} onChange={setSearch} placeholder={t('parent.invoices.searchPlaceholder')} />
               </FilterField>
               {children.length > 1 ? (
                 <FilterField label={t('parent.invoices.childFilter')}>
-                  <Select value={selectedChildId} onChange={(e) => setSelectedChildId(e.target.value)}>
+                  <Select value={childId} onChange={(e) => setChildId(e.target.value)}>
                     <option value="">{t('parent.invoices.allChildren')}</option>
-                    {children.map((child) => (
-                      <option key={child.id} value={child.id}>{childNameById.get(child.id)}</option>
+                    {children.map((c) => (
+                      <option key={c.id} value={c.id}>{childName.get(c.id)}</option>
                     ))}
                   </Select>
                 </FilterField>
               ) : null}
-              {/* The tiles above filter by status. */}
               <FilterField label={t('parent.invoices.sortLabel')} className="sm:min-w-[14rem]">
-                <Select value={sort} onChange={(e) => setSort(e.target.value as ParentInvoiceSort)}>
+                <Select value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
                   <option value="due_soon">{t('invoice.filters.parentSortDueSoon')}</option>
                   <option value="newest">{t('invoice.filters.parentSortNewest')}</option>
                 </Select>
@@ -190,13 +151,13 @@ export function ParentInvoicesPage() {
             </FilterBar>
           ) : null
         }
-        pagination={invoices.length ? <TablePagination pager={pager} pageSizeOptions={[6, 12, 24]} /> : null}
+        pagination={shown.length ? <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} /> : null}
       >
-        {invoicesQuery.isLoading ? (
+        {billing.isLoading ? (
           <TableLoading />
-        ) : !hasInvoices ? (
+        ) : !all.length ? (
           <TableEmpty icon="receipt_long" title={t('parent.invoices.emptyTitle')} description={t('parent.invoices.emptyHint')} />
-        ) : !invoices.length ? (
+        ) : !shown.length ? (
           <TableEmpty
             icon="filter_alt_off"
             title={t('parent.invoices.emptyFiltered')}
@@ -207,15 +168,15 @@ export function ParentInvoicesPage() {
             }
           />
         ) : (
-          <div className="grid gap-3 p-4 sm:p-5 lg:grid-cols-2">
+          <div className="space-y-2 p-3 sm:p-4">
             {pager.pageItems.map((invoice) => (
-              <InvoiceCard
+              <InvoiceListItem
                 key={invoice.id}
                 invoice={invoice}
-                highlighted={Boolean(highlightId && invoice.id === highlightId)}
-                childNames={children.length > 1 ? invoice.childIds.map((id) => childNameById.get(id) ?? '').filter(Boolean) : []}
-                onPayNow={() => handlePayNow(invoice.id)}
-                onView={() => navigate(`/parent/invoices/${invoice.id}${qs}`)}
+                highlighted={invoice.id === highlightId}
+                childNames={children.length > 1 ? invoice.childIds.map((id) => childName.get(id) ?? '').filter(Boolean) : []}
+                onOpen={() => navigate(`/parent/invoices/${invoice.id}`)}
+                onPay={() => pay(invoice.id)}
               />
             ))}
           </div>

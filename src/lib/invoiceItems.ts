@@ -62,3 +62,47 @@ export function invoiceRawItems(raw: unknown): RawLineItem[] {
       : [];
   return source.filter((row): row is RawLineItem => Boolean(row) && typeof row === 'object' && !Array.isArray(row));
 }
+
+export type InvoiceLineItem = {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+};
+
+/** The invoice's lines for display (in the reader's language), its note and its tax. */
+export function parseInvoiceLineItems(raw: unknown, language: string): { items: InvoiceLineItem[]; notes: string; tax: number } {
+  if (Array.isArray(raw)) {
+    const items = invoiceRawItems(raw)
+      .map((row) => {
+        const quantity = Number(row.quantity ?? 1);
+        const unitPrice = Number(row.unit_price ?? row.amount ?? 0);
+        return {
+          description: invoiceItemDescription(row, language),
+          quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
+          unitPrice: Number.isFinite(unitPrice) ? unitPrice : 0,
+          total: (Number.isFinite(quantity) && quantity > 0 ? quantity : 1) * (Number.isFinite(unitPrice) ? unitPrice : 0),
+        };
+      });
+    return { items, notes: '', tax: 0 };
+  }
+
+  const obj = (raw ?? {}) as { tax?: number | string };
+  const items = invoiceRawItems(raw)
+    .map((row) => {
+      const quantity = Number(row.quantity ?? 1);
+      const unitPrice = Number(row.unitPrice ?? row.unit_price ?? 0);
+      const total = Number(row.total ?? quantity * unitPrice);
+      return {
+        description: invoiceItemDescription(row, language),
+        quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
+        unitPrice: Number.isFinite(unitPrice) ? unitPrice : 0,
+        total: Number.isFinite(total) ? total : 0,
+      };
+    });
+  return {
+    items,
+    notes: invoiceNotes(raw, language),
+    tax: Number(obj.tax ?? 0) || 0,
+  };
+}

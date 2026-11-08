@@ -124,6 +124,9 @@ export function AppRouter() {
               <Route path="attendance" element={<P.AdminAttendancePage />} />
               <Route path="scanner" element={<P.QRScannerPage />} />
               <Route path="health/alerts" element={<P.AdminHealthAlertsDashboardPage />} />
+              <Route path="food-alerts" element={<P.AdminFoodAlertsPage />} />
+              <Route path="meal-plans" element={<P.AdminMealPricingPage />} />
+              <Route path="kitchen" element={<P.AdminKitchenStockPage />} />
               <Route path="qr-codes" element={<P.AdminQRCodesPage />} />
               <Route path="calendar" element={<P.AdminCalendarPage />} />
               <Route path="inbox" element={<P.AdminInboxPage />} />
@@ -187,6 +190,7 @@ export function AppRouter() {
               <Route index element={<P.TeacherHomePage />} />
               <Route path="attendance" element={<P.TeacherAttendancePage />} />
               <Route path="daily-reports" element={<P.TeacherDailyReportPage />} />
+              <Route path="meals" element={<P.TeacherMealsPage />} />
               <Route path="daily-reports/:childId/:date" element={<P.TeacherDailyReportEditorPage />} />
               <Route path="report-rates" element={<P.DailyReportRatesPage />} />
               <Route path="reports" element={<Navigate to="/teacher/daily-reports" replace />} />
@@ -293,6 +297,9 @@ export function AppRouter() {
               <Route path="nursery/attendance/child/:childId" element={<P.AdminChildAttendanceReportPage />} />
               <Route path="nursery/attendance" element={<P.AdminAttendancePage />} />
               <Route path="nursery/health/alerts" element={<P.AdminHealthAlertsDashboardPage />} />
+              <Route path="nursery/food-alerts" element={<P.AdminFoodAlertsPage />} />
+              <Route path="nursery/meal-plans" element={<P.AdminMealPricingPage />} />
+              <Route path="nursery/kitchen" element={<P.AdminKitchenStockPage />} />
               <Route path="nursery/qr-codes" element={<P.AdminQRCodesPage />} />
               <Route path="nursery/calendar" element={<P.AdminCalendarPage />} />
               <Route path="nursery/inbox" element={<P.AdminInboxPage />} />

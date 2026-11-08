@@ -1,338 +1,174 @@
-import { useMemo, useRef } from 'react';
+import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { toast } from 'sonner';
+import { Link, useParams } from 'react-router-dom';
 
-import { Badge } from '@/components/ui/badge';
-import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/button';
-import { InvoicePaymentHistory } from '@/components/financial/InvoicePaymentHistory';
-import { useInvoiceDetails, type InvoiceDetailsData } from '@/hooks/useInvoiceDetails';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { Skeleton } from '@/components/ui/skeleton';
+import { InvoiceActionsMenu } from '@/features/parent-billing/InvoiceActionsMenu';
+import { InvoiceStatusBadge } from '@/features/parent-billing/InvoiceStatusBadge';
+import { invoiceState, isPayable, localName } from '@/features/parent-billing/parentBilling';
+import { useParentInvoice } from '@/features/parent-billing/useParentBilling';
 import { formatDate, formatDateTime } from '@/lib/datetime';
-import { downloadInvoicePdf } from '@/lib/exports';
+import { parseInvoiceLineItems } from '@/lib/invoiceItems';
+import { formatMoneyAmount } from '@/lib/money';
 import { cn } from '@/lib/utils';
 
-function invoiceStatusVariant(details: InvoiceDetailsData | null | undefined): 'default' | 'success' | 'warning' | 'error' | 'outline' {
-  if (details?.inReview) return 'warning';
-  if (details?.status === 'paid') return 'success';
-  if (details?.status === 'overdue') return 'error';
-  if (details?.status === 'cancelled') return 'outline';
-  return 'default';
-}
-
-function safeFileName(value: string): string {
-  return value.replace(/[^\w.-]+/g, '_').slice(0, 80);
-}
-
-function DetailMetric({
-  icon,
-  label,
-  value,
-  tone = 'primary',
-}: {
-  icon: string;
-  label: string;
-  value: string;
-  tone?: 'primary' | 'success' | 'warning' | 'error';
-}) {
-  const toneClass = {
-    primary: 'bg-primary/10 text-primary',
-    success: 'bg-success/10 text-success',
-    warning: 'bg-warning/10 text-warning',
-    error: 'bg-error/10 text-error',
-  }[tone];
-
-  return (
-    <div className="rounded-lg border border-outline-variant bg-surface-container-lowest p-4">
-      <div className="flex items-start gap-3">
-        <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-md', toneClass)}>
-          <span className="material-symbols-outlined text-xl" aria-hidden>{icon}</span>
-        </span>
-        <div className="min-w-0">
-          <p className="text-xs font-medium text-on-surface-variant">{label}</p>
-          <p className="mt-1 break-words text-lg font-semibold text-on-surface">{value}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function LabelValue({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0 rounded-lg border border-outline-variant bg-surface-container-lowest p-3">
-      <p className="text-[11px] font-semibold uppercase text-on-surface-variant">{label}</p>
-      <p className="mt-1 break-words text-sm font-semibold text-on-surface">{value || '-'}</p>
-    </div>
-  );
-}
-
+/**
+ * One invoice: what it is for and its state at the top with the pay button, the money in one line
+ * (amount, paid, waiting for the nursery, left to pay), then its lines, payments and reminders.
+ * Print, share and download sit in the "⋯" menu.
+ */
 export function ParentInvoiceDetailsPage() {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
+  const isArabic = i18n.language.startsWith('ar');
   const { invoiceId } = useParams();
-  const [searchParams] = useSearchParams();
-  const isPreview = import.meta.env.DEV && searchParams.get('preview') === 'true';
-  const qs = isPreview ? '?preview=true' : '';
-  const detailsQuery = useInvoiceDetails(invoiceId);
-  const details = detailsQuery.data;
-  const invoiceRef = useRef<HTMLElement | null>(null);
-  const nowMs = useMemo(() => Date.now(), []);
+  const query = useParentInvoice(invoiceId);
+  const invoice = query.data;
+  const printableRef = useRef<HTMLElement | null>(null);
+  const money = (amount: number) => t('invoice.egpAmount', { amount: formatMoneyAmount(amount) });
 
-  if (!detailsQuery.isLoading && !details) {
-    return <EmptyState icon="receipt_long" title={t('invoice.details.notFound')} description={t('common.comingSoon')} />;
+  if (query.isLoading) {
+    return (
+      <div className="mx-auto w-full max-w-4xl space-y-4">
+        <Skeleton className="h-32 rounded-xl" />
+        <Skeleton className="h-72 rounded-xl" />
+      </div>
+    );
+  }
+  if (!invoice) {
+    return <EmptyState icon="receipt_long" title={t('invoice.details.notFound')} description={t('parentBilling.notFoundHint')} />;
   }
 
-  const dueDate = details ? new Date(details.dueDate) : null;
-  const countdown = dueDate ? Math.ceil((dueDate.getTime() - nowMs) / 86400000) : 0;
-  const canPay = (details?.status === 'pending' || details?.status === 'overdue') && !details?.inReview;
-  const statusLabel = details?.inReview ? t('invoice.inReview') : t(`invoice.status.${details?.status ?? 'pending'}`);
-  const typeLabel = details ? t(`invoice.types.${details.type}`) : '-';
-
-  const downloadPdf = (receipt = false) => {
-    if (!details) return;
-    downloadInvoicePdf({
-      receipt,
-      invoiceNumber: details.invoiceNumber,
-      parentName: details.parentName,
-      childNames: details.childNames,
-      typeLabel,
-      statusLabel,
-      dueDate: details.dueDate,
-      createdAt: details.createdAt,
-      paidAt: details.paidAt,
-      paymentMethod: details.paymentMethod
-        ? t(`invoice.paymentMethods.${details.paymentMethod}`, { defaultValue: details.paymentMethod })
-        : null,
-      lineItems: details.lineItems,
-      subtotal: details.subtotal,
-      tax: details.tax,
-      total: details.total,
-    });
-  };
-
-  const downloadImage = async () => {
-    if (!details || !invoiceRef.current) return;
-    try {
-      const { default: html2canvas } = await import('html2canvas');
-      const canvas = await html2canvas(invoiceRef.current, {
-        backgroundColor: '#ffffff',
-        scale: Math.min(2, window.devicePixelRatio || 1.5),
-      });
-      const a = document.createElement('a');
-      a.href = canvas.toDataURL('image/png');
-      a.download = `invoice-${safeFileName(details.invoiceNumber)}.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    } catch {
-      toast.error(t('payment.errors.actionFailed'));
-    }
-  };
-
-  const shareInvoice = async () => {
-    if (!details) return;
-    const shareText = `${details.invoiceNumber} - ${t('invoice.egpAmount', { amount: details.total.toFixed(2) })}`;
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: details.invoiceNumber,
-          text: shareText,
-          url: window.location.href,
-        });
-        return;
-      }
-      await navigator.clipboard.writeText(`${shareText}\n${window.location.href}`);
-      toast.success(t('common.copied', { defaultValue: 'Copied' }));
-    } catch {
-      toast.error(t('payment.errors.actionFailed'));
-    }
-  };
-
-  const printInvoice = () => {
-    window.print();
-  };
+  const state = invoiceState(invoice);
+  const { items, notes, tax } = parseInvoiceLineItems(invoice.lineItems, i18n.language);
+  const figures: Array<{ key: string; label: string; value: number; tone?: string }> = [
+    { key: 'amount', label: t('parentBilling.details.amount'), value: invoice.amount },
+    { key: 'paid', label: t('parentBilling.details.paid'), value: invoice.paidAmount, tone: 'text-success' },
+    ...(invoice.pendingAmount > 0 ? [{ key: 'review', label: t('parentBilling.details.inReview'), value: invoice.pendingAmount, tone: 'text-warning' }] : []),
+    // What can still be paid now, as on the pay button: what waits for the nursery is not counted twice.
+    { key: 'left', label: t('parentBilling.details.left'), value: invoice.payable },
+  ];
 
   return (
-    <div className="w-full max-w-none space-y-5 pb-28">
-      <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
-        <div className="flex flex-col gap-4 border-b border-outline-variant bg-surface-container-lowest p-4 sm:p-5 xl:flex-row xl:items-center xl:justify-between">
+    <div className="mx-auto w-full max-w-4xl space-y-4 pb-28">
+      <section className="rounded-xl border border-outline-variant bg-surface p-4 shadow-sm sm:p-5">
+        <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase text-primary">
-              {t('invoice.details.title', { defaultValue: 'Invoice details' })}
-            </p>
-            <h1 className="mt-1 break-words text-3xl font-semibold text-on-surface">
-              {details?.invoiceNumber ?? '-'}
-            </h1>
-            <p className="mt-2 text-sm text-on-surface-variant">
-              {details ? `${t('invoice.table.createdDate')}: ${formatDate(details.createdAt)} | ${t('invoice.table.dueDate')}: ${formatDate(details.dueDate)}` : '-'}
-            </p>
+            <p className="text-xs font-semibold text-primary">{t(`invoice.types.${invoice.type}`)}</p>
+            <h1 className="truncate text-2xl font-bold text-on-surface">{invoice.invoiceNumber}</h1>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-on-surface-variant">
+              <InvoiceStatusBadge state={state} />
+              <span>{t('parentBilling.list.dueOn', { date: formatDate(invoice.dueDate) })}</span>
+              {state === 'overdue' ? <span className="font-medium text-error">{t('parentBilling.list.lateDays', { count: invoice.overdueDays })}</span> : null}
+            </div>
           </div>
-          <div className="no-print flex flex-wrap gap-2">
-            <Button className="h-10 gap-2 rounded-md" variant="outline" onClick={() => void shareInvoice()}>
-              <span className="material-symbols-outlined text-base" aria-hidden>share</span>
-              {t('common.share', { defaultValue: 'Share' })}
-            </Button>
-            <Button className="h-10 gap-2 rounded-md" variant="outline" onClick={printInvoice}>
-              <span className="material-symbols-outlined text-base" aria-hidden>print</span>
-              {t('common.print', { defaultValue: 'Print' })}
-            </Button>
-            <Button className="h-10 gap-2 rounded-md" variant="outline" onClick={() => void downloadImage()}>
-              <span className="material-symbols-outlined text-base" aria-hidden>image</span>
-              {t('invoice.details.downloadImage', { defaultValue: 'Download image' })}
-            </Button>
-            <Button className="h-10 gap-2 rounded-md" variant="outline" onClick={() => downloadPdf(false)}>
-              <span className="material-symbols-outlined text-base" aria-hidden>picture_as_pdf</span>
-              {t('invoice.details.downloadPdf')}
-            </Button>
-            {canPay ? (
-              <Button className="h-10 gap-2 rounded-md" onClick={() => navigate(`/parent/invoices/${details?.id}/pay${qs}`)}>
-                <span className="material-symbols-outlined text-base" aria-hidden>credit_card</span>
-                {t('invoice.actions.payNow')}
-              </Button>
-            ) : null}
-            <Button variant="outline" className="h-10 rounded-md" onClick={() => navigate(`/parent/invoices${qs}`)}>
-              {t('invoice.details.back')}
-            </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            <InvoiceActionsMenu invoice={invoice} printable={() => printableRef.current} />
           </div>
         </div>
 
-        <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4 sm:p-5">
-          <DetailMetric
-            icon="payments"
-            label={t('invoice.details.total')}
-            value={details ? t('invoice.egpAmount', { amount: details.total.toFixed(2) }) : '-'}
-          />
-          <DetailMetric
-            icon="check_circle"
-            label={t('financial.paymentHistory.paidLabel', { defaultValue: 'Paid' })}
-            value={details ? t('invoice.egpAmount', { amount: details.paidAmount.toFixed(2) }) : '-'}
-            tone="success"
-          />
-          <DetailMetric
-            icon="hourglass_top"
-            label={t('invoice.inReview')}
-            value={details ? t('invoice.egpAmount', { amount: details.pendingAmount.toFixed(2) }) : '-'}
-            tone="warning"
-          />
-          <DetailMetric
-            icon="account_balance_wallet"
-            label={t('financial.paymentHistory.balanceLabel', { defaultValue: 'Balance' })}
-            value={details ? t('invoice.egpAmount', { amount: details.balanceDue.toFixed(2) }) : '-'}
-            tone={details?.balanceDue ? 'error' : 'success'}
-          />
-        </div>
+        <dl className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-outline-variant bg-outline-variant sm:grid-cols-4">
+          {figures.map((f) => (
+            <div key={f.key} className="bg-surface px-3 py-2">
+              <dt className="text-xs text-on-surface-variant">{f.label}</dt>
+              <dd className={cn('text-base font-bold tabular-nums text-on-surface', f.tone)}>{money(f.value)}</dd>
+            </div>
+          ))}
+        </dl>
+
+        {isPayable(invoice) ? (
+          <Button asChild size="lg" className="mt-4 w-full gap-2 sm:w-auto">
+            <Link to={`/parent/invoices/${invoice.id}/pay`}>
+              <MaterialSymbol name="payments" size="text-lg" />
+              {t('parentBilling.details.pay', { amount: money(invoice.payable) })}
+            </Link>
+          </Button>
+        ) : null}
+
+        {invoice.inReview.length ? (
+          <div role="note" className="mt-4 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+            <p className="flex items-center gap-1.5 font-semibold text-warning">
+              <MaterialSymbol name="hourglass_top" size="text-base" />
+              {t('parentBilling.details.reviewTitle')}
+            </p>
+            <ul className="mt-1 space-y-0.5 text-on-surface">
+              {invoice.inReview.map((p) => (
+                <li key={p.id}>{t('parentBilling.pay.alreadySentLine', { amount: money(p.amount), date: formatDateTime(p.at) })}</li>
+              ))}
+            </ul>
+            <p className="mt-1 text-on-surface-variant">{t('parentBilling.details.reviewHint')}</p>
+          </div>
+        ) : null}
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
-        <article ref={invoiceRef} className="invoice-print-area overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
-          <div className="flex flex-col gap-4 border-b border-outline-variant bg-surface-container-lowest p-5 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase text-primary">XO Nursery</p>
-              <h2 className="mt-1 text-2xl font-semibold text-on-surface">{details?.invoiceNumber ?? '-'}</h2>
-              <p className="mt-2 text-sm text-on-surface-variant">{typeLabel}</p>
-            </div>
-            <Badge variant={invoiceStatusVariant(details)} className="w-fit">
-              {statusLabel}
-            </Badge>
-          </div>
-
-          <div className="grid gap-3 p-5 md:grid-cols-2 xl:grid-cols-3">
-            <LabelValue label={t('invoice.table.parent')} value={details?.parentName ?? '-'} />
-            <LabelValue label={t('invoice.table.children')} value={details?.childNames.length ? details.childNames.join(', ') : '-'} />
-            <LabelValue label={t('invoice.table.type')} value={typeLabel} />
-            <LabelValue label={t('invoice.table.createdDate')} value={details ? formatDateTime(details.createdAt) : '-'} />
-            <LabelValue label={t('invoice.table.dueDate')} value={details ? formatDateTime(details.dueDate) : '-'} />
-            <LabelValue
-              label={t('invoice.markPaid.paymentMethod')}
-              value={details?.paymentMethod ? t(`invoice.paymentMethods.${details.paymentMethod}`, { defaultValue: details.paymentMethod }) : '-'}
-            />
-          </div>
-
-          {details?.inReview ? (
-            <div className="mx-5 mb-5 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm font-medium text-warning">
-              {t('invoice.inReviewNote')}
-            </div>
-          ) : canPay ? (
-            <div className="mx-5 mb-5 rounded-lg border border-primary/30 bg-primary/10 p-3 text-sm font-medium text-primary">
-              {t('invoice.countdown', { days: Math.max(0, countdown) })}
-            </div>
+      <article ref={printableRef} className="invoice-print-area overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
+        <div className="border-b border-outline-variant bg-surface-container-lowest px-4 py-3 sm:px-5">
+          <h2 className="text-base font-semibold text-on-surface">{t('parentBilling.details.lines')}</h2>
+          {invoice.children.length ? (
+            <p className="text-xs text-on-surface-variant">
+              {invoice.children.map((c) => localName(c, isArabic)).join('، ')}
+            </p>
           ) : null}
-
-          <div className="overflow-x-auto border-y border-outline-variant">
-            <table className="w-full min-w-[680px] text-sm">
-              <thead className="bg-surface-container-lowest text-xs uppercase text-on-surface-variant">
-                <tr>
-                  <th className="px-5 py-3 text-start font-semibold">{t('invoice.details.description')}</th>
-                  <th className="px-5 py-3 text-start font-semibold">{t('invoice.details.quantity')}</th>
-                  <th className="px-5 py-3 text-start font-semibold">{t('invoice.details.unitPrice')}</th>
-                  <th className="px-5 py-3 text-start font-semibold">{t('invoice.details.total')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-outline-variant">
-                {(details?.lineItems ?? []).map((item, idx) => (
-                  <tr key={`${idx}-${item.description}`}>
-                    <td className="px-5 py-4 font-semibold text-on-surface">{item.description}</td>
-                    <td className="px-5 py-4 text-on-surface-variant">{item.quantity}</td>
-                    <td className="px-5 py-4 text-on-surface-variant">{t('invoice.egpAmount', { amount: item.unitPrice.toFixed(2) })}</td>
-                    <td className="px-5 py-4 font-semibold text-on-surface">{t('invoice.egpAmount', { amount: item.total.toFixed(2) })}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="grid gap-2 bg-surface-container-lowest p-5 text-sm sm:ms-auto sm:w-96">
-            <div className="flex justify-between gap-3">
-              <span className="text-on-surface-variant">{t('invoice.details.subtotal')}</span>
-              <span className="font-medium text-on-surface">{t('invoice.egpAmount', { amount: (details?.subtotal ?? 0).toFixed(2) })}</span>
-            </div>
-            <div className="flex justify-between gap-3">
+        </div>
+        <ul className="divide-y divide-outline-variant">
+          {items.map((item, index) => (
+            <li key={`${index}-${item.description}`} className="flex items-start justify-between gap-3 px-4 py-3 text-sm sm:px-5">
+              <span className="min-w-0 text-on-surface">
+                {item.description}
+                {item.quantity !== 1 ? <span className="text-on-surface-variant"> × {item.quantity}</span> : null}
+              </span>
+              <span className={cn('shrink-0 font-semibold tabular-nums', item.total < 0 ? 'text-success' : 'text-on-surface')}>
+                {money(item.total)}
+              </span>
+            </li>
+          ))}
+          {tax ? (
+            <li className="flex justify-between gap-3 px-4 py-3 text-sm sm:px-5">
               <span className="text-on-surface-variant">{t('invoice.details.tax')}</span>
-              <span className="font-medium text-on-surface">{t('invoice.egpAmount', { amount: (details?.tax ?? 0).toFixed(2) })}</span>
-            </div>
-            <div className="flex justify-between gap-3 border-t border-outline-variant pt-2">
-              <span className="font-semibold text-on-surface">{t('invoice.details.total')}</span>
-              <span className="font-semibold text-on-surface">{t('invoice.egpAmount', { amount: (details?.total ?? 0).toFixed(2) })}</span>
-            </div>
-            <div className="flex justify-between gap-3">
-              <span className="text-on-surface-variant">{t('financial.paymentHistory.balanceLabel', { defaultValue: 'Balance' })}</span>
-              <span className="font-semibold text-on-surface">{t('invoice.egpAmount', { amount: (details?.balanceDue ?? 0).toFixed(2) })}</span>
-            </div>
-          </div>
-        </article>
+              <span className="font-semibold tabular-nums">{money(tax)}</span>
+            </li>
+          ) : null}
+          <li className="flex justify-between gap-3 bg-surface-container-lowest px-4 py-3 text-sm sm:px-5">
+            <span className="font-semibold text-on-surface">{t('invoice.details.total')}</span>
+            <span className="font-bold tabular-nums text-on-surface">{money(invoice.amount)}</span>
+          </li>
+        </ul>
+        {notes ? <p className="border-t border-outline-variant px-4 py-3 text-sm text-on-surface-variant sm:px-5">{notes}</p> : null}
+      </article>
 
-        <aside className="no-print space-y-5">
-          <InvoicePaymentHistory payments={details?.payments ?? []} />
-          <section className="rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
-            <h2 className="text-base font-semibold text-on-surface">{t('payment.summary.title')}</h2>
-            <div className="mt-4 grid gap-3">
-              <LabelValue label={t('invoice.table.invoiceNo')} value={details?.invoiceNumber ?? '-'} />
-              <LabelValue label={t('invoice.details.paidAt')} value={details?.paidAt ? formatDateTime(details.paidAt) : '-'} />
-              <LabelValue label={t('parent.financial.nextDueLabel', { defaultValue: 'Next payment' })} value={details ? formatDate(details.dueDate) : '-'} />
-              <LabelValue label={t('invoice.table.status')} value={statusLabel} />
-            </div>
-            {details?.status === 'paid' ? (
-              <Button className="mt-4 h-10 w-full gap-2 rounded-md" variant="outline" onClick={() => downloadPdf(true)}>
-                <span className="material-symbols-outlined text-base" aria-hidden>receipt</span>
-                {t('invoice.details.downloadReceipt')}
-              </Button>
-            ) : null}
-          </section>
-
-          <section className="rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
-            <h2 className="text-base font-semibold text-on-surface">{t('invoice.details.activityLog')}</h2>
-            <div className="mt-4 max-h-[340px] space-y-3 overflow-y-auto pe-1">
-              {(details?.activity ?? []).map((item) => (
-                <div key={item.key} className="rounded-lg border border-outline-variant bg-surface-container-lowest p-3 text-sm">
-                  <p className="font-semibold text-on-surface">{t(`invoice.details.activity.${item.type}`)}</p>
-                  <p className="mt-1 text-xs text-on-surface-variant">
-                    {formatDateTime(item.at)} | {item.actor}
-                  </p>
-                </div>
+      <section className="rounded-xl border border-outline-variant bg-surface shadow-sm">
+        <h2 className="border-b border-outline-variant px-4 py-3 text-base font-semibold text-on-surface sm:px-5">
+          {t('parentBilling.details.history')}
+        </h2>
+        {invoice.payments.length || invoice.reminders.length ? (
+          <ul className="divide-y divide-outline-variant">
+            {[
+              ...invoice.payments.map((p) => ({
+                key: `p-${p.id}`,
+                at: p.at,
+                icon: 'check_circle',
+                tone: 'text-success',
+                text: t('parentBilling.details.paymentLine', {
+                  amount: money(p.amount),
+                  method: t(`payment.manualMethods.${p.method}.label`, { defaultValue: p.method }),
+                }),
+              })),
+              ...invoice.reminders.map((r, i) => ({ key: `r-${i}`, at: r.sentAt, icon: 'notifications', tone: 'text-on-surface-variant', text: t('parentBilling.details.reminderLine') })),
+            ]
+              .sort((a, b) => b.at.localeCompare(a.at))
+              .map((row) => (
+                <li key={row.key} className="flex items-start gap-3 px-4 py-3 text-sm sm:px-5">
+                  <MaterialSymbol name={row.icon} size="text-lg" className={row.tone} />
+                  <span className="min-w-0 flex-1 text-on-surface">{row.text}</span>
+                  <span className="shrink-0 text-xs text-on-surface-variant">{formatDateTime(row.at)}</span>
+                </li>
               ))}
-            </div>
-          </section>
-        </aside>
+          </ul>
+        ) : (
+          <p className="px-4 py-6 text-center text-sm text-on-surface-variant sm:px-5">{t('parentBilling.details.noHistory')}</p>
+        )}
       </section>
     </div>
   );

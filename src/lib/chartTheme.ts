@@ -28,5 +28,15 @@ export function chartDirection(rtl: boolean, axisPull = -24) {
   };
 }
 
+/**
+ * Three states drawn side by side: done / waiting / missed (attended, excused, absent; paid, pending,
+ * overdue). The tokens were checked together for colour-blind separation on every theme surface.
+ */
+export const CHART_STATE = {
+  done: 'rgb(var(--chart-attended))',
+  waiting: 'rgb(var(--chart-excused))',
+  missed: 'rgb(var(--chart-absent))',
+} as const;
+
 /** Distinct series colours for categorical charts (e.g. moods). --info equals --primary in every theme. */
 export const CHART_SERIES = [...(['primary', 'success', 'warning', 'error'] as const).map(chartColor), 'rgb(var(--foreground-tertiary))'];

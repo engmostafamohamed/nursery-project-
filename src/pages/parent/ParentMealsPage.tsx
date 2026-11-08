@@ -1,30 +1,46 @@
-import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 
-import { useMealPlans } from '@/hooks/useMealPlans';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Skeleton } from '@/components/ui/skeleton';
+import { FamilyMealPlans } from '@/features/food-and-beverage/FamilyMealPlans';
+import { weekStartOf } from '@/features/food-and-beverage/menu';
+import { MenuFileCard } from '@/features/food-and-beverage/MenuFileCard';
+import { MenuWeekView } from '@/features/food-and-beverage/MenuWeekView';
+import { useMenuWeek } from '@/features/food-and-beverage/useMenuWeek';
+import { WeekSwitcher } from '@/features/food-and-beverage/WeekSwitcher';
+import { getNurseryCalendarDateString } from '@/lib/nurseryDay';
 import { useSettings } from '@/lib/useSettings';
 
+/**
+ * The family's view of the nursery's menu: the published week (this one, or the one a notification
+ * links to), its file, and the dishes their child must not eat.
+ */
 export function ParentMealsPage() {
   const { t } = useTranslation();
   const { nurseryId } = useSettings();
-  const meals = useMealPlans(nurseryId ?? undefined);
-  const currentWeek = useMemo(() => meals.plans[0] ?? null, [meals.plans]);
-  const menu = (currentWeek?.meals_json as Record<string, unknown> | undefined) ?? {};
+  const [searchParams, setSearchParams] = useSearchParams();
+  const today = getNurseryCalendarDateString();
+  const thisWeek = weekStartOf(today);
+  const requested = searchParams.get('week');
+  const weekStart = requested && /^\d{4}-\d{2}-\d{2}$/.test(requested) ? weekStartOf(requested) : thisWeek;
+  const query = useMenuWeek(nurseryId, weekStart);
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-lg font-semibold text-on-surface">{t('meals.parentTitle')}</h1>
-      {!currentWeek ? (
-        <p className="text-sm text-on-surface-variant">{t('meals.noPlan')}</p>
+    <div className="mx-auto w-full max-w-4xl space-y-4 pb-24">
+      <PageHeader icon="restaurant" title={t('meals.parentTitle')} description={t('fnb.parent.subtitle')}>
+        <WeekSwitcher weekStart={weekStart} thisWeek={thisWeek} onChange={(next) => setSearchParams(next === thisWeek ? {} : { week: next })} />
+      </PageHeader>
+      <FamilyMealPlans />
+      {query.isLoading || !nurseryId ? (
+        <Skeleton className="h-72 rounded-xl" />
+      ) : query.data ? (
+        <>
+          {query.data.week?.file ? <MenuFileCard nurseryId={nurseryId} menu={{ ...query.data, canEdit: false }} /> : null}
+          <MenuWeekView menu={query.data} today={today} audience="parent" />
+        </>
       ) : (
-        <section className="space-y-2 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
-          <p className="text-sm font-medium">{t('meals.weekOf')}: {String(currentWeek.week_start_date)}</p>
-          {(['sunday', 'monday', 'tuesday', 'wednesday', 'thursday'] as const).map((day) => (
-            <div key={day} className="rounded-lg border border-outline-variant bg-surface text-foreground p-2 text-sm">
-              <strong>{t(`meals.days.${day}`)}:</strong> {String(menu[day] ?? '-')}
-            </div>
-          ))}
-        </section>
+        <p role="alert" className="rounded-xl border border-error/40 bg-error/5 p-4 text-sm">{t('fnb.errors.failed')}</p>
       )}
     </div>
   );

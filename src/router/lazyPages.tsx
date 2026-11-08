@@ -426,3 +426,19 @@ export const RemindersPage = lazy(() =>
 export const QrVerifyLinkPage = lazy(() =>
   import('@/pages/shared/QrVerifyLinkPage').then((m) => ({ default: m.QrVerifyLinkPage })),
 );
+
+export const AdminFoodAlertsPage = lazy(() =>
+  import('@/pages/admin/AdminFoodAlertsPage').then((m) => ({ default: m.AdminFoodAlertsPage })),
+);
+
+export const TeacherMealsPage = lazy(() =>
+  import('@/pages/teacher/TeacherMealsPage').then((m) => ({ default: m.TeacherMealsPage })),
+);
+
+export const AdminMealPricingPage = lazy(() =>
+  import('@/pages/admin/AdminMealPricingPage').then((m) => ({ default: m.AdminMealPricingPage })),
+);
+
+export const AdminKitchenStockPage = lazy(() =>
+  import('@/pages/admin/AdminKitchenStockPage').then((m) => ({ default: m.AdminKitchenStockPage })),
+);

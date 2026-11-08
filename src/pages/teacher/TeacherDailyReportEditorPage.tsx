@@ -11,6 +11,7 @@ import { confirm } from '@/components/ui/confirm';
 import { StatusPill } from '@/components/ui/DataTable';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ChildFoodAlerts } from '@/features/food-and-beverage/ChildFoodAlerts';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthSession } from '@/hooks/useAuthSession';
@@ -28,6 +29,7 @@ import type { DailyReportCard } from '@/lib/dailyReportCard';
 import { ATTENDANCE_TONE, attendanceName, questionList, questionName } from '@/lib/dailyReportLabels';
 import { addCalendarDaysYmd, getNurseryCalendarDateString } from '@/lib/nurseryDay';
 import { cn } from '@/lib/utils';
+import { useSettings } from '@/lib/useSettings';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -73,6 +75,7 @@ function ReportEditor({ childId, day }: { childId: string; day: string }) {
   const { user } = useAuthSession();
   const dayQuery = useMyDailyReports(user?.id, day);
   const rowQuery = useDailyReportRow(user?.id, childId, day);
+  const { nurseryId } = useSettings();
   const save = useSaveDailyReport();
   const send = useSendDailyReports(user?.id);
   const refreshDay = useRefreshMyDailyReports(user?.id);
@@ -275,6 +278,7 @@ function ReportEditor({ childId, day }: { childId: string; day: string }) {
         ) : null}
       </section>
 
+      <ChildFoodAlerts nurseryId={nurseryId} childId={childId} day={day} menuPath="/teacher/meals" />
       <DailyReportQuestions value={answers} onChange={change} missing={done?.missing ?? []} readOnly={readOnly} showFeeding={ageInYears(me.dob) < 2} />
 
       {/* Progress, saving and sending: stays at the bottom of the screen */}

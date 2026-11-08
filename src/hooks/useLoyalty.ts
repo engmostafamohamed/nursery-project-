@@ -97,6 +97,7 @@ export function useLoyalty(params: { parentId?: string; nurseryId?: string; enab
       void qc.invalidateQueries({ queryKey: ['loyalty-transactions'] });
       void qc.invalidateQueries({ queryKey: ['invoice-details'] });
       void qc.invalidateQueries({ queryKey: ['parent-invoices'] });
+      void qc.invalidateQueries({ queryKey: ['parent-billing'] });
       void qc.invalidateQueries({ queryKey: ['payment-history'] });
     },
   });

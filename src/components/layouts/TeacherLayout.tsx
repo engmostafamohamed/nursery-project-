@@ -40,6 +40,7 @@ const primaryNavItems: TeacherNavItem[] = [
 
 const secondaryNavItems: TeacherNavItem[] = [
   { to: '/teacher/daily-reports', key: 'dailyReports', icon: 'description', feature: 'daily_reports' },
+  { to: '/teacher/meals', key: 'meals', icon: 'restaurant' },
   { to: '/teacher/report-rates', key: 'reportRates', icon: 'monitoring', feature: 'class_team' },
   { to: '/teacher/milestones', key: 'milestones', icon: 'social_leaderboard', feature: 'daily_reports' },
   { to: '/teacher/reminders', key: 'reminders', icon: 'alarm' },

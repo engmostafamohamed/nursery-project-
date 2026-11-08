@@ -49,6 +49,11 @@ type Options = {
   onSubmitted?: (result: { duplicate: boolean }) => void;
   /** Method selected at first, when offered (e.g. "try again" after a failed online payment). */
   initialMethod?: ParentPaymentMethodCode | null;
+  /**
+   * Ask "pay X?" in a dialog before sending (default). A screen with its own confirmation step
+   * turns it off, so the parent is not asked twice.
+   */
+  confirmBeforePay?: boolean;
 };
 
 const AMOUNT_TOLERANCE = 0.005;
@@ -79,7 +84,15 @@ function paymentSignature(invoiceId: string, method: string, amount: number, det
  * reuses one idempotency key, so the server returns the first result instead of recording it
  * twice. A different method, amount or details is a new payment with a new key.
  */
-export function useInvoiceCheckout({ invoice, amountPolicy, returnPath, beforePay, onSubmitted, initialMethod = null }: Options) {
+export function useInvoiceCheckout({
+  invoice,
+  amountPolicy,
+  returnPath,
+  beforePay,
+  onSubmitted,
+  initialMethod = null,
+  confirmBeforePay = true,
+}: Options) {
   const { t } = useTranslation();
   const { user } = useAuthSession();
   const queryClient = useQueryClient();
@@ -158,21 +171,23 @@ export function useInvoiceCheckout({ invoice, amountPolicy, returnPath, beforePa
         return;
       }
       const flow = paymentFlowOf(method);
-      const amountLabel = t('invoice.egpAmount', { amount: amount.toFixed(2) });
-      const methodLabel = t(`payment.manualMethods.${method}.label`);
-      const ok = await confirm({
-        title: t('payment.confirm.title'),
-        description: [
-          t('payment.confirm.description', { amount: amountLabel, number: invoice.invoiceNumber, method: methodLabel }),
-          flow === 'transfer' ? t('payment.confirm.reference', { reference: details.reference.trim() }) : '',
-          flow === 'online_checkout' && !testMode ? t('payment.checkout.redirectNote') : t('payment.confirm.reviewNote'),
-        ].filter(Boolean).join(' '),
-        confirmText: flow === 'online_checkout' && !testMode
-          ? t('payment.checkout.continueToCheckout', { amount: amountLabel })
-          : t('payment.confirm.submit', { amount: amountLabel }),
-        icon: 'payments',
-      });
-      if (!ok) return;
+      if (confirmBeforePay) {
+        const amountLabel = t('invoice.egpAmount', { amount: amount.toFixed(2) });
+        const methodLabel = t(`payment.manualMethods.${method}.label`);
+        const ok = await confirm({
+          title: t('payment.confirm.title'),
+          description: [
+            t('payment.confirm.description', { amount: amountLabel, number: invoice.invoiceNumber, method: methodLabel }),
+            flow === 'transfer' ? t('payment.confirm.reference', { reference: details.reference.trim() }) : '',
+            flow === 'online_checkout' && !testMode ? t('payment.checkout.redirectNote') : t('payment.confirm.reviewNote'),
+          ].filter(Boolean).join(' '),
+          confirmText: flow === 'online_checkout' && !testMode
+            ? t('payment.checkout.continueToCheckout', { amount: amountLabel })
+            : t('payment.confirm.submit', { amount: amountLabel }),
+          icon: 'payments',
+        });
+        if (!ok) return;
+      }
 
       const idempotencyKey = keyFor(paymentSignature(invoice.id, method, amount, details));
       try {

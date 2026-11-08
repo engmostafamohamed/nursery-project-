@@ -12,6 +12,7 @@ import { ReportRateCard } from '@/components/daily-reports/ReportRateCard';
 import { Button } from '@/components/ui/button';
 import { StatusPill, TableCard } from '@/components/ui/DataTable';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { SectionTitle } from '@/components/ui/SectionTitle';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatTile } from '@/components/ui/StatTile';
 import { useActiveNurseryId } from '@/hooks/useActiveNurseryId';
@@ -28,17 +29,6 @@ import { formatMoneyAmount } from '@/lib/money';
 
 function formatInt(n: number, locale: string): string {
   return new Intl.NumberFormat(locale === 'ar' ? 'ar-EG' : 'en-GB').format(n);
-}
-
-function SectionTitle({ icon, children }: { icon: string; children: React.ReactNode }) {
-  return (
-    <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-on-surface">
-      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary" aria-hidden>
-        <span className="material-symbols-outlined text-lg">{icon}</span>
-      </span>
-      {children}
-    </h2>
-  );
 }
 
 export function AdminDashboardPage() {

@@ -837,31 +837,163 @@
     "dashboard": {
       "title": "XO admin dashboard",
       "subtitle": "Overview of all nurseries on the platform.",
-      "heroAria": "Platform metrics overview",
       "errorLoading": "We could not load the dashboard. Please try again.",
-      "totalNurseries": "Total nurseries",
-      "activeOutOfTotal": "{{active}} active of {{total}}",
-      "activeSubscriptions": "Active subscriptions",
-      "trialNurseriesLabel": "{{count}} on trial",
-      "totalUsers": "Total users",
-      "userBreakdown": "{{parents}} parents · {{teachers}} teachers",
-      "platformHealth": "Platform health",
-      "activeEnrollmentsLabel": "Active child enrollments",
       "recentSignups": "Recent sign-ups",
       "viewAllNurseries": "View all",
       "noRecentSignups": "No recent sign-ups.",
-      "planUnknown": "Plan not set",
-      "quickStats": "Quick stats",
-      "pendingInquiries": "Pending inquiries",
-      "pendingApplications": "Pending applications",
-      "overdueInvoices": "Overdue invoices",
-      "nurseriesByPlan": "Nurseries by plan",
-      "noPlanData": "No plan data yet.",
-      "planCardLabel": "nurseries",
       "selectedNurseryTitle": "Selected nursery dashboard",
       "selectedNurserySubtitle": "Manage the currently selected nursery from the same XO dashboard.",
       "selectedNurseryEmpty": "Select a nursery to view its operational dashboard.",
-      "backToPlatform": "Back to platform dashboard"
+      "backToPlatform": "Back to platform dashboard",
+      "allNurseries": "All nurseries",
+      "empty": "No data yet.",
+      "month": "Month",
+      "day": "Day",
+      "group": "Group",
+      "sections": {
+        "money": "Money",
+        "children": "Children and attendance",
+        "nurseries": "Nurseries and users"
+      },
+      "tiles": {
+        "nurseries": "Nurseries",
+        "nurseriesHint": "{{active}} active · {{trial}} on trial · {{fresh}} new this month",
+        "children": "Active children",
+        "childrenHint": "{{current}} joined this month · {{previous}} last month",
+        "users": "Users",
+        "usersHint": "{{parents}} parents · {{staff}} staff",
+        "collected": "Collected this month",
+        "collectedLastMonth": "Last month: {{amount}}"
+      },
+      "strip": {
+        "attendance": "Attendance, last 30 days",
+        "attendanceHint": "On the days each nursery was open",
+        "outstanding": "Still owed",
+        "overdue": "Overdue",
+        "applications": "Applications waiting",
+        "inquiries": "New inquiries"
+      },
+      "money": {
+        "trendTitle": "Billed and collected, 12 months",
+        "trendHint": "Billed: invoices by the month they fall due. Collected: completed payments by the month they were paid.",
+        "billed": "Billed",
+        "collected": "Collected",
+        "collectedIn": "{{amount}} collected in {{month}}",
+        "statusTitle": "Invoices by status",
+        "statusHint": "Open invoices show what is still owed. Cancelled invoices are left out.",
+        "statusEmpty": "No invoices yet.",
+        "invoiceCount_one": "{{formatted}} invoice",
+        "invoiceCount_other": "{{formatted}} invoices",
+        "invoices": "Invoices",
+        "stillOwed": "Still owed",
+        "agingTitle": "Overdue, by days late",
+        "agingHint": "What overdue invoices still owe, by days past their due date",
+        "agingEmpty": "No overdue invoices.",
+        "aging": {
+          "1": "1–30 days late",
+          "2": "31–60 days late",
+          "3": "61–90 days late",
+          "4": "Over 90 days late"
+        },
+        "agingShort": {
+          "1": "1–30",
+          "2": "31–60",
+          "3": "61–90",
+          "4": "90+"
+        },
+        "methodsTitle": "Payment methods, 12 months",
+        "methodsHint": "Completed payments, by amount",
+        "methodsEmpty": "No completed payments in the last 12 months.",
+        "paymentCount_one": "{{formatted}} payment",
+        "paymentCount_other": "{{formatted}} payments",
+        "methods": {
+          "instapay": "InstaPay",
+          "card": "Card",
+          "cash": "Cash",
+          "manual": "Recorded by the nursery",
+          "bank_transfer": "Bank transfer",
+          "paymob": "Paymob",
+          "other": "Other"
+        }
+      },
+      "children": {
+        "attendanceTitle": "Daily attendance, last 30 days",
+        "attendanceHint": "Children checked in out of the active children, on the days each nursery was open. Days with no check-ins stay empty.",
+        "attendanceAverage": "{{rate}} average",
+        "attendanceEmpty": "No check-ins in the last 30 days.",
+        "rate": "Attendance",
+        "presentOf": "{{present}} of {{expected}} children checked in",
+        "closedDay": "No check-ins this day",
+        "enrollmentTitle": "New children, 12 months",
+        "enrollmentHint": "Children by the month they joined their nursery",
+        "joined": "Joined",
+        "profileTitle": "Active children by age",
+        "childrenLabel": "Children",
+        "childrenCount_one": "{{formatted}} child",
+        "childrenCount_other": "{{formatted}} children",
+        "girls": "Girls",
+        "boys": "Boys",
+        "age": {
+          "0": "Under 1 year old",
+          "1": "1 year old",
+          "2": "2 years old",
+          "3": "3 years old",
+          "4": "4 years old",
+          "5": "5 years and over"
+        },
+        "ageShort": {
+          "0": "<1",
+          "1": "1",
+          "2": "2",
+          "3": "3",
+          "4": "4",
+          "5": "5+"
+        }
+      },
+      "admissions": {
+        "title": "Admissions, 12 months",
+        "hint": "Inquiries received, applications sent and applications approved",
+        "inquiries": "Inquiries",
+        "applications": "Applications sent",
+        "approved": "Approved",
+        "approvalRate": "{{rate}} approved",
+        "waiting_one": "{{formatted}} application waiting",
+        "waiting_other": "{{formatted}} applications waiting",
+        "newInquiries_one": "{{formatted}} new inquiry",
+        "newInquiries_other": "{{formatted}} new inquiries"
+      },
+      "network": {
+        "tableTitle": "Nurseries at a glance",
+        "tableHint": "Sort by any column. Open a nursery to manage it.",
+        "col": {
+          "nursery": "Nursery",
+          "children": "Children",
+          "ratio": "Children per teacher",
+          "attendance": "Attendance, 30 days",
+          "collected": "Collected this month",
+          "outstanding": "Still owed",
+          "overdue": "Overdue invoices"
+        },
+        "teacherCount_one": "{{formatted}} teacher",
+        "teacherCount_other": "{{formatted}} teachers",
+        "showAll_one": "Show all {{formatted}}",
+        "showAll_other": "Show all {{formatted}}",
+        "showFewer": "Show fewer",
+        "citiesTitle": "Nurseries by city",
+        "cityCount_one": "{{formatted}} city",
+        "cityCount_other": "{{formatted}} cities",
+        "cityNotSet": "City not set",
+        "otherCities": "Other cities",
+        "subscriptionsTitle": "Subscriptions",
+        "subscriptionsHint": "Each nursery's subscription status and plan",
+        "byStatus": "By status",
+        "byPlan": "By plan",
+        "notSet": "Not set",
+        "noSubscription": "No subscription",
+        "usersTitle": "Users by role",
+        "usersNew_one": "{{formatted}} joined this month",
+        "usersNew_other": "{{formatted}} joined this month"
+      }
     },
     "settingsPage": {
       "title": "Super admin settings",
@@ -989,6 +1121,10 @@
       "loyalty": "Loyalty",
       "surveys": "Surveys",
       "inventory": "Inventory",
+      "moreGroupFoodAndBeverage": "Food & beverage (F&B)",
+      "foodAlerts": "Food allergy alerts",
+      "mealPlans": "Meal plans",
+      "kitchenStock": "Kitchen stock",
       "meals": "Meals",
       "community": "Community",
       "library": "Library",
@@ -2537,6 +2673,7 @@
   },
   "invoice": {
     "itemKinds": {
+      "meal_plan": "Meals",
       "late_pickup": "Late pickup extra hours · {{date}}",
       "loyalty_discount": "Loyalty points discount ({{points}} points)",
       "tuition": "Tuition",
@@ -3221,6 +3358,490 @@
     "parentSubtitle": "Your child's quarterly evaluation reports.",
     "parentEmptyTitle": "No reports yet",
     "parentEmptyDesc": "Term reports will appear here once the nursery sends them."
+  },
+  "parentBilling": {
+    "notFoundHint": "It may have been removed, or the link is wrong.",
+    "state": {
+      "paid": "Paid",
+      "in_review": "Waiting for confirmation",
+      "overdue": "Overdue",
+      "due": "To pay",
+      "cancelled": "Cancelled"
+    },
+    "hero": {
+      "owe": "You owe",
+      "nothingToPay": "Nothing to pay now",
+      "allClear": "All paid",
+      "overdue_one": "{{count}} invoice overdue · {{amount}}",
+      "overdue_other": "{{count}} invoices overdue · {{amount}}",
+      "nextDue": "Next due {{date}} · {{amount}}",
+      "inReview": "{{amount}} sent and waiting for the nursery to confirm",
+      "payOverdue": "Pay overdue",
+      "payNext": "Pay next invoice"
+    },
+    "list": {
+      "openInvoice": "Open invoice {{number}}",
+      "lateDays_one": "{{count}} day late",
+      "lateDays_other": "{{count}} days late",
+      "dueOn": "Due {{date}}",
+      "partInReview": "{{amount}} waiting for confirmation",
+      "pay": "Pay",
+      "filterLabel": "Show invoices",
+      "filters": {
+        "all": "All invoices",
+        "open": "To pay",
+        "paid": "Paid"
+      }
+    },
+    "actions": {
+      "more": "More actions",
+      "print": "Print",
+      "share": "Share",
+      "image": "Save as image",
+      "pdf": "Download PDF",
+      "receipt": "Download receipt",
+      "linkCopied": "Link copied"
+    },
+    "pay": {
+      "eyebrow": "Pay invoice",
+      "viewInvoice": "View invoice",
+      "progress": "Step {{step}} of {{total}}",
+      "steps": {
+        "amount": "Amount",
+        "points": "Points",
+        "method": "Method",
+        "confirm": "Confirm"
+      },
+      "titles": {
+        "amount": "How much do you want to pay?",
+        "points": "Use your points?",
+        "method": "How will you pay?",
+        "confirm": "Check and send"
+      },
+      "alreadySentTitle": "You already sent a payment for this invoice",
+      "alreadySentLine": "{{amount}} on {{date}}, waiting for the nursery to confirm",
+      "alreadySentHint": "Only pay the rest if this is a new payment.",
+      "payAll": "Pay everything left",
+      "payPart": "Pay part of it instead",
+      "partLabel": "Amount to pay (up to {{max}})",
+      "partErrors": {
+        "required": "Enter the amount you want to pay.",
+        "invalid": "Enter a number, for example 1500 or 1500.50.",
+        "too_small": "The amount must be more than 0.",
+        "too_large": "You can pay up to {{max}}."
+      },
+      "back": "Back",
+      "next": "Next",
+      "skipPoints": "Continue without points",
+      "send": "Send payment · {{amount}}"
+    },
+    "points": {
+      "balance": "You have {{points}} points",
+      "rate": "Each point is worth {{amount}}",
+      "applied": "Discount applied: {{amount}} off this invoice",
+      "howMany": "Points to use ({{min}} to {{max}})",
+      "useMost": "Use the most",
+      "discountIs": "That takes {{amount}} off",
+      "apply": "Apply discount · {{amount}}",
+      "final": "The discount is taken off the invoice at once and cannot be undone.",
+      "notEnough": "You can use points once you have at least {{min}} you can spend on this invoice.",
+      "errors": {
+        "whole_number": "Enter a whole number of points.",
+        "below_minimum": "Use at least {{min}} points.",
+        "above_maximum": "You can use up to {{max}} points on this invoice."
+      }
+    },
+    "confirm": {
+      "youPay": "You are paying",
+      "invoice": "Invoice",
+      "pointsDiscount": "Points discount",
+      "method": "Method",
+      "reference": "Reference",
+      "reviewNote": "The nursery checks your payment, then confirms it. You will get a notification when it is confirmed."
+    },
+    "outcome": {
+      "sent": {
+        "title": "Payment sent",
+        "body": "The nursery will check it and confirm it. You will get a notification when it is confirmed."
+      },
+      "already_sent": {
+        "title": "This payment was already sent",
+        "body": "It is waiting for the nursery to confirm it. You do not need to send it again."
+      },
+      "waiting": {
+        "title": "Waiting for the nursery",
+        "body": "Everything left on this invoice was sent and is waiting for the nursery to confirm it."
+      },
+      "paid_with_points": {
+        "title": "Paid with your points",
+        "body": "Your points covered what was left. This invoice is paid."
+      },
+      "paid": {
+        "title": "This invoice is paid",
+        "body": "There is nothing left to pay on it."
+      },
+      "cancelled": {
+        "title": "This invoice was cancelled",
+        "body": "There is nothing to pay. If you think this is a mistake, contact the nursery."
+      },
+      "backToInvoices": "Back to my invoices",
+      "viewInvoice": "View invoice"
+    },
+    "details": {
+      "amount": "Amount",
+      "paid": "Paid",
+      "inReview": "Waiting for confirmation",
+      "left": "Left to pay",
+      "pay": "Pay {{amount}}",
+      "reviewTitle": "Waiting for the nursery to confirm",
+      "reviewHint": "You will get a notification when the nursery confirms it.",
+      "lines": "What this invoice is for",
+      "history": "Payments and reminders",
+      "paymentLine": "{{amount}} paid by {{method}}",
+      "reminderLine": "The nursery sent a reminder",
+      "noHistory": "No payments or reminders yet."
+    }
+  },
+  "fnb": {
+    "eyebrow": "Food & beverage",
+    "meals": {
+      "breakfast": "Breakfast",
+      "lunch": "Lunch",
+      "snacks": "Snacks"
+    },
+    "allergens": {
+      "contains": "Contains",
+      "childrenCount_one": "{{count}} child here is allergic",
+      "childrenCount_other": "{{count}} children here are allergic",
+      "milk": "Milk",
+      "eggs": "Eggs",
+      "peanuts": "Peanuts",
+      "tree_nuts": "Tree nuts",
+      "gluten": "Gluten (wheat)",
+      "soy": "Soy",
+      "fish": "Fish",
+      "shellfish": "Shellfish",
+      "sesame": "Sesame",
+      "strawberry": "Strawberry",
+      "citrus": "Citrus"
+    },
+    "severity": {
+      "life_threatening": "Life-threatening",
+      "severe": "Severe",
+      "moderate": "Moderate",
+      "mild": "Mild"
+    },
+    "status": {
+      "draft": "Draft",
+      "published": "Published"
+    },
+    "ownFood": "Brings own food",
+    "week": {
+      "this": "This week",
+      "next": "Next week",
+      "last": "Last week",
+      "previous": "Previous week",
+      "following": "Next week",
+      "backToThis": "This week"
+    },
+    "menu": {
+      "title": "Weekly menu",
+      "subtitle": "Plan each day’s meals, mark what each dish contains, and publish the menu to families.",
+      "alertsLink": "Allergy alerts",
+      "draftHint": "Families do not see this week yet.",
+      "publishedHint": "Families can see this week.",
+      "publish": "Publish to families",
+      "unpublish": "Hide from families",
+      "published": "The menu was published. Families were told.",
+      "unpublished": "The menu is hidden from families.",
+      "copyLast": "Copy last week",
+      "copied": "Last week’s dishes were copied.",
+      "saveFirst": "Save your changes before publishing."
+    },
+    "editor": {
+      "dishName": "Dish name",
+      "dishPlaceholder": "e.g. Rice with vegetables",
+      "addDish": "Add to {{meal}}",
+      "notes": "Note for families (optional)",
+      "notesPlaceholder": "e.g. Fruit is served every day.",
+      "save": "Save menu",
+      "saving": "Saving…",
+      "saved": "The menu was saved.",
+      "unsaved": "You have changes that are not saved.",
+      "allSaved": "Everything is saved.",
+      "notSafeFor_one": "Not safe for 1 child",
+      "notSafeFor_other": "Not safe for {{count}} children",
+      "issues": {
+        "name_required": "Write the dish name, or remove it.",
+        "name_too_long": "Keep the name under {{max}} characters."
+      },
+      "discardTitle": "Leave without saving?",
+      "discardBody": "Your changes to this week will be lost.",
+      "discard": "Leave",
+      "add": "Add",
+      "newDish": "Add a dish",
+      "editDishTitle": "Edit dish",
+      "editDish": "Edit {{name}}",
+      "containsLabel": "What does it contain?",
+      "countsHint": "The number on an allergen is how many children here are allergic to it.",
+      "safeForAll": "Safe for every child here.",
+      "deleteDish": "Delete dish",
+      "done": "Done"
+    },
+    "file": {
+      "title": "Menu file",
+      "none": "No photo or PDF of the menu yet.",
+      "hint": "A photo or PDF of the menu, up to {{max}} MB. Photos are made smaller automatically.",
+      "add": "Add photo or PDF",
+      "replace": "Replace",
+      "remove": "Remove",
+      "open": "Open",
+      "uploading": "Uploading…",
+      "saved": "The menu file was saved.",
+      "openFailed": "The file could not be opened. Try again.",
+      "removeTitle": "Remove the menu file?",
+      "removeBody": "Families will no longer see it for this week.",
+      "errors": {
+        "invalid_type": "Choose a photo (JPG, PNG, WebP) or a PDF.",
+        "too_large": "The file is larger than {{max}} MB."
+      }
+    },
+    "view": {
+      "today": "Today",
+      "emptyParent": "The nursery has not published the menu for this week yet.",
+      "emptyStaff": "There is no menu for this week yet.",
+      "dayEmpty": "No dishes for this day.",
+      "allergicLine": "{{name}} is allergic ({{allergens}})",
+      "pickDay": "Choose a day"
+    },
+    "alerts": {
+      "title": "Food allergy alerts",
+      "subtitle": "Children who must not eat a dish on the menu, and what to do if they react.",
+      "menuLink": "Weekly menu",
+      "period": "Period",
+      "periods": {
+        "today": "Today",
+        "this_week": "This week",
+        "next_week": "Next week"
+      },
+      "none": "No child is allergic to anything on the menu for this period.",
+      "item": "{{meal}}: {{dish}} — {{allergen}}",
+      "reaction": "Reaction",
+      "treatment": "If they react",
+      "unmatchedTitle": "Allergies not checked against the menu",
+      "unmatchedHint": "These are not foods we recognise (for example medicines or dust). Check them yourself.",
+      "unmatchedCount_one": "{{count}} child",
+      "unmatchedCount_other": "{{count}} children"
+    },
+    "report": {
+      "title": "Allergy alert for today’s meals",
+      "seeMenu": "See today’s menu"
+    },
+    "teacher": {
+      "title": "Meals",
+      "subtitle": "Today’s allergy alerts for your classes, and the week’s menu.",
+      "todayAlerts": "Today’s allergy alerts",
+      "weekMenu": "The week’s menu"
+    },
+    "parent": {
+      "subtitle": "The nursery’s meals for the week. Dishes your child must not eat are marked.",
+      "plansTitle": "Your children’s meal plans"
+    },
+    "plans": {
+      "title": "Meal plans",
+      "subtitle": "The meal plans the nursery offers and their monthly price. A charged plan is added to the child’s monthly invoice.",
+      "add": "Add meal plan",
+      "tiles": {
+        "monthly": "Meal plans a month",
+        "monthlyHint_one": "From {{count}} child who pays",
+        "monthlyHint_other": "From {{count}} children who pay",
+        "withPlan": "Children with a plan",
+        "withPlanHint": "{{included}} included in their package",
+        "none": "Without a plan",
+        "notBilled": "Not billed",
+        "notBilledHint": "Charged plan, but no monthly invoice"
+      },
+      "offered": "Plans offered",
+      "childrenOnPlan_one": "{{count}} child on this plan",
+      "childrenOnPlan_other": "{{count}} children on this plan",
+      "inactive": "Not offered",
+      "month": "month",
+      "childrenTitle": "Children’s plans",
+      "childrenCount_one": "{{count}} child",
+      "childrenCount_other": "{{count}} children",
+      "childrenHint": "Open a child to give, change or stop their plan. A change starts today.",
+      "filterLabel": "Plan",
+      "filters": {
+        "all": "All children",
+        "charged": "Paying for a plan",
+        "included": "Included in package",
+        "none": "No plan",
+        "not_billed": "Not billed"
+      },
+      "noChildren": "No children match these filters.",
+      "columns": {
+        "plan": "Meal plan",
+        "price": "A month",
+        "since": "Since"
+      },
+      "noPlan": "No meal plan",
+      "includedShort": "Included",
+      "notBilledShort": "Not billed",
+      "changeFor": "Change {{name}}’s meal plan",
+      "newTitle": "New meal plan",
+      "editTitle": "Edit meal plan",
+      "dialogHint": "Families see the name in their language.",
+      "nameAr": "Name in Arabic",
+      "nameEn": "Name in English",
+      "meals": "Meals in this plan",
+      "price": "Monthly price",
+      "perMonth": "EGP / month",
+      "priceHint": "Added to the monthly invoice of each child on this plan.",
+      "priceChangeHint": "A new price applies to children given the plan from now on; the others keep theirs.",
+      "active": "Offered",
+      "activeHint": "Turn off to stop giving it; children who have it keep it.",
+      "save": "Save",
+      "saved": "The meal plan was saved.",
+      "issues": {
+        "name_ar_required": "Write the name in Arabic.",
+        "name_en_required": "Write the name in English.",
+        "name_too_long": "Keep the name under {{max}} characters.",
+        "meals_required": "Choose at least one meal.",
+        "price_invalid": "Write a price from 0 to {{max}}, for example 800."
+      },
+      "childTitle": "{{name}}’s meal plan",
+      "childHint": "The plan starts today. The child’s previous plan ends yesterday.",
+      "pricePerMonth": "{{amount}} / month",
+      "included": "Included in their tuition package",
+      "includedHint": "Not charged: the package already covers these meals.",
+      "billingNote": "{{amount}} will be added to each monthly invoice, from the next one.",
+      "noTuitionNote": "This child has no tuition plan, so there is no monthly invoice to add the meals to. Bill them by hand, or give the child a tuition plan.",
+      "childSaved": "The child’s meal plan was saved.",
+      "childStopped": "The child’s meal plan was stopped."
+    },
+    "kitchen": {
+      "title": "Kitchen stock",
+      "subtitle": "Food, drinks and kitchen supplies: what is running low or about to expire, and every delivery and use.",
+      "newItem": "Add item",
+      "editItem": "Edit item",
+      "newItemHint": "It starts at 0. Record the first delivery after adding it.",
+      "editItemHint": "To change the quantity, record a delivery, a use or a count.",
+      "name": "Item",
+      "namePlaceholder": "e.g. Rice",
+      "category": "Category",
+      "categories": {
+        "food": "Food",
+        "drinks": "Drinks",
+        "kitchen_supplies": "Kitchen supplies"
+      },
+      "unit": "Unit",
+      "units": {
+        "kg": "kg",
+        "g": "g",
+        "liter": "liter",
+        "piece": "piece",
+        "pack": "pack",
+        "box": "box",
+        "can": "can",
+        "bottle": "bottle",
+        "dozen": "dozen"
+      },
+      "lowLevel": "Low at",
+      "lowLevelHint": "Flag it when this much or less is left (0: never).",
+      "expiry": "Expiry date",
+      "optional": "Optional.",
+      "saveItem": "Save item",
+      "itemSaved": "The item was saved.",
+      "issues": {
+        "name_required": "Write the item’s name.",
+        "name_too_long": "Keep the name under 80 characters.",
+        "unit_required": "Write the unit, for example kg.",
+        "level_invalid": "Write a number, for example 2."
+      },
+      "modes": {
+        "restock": "Delivery",
+        "take": "Use",
+        "count": "Count"
+      },
+      "inStock": "In stock: {{quantity}} {{unit}}",
+      "why": "What happened",
+      "kinds": {
+        "restocked": "Delivered",
+        "used": "Used",
+        "spoiled": "Thrown away",
+        "counted": "Counted"
+      },
+      "quantity": "Quantity",
+      "countedQuantity": "Quantity there now",
+      "quantityIssues": {
+        "required": "Write the quantity.",
+        "invalid": "Write a number, for example 2.5.",
+        "zero": "The quantity must be more than 0.",
+        "more_than_stock": "Only {{quantity}} {{unit}} is in stock."
+      },
+      "after": "This leaves {{quantity}} {{unit}}",
+      "expiryRestockHint": "The date of this delivery replaces the item’s expiry date.",
+      "note": "Note",
+      "notePlaceholder": "e.g. From the weekly delivery",
+      "record": "Record",
+      "movementSaved": "The change was recorded.",
+      "tiles": {
+        "items": "Items",
+        "out": "Out of stock",
+        "low": "Running low",
+        "expiry": "Expiry",
+        "expiryHint": "{{expired}} expired · {{soon}} expiring soon"
+      },
+      "needsAttention": "Needs attention",
+      "allItems": "All items",
+      "itemCount_one": "{{count}} item",
+      "itemCount_other": "{{count}} items",
+      "searchPlaceholder": "Item name…",
+      "allCategories": "All categories",
+      "show": "Show",
+      "empty": "No kitchen items yet.",
+      "emptyFiltered": "No items match these filters.",
+      "emptyHint": "Add the food, drinks and supplies the kitchen keeps.",
+      "columns": {
+        "item": "Item",
+        "inStock": "In stock",
+        "status": "Status",
+        "expiry": "Expires"
+      },
+      "flags": {
+        "expired": "Expired",
+        "out": "Out of stock",
+        "low": "Low",
+        "expiringSoon": "Expiring soon",
+        "ok": "OK"
+      },
+      "lowAt": "Low at {{quantity}}",
+      "deleteTitle": "Delete {{name}}?",
+      "deleteBody": "The item and its history will be removed.",
+      "deleted": "The item was deleted.",
+      "history": "Latest changes",
+      "historyCount_one": "{{count}} change",
+      "historyCount_other": "{{count}} changes",
+      "leftAfter": "{{quantity}} {{unit}} left"
+    },
+    "errors": {
+      "failed": "Something went wrong. Try again.",
+      "menu_forbidden": "You do not have permission to change the menu.",
+      "menu_invalid_dishes": "The menu could not be saved. Check the dishes.",
+      "menu_invalid_dish": "A dish is missing its name or is on the wrong day.",
+      "menu_invalid_allergen": "A dish has an allergen we do not know.",
+      "menu_notes_too_long": "The note is too long.",
+      "menu_week_empty": "Add dishes or a menu file before publishing.",
+      "menu_week_not_empty": "This week already has dishes, so last week was not copied over it.",
+      "menu_copy_source_empty": "Last week has no dishes to copy.",
+      "menu_invalid_file": "The file could not be saved. Choose a photo or PDF up to 5 MB.",
+      "meal_plan_invalid": "Check the plan’s names, meals and price.",
+      "meal_plan_not_found": "That meal plan is no longer offered.",
+      "kitchen_item_invalid": "Check the item’s name, category and unit.",
+      "kitchen_item_not_found": "That item was removed.",
+      "kitchen_invalid_quantity": "Check the quantity.",
+      "kitchen_not_enough": "There is not that much in stock."
+    }
   },
   "parent": {
     "children": {
@@ -4156,6 +4777,7 @@
       "reportRates": "Report send rate",
       "community": "Community",
       "bottomBarLabel": "Teacher app main sections",
+      "meals": "Meals",
       "home": "Home",
       "inbox": "Inbox",
       "attendance": "Attendance",
@@ -5359,19 +5981,7 @@
     }
   },
   "meals": {
-    "adminTitle": "Meal Plans",
-    "parentTitle": "This Week's Menu",
-    "savePlan": "Save weekly menu",
-    "saved": "Meal plan saved.",
-    "weekOf": "Week of",
-    "noPlan": "No meal plan available yet.",
-    "days": {
-      "sunday": "Sunday",
-      "monday": "Monday",
-      "tuesday": "Tuesday",
-      "wednesday": "Wednesday",
-      "thursday": "Thursday"
-    }
+    "parentTitle": "This Week's Menu"
   },
   "community": {
     "adminTitle": "Community Board",
@@ -6582,6 +7192,10 @@
     "payment_gateway_needs_review": {
       "title": "Online payment needs review",
       "body": "Paymob reported {{amount}} for invoice {{invoice_number}} (transaction {{transaction}}) that could not be applied automatically. Check it in the Paymob dashboard."
+    },
+    "menu_published": {
+      "title": "This week’s menu is ready",
+      "body": "The nursery published the menu for the week of {{week_start}}."
     },
     "invoice_paid": {
       "title": "Payment confirmed",
@@ -8030,7 +8644,37 @@
         "low": "Low"
       },
       "empty": "No active alerts.",
-      "selectForBulk": "Select alerts using filters, then notify parents in bulk."
+      "selectForBulk": "Select alerts using filters, then notify parents in bulk.",
+      "groups": {
+        "allergies": "Serious allergies",
+        "medicines": "Expired medicines",
+        "vaccinations": "Overdue vaccinations",
+        "contacts": "Missing contacts"
+      },
+      "groupHints": {
+        "allergies": "Severe or life-threatening",
+        "medicines": "Medicines past their date",
+        "vaccinations": "Vaccinations not given on time",
+        "contacts": "No emergency contact or doctor"
+      },
+      "allAlerts": "All alerts",
+      "count_one": "{{count}} alert",
+      "count_other": "{{count}} alerts",
+      "searchChild": "Child’s name…",
+      "urgencyAll": "All urgencies",
+      "emptyFiltered": "No alerts match these filters.",
+      "noClass": "No class",
+      "openRecord": "Open health record",
+      "resolveTitle": "Mark this alert handled?",
+      "resolveBody": "{{kind}} for {{child}} will leave the list. It comes back if the record still needs it later.",
+      "resolved": "The alert was marked handled.",
+      "bulkTitle": "Notify these parents?",
+      "bulkBody_one": "The parents of the child in {{count}} alert will be asked to update the health record.",
+      "bulkBody_other": "The parents of the children in {{count}} alerts will be asked to update their health records.",
+      "bulkConfirm": "Notify parents",
+      "notifyShown_one": "Notify parents ({{count}})",
+      "notifyShown_other": "Notify parents ({{count}})",
+      "noParent": "No parent account is linked to this child."
     },
     "toast": {
       "printReady": "Opening print dialog. Choose “Save as PDF” to export.",
