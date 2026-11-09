@@ -12,6 +12,7 @@ import { useFoodAlerts } from '@/features/food-and-beverage/useMenuWeek';
 import { getNurseryCalendarDateString } from '@/lib/nurseryDay';
 import { cn } from '@/lib/utils';
 import { useSettings } from '@/lib/useSettings';
+import { useAdminBasePath } from '@/hooks/useAdminBasePath';
 
 type Period = 'today' | 'this_week' | 'next_week';
 const PERIODS: Period[] = ['today', 'this_week', 'next_week'];
@@ -20,7 +21,7 @@ const PERIODS: Period[] = ['today', 'this_week', 'next_week'];
 export function AdminFoodAlertsPage() {
   const { t } = useTranslation();
   const location = useLocation();
-  const base = location.pathname.startsWith('/xo-admin') ? '/xo-admin/nursery' : '/admin';
+  const base = useAdminBasePath();
   const { nurseryId } = useSettings();
   const today = getNurseryCalendarDateString();
   const [period, setPeriod] = useState<Period>('today');

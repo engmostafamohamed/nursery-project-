@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 
 import { ChildAvatarUpload } from '@/components/admin/ChildAvatarUpload';
 import { ChildBillingTab } from '@/components/admin/children/ChildBillingTab';
@@ -12,6 +12,7 @@ import { ChildQrCodeCard, type ChildQrInput } from '@/components/qr/ChildQrCodeC
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
+import { useAdminBasePath } from '@/hooks/useAdminBasePath';
 import { useAdmissionTimelines } from '@/hooks/useAdmissionTimelines';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useNurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
@@ -197,8 +198,7 @@ function humanize(value: string | number | null | undefined): string {
 
 export function AdminChildRecordPage() {
   const { t, i18n } = useTranslation();
-  const location = useLocation();
-  const healthBase = location.pathname.startsWith('/xo-admin') ? '/xo-admin/nursery' : '/admin';
+  const healthBase = useAdminBasePath();
   const { childId } = useParams();
   const { user } = useAuthSession();
   const { data: profile } = useUserProfile(user?.id);

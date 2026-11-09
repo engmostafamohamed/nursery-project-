@@ -167,6 +167,9 @@ export const AdminClassesListPage = lazy(() =>
 export const AdminClassDetailPage = lazy(() =>
   import('@/pages/admin/AdminClassDetailPage').then((m) => ({ default: m.AdminClassDetailPage })),
 );
+export const AdminClassProfilePage = lazy(() =>
+  import('@/pages/admin/AdminClassProfilePage').then((m) => ({ default: m.AdminClassProfilePage })),
+);
 export const AdminMessagesPage = lazy(() =>
   import('@/pages/admin/AdminMessagesPage').then((m) => ({ default: m.AdminMessagesPage })),
 );

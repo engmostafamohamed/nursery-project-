@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useLocation } from 'react-router-dom';
+
 import { toast } from 'sonner';
 
 import { AttendanceKpiPanel } from '@/components/admin/attendance/AttendanceKpiPanel';
@@ -15,6 +15,7 @@ import {
   useAdminAttendanceAnalytics,
   type AttendanceDatePreset,
 } from '@/hooks/useAdminAttendanceAnalytics';
+import { useAdminBasePath } from '@/hooks/useAdminBasePath';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useUserProfile } from '@/hooks/useUserProfile';
 
@@ -22,7 +23,7 @@ export function AdminAttendanceDashboardPage() {
   const { t } = useTranslation();
   const { user } = useAuthSession();
   const { data: profile } = useUserProfile(user?.id);
-  const basePath = useLocation().pathname.startsWith('/xo-admin') ? '/xo-admin/nursery' : '/admin';
+  const basePath = useAdminBasePath();
   const [preset, setPreset] = useState<AttendanceDatePreset>('week');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');

@@ -1811,6 +1811,7 @@
         "resultsCount_one": "{{count}} class",
         "resultsCount_other": "{{count}} classes",
         "overBy": "Over by {{count}}",
+        "openHint": "Select a class to see its children, team and today.",
         "title": "Classes",
         "subtitle": "Create classes, assign staff, and manage rosters.",
         "searchPlaceholder": "Search classes by name, age group, or room",
@@ -7163,6 +7164,163 @@
     "fromAfterTo": "The start date must be before the end date.",
     "rangeTooLong": "Choose at most {{days}} days.",
     "chooseDates": "Choose the start and end dates to see the numbers."
+  },
+  "classProfile": {
+    "eyebrow": "Class",
+    "backToClasses": "All classes",
+    "room": "Room {{room}}",
+    "capacity": "Children / places",
+    "capacityLabel": "{{count}} children of {{capacity}} places",
+    "closedToday": "Closed today",
+    "actions": {
+      "edit": "Edit class",
+      "announce": "Announcement"
+    },
+    "tabs": {
+      "children": "Children",
+      "team": "Team",
+      "activity": "Activity",
+      "waitlist": "Waiting list",
+      "details": "Details"
+    },
+    "today": {
+      "here": "Here now",
+      "ofExpected_one": "of {{count}} expected today",
+      "ofExpected_other": "of {{count}} expected today",
+      "wentHome": "Went home",
+      "absent": "Absent",
+      "excused_one": "{{count}} with a parent's notice",
+      "excused_other": "{{count}} with a parent's notice",
+      "reports": "Daily reports sent",
+      "reportsValue": "{{sent}} of {{expected}}",
+      "reportsDue_one": "{{count}} still to send",
+      "reportsDue_other": "{{count}} still to send",
+      "health": "Health needs",
+      "seriousAllergies_one": "{{count}} with a serious allergy",
+      "seriousAllergies_other": "{{count}} with a serious allergy"
+    },
+    "filters": {
+      "all": "All",
+      "here": "Here now",
+      "went_home": "Went home",
+      "absent": "Absent",
+      "reports_due": "Report to send",
+      "health": "Health needs"
+    },
+    "attendance": {
+      "partial": "Here",
+      "present": "Went home",
+      "absent": "Not in",
+      "excused": "Absent with notice",
+      "off": "Day off",
+      "not_enrolled": "Starts later",
+      "since": "Since {{time}}"
+    },
+    "health": {
+      "none": "Nothing to watch",
+      "more_one": "+{{count}} more",
+      "more_other": "+{{count}} more",
+      "conditions_one": "{{count}} condition",
+      "conditions_other": "{{count}} conditions",
+      "medications_one": "{{count}} medicine today",
+      "medications_other": "{{count}} medicines today"
+    },
+    "children": {
+      "title": "Children",
+      "count_one": "{{count}} child",
+      "count_other": "{{count}} children",
+      "description": "Each child's day, daily report and health. Select a child to open their record.",
+      "searchPlaceholder": "Child's name or code",
+      "filterLabel": "Show children",
+      "colChild": "Child",
+      "colAge": "Age",
+      "colToday": "Today",
+      "colReport": "Daily report",
+      "colHealth": "Health",
+      "emptyTitle": "No children in this class yet",
+      "emptyDescription": "Add children from the class's edit page.",
+      "addChildren": "Add children",
+      "noMatch": "No child matches this search or filter."
+    },
+    "team": {
+      "title": "Team",
+      "count_one": "{{count}} teacher",
+      "count_other": "{{count}} teachers",
+      "description": "Who teaches this class and who is with it today.",
+      "manage": "Team & classes",
+      "absences": "Absences",
+      "since": "On the team since {{date}}",
+      "emptyTitle": "No teachers in this class",
+      "emptyDescription": "Choose a lead teacher, a backup and assistants on the Team & classes page.",
+      "historyTitle": "Team changes",
+      "historyDescription": "The last changes to this class's team.",
+      "cover": {
+        "covered": "The lead teacher is away today, so the backup teacher looks after the class.",
+        "uncovered": "Nobody from the team is in today. Choose someone to look after the class.",
+        "no_lead": "This class has no lead teacher. Choose one on the Team & classes page.",
+        "normal": "The lead teacher is in today."
+      }
+    },
+    "duty": {
+      "on_duty": "On duty today",
+      "covering": "Covering today",
+      "away": "Away today",
+      "standby": "Backup, not needed today",
+      "inactive": "Account inactive",
+      "until": "until {{date}}"
+    },
+    "activity": {
+      "mediaPending": "Photos and videos to approve",
+      "mediaPendingHint": "Open the approval list",
+      "mediaApproved": "Approved in the last 30 days",
+      "mediaApprovedHint": "Open the media library",
+      "messagesTitle": "Sent to the families",
+      "messagesDescription": "The last class announcements and teachers' messages to this class's families.",
+      "announce": "New announcement",
+      "kindAnnouncement": "Class announcement",
+      "kindFamilyMessage": "Teacher's message",
+      "noMessagesTitle": "Nothing sent yet",
+      "noMessagesDescription": "Announcements and teachers' messages to this class's families appear here.",
+      "status": {
+        "sent": "Sent",
+        "scheduled": "Scheduled",
+        "draft": "Draft",
+        "failed": "Not sent"
+      }
+    },
+    "waitlist": {
+      "title": "Waiting list",
+      "count_one": "{{count}} family waiting",
+      "count_other": "{{count}} families waiting",
+      "description": "Families waiting for a place in this class, in their order.",
+      "all": "Whole waiting list",
+      "colChild": "Child",
+      "colParent": "Parent",
+      "colStart": "Wants to start",
+      "colAdded": "Added",
+      "colStatus": "Status",
+      "waiting": "Waiting",
+      "offered": "Place offered",
+      "emptyTitle": "Nobody is waiting",
+      "emptyDescription": "Families waiting for a place in this class appear here."
+    },
+    "details": {
+      "title": "Class details",
+      "createdAt": "Created on",
+      "camerasTitle": "Cameras",
+      "camerasCount_one": "{{count}} camera",
+      "camerasCount_other": "{{count}} cameras",
+      "noCameras": "No camera in this class.",
+      "cameraOn": "On",
+      "cameraOff": "Off"
+    },
+    "errors": {
+      "title": "This class can't be opened",
+      "notFound": "The class was deleted or the link is wrong.",
+      "forbidden": "You can't see this class.",
+      "network": "No connection. Check the internet and try again.",
+      "failed": "The class didn't load. Try again."
+    }
   },
   "packageSubscriptions": {
     "title": "Package subscriptions",

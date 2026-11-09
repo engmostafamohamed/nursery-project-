@@ -29,31 +29,15 @@ import {
   useUpdateClassDetails,
   type StaffPerson,
 } from '@/hooks/useClassStaff';
-import { useNurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
-
-function localized(
-  ar: string | null | undefined,
-  en: string | null | undefined,
-  pref: 'ar' | 'en' | 'both',
-): string {
-  const a = (ar ?? '').trim();
-  const e = (en ?? '').trim();
-  if (pref === 'ar') return a || e || '—';
-  if (pref === 'en') return e || a || '—';
-  if (a && e) return `${a} / ${e}`;
-  return a || e || '—';
-}
-
-function personLabel(p: StaffPerson | null | undefined, pref: 'ar' | 'en' | 'both'): string {
-  if (!p) return '—';
-  return localized(p.name_ar, p.name_en, pref);
-}
+import { useAdminBasePath } from '@/hooks/useAdminBasePath';
+import { useBilingualNames } from '@/hooks/useBilingualNames';
 
 export function AdminClassDetailPage() {
   const { classId: rawClassId } = useParams();
   const isNew = !rawClassId || rawClassId === 'new';
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const base = useAdminBasePath();
   const { activeNurseryId } = useActiveNurseryId();
 
   const classQuery = useClassWithStaff(isNew ? null : rawClassId ?? null);
@@ -62,7 +46,8 @@ export function AdminClassDetailPage() {
   // switches the sidebar picker mid-edit doesn't mix data across nurseries.
   // For the new-class flow, the active picker selection is the target nursery.
   const nurseryId = isNew ? activeNurseryId : classQuery.data?.nursery_id ?? null;
-  const { data: languagePref = 'both' } = useNurseryLanguagePref(nurseryId);
+  const names = useBilingualNames(nurseryId);
+  const person = (p: StaffPerson | null | undefined) => (p ? names.text(p.name_ar, p.name_en) : '—');
 
   const teachersQuery = useNurseryTeachers(nurseryId);
   const rosterQuery = useClassRoster(isNew ? null : rawClassId ?? null);
@@ -175,7 +160,7 @@ export function AdminClassDetailPage() {
             ? t('admin.classes.toasts.createdWithChildren', { count: assignedCount })
             : t('admin.classes.toasts.createdOk'),
         );
-        navigate(`/admin/classes/${newId}`, { replace: true });
+        navigate(`${base}/classes/${newId}/edit`, { replace: true });
       } else if (rawClassId) {
         await updateMut.mutateAsync({ classId: rawClassId, ...payload });
         // Lead first, then backup, so swapping the two teachers works in one save.
@@ -187,7 +172,7 @@ export function AdminClassDetailPage() {
           await setBackupMut.mutateAsync({ classId: rawClassId, userId: backupId || null });
         }
         toast.success(t('admin.classes.toasts.updatedOk'));
-        navigate('/admin/classes');
+        navigate(`${base}/classes/${rawClassId}`);
       }
     } catch (err) {
       console.error(err);
@@ -207,7 +192,7 @@ export function AdminClassDetailPage() {
     try {
       await deleteMut.mutateAsync(rawClassId);
       toast.success(t('admin.classes.toasts.deletedOk'));
-      navigate('/admin/classes');
+      navigate(`${base}/classes`);
     } catch (err) {
       console.error(err);
       toast.error(t('admin.classes.toasts.deleteFailed'));
@@ -372,7 +357,7 @@ export function AdminClassDetailPage() {
           <h1 className="text-xl font-semibold text-foreground">
             {isNew
               ? t('admin.classes.detail.newTitle')
-              : localized(classData?.name_ar, classData?.name_en, languagePref)}
+              : names.text(classData?.name_ar, classData?.name_en)}
           </h1>
           <p className="text-sm text-foreground-secondary">
             {isNew ? t('admin.classes.detail.newSubtitle') : t('admin.classes.detail.subtitle')}
@@ -424,7 +409,7 @@ export function AdminClassDetailPage() {
                   <option value="">{t('admin.classes.fields.noLead')}</option>
                   {leadOptions.map((u) => (
                     <option key={u.id} value={u.id}>
-                      {personLabel(u, languagePref)}
+                      {person(u)}
                     </option>
                   ))}
                 </Select>
@@ -435,7 +420,7 @@ export function AdminClassDetailPage() {
                   <option value="">{t('admin.classes.fields.noBackup')}</option>
                   {backupOptions.map((u) => (
                     <option key={u.id} value={u.id}>
-                      {personLabel(u, languagePref)}
+                      {person(u)}
                     </option>
                   ))}
                 </Select>
@@ -505,7 +490,7 @@ export function AdminClassDetailPage() {
                               onCheckedChange={() => toggleInitialChild(c.id)}
                             />
                             <Label htmlFor={inputId} className="cursor-pointer text-sm font-normal">
-                              {localized(c.full_name_ar, c.full_name_en, languagePref)}
+                              {names.text(c.full_name_ar, c.full_name_en)}
                             </Label>
                           </li>
                         );
@@ -531,13 +516,13 @@ export function AdminClassDetailPage() {
                   <div className="rounded-md border border-border-subtle bg-surface-low p-3">
                     <p className="text-xs text-foreground-secondary">{t('admin.classes.staff.currentLead')}</p>
                     <p className="text-sm font-medium text-foreground">
-                      {personLabel(classData?.lead, languagePref)}
+                      {person(classData?.lead)}
                     </p>
                   </div>
                   <div className="rounded-md border border-border-subtle bg-surface-low p-3">
                     <p className="text-xs text-foreground-secondary">{t('admin.classes.staff.currentBackup')}</p>
                     <p className="text-sm font-medium text-foreground">
-                      {personLabel(classData?.substitute, languagePref)}
+                      {person(classData?.substitute)}
                     </p>
                   </div>
                 </div>
@@ -559,7 +544,7 @@ export function AdminClassDetailPage() {
                       <option value="">{t('common.select')}</option>
                       {assistantCandidates.map((u) => (
                         <option key={u.id} value={u.id}>
-                          {personLabel(u, languagePref)}
+                          {person(u)}
                         </option>
                       ))}
                     </Select>
@@ -581,7 +566,7 @@ export function AdminClassDetailPage() {
                         className="flex items-center justify-between rounded-md border border-border-subtle bg-surface-low p-3"
                       >
                         <div>
-                          <p className="text-sm font-medium text-foreground">{personLabel(a, languagePref)}</p>
+                          <p className="text-sm font-medium text-foreground">{person(a)}</p>
                           <p className="text-xs text-foreground-secondary">{a.email ?? a.phone ?? ''}</p>
                         </div>
                         <Button variant="outline" size="sm" onClick={() => onRemoveAssistant(a.id)}>
@@ -618,7 +603,7 @@ export function AdminClassDetailPage() {
                     <option value="">{t('common.select')}</option>
                     {(unassignedQuery.data ?? []).map((c) => (
                       <option key={c.id} value={c.id}>
-                        {localized(c.full_name_ar, c.full_name_en, languagePref)}
+                        {names.text(c.full_name_ar, c.full_name_en)}
                       </option>
                     ))}
                   </Select>
@@ -640,7 +625,7 @@ export function AdminClassDetailPage() {
                       className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border-subtle bg-surface-low p-3"
                     >
                       <p className="text-sm font-medium text-foreground">
-                        {localized(child.full_name_ar, child.full_name_en, languagePref)}
+                        {names.text(child.full_name_ar, child.full_name_en)}
                       </p>
                       <div className="flex flex-wrap items-center gap-2">
                         <Select
@@ -651,7 +636,7 @@ export function AdminClassDetailPage() {
                           <option value="">{t('admin.classes.roster.moveTo')}</option>
                           {otherClasses.map((c) => (
                             <option key={c.id} value={c.id}>
-                              {localized(c.name_ar, c.name_en, languagePref)}
+                              {names.text(c.name_ar, c.name_en)}
                             </option>
                           ))}
                         </Select>
@@ -679,7 +664,7 @@ export function AdminClassDetailPage() {
 
       {/* Sticky bottom action bar */}
       <div className="sticky bottom-0 -mx-4 mt-2 flex items-center justify-end gap-2 border-t border-border-subtle bg-surface px-4 py-3">
-        <Button variant="secondary" onClick={() => navigate('/admin/classes')}>
+        <Button variant="secondary" onClick={() => navigate(isNew ? `${base}/classes` : `${base}/classes/${rawClassId}`)}>
           {t('common.cancel')}
         </Button>
         <Button

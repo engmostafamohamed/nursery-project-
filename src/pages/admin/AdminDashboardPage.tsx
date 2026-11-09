@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { AdminDashboardActivityFeed } from '@/components/admin/AdminDashboardActivityFeed';
@@ -15,6 +15,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { SectionTitle } from '@/components/ui/SectionTitle';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatTile } from '@/components/ui/StatTile';
+import { useAdminBasePath } from '@/hooks/useAdminBasePath';
 import { useActiveNurseryId } from '@/hooks/useActiveNurseryId';
 import { useAdminDashboardActivityFeed } from '@/hooks/useAdminDashboardActivityFeed';
 import { useAdminDashboardAlerts } from '@/hooks/useAdminDashboardAlerts';
@@ -33,13 +34,12 @@ function formatInt(n: number, locale: string): string {
 
 export function AdminDashboardPage() {
   const { t, i18n } = useTranslation();
-  const location = useLocation();
   const queryClient = useQueryClient();
   const { user } = useAuthSession();
   const { data: profile, isPending: profilePending } = useUserProfile(user?.id);
   const { activeNurseryId } = useActiveNurseryId();
   const nurseryId = activeNurseryId ?? profile?.nursery_id ?? undefined;
-  const adminBasePath = location.pathname.startsWith('/xo-admin') ? '/xo-admin/nursery' : '/admin';
+  const adminBasePath = useAdminBasePath();
   const adminPath = (path: string) => `${adminBasePath}${path}`;
   const locale = i18n.language;
 

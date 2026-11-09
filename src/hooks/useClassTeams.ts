@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { classProfileKeys } from '@/features/classes/useClassProfile';
 import type { ClassTeamRole, ClassTeams } from '@/lib/classTeam';
 import { supabase } from '@/lib/supabase';
 
@@ -27,6 +28,7 @@ export function useClassTeamActions(nurseryId: string | null | undefined) {
     void qc.invalidateQueries({ queryKey: ['class-with-staff'] });
     void qc.invalidateQueries({ queryKey: ['teacher-classes'] });
     void qc.invalidateQueries({ queryKey: ['my-classes'] });
+    void qc.invalidateQueries({ queryKey: classProfileKeys.all });
   };
   const assign = useMutation({
     mutationFn: async (args: { classId: string; userId: string; role: ClassTeamRole }) => {

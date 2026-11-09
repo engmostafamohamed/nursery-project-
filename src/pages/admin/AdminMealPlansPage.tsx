@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useLocation, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ import { useMenuChange, useMenuWeek } from '@/features/food-and-beverage/useMenu
 import { WeekSwitcher } from '@/features/food-and-beverage/WeekSwitcher';
 import { getNurseryCalendarDateString } from '@/lib/nurseryDay';
 import { useSettings } from '@/lib/useSettings';
+import { useAdminBasePath } from '@/hooks/useAdminBasePath';
 
 /**
  * F&B · the weekly menu: write each day's dishes and what they contain (with the children each is
@@ -26,8 +27,7 @@ import { useSettings } from '@/lib/useSettings';
  */
 export function AdminMealPlansPage() {
   const { t } = useTranslation();
-  const location = useLocation();
-  const base = location.pathname.startsWith('/xo-admin') ? '/xo-admin/nursery' : '/admin';
+  const base = useAdminBasePath();
   const { nurseryId } = useSettings();
   const [searchParams, setSearchParams] = useSearchParams();
   const today = getNurseryCalendarDateString();

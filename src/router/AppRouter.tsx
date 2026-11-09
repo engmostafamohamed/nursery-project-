@@ -138,7 +138,8 @@ export function AppRouter() {
               <Route path="messages/broadcasts" element={<P.AdminBroadcastHistoryPage />} />
               <Route path="classes" element={<P.AdminClassesListPage />} />
               <Route path="classes/new" element={<P.AdminClassDetailPage />} />
-              <Route path="classes/:classId" element={<P.AdminClassDetailPage />} />
+              <Route path="classes/:classId" element={<P.AdminClassProfilePage />} />
+              <Route path="classes/:classId/edit" element={<P.AdminClassDetailPage />} />
               <Route path="classes/:classId/announcements" element={<P.AdminClassAnnouncementsPage />} />
               <Route path="notifications" element={<P.AdminNotificationsPage />} />
               <Route path="settings/positions" element={<P.AdminPositionsPage />} />
@@ -315,7 +316,8 @@ export function AppRouter() {
               <Route path="nursery/messages/broadcasts" element={<P.AdminBroadcastHistoryPage />} />
               <Route path="nursery/classes" element={<P.AdminClassesListPage />} />
               <Route path="nursery/classes/new" element={<P.AdminClassDetailPage />} />
-              <Route path="nursery/classes/:classId" element={<P.AdminClassDetailPage />} />
+              <Route path="nursery/classes/:classId" element={<P.AdminClassProfilePage />} />
+              <Route path="nursery/classes/:classId/edit" element={<P.AdminClassDetailPage />} />
               <Route path="nursery/classes/:classId/announcements" element={<P.AdminClassAnnouncementsPage />} />
               <Route path="nursery/notifications" element={<P.AdminNotificationsPage />} />
               <Route path="nursery/settings/positions" element={<P.AdminPositionsPage />} />

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useLocation } from 'react-router-dom';
+
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,7 @@ import { PackageDealPicker } from '@/components/admin/settings/PackageDealPicker
 import { PackageSectionTextsCard } from '@/components/admin/settings/PackageSectionTextsCard';
 import { TuitionPackagesEditor } from '@/components/admin/settings/TuitionPackagesEditor';
 import { FieldError, invalidFieldClass } from '@/components/ui/FieldError';
+import { useAdminBasePath } from '@/hooks/useAdminBasePath';
 import { useAdminDeals, isDealCurrentlyActive, applyDealToPrice, useInlineDealCleanup } from '@/hooks/useAdminDeals';
 import { useAdminTuitionPackages } from '@/hooks/useAdminTuitionPackages';
 import { useAuthSession } from '@/hooks/useAuthSession';
@@ -270,7 +271,7 @@ export function AdminPackagesPage() {
   );
   // One period for the totals card and every package card, so their numbers always agree.
   const subscriptions = usePackageSubscriptionsView(nurseryId, catalog);
-  const basePath = useLocation().pathname.startsWith('/xo-admin') ? '/xo-admin/nursery' : '/admin';
+  const basePath = useAdminBasePath();
 
   const hasActiveFilters = Boolean(search || statusFilter !== 'all' || coverageFilter !== 'all' || dealFilter !== 'all');
   const clearFilters = () => {

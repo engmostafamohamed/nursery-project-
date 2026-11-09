@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useLocation } from 'react-router-dom';
+
 
 import { Button } from '@/components/ui/button';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
@@ -16,6 +16,7 @@ import { useStaffAbsences } from '@/features/staff-absence/useStaffAbsence';
 import { getNurseryCalendarDateString } from '@/lib/nurseryDay';
 import { cn } from '@/lib/utils';
 import { useSettings } from '@/lib/useSettings';
+import { useAdminBasePath } from '@/hooks/useAdminBasePath';
 
 type View = 'current' | 'past';
 
@@ -25,8 +26,7 @@ type View = 'current' | 'past';
  */
 export function AdminStaffAbsencesPage() {
   const { t } = useTranslation();
-  const location = useLocation();
-  const base = location.pathname.startsWith('/xo-admin') ? '/xo-admin/nursery' : '/admin';
+  const base = useAdminBasePath();
   const { nurseryId } = useSettings();
   const today = getNurseryCalendarDateString();
   const [view, setView] = useState<View>('current');

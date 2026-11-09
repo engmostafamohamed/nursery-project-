@@ -1,9 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
-import { ClassViewDialog } from '@/components/admin/ClassViewDialog';
 import { ActionGate } from '@/components/shared/ActionGate';
 import { confirm } from '@/components/ui/confirm';
 import { Button } from '@/components/ui/button';
@@ -23,67 +22,31 @@ import {
 } from '@/components/ui/DataTable';
 import { FilterBar, SearchInput } from '@/components/ui/FilterBar';
 import { FilterField } from '@/components/ui/FilterField';
+import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { NameStack } from '@/components/ui/NameStack';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/select';
 import { StatTile } from '@/components/ui/StatTile';
+import { capacityFill } from '@/features/classes/classCapacity';
+import { ClassCapacityMeter } from '@/features/classes/ClassCapacityMeter';
 import { useActiveNurseryId } from '@/hooks/useActiveNurseryId';
-import {
-  useDeleteClass,
-  useNurseryClasses,
-  type NurseryClassRow,
-  type StaffPerson,
-} from '@/hooks/useClassStaff';
-import { useNurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
+import { useAdminBasePath } from '@/hooks/useAdminBasePath';
+import { useBilingualNames } from '@/hooks/useBilingualNames';
+import { useDeleteClass, useNurseryClasses, type NurseryClassRow } from '@/hooks/useClassStaff';
 import { usePagination } from '@/hooks/usePagination';
-import { cn } from '@/lib/utils';
 
 type SortKey = 'name' | 'grade' | 'lead' | 'roster';
 type QuickFilter = 'all' | 'over' | 'noLead';
-type LanguagePref = 'ar' | 'en' | 'both';
 
-/** One line for sorting and search; identical Arabic and English names appear once. */
-function localizedName(ar: string | null | undefined, en: string | null | undefined, pref: LanguagePref): string {
-  const a = (ar ?? '').trim();
-  const e = (en ?? '').trim();
-  if (pref === 'ar') return a || e || '—';
-  if (pref === 'en') return e || a || '—';
-  if (a && e && a !== e) return `${a} / ${e}`;
-  return a || e || '—';
-}
+const isOverCapacity = (c: NurseryClassRow) => capacityFill(c.child_count, c.capacity).over > 0;
 
-/** For display: the reader's language first, the other name below it when it differs. */
-function nameLines(ar: string | null | undefined, en: string | null | undefined, pref: LanguagePref, arabicFirst: boolean) {
-  const a = (ar ?? '').trim();
-  const e = (en ?? '').trim();
-  if (pref === 'ar') return { primary: a || e || '—', secondary: '' };
-  if (pref === 'en') return { primary: e || a || '—', secondary: '' };
-  if (!a || !e || a === e) return { primary: a || e || '—', secondary: '' };
-  return arabicFirst ? { primary: a, secondary: e } : { primary: e, secondary: a };
-}
-
-function staffName(p: StaffPerson | null, pref: LanguagePref, dash = '—'): string {
-  if (!p) return dash;
-  return localizedName(p.name_ar, p.name_en, pref) || dash;
-}
-
-function isOverCapacity(c: NurseryClassRow): boolean {
-  return c.capacity != null && c.capacity > 0 && c.child_count > c.capacity;
-}
-
-function NameStack({ primary, secondary, strong = false }: { primary: string; secondary: string; strong?: boolean }) {
-  return (
-    <div className="min-w-0">
-      <p className={cn('truncate text-on-surface', strong ? 'font-semibold' : 'font-medium')} title={primary}>{primary}</p>
-      {secondary ? <p className="truncate text-xs text-on-surface-variant" title={secondary}>{secondary}</p> : null}
-    </div>
-  );
-}
-
+/** The nursery's classes: a row opens the class (its children, team and day); edit and delete sit at its end. */
 export function AdminClassesListPage() {
-  const { t, i18n } = useTranslation();
-  const arabicFirst = i18n.language.startsWith('ar');
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const base = useAdminBasePath();
   const { activeNurseryId } = useActiveNurseryId();
-  const { data: languagePref = 'both' } = useNurseryLanguagePref(activeNurseryId);
+  const names = useBilingualNames(activeNurseryId);
   const classesQuery = useNurseryClasses(activeNurseryId);
   const deleteMut = useDeleteClass();
 
@@ -91,7 +54,6 @@ export function AdminClassesListPage() {
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
   const [sortBy, setSortBy] = useState<SortKey>('name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
-  const [viewClassId, setViewClassId] = useState<string | null>(null);
 
   const onDelete = async (classId: string) => {
     if (!(await confirm({ description: t('admin.classes.actions.deleteConfirm'), variant: 'danger' })))
@@ -126,21 +88,21 @@ export function AdminClassesListPage() {
       return `${c.name_ar} ${c.name_en} ${c.grade_level ?? ''} ${c.room_number ?? ''}`.toLowerCase().includes(q);
     });
     const dir = sortDir === 'asc' ? 1 : -1;
+    const person = (p: NurseryClassRow['lead']) => (p ? names.text(p.name_ar, p.name_en) : '—');
     return [...filtered].sort((a, b) => {
       switch (sortBy) {
         case 'grade':
-          return ((a.grade_level ?? '').localeCompare(b.grade_level ?? '')) * dir;
+          return (a.grade_level ?? '').localeCompare(b.grade_level ?? '') * dir;
         case 'lead':
-          return staffName(a.lead, languagePref).localeCompare(staffName(b.lead, languagePref)) * dir;
+          return person(a.lead).localeCompare(person(b.lead)) * dir;
         case 'roster':
           return (a.child_count - b.child_count) * dir;
         case 'name':
         default:
-          return localizedName(a.name_ar, a.name_en, languagePref)
-            .localeCompare(localizedName(b.name_ar, b.name_en, languagePref)) * dir;
+          return names.text(a.name_ar, a.name_en).localeCompare(names.text(b.name_ar, b.name_en)) * dir;
       }
     });
-  }, [classesQuery.data, search, quickFilter, sortBy, sortDir, languagePref]);
+  }, [classesQuery.data, search, quickFilter, sortBy, sortDir, names]);
 
   const toggleSort = (key: SortKey) => {
     if (sortBy === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -160,7 +122,7 @@ export function AdminClassesListPage() {
 
   const sortFor = (key: SortKey) => ({ active: sortBy === key, direction: sortDir, onToggle: () => toggleSort(key) });
 
-  const capacityPct = stats.capacity > 0 ? Math.round((stats.children / stats.capacity) * 100) : null;
+  const capacity = capacityFill(stats.children, stats.capacity || null);
 
   return (
     <div className="space-y-5 pb-8">
@@ -170,9 +132,9 @@ export function AdminClassesListPage() {
         description={t('admin.classes.list.subtitle')}
         actions={
           <ActionGate feature="classes" action="create">
-            <Button asChild>
-              <Link to="/admin/classes/new">
-                <span className="material-symbols-outlined me-1 text-base" aria-hidden>add</span>
+            <Button asChild className="gap-1">
+              <Link to={`${base}/classes/new`}>
+                <MaterialSymbol name="add" size="text-base" />
                 {t('admin.classes.actions.new')}
               </Link>
             </Button>
@@ -184,9 +146,9 @@ export function AdminClassesListPage() {
           <StatTile
             icon="child_care"
             label={t('admin.classes.list.colRoster')}
-            value={capacityPct === null ? stats.children : `${stats.children} · ${capacityPct}%`}
+            value={capacity.pct === null ? stats.children : `${stats.children} · ${Math.round(capacity.pct)}%`}
             helper={stats.capacity > 0 ? t('admin.classes.list.stats.capacityHelper', { capacity: stats.capacity }) : undefined}
-            tone={capacityPct !== null && capacityPct > 100 ? 'error' : capacityPct !== null && capacityPct >= 90 ? 'warning' : 'success'}
+            tone={capacity.tone}
           />
           <StatTile
             icon="warning"
@@ -210,6 +172,7 @@ export function AdminClassesListPage() {
       <TableCard
         title={t('admin.classes.list.title')}
         count={classesQuery.isLoading ? undefined : t('admin.classes.list.resultsCount', { count: rows.length })}
+        description={t('admin.classes.list.openHint')}
         filters={
           <FilterBar onClear={clearFilters} canClear={filtersActive}>
             <FilterField label={t('admin.classes.list.showLabel')}>
@@ -248,22 +211,24 @@ export function AdminClassesListPage() {
             </THead>
             <TBody>
               {pager.pageItems.map((c) => {
-                const name = nameLines(c.name_ar, c.name_en, languagePref, arabicFirst);
-                const lead = c.lead ? nameLines(c.lead.name_ar, c.lead.name_en, languagePref, arabicFirst) : null;
-                const backup = c.substitute ? nameLines(c.substitute.name_ar, c.substitute.name_en, languagePref, arabicFirst) : null;
-                const over = isOverCapacity(c) ? c.child_count - (c.capacity ?? 0) : 0;
-                const pct = c.capacity ? (c.child_count / c.capacity) * 100 : null;
-                const fillTone = pct === null ? 'bg-primary' : pct > 100 ? 'bg-error' : pct >= 90 ? 'bg-warning' : 'bg-success';
+                const name = names.lines(c.name_ar, c.name_en);
                 return (
-                  <Tr key={c.id}>
+                  <Tr key={c.id} onClick={() => navigate(`${base}/classes/${c.id}`)} className="group" data-testid="class-row">
                     <Td className="max-w-[220px]">
-                      <NameStack primary={name.primary} secondary={name.secondary} strong />
+                      <div className="flex items-center gap-2">
+                        <NameStack name={name} strong />
+                        <MaterialSymbol
+                          name="chevron_right"
+                          size="text-base"
+                          className="text-on-surface-variant opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 rtl:rotate-180"
+                        />
+                      </div>
                     </Td>
                     <Td className="text-on-surface-variant">{c.grade_level ?? '—'}</Td>
                     <Td>
                       {c.room_number ? (
                         <span className="inline-flex items-center gap-1 rounded-md bg-surface-high px-2 py-1 text-xs font-medium text-on-surface">
-                          <span className="material-symbols-outlined text-sm" aria-hidden>meeting_room</span>
+                          <MaterialSymbol name="meeting_room" size="text-sm" />
                           {c.room_number}
                         </span>
                       ) : (
@@ -271,47 +236,27 @@ export function AdminClassesListPage() {
                       )}
                     </Td>
                     <Td className="max-w-[220px]">
-                      {lead ? (
-                        <NameStack primary={lead.primary} secondary={lead.secondary} />
+                      {c.lead ? (
+                        <NameStack name={names.lines(c.lead.name_ar, c.lead.name_en)} />
                       ) : (
                         <StatusPill tone="warning" icon="person_alert">{t('admin.classes.list.noLead')}</StatusPill>
                       )}
                     </Td>
                     <Td className="max-w-[200px]">
-                      {backup ? (
-                        <NameStack primary={backup.primary} secondary={backup.secondary} />
+                      {c.substitute ? (
+                        <NameStack name={names.lines(c.substitute.name_ar, c.substitute.name_en)} />
                       ) : (
                         <span className="text-on-surface-variant">{t('admin.classes.list.noBackup')}</span>
                       )}
                     </Td>
                     <Td className="tabular-nums text-on-surface-variant">{c.assistants.length}</Td>
                     <Td>
-                      <div className="min-w-[140px]">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className={cn('font-semibold tabular-nums', over ? 'text-error' : 'text-on-surface')}>
-                            {c.child_count}
-                            {c.capacity != null ? ` / ${c.capacity}` : ''}
-                          </span>
-                          {over ? (
-                            <span className="rounded-full bg-error/10 px-2 py-0.5 text-[11px] font-semibold text-error">
-                              {t('admin.classes.list.overBy', { count: over })}
-                            </span>
-                          ) : null}
-                        </div>
-                        {pct !== null ? (
-                          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-high">
-                            <div className={cn('h-full rounded-full', fillTone)} style={{ width: `${Math.min(100, pct)}%` }} />
-                          </div>
-                        ) : null}
-                      </div>
+                      <ClassCapacityMeter count={c.child_count} capacity={c.capacity} />
                     </Td>
                     <Td align="end">
                       <div className="flex items-center justify-end gap-1">
-                        <ActionGate feature="classes" action="view">
-                          <IconAction icon="visibility" label={`${t('common.view')}: ${name.primary}`} onClick={() => setViewClassId(c.id)} />
-                        </ActionGate>
                         <ActionGate feature="classes" action="update">
-                          <IconAction icon="edit" label={`${t('common.edit')}: ${name.primary}`} to={`/admin/classes/${c.id}`} />
+                          <IconAction icon="edit" label={`${t('common.edit')}: ${name.primary}`} to={`${base}/classes/${c.id}/edit`} />
                         </ActionGate>
                         <ActionGate feature="classes" action="delete">
                           <IconAction
@@ -331,14 +276,6 @@ export function AdminClassesListPage() {
           </DataTable>
         )}
       </TableCard>
-
-      <ClassViewDialog
-        classId={viewClassId}
-        open={viewClassId !== null}
-        onOpenChange={(o) => {
-          if (!o) setViewClassId(null);
-        }}
-      />
     </div>
   );
 }

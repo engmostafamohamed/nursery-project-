@@ -5,6 +5,7 @@ import type { HealthBackState } from '@/features/child-health/childHealth';
 import { ChildHealthError, ChildHealthSkeleton } from '@/features/child-health/ChildHealthPageState';
 import { ChildHealthProfileView } from '@/features/child-health/ChildHealthProfileView';
 import { useChildHealthProfile } from '@/features/child-health/useChildHealthProfile';
+import { useAdminBasePath } from '@/hooks/useAdminBasePath';
 
 /**
  * The nursery's view of a child's health profile (branch admins, managers, chain admins and XO).
@@ -15,7 +16,7 @@ export function AdminChildHealthProfilePage() {
   const { childId } = useParams();
   const location = useLocation();
   const [params] = useSearchParams();
-  const base = location.pathname.startsWith('/xo-admin') ? '/xo-admin/nursery' : '/admin';
+  const base = useAdminBasePath();
   const query = useChildHealthProfile(childId);
   const state = location.state as HealthBackState;
   const back = state?.from

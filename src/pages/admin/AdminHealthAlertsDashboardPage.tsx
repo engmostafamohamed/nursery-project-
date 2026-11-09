@@ -28,6 +28,7 @@ import {
   type AlertFilter,
   type AlertGroup,
 } from '@/features/health-alerts/healthAlertsView';
+import { useAdminBasePath } from '@/hooks/useAdminBasePath';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useDismissHealthAlert, useHealthAlerts } from '@/hooks/useHealthAlerts';
 import { usePagination } from '@/hooks/usePagination';
@@ -48,7 +49,7 @@ export function AdminHealthAlertsDashboardPage() {
   const isArabic = i18n.language.startsWith('ar');
   const navigate = useNavigate();
   const location = useLocation();
-  const base = location.pathname.startsWith('/xo-admin') ? '/xo-admin/nursery' : '/admin';
+  const base = useAdminBasePath();
   const backHere = { from: location.pathname, fromLabelKey: 'health.alertsPageTitle' };
   const { user } = useAuthSession();
   const { data: profile } = useUserProfile(user?.id);

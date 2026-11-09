@@ -11,3 +11,12 @@ export const TONE_TINT: Record<PillTone, string> = {
   error: 'bg-error/10 text-error',
   neutral: 'bg-surface-high text-on-surface-variant',
 };
+
+/** A solid fill per tone, for bars and meters. */
+export const TONE_FILL: Record<PillTone, string> = {
+  primary: 'bg-primary',
+  success: 'bg-success',
+  warning: 'bg-warning',
+  error: 'bg-error',
+  neutral: 'bg-on-surface-variant',
+};

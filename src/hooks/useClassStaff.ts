@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { classProfileKeys } from '@/features/classes/useClassProfile';
 import { groupClassStaff } from '@/lib/classStaff';
 import { supabase } from '@/lib/supabase';
 import type { ClassStaffRole } from '@/types/tables';
@@ -247,6 +248,7 @@ export function useUpdateClassDetails() {
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['class-with-staff', vars.classId] });
       qc.invalidateQueries({ queryKey: ['nursery-classes'] });
+      qc.invalidateQueries({ queryKey: classProfileKeys.all });
     },
   });
 }
@@ -272,6 +274,7 @@ export function useCreateClass() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['nursery-classes'] });
+      qc.invalidateQueries({ queryKey: classProfileKeys.all });
     },
   });
 }
@@ -290,6 +293,7 @@ export function useDeleteClass() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['nursery-classes'] });
+      qc.invalidateQueries({ queryKey: classProfileKeys.all });
     },
   });
 }
@@ -307,6 +311,7 @@ export function useSetClassLead() {
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['class-with-staff', vars.classId] });
       qc.invalidateQueries({ queryKey: ['nursery-classes'] });
+      qc.invalidateQueries({ queryKey: classProfileKeys.all });
       qc.invalidateQueries({ queryKey: ['teacher-classes'] });
     },
   });
@@ -326,6 +331,7 @@ export function useSetClassSubstitute() {
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['class-with-staff', vars.classId] });
       qc.invalidateQueries({ queryKey: ['nursery-classes'] });
+      qc.invalidateQueries({ queryKey: classProfileKeys.all });
       qc.invalidateQueries({ queryKey: ['teacher-classes'] });
     },
   });
@@ -343,6 +349,7 @@ export function useAddClassAssistant() {
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ['class-with-staff', vars.classId] });
       qc.invalidateQueries({ queryKey: ['nursery-classes'] });
+      qc.invalidateQueries({ queryKey: classProfileKeys.all });
       qc.invalidateQueries({ queryKey: ['teacher-classes'] });
     },
   });
@@ -362,6 +369,7 @@ export function useRemoveClassStaff() {
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ['class-with-staff', vars.classId] });
       qc.invalidateQueries({ queryKey: ['nursery-classes'] });
+      qc.invalidateQueries({ queryKey: classProfileKeys.all });
       qc.invalidateQueries({ queryKey: ['teacher-classes'] });
     },
   });
@@ -385,6 +393,7 @@ export function useAssignChildToClass() {
       qc.invalidateQueries({ queryKey: ['class-roster'] });
       qc.invalidateQueries({ queryKey: ['unassigned-children'] });
       qc.invalidateQueries({ queryKey: ['nursery-classes'] });
+      qc.invalidateQueries({ queryKey: classProfileKeys.all });
       // Refresh both source and destination class detail queries so child_count
       // / capacity stays accurate after add / remove / move.
       if (vars.classId) qc.invalidateQueries({ queryKey: ['class-with-staff', vars.classId] });

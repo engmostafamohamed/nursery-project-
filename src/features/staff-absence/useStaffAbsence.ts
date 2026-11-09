@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { classProfileKeys } from '@/features/classes/useClassProfile';
+
 import { cancelAbsence, fetchMyAbsences, fetchStaffAbsences, reportAbsence } from './staffAbsenceApi';
 import type { AbsenceDraft } from './staffAbsence';
 
@@ -26,6 +28,7 @@ export function useAbsenceChanges() {
   const queryClient = useQueryClient();
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: staffAbsenceKeys.all });
+    void queryClient.invalidateQueries({ queryKey: classProfileKeys.all });
     void queryClient.invalidateQueries({ queryKey: ['notifications'] });
   };
   const report = useMutation({ mutationFn: (d: AbsenceDraft) => reportAbsence(d), onSuccess: refresh });
