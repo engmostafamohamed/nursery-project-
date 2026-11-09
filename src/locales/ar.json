@@ -3709,7 +3709,7 @@
       "reaction": "رد الفعل",
       "treatment": "إذا ظهرت الحساسية",
       "unmatchedTitle": "حساسيات لا تُقارن بالمنيو",
-      "unmatchedHint": "هذه ليست أطعمة نعرفها (مثل الأدوية أو الأتربة)، فراجعها بنفسك.",
+      "unmatchedHint": "هذه ليست أطعمة نعرفها (مثل الأدوية أو الأتربة). إذا كان أحدها طعامًا، افتح ملف الطفل واختر أطعمة المنيو التي يشملها.",
       "unmatchedCount_zero": "لا يوجد أطفال",
       "unmatchedCount_one": "طفل واحد",
       "unmatchedCount_two": "طفلان",
@@ -8688,6 +8688,288 @@
     }
   },
   "health": {
+    "profile": {
+      "eyebrow": "الملف الصحي",
+      "backToRecord": "ملف الطفل",
+      "backToChildren": "أطفالي",
+      "noClass": "بدون فصل",
+      "optional": "(اختياري)",
+      "age": {
+        "years_zero": "{{count}} سنة",
+        "years_one": "سنة واحدة",
+        "years_two": "سنتان",
+        "years_few": "{{count}} سنوات",
+        "years_many": "{{count}} سنة",
+        "years_other": "{{count}} سنة",
+        "months_zero": "أقل من شهر",
+        "months_one": "شهر واحد",
+        "months_two": "شهران",
+        "months_few": "{{count}} أشهر",
+        "months_many": "{{count}} شهرًا",
+        "months_other": "{{count}} شهر",
+        "and": " و"
+      },
+      "gender": {
+        "male": "ولد",
+        "female": "بنت"
+      },
+      "status": {
+        "inactive": "غير نشط",
+        "withdrawn": "منسحب",
+        "graduated": "متخرج",
+        "pending": "قيد الانتظار",
+        "suspended": "موقوف"
+      },
+      "facts": {
+        "bloodKnown": "مسجّلة",
+        "notRecorded": "غير مسجّلة",
+        "noneRecorded": "لا يوجد شيء مسجّل",
+        "none": "لا يوجد",
+        "worst": "الأشد: {{severity}}",
+        "inDate": "كلها صالحة",
+        "upToDate": "في موعدها",
+        "expired_zero": "لا يوجد منتهٍ",
+        "expired_one": "دواء منتهي الصلاحية",
+        "expired_two": "دواءان منتهيا الصلاحية",
+        "expired_few": "{{count}} أدوية منتهية الصلاحية",
+        "expired_many": "{{count}} دواءً منتهي الصلاحية",
+        "expired_other": "{{count}} دواء منتهي الصلاحية",
+        "overdue_zero": "لا يوجد متأخر",
+        "overdue_one": "تطعيم متأخر",
+        "overdue_two": "تطعيمان متأخران",
+        "overdue_few": "{{count}} تطعيمات متأخرة",
+        "overdue_many": "{{count}} تطعيمًا متأخرًا",
+        "overdue_other": "{{count}} تطعيم متأخر",
+        "dueSoon_zero": "لا يوجد قريب",
+        "dueSoon_one": "تطعيم قريب الموعد",
+        "dueSoon_two": "تطعيمان قريبا الموعد",
+        "dueSoon_few": "{{count}} تطعيمات قريبة الموعد",
+        "dueSoon_many": "{{count}} تطعيمًا قريب الموعد",
+        "dueSoon_other": "{{count}} تطعيم قريب الموعد"
+      },
+      "attention": {
+        "title": "يحتاج إلى متابعة",
+        "view": "عرض",
+        "add": "إضافة",
+        "fill": "إضافة البيانات",
+        "life_threatening_allergy": "حساسية خطيرة على الحياة من {{subject}}. أبقِ خطة العلاج في متناول اليد.",
+        "medication_expired": "انتهت صلاحية {{subject}} في {{date}}. اطلب من الأسرة عبوة جديدة.",
+        "medication_expiring": "تنتهي صلاحية {{subject}} في {{date}}.",
+        "consent_missing": "لم يوافق ولي الأمر على إعطاء {{subject}}.",
+        "vaccination_overdue": "كان موعد {{subject}} في {{date}}.",
+        "vaccination_due_soon": "موعد {{subject}} في {{date}}.",
+        "no_emergency_contact": "لا توجد جهة اتصال للطوارئ برقم هاتف.",
+        "no_pediatrician": "لم يُسجَّل طبيب أطفال.",
+        "enrollment_allergy_unrecorded": "استمارة التسجيل تذكر حساسية غير مسجّلة هنا: {{subject}}",
+        "enrollment_allergy_unrecorded_plain": "استمارة التسجيل تقول إن الطفل لديه حساسية، لكن لا توجد حساسية مسجّلة هنا.",
+        "enrollment_condition_unrecorded": "استمارة التسجيل تذكر حالة صحية غير مسجّلة هنا: {{subject}}",
+        "enrollment_condition_unrecorded_plain": "استمارة التسجيل تقول إن الطفل لديه حالة صحية، لكن لا توجد حالة مسجّلة هنا."
+      },
+      "sections": {
+        "allergies": "الحساسية",
+        "conditions": "الحالات الصحية",
+        "medications": "الأدوية اليومية",
+        "vaccinations": "التطعيمات",
+        "contacts": "بمن نتصل",
+        "doctor": "الطبيب والتأمين",
+        "enrollment": "من استمارة التسجيل",
+        "documents": "المستندات الطبية"
+      },
+      "hints": {
+        "allergies": "ما يتحسس منه الطفل وماذا نفعل.",
+        "conditions": "الحالات المزمنة والخطة إذا حدث شيء.",
+        "medications": "الأدوية التي تعطيها الحضانة، وهل وافق ولي الأمر.",
+        "vaccinations": "الجرعات التي أُخذت والجرعات القادمة.",
+        "contacts": "جهات الطوارئ أولًا. اضغط على الرقم للاتصال.",
+        "doctor": "طبيب الأطفال والتأمين الصحي للطفل.",
+        "enrollment": "كما كتبه ولي الأمر عند التسجيل.",
+        "documents": "التقارير والوصفات وكروت التطعيم."
+      },
+      "empty": {
+        "allergiesParent": "لا توجد حساسية مسجّلة. إذا كان لدى طفلك حساسية فاطلب من الحضانة إضافتها.",
+        "conditionsParent": "لا توجد حالات صحية مسجّلة.",
+        "medicationsParent": "لا توجد أدوية يومية مسجّلة.",
+        "vaccinationsParent": "لا توجد تطعيمات مسجّلة بعد. يمكنك رفع كارت التطعيم بالأسفل."
+      },
+      "allergy": {
+        "reaction": "رد الفعل",
+        "treatment": "ماذا نفعل",
+        "lastReaction": "آخر رد فعل",
+        "menuChecked": "تُقارن بالمنيو:",
+        "notOnMenu": "ليست من أطعمة المنيو، لذلك لا تُقارن بالمنيو",
+        "chooseFoods": "اختيار أطعمة المنيو",
+        "fromAlerts": "هل «{{name}}» طعام؟ اختر أطعمة المنيو التي تشملها حتى يُقارن بها كل منيو.",
+        "foodsLabel": "أطعمة المنيو التي تشملها",
+        "foodsHint": "ينبّه المنيو إلى الأطباق التي تحتوي عليها. اتركها كلها بدون اختيار إذا لم تكن طعامًا، مثل الأتربة أو دواء.",
+        "matching": "جارٍ مطابقة الاسم مع أطعمة المنيو…",
+        "noFoods": "لم يُختر أي طعام من المنيو: لن يُقارن المنيو بهذه الحساسية.",
+        "suggested": "اختيرت من الاسم. غيّرها إذا لم تكن صحيحة."
+      },
+      "condition": {
+        "plan": "إذا حدثت",
+        "treatment": "العلاج",
+        "triggers": "المحفزات",
+        "diagnosed": "تاريخ التشخيص"
+      },
+      "medication": {
+        "expired": "انتهت {{date}}",
+        "expiring": "تنتهي {{date}}",
+        "ok": "تنتهي {{date}}",
+        "noDate": "بدون تاريخ انتهاء",
+        "times": "المواعيد",
+        "method": "طريقة الإعطاء",
+        "storage": "الحفظ",
+        "consent": {
+          "granted": "وافق ولي الأمر",
+          "pending": "في انتظار الموافقة",
+          "denied": "رفض ولي الأمر"
+        }
+      },
+      "vaccination": {
+        "dose": "الجرعة {{dose}}",
+        "overdue": "متأخر",
+        "due_soon": "قريب الموعد",
+        "scheduled": "الجرعة القادمة محددة",
+        "done": "مكتمل",
+        "givenOn": "تاريخ الإعطاء",
+        "nextDue": "الجرعة القادمة",
+        "givenBy": "أعطاه",
+        "batch": "رقم التشغيلة",
+        "notGiven": "لم يُعطَ بعد"
+      },
+      "contacts": {
+        "call": "الاتصال بـ{{name}} على {{phone}}",
+        "empty": "لا يوجد من نتصل به بعد. أضف جهة اتصال للطوارئ.",
+        "noPhone": "لا يوجد رقم هاتف",
+        "unnamed": "بدون اسم",
+        "tags": {
+          "parent": "ولي أمر",
+          "primary": "جهة الاتصال الأساسية",
+          "emergency": "طوارئ",
+          "medical": "يمكنه الموافقة على العلاج",
+          "nursery": "أضافته الحضانة"
+        }
+      },
+      "relations": {
+        "mother": "الأم",
+        "father": "الأب",
+        "guardian": "الوصي",
+        "legal_guardian": "الوصي القانوني",
+        "grandmother": "الجدة",
+        "grandfather": "الجد",
+        "aunt": "الخالة / العمة",
+        "uncle": "الخال / العم",
+        "sibling": "الأخ / الأخت",
+        "brother": "الأخ",
+        "sister": "الأخت",
+        "nanny": "المربية",
+        "driver": "السائق",
+        "family driver": "سائق العائلة",
+        "neighbor": "الجار",
+        "friend": "صديق العائلة",
+        "other": "أخرى"
+      },
+      "doctor": {
+        "pediatrician": "طبيب الأطفال",
+        "insurance": "التأمين الصحي",
+        "emptyStaff": "أضف طبيب الطفل وتأمينه ليكونا في متناول اليد في الطوارئ.",
+        "emptyParent": "لا يوجد طبيب أو تأمين مسجّل. اطلب من الحضانة إضافتهما."
+      },
+      "enrollment": {
+        "hasAllergy": "لديه حساسية",
+        "allergyTypes": "الحساسية المختارة",
+        "foodAllergies": "حساسية الطعام",
+        "otherAllergies": "حساسية أخرى",
+        "hasCondition": "لديه حالة صحية",
+        "condition": "الحالة الصحية",
+        "notes": "ملاحظات الصحة والسلوك",
+        "consents": "أدوية يسمح بها ولي الأمر في الطوارئ",
+        "noConsents": "لم يُختر شيء.",
+        "nothing": "لم يكتب ولي الأمر شيئًا عن الصحة عند التسجيل."
+      },
+      "documents": {
+        "name": "ما هو المستند؟",
+        "file": "الملف",
+        "fileHint": "ملف PDF أو صورة (JPG أو PNG أو WebP)، حتى 10 ميجابايت.",
+        "uploading": "جارٍ الرفع…",
+        "openFailed": "تعذّر فتح المستند. حاول مرة أخرى."
+      },
+      "request": {
+        "title": "اطلب من الحضانة التحديث",
+        "hint": "هل هناك شيء ناقص أو قديم؟ ستصل رسالتك لإدارة الحضانة.",
+        "placeholder": "مثال: شُخّصت ليلى بحساسية من الفول السوداني الأسبوع الماضي."
+      },
+      "overview": {
+        "title": "فصيلة الدم والطبيب والتأمين",
+        "description": "يراها ولي الأمر أيضًا، وتُطبع في الملخص الصحي.",
+        "bloodUnknown": "غير معروفة",
+        "extraContact": "جهة اتصال أخرى للطوارئ",
+        "extraContactHint": "شخص غير الوالدين يمكن للحضانة الاتصال به."
+      },
+      "placeholders": {
+        "phone": "مثال: 01012345678",
+        "doctor": "مثال: د. هاني صالح",
+        "allergy": "مثال: الفول السوداني",
+        "reaction": "مثال: طفح وتورّم",
+        "treatment": "مثال: إعطاء مضاد الهيستامين والاتصال بولي الأمر",
+        "condition": "مثال: الربو",
+        "conditionSeverity": "مثال: بسيطة",
+        "medication": "مثال: فنتولين",
+        "dosage": "مثال: 5 مل",
+        "times": "مثال: 9:00 و13:00",
+        "storage": "مثال: في الثلاجة",
+        "document": "مثال: كارت التطعيم"
+      },
+      "actions": {
+        "edit": "تعديل",
+        "editItem": "تعديل {{name}}",
+        "deleteItem": "حذف {{name}}",
+        "noParents": "لا يوجد حساب ولي أمر مرتبط بهذا الطفل."
+      },
+      "saved": {
+        "overview": "حُفظت البيانات الصحية.",
+        "allergy": "حُفظت الحساسية.",
+        "condition": "حُفظت الحالة الصحية.",
+        "medication": "حُفظ الدواء.",
+        "vaccination": "حُفظ التطعيم."
+      },
+      "deleted": {
+        "allergy": "حُذفت الحساسية.",
+        "condition": "حُذفت الحالة الصحية.",
+        "medication": "حُذف الدواء.",
+        "vaccination": "حُذف التطعيم."
+      },
+      "issues": {
+        "name_required": "اكتب الاسم.",
+        "too_long": "اجعله أقل من {{max}} حرفًا.",
+        "date_future": "هذا التاريخ في المستقبل.",
+        "phone_invalid": "اكتب الرقم كاملًا، مثل 01012345678 أو ‎+971501234567.",
+        "contact_phone_required": "أضف رقم هاتف لجهة الاتصال هذه.",
+        "contact_name_required": "أضف اسمًا لهذا الرقم.",
+        "blood_type_invalid": "اختر فصيلة دم من القائمة.",
+        "dose_invalid": "اكتب رقم جرعة من 1 إلى 10.",
+        "next_before_given": "يجب أن تكون الجرعة القادمة بعد الجرعة التي أُعطيت.",
+        "doc_name_required": "اكتب ما هو المستند.",
+        "file_required": "اختر ملفًا.",
+        "file_type": "اختر ملف PDF أو صورة (JPG أو PNG أو WebP).",
+        "file_size": "الملف أكبر من 10 ميجابايت.",
+        "request_required": "اكتب ما الذي يجب تغييره."
+      },
+      "errors": {
+        "title": "تعذّر فتح الملف الصحي",
+        "forbidden": "ليست لديك صلاحية لعرض أو تعديل الملف الصحي لهذا الطفل.",
+        "phone_invalid": "أحد أرقام الهاتف غير مكتمل. راجع الأرقام وحاول مرة أخرى.",
+        "contact_incomplete": "جهة اتصال الطوارئ تحتاج إلى اسم ورقم هاتف معًا.",
+        "blood_type_invalid": "اختر فصيلة دم من القائمة.",
+        "text_too_long": "أحد الحقول أطول من المسموح.",
+        "network": "مشكلة في الاتصال. تحقق من الإنترنت وحاول مرة أخرى.",
+        "failed": "حدث خطأ. حاول مرة أخرى."
+      },
+      "print": {
+        "title": "الملخص الصحي",
+        "printed": "طُبع في {{date}}"
+      }
+    },
     "pageTitle": "الملف الصحي للطفل",
     "pageTitleParent": "الصحة والسلامة",
     "alertsPageTitle": "تنبيهات صحية",

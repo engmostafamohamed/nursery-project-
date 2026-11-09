@@ -3629,7 +3629,7 @@
       "reaction": "Reaction",
       "treatment": "If they react",
       "unmatchedTitle": "Allergies not checked against the menu",
-      "unmatchedHint": "These are not foods we recognise (for example medicines or dust). Check them yourself.",
+      "unmatchedHint": "These are not foods we recognise (for example medicines or dust). If one of them is a food, open the child and choose the menu foods it covers.",
       "unmatchedCount_one": "{{count}} child",
       "unmatchedCount_other": "{{count}} children"
     },
@@ -8469,6 +8469,269 @@
     }
   },
   "health": {
+    "profile": {
+      "eyebrow": "Health profile",
+      "backToRecord": "Child record",
+      "backToChildren": "My children",
+      "noClass": "No class",
+      "optional": "(optional)",
+      "age": {
+        "years_one": "{{count}} year",
+        "years_other": "{{count}} years",
+        "months_zero": "Under a month",
+        "months_one": "{{count}} month",
+        "months_other": "{{count}} months",
+        "and": ", "
+      },
+      "gender": {
+        "male": "Boy",
+        "female": "Girl"
+      },
+      "status": {
+        "inactive": "Inactive",
+        "withdrawn": "Withdrawn",
+        "graduated": "Graduated",
+        "pending": "Pending",
+        "suspended": "Suspended"
+      },
+      "facts": {
+        "bloodKnown": "On file",
+        "notRecorded": "Not recorded",
+        "noneRecorded": "None recorded",
+        "none": "None",
+        "worst": "Worst: {{severity}}",
+        "inDate": "All in date",
+        "upToDate": "Up to date",
+        "expired_one": "{{count}} expired",
+        "expired_other": "{{count}} expired",
+        "overdue_one": "{{count}} overdue",
+        "overdue_other": "{{count}} overdue",
+        "dueSoon_one": "{{count}} due soon",
+        "dueSoon_other": "{{count}} due soon"
+      },
+      "attention": {
+        "title": "Needs attention",
+        "view": "View",
+        "add": "Add",
+        "fill": "Add details",
+        "life_threatening_allergy": "Life-threatening allergy to {{subject}}. Keep the treatment plan at hand.",
+        "medication_expired": "{{subject}} expired on {{date}}. Ask the family for a new one.",
+        "medication_expiring": "{{subject}} expires on {{date}}.",
+        "consent_missing": "The parents have not agreed to {{subject}} being given.",
+        "vaccination_overdue": "{{subject}} was due on {{date}}.",
+        "vaccination_due_soon": "{{subject}} is due on {{date}}.",
+        "no_emergency_contact": "No emergency contact with a phone number.",
+        "no_pediatrician": "No pediatrician recorded.",
+        "enrollment_allergy_unrecorded": "The enrollment form mentions allergies that are not recorded here: {{subject}}",
+        "enrollment_allergy_unrecorded_plain": "The enrollment form says the child has allergies, but none are recorded here.",
+        "enrollment_condition_unrecorded": "The enrollment form mentions a health condition that is not recorded here: {{subject}}",
+        "enrollment_condition_unrecorded_plain": "The enrollment form says the child has a health condition, but none is recorded here."
+      },
+      "sections": {
+        "allergies": "Allergies",
+        "conditions": "Health conditions",
+        "medications": "Daily medicines",
+        "vaccinations": "Vaccinations",
+        "contacts": "Who to call",
+        "doctor": "Doctor & insurance",
+        "enrollment": "From the enrollment form",
+        "documents": "Medical documents"
+      },
+      "hints": {
+        "allergies": "What the child reacts to and what to do.",
+        "conditions": "Long-term conditions and the plan if something happens.",
+        "medications": "Medicines the nursery gives, and whether the parents agreed.",
+        "vaccinations": "Doses given and the next ones due.",
+        "contacts": "Emergency contacts first. Tap a number to call.",
+        "doctor": "The child’s pediatrician and health insurance.",
+        "enrollment": "As the parents wrote it when they enrolled.",
+        "documents": "Reports, prescriptions and vaccination cards."
+      },
+      "empty": {
+        "allergiesParent": "No allergies recorded. If your child has one, ask the nursery to add it.",
+        "conditionsParent": "No health conditions recorded.",
+        "medicationsParent": "No daily medicines recorded.",
+        "vaccinationsParent": "No vaccinations recorded yet. You can upload the vaccination card below."
+      },
+      "allergy": {
+        "reaction": "Reaction",
+        "treatment": "What to do",
+        "lastReaction": "Last reaction",
+        "menuChecked": "Checked against the menu:",
+        "notOnMenu": "Not a menu food, so the menu is not checked against it",
+        "chooseFoods": "Choose menu foods",
+        "fromAlerts": "Is “{{name}}” a food? Choose the menu foods it covers so every menu is checked against it.",
+        "foodsLabel": "Menu foods it covers",
+        "foodsHint": "The menu warns about dishes that contain these. Leave them all off for something that is not a food, such as dust or a medicine.",
+        "matching": "Matching the name to menu foods…",
+        "noFoods": "No menu food chosen: the menu will not be checked against this allergy.",
+        "suggested": "Chosen from the name. Change them if they are not right."
+      },
+      "condition": {
+        "plan": "If it happens",
+        "treatment": "Treatment",
+        "triggers": "Triggers",
+        "diagnosed": "Diagnosed"
+      },
+      "medication": {
+        "expired": "Expired {{date}}",
+        "expiring": "Expires {{date}}",
+        "ok": "Expires {{date}}",
+        "noDate": "No expiry date",
+        "times": "When",
+        "method": "How it is given",
+        "storage": "Storage",
+        "consent": {
+          "granted": "Parents agreed",
+          "pending": "Waiting for consent",
+          "denied": "Parents refused"
+        }
+      },
+      "vaccination": {
+        "dose": "Dose {{dose}}",
+        "overdue": "Overdue",
+        "due_soon": "Due soon",
+        "scheduled": "Next dose booked",
+        "done": "Complete",
+        "givenOn": "Given",
+        "nextDue": "Next dose",
+        "givenBy": "Given by",
+        "batch": "Batch",
+        "notGiven": "Not given yet"
+      },
+      "contacts": {
+        "call": "Call {{name}} on {{phone}}",
+        "empty": "No one to call yet. Add an emergency contact.",
+        "noPhone": "No phone number",
+        "unnamed": "No name",
+        "tags": {
+          "parent": "Parent",
+          "primary": "Main contact",
+          "emergency": "Emergency",
+          "medical": "May agree to treatment",
+          "nursery": "Added by the nursery"
+        }
+      },
+      "relations": {
+        "mother": "Mother",
+        "father": "Father",
+        "guardian": "Guardian",
+        "legal_guardian": "Legal guardian",
+        "grandmother": "Grandmother",
+        "grandfather": "Grandfather",
+        "aunt": "Aunt",
+        "uncle": "Uncle",
+        "sibling": "Sibling",
+        "brother": "Brother",
+        "sister": "Sister",
+        "nanny": "Nanny",
+        "driver": "Driver",
+        "family driver": "Family driver",
+        "neighbor": "Neighbour",
+        "friend": "Family friend",
+        "other": "Other"
+      },
+      "doctor": {
+        "pediatrician": "Pediatrician",
+        "insurance": "Health insurance",
+        "emptyStaff": "Add the child’s doctor and insurance so they are at hand in an emergency.",
+        "emptyParent": "No doctor or insurance recorded. Ask the nursery to add them."
+      },
+      "enrollment": {
+        "hasAllergy": "Has allergies",
+        "allergyTypes": "Allergies chosen",
+        "foodAllergies": "Food allergies",
+        "otherAllergies": "Other allergies",
+        "hasCondition": "Has a health condition",
+        "condition": "Health condition",
+        "notes": "Health and behaviour notes",
+        "consents": "Medicines the parents allow in an emergency",
+        "noConsents": "None chosen.",
+        "nothing": "The parents wrote nothing about health when they enrolled."
+      },
+      "documents": {
+        "name": "What is it?",
+        "file": "File",
+        "fileHint": "A PDF or a photo (JPG, PNG or WebP), up to 10 MB.",
+        "uploading": "Uploading…",
+        "openFailed": "The document could not be opened. Try again."
+      },
+      "request": {
+        "title": "Ask the nursery to update",
+        "hint": "Something missing or out of date? The nursery’s admins are told.",
+        "placeholder": "For example: Laila was diagnosed with a peanut allergy last week."
+      },
+      "overview": {
+        "title": "Blood type, doctor and insurance",
+        "description": "The parents see these too, and they are printed on the health summary.",
+        "bloodUnknown": "Not known",
+        "extraContact": "Another emergency contact",
+        "extraContactHint": "Someone besides the parents the nursery may call."
+      },
+      "placeholders": {
+        "phone": "e.g. 01012345678",
+        "doctor": "e.g. Dr. Hany Saleh",
+        "allergy": "e.g. Peanuts",
+        "reaction": "e.g. Rash and swelling",
+        "treatment": "e.g. Give the antihistamine and call the parents",
+        "condition": "e.g. Asthma",
+        "conditionSeverity": "e.g. Mild",
+        "medication": "e.g. Ventolin",
+        "dosage": "e.g. 5 ml",
+        "times": "e.g. 9:00 and 13:00",
+        "storage": "e.g. In the fridge",
+        "document": "e.g. Vaccination card"
+      },
+      "actions": {
+        "edit": "Edit",
+        "editItem": "Edit {{name}}",
+        "deleteItem": "Delete {{name}}",
+        "noParents": "No parent account is linked to this child."
+      },
+      "saved": {
+        "overview": "The health details were saved.",
+        "allergy": "The allergy was saved.",
+        "condition": "The condition was saved.",
+        "medication": "The medicine was saved.",
+        "vaccination": "The vaccination was saved."
+      },
+      "deleted": {
+        "allergy": "The allergy was deleted.",
+        "condition": "The condition was deleted.",
+        "medication": "The medicine was deleted.",
+        "vaccination": "The vaccination was deleted."
+      },
+      "issues": {
+        "name_required": "Write a name.",
+        "too_long": "Keep it under {{max}} characters.",
+        "date_future": "This date is in the future.",
+        "phone_invalid": "Write the full number, for example 01012345678 or +971501234567.",
+        "contact_phone_required": "Add a phone number for this contact.",
+        "contact_name_required": "Add a name for this number.",
+        "blood_type_invalid": "Choose a blood type from the list.",
+        "dose_invalid": "Write a dose from 1 to 10.",
+        "next_before_given": "The next dose must come after the one given.",
+        "doc_name_required": "Write what the document is.",
+        "file_required": "Choose a file.",
+        "file_type": "Choose a PDF or a photo (JPG, PNG or WebP).",
+        "file_size": "The file is larger than 10 MB.",
+        "request_required": "Write what should change."
+      },
+      "errors": {
+        "title": "The health profile could not be opened",
+        "forbidden": "You do not have permission to see or change this child’s health record.",
+        "phone_invalid": "A phone number is not complete. Check the numbers and try again.",
+        "contact_incomplete": "The emergency contact needs both a name and a phone number.",
+        "blood_type_invalid": "Choose a blood type from the list.",
+        "text_too_long": "One of the fields is too long.",
+        "network": "Connection problem. Check the internet and try again.",
+        "failed": "Something went wrong. Try again."
+      },
+      "print": {
+        "title": "Health summary",
+        "printed": "Printed {{date}}"
+      }
+    },
     "pageTitle": "Child health profile",
     "pageTitleParent": "Health & safety",
     "alertsPageTitle": "Health alerts",

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { notifyNurseryAdmins } from '@/lib/healthNotifications';
 import { supabase } from '@/lib/supabase';
@@ -19,23 +19,6 @@ function extFromFile(file: File): string {
   if (n.endsWith('.webp')) return 'webp';
   if (n.endsWith('.pdf')) return 'pdf';
   return 'jpg';
-}
-
-export function useChildHealthDocumentsList(childId: string | undefined) {
-  return useQuery({
-    queryKey: ['child-health-documents', childId],
-    queryFn: async (): Promise<ChildHealthDocumentsRow[]> => {
-      if (!childId) return [];
-      const res = await supabase
-        .from('child_health_documents')
-        .select('*')
-        .eq('child_id', childId)
-        .order('created_at', { ascending: false });
-      if (res.error) throw res.error;
-      return (res.data ?? []) as ChildHealthDocumentsRow[];
-    },
-    enabled: Boolean(childId),
-  });
 }
 
 export function useRequestHealthUpdate() {
@@ -104,7 +87,7 @@ export function useUploadChildHealthDocument() {
       return ins.data as ChildHealthDocumentsRow;
     },
     onSuccess: (_data, vars) => {
-      void qc.invalidateQueries({ queryKey: ['child-health-documents', vars.childId] });
+      void qc.invalidateQueries({ queryKey: ['child-health-profile', vars.childId] });
     },
   });
 }

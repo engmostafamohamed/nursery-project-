@@ -258,6 +258,7 @@ export function ParentChildrenPage() {
     const isPresent = child.todayAttendance === 'present' || child.todayAttendance === 'checked_out';
     const actions: ChildAction[] = [
       { to: `/parent/attendance?child=${child.id}`, icon: 'history', label: t('parent.nav.attendanceHistory') },
+      { to: `/parent/children/${child.id}/health`, icon: 'health_and_safety', label: t('health.pageTitleParent') },
       { to: `/parent/invoices?child=${child.id}`, icon: 'payments', label: t('parent.paymentRecord.title', { defaultValue: 'Payments' }) },
       { to: `/parent/chat?child=${child.id}`, icon: 'forum', label: t('parent.nav.chat') },
       { to: `/parent/child/${child.id}/qr`, icon: 'qr_code_2', label: t('parent.nav.qrCode') },

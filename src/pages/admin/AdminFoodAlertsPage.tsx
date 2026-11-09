@@ -65,7 +65,11 @@ export function AdminFoodAlertsPage() {
       {query.isLoading || !nurseryId ? (
         <Skeleton className="h-64 rounded-xl" />
       ) : query.data ? (
-        <FoodAlertList alerts={query.data} childHref={(childId) => `${base}/children/${childId}/health`} />
+        <FoodAlertList
+          alerts={query.data}
+          childHref={(childId, allergyName) => `${base}/children/${childId}/health?allergy=${encodeURIComponent(allergyName)}`}
+          childLinkState={{ from: location.pathname, fromLabelKey: 'fnb.alerts.title' }}
+        />
       ) : (
         <p role="alert" className="rounded-xl border border-error/40 bg-error/5 p-4 text-sm">{t('fnb.errors.failed')}</p>
       )}

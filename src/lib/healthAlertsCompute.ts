@@ -38,7 +38,21 @@ type ChildLite = {
   full_name_ar: string;
   full_name_en: string;
   class_id: string | null;
+  /** The emergency contacts given at enrollment (children.emergency_contacts). */
+  emergency_contacts?: unknown;
 };
+
+/** Whether the enrollment gave at least one emergency contact with a phone. */
+function hasEnrollmentContact(contacts: unknown): boolean {
+  return (
+    Array.isArray(contacts) &&
+    contacts.some((c) => {
+      if (!c || typeof c !== 'object') return false;
+      const phone = (c as Record<string, unknown>).phone ?? (c as Record<string, unknown>).mobile;
+      return typeof phone === 'string' && phone.trim() !== '';
+    })
+  );
+}
 
 type ClassLite = { id: string; name_ar: string; name_en: string };
 
@@ -147,8 +161,8 @@ export function computeHealthAlerts(input: Input): HealthAlertItem[] {
   for (const child of children) {
     const rec = recordsByChildId.get(child.id);
     const missingEm =
-      !rec ||
-      (isBlank(rec.emergency_contact_name) && isBlank(rec.emergency_contact_phone));
+      !hasEnrollmentContact(child.emergency_contacts) &&
+      (!rec || (isBlank(rec.emergency_contact_name) && isBlank(rec.emergency_contact_phone)));
     if (missingEm) {
       const cl = child.class_id ? classesById.get(child.class_id) : undefined;
       pushIfNew({

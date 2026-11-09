@@ -102,6 +102,18 @@ describe('health alerts', () => {
     expect(alerts({ recordsByChildId: records }).map((a) => a.fingerprint)).toEqual(['miss_emergency:c1']);
   });
 
+  it('counts the emergency contacts given at enrollment', () => {
+    const records = new Map([
+      ['c1', record('c1', { emergency_contact_name: null, emergency_contact_phone: null })],
+      ['c2', record('c2', { emergency_contact_name: null, emergency_contact_phone: null })],
+    ]);
+    const children = [
+      { ...adam, emergency_contacts: [{ name: 'Mariam', phone: '+201033376233', relationship: 'mother' }] },
+      { ...lina, emergency_contacts: [{ name: 'No phone', phone: '' }] },
+    ];
+    expect(alerts({ children, recordsByChildId: records }).map((a) => a.fingerprint)).toEqual(['miss_emergency:c2']);
+  });
+
   it('treats a child with no health record as missing both contacts', () => {
     const result = alerts({ recordsByChildId: new Map([['c1', record('c1')]]) });
     expect(result.map((a) => a.fingerprint)).toEqual(['miss_emergency:c2', 'miss_pediatrician:c2']);

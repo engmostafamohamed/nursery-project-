@@ -18,11 +18,14 @@ export function FoodAlertList({
   alerts,
   showUnmatched = true,
   childHref,
+  childLinkState,
 }: {
   alerts: FoodAlerts;
   showUnmatched?: boolean;
-  /** Where a child's name leads (their health record), for staff who may open it. */
-  childHref?: (childId: string) => string;
+  /** Where a child's name leads (their health record, at the allergy), for staff who may open it. */
+  childHref?: (childId: string, allergyName: string) => string;
+  /** Passed along with that link, e.g. so the record's back link returns here. */
+  childLinkState?: unknown;
 }) {
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language.startsWith('ar');
@@ -55,7 +58,7 @@ export function FoodAlertList({
         ))
       )}
 
-      {showUnmatched && alerts.unmatched.length ? <UnmatchedAllergies items={alerts.unmatched} childHref={childHref} isArabic={isArabic} /> : null}
+      {showUnmatched && alerts.unmatched.length ? <UnmatchedAllergies items={alerts.unmatched} childHref={childHref} linkState={childLinkState} isArabic={isArabic} /> : null}
     </div>
   );
 }
@@ -139,7 +142,17 @@ function ChildAlertCard({ child, isArabic }: { child: ChildAlert; isArabic: bool
  * Allergies that name no food (medicines, dust…): the menu cannot be checked against them, so the
  * nursery sees them grouped by allergy, each child coloured by how severe it is.
  */
-function UnmatchedAllergies({ items, childHref, isArabic }: { items: FoodAlerts['unmatched']; childHref?: (childId: string) => string; isArabic: boolean }) {
+function UnmatchedAllergies({
+  items,
+  childHref,
+  linkState,
+  isArabic,
+}: {
+  items: FoodAlerts['unmatched'];
+  childHref?: (childId: string, allergyName: string) => string;
+  linkState?: unknown;
+  isArabic: boolean;
+}) {
   const { t } = useTranslation();
   const groups = groupUnmatched(items);
   const children = new Set(items.map((u) => u.childId)).size;
@@ -178,7 +191,7 @@ function UnmatchedAllergies({ items, childHref, isArabic }: { items: FoodAlerts[
                 return (
                   <li key={child.childId}>
                     {childHref ? (
-                      <Link to={childHref(child.childId)} title={title} className={cn(look, 'transition-colors hover:border-primary hover:text-primary')}>
+                      <Link to={childHref(child.childId, group.name)} state={linkState} title={title} className={cn(look, 'transition-colors hover:border-primary hover:text-primary')}>
                         {dot}
                         {label}
                       </Link>

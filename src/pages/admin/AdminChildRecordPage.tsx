@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 
 import { ChildAvatarUpload } from '@/components/admin/ChildAvatarUpload';
 import { ChildBillingTab } from '@/components/admin/children/ChildBillingTab';
@@ -197,6 +197,8 @@ function humanize(value: string | number | null | undefined): string {
 
 export function AdminChildRecordPage() {
   const { t, i18n } = useTranslation();
+  const location = useLocation();
+  const healthBase = location.pathname.startsWith('/xo-admin') ? '/xo-admin/nursery' : '/admin';
   const { childId } = useParams();
   const { user } = useAuthSession();
   const { data: profile } = useUserProfile(user?.id);
@@ -513,7 +515,7 @@ export function AdminChildRecordPage() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" asChild className="h-10 rounded-md">
-              <Link to={`/admin/children/${child.id}/health`}>
+              <Link to={`${healthBase}/children/${child.id}/health`}>
                 <span className="material-symbols-outlined me-2 text-base" aria-hidden>medical_services</span>
                 {t('health.pageTitle')}
               </Link>
@@ -793,7 +795,7 @@ export function AdminChildRecordPage() {
             )}
             <div className="mt-4">
               <Button variant="outline" asChild className="h-10 rounded-md">
-                <Link to={`/admin/children/${child.id}/health`}>
+                <Link to={`${healthBase}/children/${child.id}/health`}>
                   <span className="material-symbols-outlined me-2 text-base" aria-hidden>medical_services</span>
                   {t('health.pageTitle')}
                 </Link>

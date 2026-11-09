@@ -210,6 +210,7 @@ export function IconAction({
   label,
   onClick,
   to,
+  state,
   danger = false,
   disabled = false,
 }: {
@@ -217,6 +218,8 @@ export function IconAction({
   label: string;
   onClick?: () => void;
   to?: string;
+  /** Passed along with `to` (router location state). */
+  state?: unknown;
   danger?: boolean;
   disabled?: boolean;
 }) {
@@ -227,7 +230,7 @@ export function IconAction({
   const content = <span className="material-symbols-outlined text-lg" aria-hidden>{icon}</span>;
   if (to) {
     return (
-      <Link to={to} className={className} aria-label={label} title={label} onClick={(e) => e.stopPropagation()}>
+      <Link to={to} state={state} className={className} aria-label={label} title={label} onClick={(e) => e.stopPropagation()}>
         {content}
       </Link>
     );

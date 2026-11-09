@@ -49,6 +49,7 @@ export function AdminHealthAlertsDashboardPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const base = location.pathname.startsWith('/xo-admin') ? '/xo-admin/nursery' : '/admin';
+  const backHere = { from: location.pathname, fromLabelKey: 'health.alertsPageTitle' };
   const { user } = useAuthSession();
   const { data: profile } = useUserProfile(user?.id);
   const alertsQuery = useHealthAlerts();
@@ -235,7 +236,7 @@ export function AdminHealthAlertsDashboardPage() {
                 const name = readerName(alert.childNameAr, alert.childNameEn, isArabic);
                 const detail = isArabic ? alert.detailAr || alert.detailEn : alert.detailEn || alert.detailAr;
                 return (
-                  <Tr key={alert.fingerprint} onClick={() => navigate(`${base}/children/${alert.childId}/health`)}>
+                  <Tr key={alert.fingerprint} onClick={() => navigate(`${base}/children/${alert.childId}/health`, { state: backHere })}>
                     <Td>
                       <span className="flex items-center gap-3">
                         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary" aria-hidden>
@@ -270,7 +271,7 @@ export function AdminHealthAlertsDashboardPage() {
                           onClick={() => void notify(alert)}
                         />
                         <IconAction icon="task_alt" label={t('health.actions.markResolved')} disabled={dismiss.isPending} onClick={() => void resolve(alert)} />
-                        <IconAction icon="medical_information" label={t('health.dashboard.openRecord')} to={`${base}/children/${alert.childId}/health`} />
+                        <IconAction icon="medical_information" label={t('health.dashboard.openRecord')} to={`${base}/children/${alert.childId}/health`} state={backHere} />
                       </span>
                     </Td>
                   </Tr>

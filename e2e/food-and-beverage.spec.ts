@@ -163,7 +163,10 @@ test.describe.serial('F&B: the menu and its allergy alerts', () => {
     await page.goto('/admin/food-alerts');
     await expect(page.getByTestId('food-alert')).toHaveCount(2);
     await expect(page.getByTestId('food-alert').filter({ hasText: 'UI Adam' })).toContainText('Life-threatening');
-    await expect(page.getByTestId('unmatched-allergies')).toContainText('UI Sara · Penicillin');
+    // Grouped by allergy; each child leads to their health record, at that allergy.
+    const unmatched = page.getByTestId('unmatched-allergies');
+    await expect(unmatched).toContainText('Penicillin');
+    await expect(unmatched.getByRole('link', { name: 'UI Sara' })).toHaveAttribute('href', /\/admin\/children\/[0-9a-f-]+\/health\?allergy=Penicillin$/);
     await page.getByRole('tab', { name: 'Next week' }).click();
     await expect(page.getByTestId('food-alerts-none')).toBeVisible();
   });

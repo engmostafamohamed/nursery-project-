@@ -30,7 +30,7 @@ export function useHealthAlerts() {
       const [childrenRes, classesRes, dismissRes] = await Promise.all([
         supabase
           .from('children')
-          .select('id, full_name_ar, full_name_en, class_id')
+          .select('id, full_name_ar, full_name_en, class_id, emergency_contacts')
           .eq('nursery_id', nurseryId)
           .eq('status', 'active'),
         supabase.from('classes').select('id, name_ar, name_en').eq('nursery_id', nurseryId),
@@ -45,6 +45,7 @@ export function useHealthAlerts() {
         full_name_ar: string;
         full_name_en: string;
         class_id: string | null;
+        emergency_contacts: unknown;
       }[];
       const classes = (classesRes.data ?? []) as { id: string; name_ar: string; name_en: string }[];
       const classesById = new Map(classes.map((c) => [c.id, c]));
