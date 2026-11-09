@@ -51,11 +51,13 @@ const NAV_LINK_END_PATHS = new Set([
   '/admin/staff',
   '/admin/media',
   '/admin/staff/payroll',
+  '/admin/staff/absences',
   '/admin/attendance',
   '/admin/attendance/dashboard',
   '/admin/attendance/logs',
   '/admin/scanner',
   '/admin/health/alerts',
+  '/admin/health/medicines',
   '/admin/messages/broadcast',
   '/admin/events',
   '/admin/courses',
@@ -104,6 +106,7 @@ const moreNavGroups: { titleKey: string; items: NavItem[] }[] = [
     items: [
       { to: '/admin/children/enroll', key: 'childEnrollment', icon: 'child_care', feature: 'child_enrollment' },
       { to: '/admin/staff/onboarding', key: 'staffOnboarding', icon: 'assignment_ind', feature: 'staff_onboarding' },
+      { to: '/admin/staff/absences', key: 'staffAbsences', icon: 'event_busy', feature: 'staff' },
       { to: '/admin/admissions/import', key: 'admissionsImport', icon: 'upload_file', feature: 'admissions' },
       { to: '/admin/inventory', key: 'inventory', icon: 'inventory_2', feature: 'inventory' },
       { to: '/admin/qr-codes', key: 'qrCodes', icon: 'qr_code_2', feature: 'qr_code' },
@@ -118,6 +121,7 @@ const moreNavGroups: { titleKey: string; items: NavItem[] }[] = [
       { to: '/admin/kitchen', key: 'kitchenStock', icon: 'kitchen', feature: 'meals' },
       { to: '/admin/food-alerts', key: 'foodAlerts', icon: 'no_food', feature: 'health_alerts' },
       { to: '/admin/health/alerts', key: 'healthAlerts', icon: 'medical_services', feature: 'health_alerts' },
+      { to: '/admin/health/medicines', key: 'medicinesToday', icon: 'medication', feature: 'health_alerts' },
     ],
   },
   {
@@ -472,7 +476,7 @@ export function AdminLayout() {
             <AdminUserMenu />
           </div>
         </header>
-        <main className="p-8">
+        <main className="p-8 pb-28">
           <PWAInstallPrompt />
           <FeatureRouteGuard homePath="/admin">
             <Outlet />

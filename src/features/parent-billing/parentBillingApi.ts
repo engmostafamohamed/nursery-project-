@@ -18,7 +18,7 @@ const str = (value: unknown): string => (typeof value === 'string' ? value : '')
 const strOrNull = (value: unknown): string | null => (typeof value === 'string' && value ? value : null);
 const list = (value: unknown): Json[] => (Array.isArray(value) ? (value as Json[]) : []);
 
-const TYPES: InvoiceType[] = ['monthly', 'event', 'extra_hours', 'other'];
+const TYPES: InvoiceType[] = ['monthly', 'event', 'extra_hours', 'other', 'food_extras'];
 const STATUSES: InvoiceStatus[] = ['pending', 'overdue', 'paid', 'cancelled'];
 
 export function toBillingInvoice(row: Json): BillingInvoice {

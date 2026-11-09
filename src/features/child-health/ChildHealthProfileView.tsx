@@ -108,7 +108,7 @@ export function ChildHealthProfileView({ profile, back, highlightAllergy }: { pr
           <div className="min-w-0 space-y-5">
             <AllergiesCard allergies={profile.allergies} viewer={viewer} highlight={highlightAllergy} {...editing<Allergy>('allergy', (item) => ({ kind: 'allergy', item }))} />
             <ConditionsCard conditions={profile.conditions} viewer={viewer} {...editing<Condition>('condition', (item) => ({ kind: 'condition', item }))} />
-            <MedicationsCard medications={profile.medications} today={profile.today} viewer={viewer} {...editing<Medication>('medication', (item) => ({ kind: 'medication', item }))} />
+            <MedicationsCard medications={profile.medications} today={profile.today} tz={profile.tz} viewer={viewer} {...editing<Medication>('medication', (item) => ({ kind: 'medication', item }))} />
             <VaccinationsCard vaccinations={profile.vaccinations} today={profile.today} viewer={viewer} {...editing<Vaccination>('vaccination', (item) => ({ kind: 'vaccination', item }))} />
           </div>
           <aside className="min-w-0 space-y-5">

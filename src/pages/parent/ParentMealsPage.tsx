@@ -9,12 +9,14 @@ import { MenuFileCard } from '@/features/food-and-beverage/MenuFileCard';
 import { MenuWeekView } from '@/features/food-and-beverage/MenuWeekView';
 import { useMenuWeek } from '@/features/food-and-beverage/useMenuWeek';
 import { WeekSwitcher } from '@/features/food-and-beverage/WeekSwitcher';
+import { FamilyExtrasPanel } from '@/features/kitchen-sales/FamilyExtrasPanel';
 import { getNurseryCalendarDateString } from '@/lib/nurseryDay';
 import { useSettings } from '@/lib/useSettings';
 
 /**
- * The family's view of the nursery's menu: the published week (this one, or the one a notification
- * links to), its file, and the dishes their child must not eat.
+ * The family's view of the nursery's menu: their children's meal plans and extras (ordering them,
+ * answering a teacher who asks), the published week (this one, or the one a notification links to),
+ * its file, and the dishes their child must not eat. ?view=extras opens at the extras.
  */
 export function ParentMealsPage() {
   const { t } = useTranslation();
@@ -29,9 +31,10 @@ export function ParentMealsPage() {
   return (
     <div className="mx-auto w-full max-w-4xl space-y-4 pb-24">
       <PageHeader icon="restaurant" title={t('meals.parentTitle')} description={t('fnb.parent.subtitle')}>
-        <WeekSwitcher weekStart={weekStart} thisWeek={thisWeek} onChange={(next) => setSearchParams(next === thisWeek ? {} : { week: next })} />
+        <WeekSwitcher weekStart={weekStart} thisWeek={thisWeek} onChange={(next) => setSearchParams(next === thisWeek ? {} : { week: next }, { replace: true })} />
       </PageHeader>
       <FamilyMealPlans />
+      <FamilyExtrasPanel focus={searchParams.get('view') === 'extras'} />
       {query.isLoading || !nurseryId ? (
         <Skeleton className="h-72 rounded-xl" />
       ) : query.data ? (

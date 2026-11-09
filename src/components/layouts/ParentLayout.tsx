@@ -115,7 +115,7 @@ export function ParentLayout() {
   };
 
   return (
-    <div className="parent-shell min-h-screen w-full overflow-x-hidden bg-background pb-28 pt-16 sm:pt-[4.25rem] lg:ps-64 lg:pb-0">
+    <div className="parent-shell min-h-screen w-full overflow-x-hidden bg-background pb-28 pt-16 sm:pt-[4.25rem] lg:ps-64 lg:pb-20">
       {/* Desktop sidebar — uses the empty side space on wide screens. */}
       <aside className="no-print hidden lg:fixed lg:inset-y-0 lg:start-0 lg:z-40 lg:flex lg:w-64 lg:flex-col lg:border-e lg:border-outline-variant lg:bg-surface">
         <div className="flex items-center gap-2 border-b border-outline-variant px-5 py-4">

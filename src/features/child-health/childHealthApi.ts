@@ -77,6 +77,9 @@ export function medicationRow(d: MedicationDraft) {
     storage_requirements: orNull(d.storage),
     expiry_date: d.expiryDate || null,
     parent_consent_status: d.consent,
+    dose_times: d.doseTimes.filter(Boolean),
+    starts_on: d.startsOn || null,
+    ends_on: d.endsOn || null,
   };
 }
 

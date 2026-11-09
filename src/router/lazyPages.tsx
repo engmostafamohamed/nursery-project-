@@ -439,6 +439,18 @@ export const AdminMealPricingPage = lazy(() =>
   import('@/pages/admin/AdminMealPricingPage').then((m) => ({ default: m.AdminMealPricingPage })),
 );
 
+export const AdminMedicinesPage = lazy(() =>
+  import('@/pages/admin/AdminMedicinesPage').then((m) => ({ default: m.AdminMedicinesPage })),
+);
+export const TeacherMedicinesPage = lazy(() =>
+  import('@/pages/teacher/TeacherMedicinesPage').then((m) => ({ default: m.TeacherMedicinesPage })),
+);
+export const AdminStaffAbsencesPage = lazy(() =>
+  import('@/pages/admin/AdminStaffAbsencesPage').then((m) => ({ default: m.AdminStaffAbsencesPage })),
+);
+export const TeacherAbsencesPage = lazy(() =>
+  import('@/pages/teacher/TeacherAbsencesPage').then((m) => ({ default: m.TeacherAbsencesPage })),
+);
 export const AdminKitchenStockPage = lazy(() =>
   import('@/pages/admin/AdminKitchenStockPage').then((m) => ({ default: m.AdminKitchenStockPage })),
 );

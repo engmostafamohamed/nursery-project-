@@ -10,10 +10,15 @@ import { MenuFileCard } from '@/features/food-and-beverage/MenuFileCard';
 import { MenuWeekView } from '@/features/food-and-beverage/MenuWeekView';
 import { useFoodAlerts, useMenuWeek } from '@/features/food-and-beverage/useMenuWeek';
 import { WeekSwitcher } from '@/features/food-and-beverage/WeekSwitcher';
+import { MyFoodAccount } from '@/features/kitchen-sales/MyFoodAccount';
+import { TeacherExtrasPanel } from '@/features/kitchen-sales/TeacherExtrasPanel';
 import { getNurseryCalendarDateString } from '@/lib/nurseryDay';
 import { useSettings } from '@/lib/useSettings';
 
-/** The teacher's F&B: who in their classes must not eat today's dishes, then the week's menu. */
+/**
+ * The teacher's F&B: who in their classes must not eat today's dishes, today's extras for the
+ * children they look after, the week's menu, and their own food and drinks account.
+ */
 export function TeacherMealsPage() {
   const { t } = useTranslation();
   const { nurseryId } = useSettings();
@@ -30,6 +35,7 @@ export function TeacherMealsPage() {
         <SectionTitle icon="no_food">{t('fnb.teacher.todayAlerts')}</SectionTitle>
         {alerts.isLoading || !nurseryId ? <Skeleton className="h-32 rounded-xl" /> : alerts.data ? <FoodAlertList alerts={alerts.data} /> : null}
       </section>
+      <TeacherExtrasPanel />
       <section className="space-y-3">
         <SectionTitle icon="menu_book">{t('fnb.teacher.weekMenu')}</SectionTitle>
         <WeekSwitcher weekStart={weekStart} thisWeek={thisWeek} onChange={setWeekStart} />
@@ -42,6 +48,7 @@ export function TeacherMealsPage() {
           </>
         ) : null}
       </section>
+      <MyFoodAccount thisMonth={today.slice(0, 7)} />
     </div>
   );
 }

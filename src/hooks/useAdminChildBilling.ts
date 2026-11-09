@@ -35,7 +35,7 @@ export type ChildBillingInvoice = {
   invoiceNumber: string;
   amount: number;
   status: 'pending' | 'paid' | 'overdue' | 'cancelled';
-  invoiceType: 'monthly' | 'event' | 'extra_hours' | 'other';
+  invoiceType: 'monthly' | 'event' | 'extra_hours' | 'other' | 'food_extras';
   dueDate: string;
   createdAt: string;
   /** Completed payments. */

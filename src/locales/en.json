@@ -1,5 +1,525 @@
 {
+  "medicineRound": {
+    "teacherTitle": "Medicines",
+    "teacherSubtitle": "Today’s doses for the children you look after. You are reminded at each dose’s time; the parents are told when you record it.",
+    "adminEyebrow": "Health",
+    "adminTitle": "Medicines today",
+    "adminSubtitle": "Every dose in the nursery today: what was given, by whom, and what is overdue.",
+    "listTitle": "Today’s round",
+    "now": "Now {{time}}",
+    "tiles": {
+      "overdue": "Overdue",
+      "due": "Due now",
+      "upcoming": "Later today",
+      "done": "Recorded"
+    },
+    "filters": {
+      "todo": "To do",
+      "done": "Recorded",
+      "all": "All"
+    },
+    "states": {
+      "overdue": "Overdue",
+      "due": "Due now",
+      "upcoming": "Later",
+      "when_needed": "When needed",
+      "not_here": "Child not here",
+      "given": "Given",
+      "skipped": "Not given"
+    },
+    "reasons": {
+      "absent": "Child absent",
+      "refused": "Child refused",
+      "parent_gave": "Parent gave it",
+      "not_needed": "Not needed",
+      "other": "Other"
+    },
+    "empty": {
+      "todo": "Nothing to give right now.",
+      "done": "No doses recorded yet today.",
+      "all": "No doses today.",
+      "none_mine": "None of the children you look after has a medicine today.",
+      "none_nursery": "No child has a medicine to take today."
+    },
+    "given": "Given",
+    "notGiven": "Not given",
+    "undo": "Undo",
+    "undoTitle": "Undo this dose?",
+    "undoBody": "{{medicine}} for {{child}} goes back to not recorded, and the parents are told.",
+    "undone": "The dose was undone.",
+    "givenBy": "at {{time}} by {{by}}",
+    "skippedBy": "{{reason}} · {{by}}",
+    "dose": "Dose",
+    "time": "Time",
+    "method": "How",
+    "instructions": "Instructions",
+    "whenNeeded": "When needed",
+    "recordedGiven": "{{medicine}} recorded as given to {{child}}. The parents were told.",
+    "recordedSkipped": "{{medicine}} recorded as not given to {{child}}. The parents were told why.",
+    "dialog": {
+      "givenTitle": "Give {{medicine}} to {{child}}",
+      "givenHint": "Check the dose and how it is given, then confirm once it is given.",
+      "skippedTitle": "{{medicine}} not given to {{child}}",
+      "skippedHint": "The parents are told the reason.",
+      "why": "Why",
+      "note": "Note",
+      "noteHint": "The parents can read it.",
+      "confirmGiven": "Yes, it was given",
+      "confirmSkipped": "Record as not given"
+    },
+    "issues": {
+      "reason_required": "Choose a reason.",
+      "note_required": "Write what happened.",
+      "note_too_long": "Keep the note under {{max}} characters."
+    },
+    "errors": {
+      "forbidden": "You cannot record this child’s medicines.",
+      "invalid": "Check the dose details.",
+      "no_consent": "The parents have not agreed to this medicine.",
+      "not_active": "This medicine is past its expiry date or course.",
+      "child_not_here": "The child is not checked in.",
+      "already_recorded": "This dose was already recorded.",
+      "undo_closed": "Only today’s doses can be undone.",
+      "network": "Connection problem. Check the internet and try again.",
+      "failed": "Something went wrong. Try again."
+    },
+    "banner": {
+      "title_one": "{{count}} medicine to give now",
+      "title_other": "{{count}} medicines to give now",
+      "overdue_one": "{{count}} is overdue",
+      "overdue_other": "{{count}} are overdue",
+      "hint": "Open the round to record them."
+    }
+  },
+  "kitchenSales": {
+    "currency": "EGP",
+    "kinds": {
+      "meal": "Extra meal",
+      "drink": "Extra drink",
+      "snack": "Extra snack"
+    },
+    "billing": {
+      "open": "Open · next payslip",
+      "deducted": "Deducted from salary",
+      "invoiced": "On the invoice",
+      "paid": "Paid",
+      "no_parent": "No parent account",
+      "cancelled": "Cancelled"
+    },
+    "page": {
+      "subtitle": "Stock, what the kitchen sells to staff and children, today’s extras and the discounts it gives.",
+      "tabs": "Kitchen sections",
+      "tab": {
+        "stock": "Stock",
+        "sales": "Sales",
+        "extras": "Extras today",
+        "discounts": "Discounts"
+      }
+    },
+    "item": {
+      "prices": "Prices",
+      "childShort": "Child",
+      "staffShort": "Staff",
+      "notSold": "Not sold",
+      "unitHint": "The unit stock is counted and sold in, e.g. bottle.",
+      "unitWord": "unit",
+      "selling": "Selling",
+      "sellingHint": "Prices are per {{unit}}. Leave a price empty if it is not sold to them.",
+      "childPrice": "Price for children",
+      "staffPrice": "Price for staff",
+      "staffPriceHint": "Empty: the children’s price.",
+      "cost": "What it costs us",
+      "packSize": "Per pack ({{unit}})",
+      "packUnit": "Pack name",
+      "packUnitPlaceholder": "e.g. carton",
+      "extraKind": "On the menu as an extra",
+      "notExtra": "Not an extra",
+      "extraHint": "Extras appear on the parents’ menu and teachers can give them to children.",
+      "contains": "Contains",
+      "containsHint": "An extra is never given to a child allergic to one of these."
+    },
+    "packs": {
+      "countIn": "Count in",
+      "inPacks": "{{pack}}s (× {{size}})",
+      "equals": "= {{quantity}} {{unit}}",
+      "packOf": "{{pack}} of {{size}} {{unit}}"
+    },
+    "history": {
+      "for": "for {{name}}"
+    },
+    "charge": {
+      "title": "Take {{item}} for someone",
+      "titleShort": "Take {{item}} for someone",
+      "for": "Who is it for",
+      "staff": "Member of staff",
+      "child": "Child",
+      "staffNotSold": "Not sold to staff",
+      "childNotSold": "Not an extra for children",
+      "whichStaff": "Member of staff",
+      "chooseStaff": "Choose a member of staff",
+      "whichChild": "Child",
+      "childHint": "Served now if the parents agreed to extras at enrollment; otherwise the parent is asked first.",
+      "searchChild": "Type at least 2 letters of the child’s name",
+      "searchResults": "Children found",
+      "noChildFound": "No child with this name.",
+      "changeChild": "Choose another child",
+      "quantity": "Quantity ({{unit}})",
+      "note": "Note",
+      "price": "{{quantity}} {{unit}} at the full price",
+      "discount": "{{name}} ({{percent}}%)",
+      "total": "Charged",
+      "staffBilling": "Added to their account and deducted from their next payslip.",
+      "childBilling": "Added to the family’s monthly food invoice.",
+      "record": "Record",
+      "staffDone": "Recorded on the staff member’s account.",
+      "childServed": "Served and added to the family’s food invoice.",
+      "childAsked": "The parent was asked to approve it."
+    },
+    "quantityIssues": {
+      "required": "Write a quantity.",
+      "invalid": "Write a number, e.g. 2 or 1.5.",
+      "zero": "Write more than 0.",
+      "too_many": "At most {{max}} at a time.",
+      "more_than_stock": "Only {{quantity}} {{unit}} in stock."
+    },
+    "issues": {
+      "person_required": "Choose who it is for.",
+      "item_required": "Choose an item.",
+      "reason_required": "Write why (at least 3 letters).",
+      "reason_too_long": "Keep it under 200 characters.",
+      "name_required": "Write a name.",
+      "name_too_long": "Keep it under 80 characters.",
+      "percent_invalid": "Write a percentage from 0.01 to 100.",
+      "ends_before_start": "The end cannot come before the start.",
+      "quantity_invalid": "Choose from 1 to {{max}}.",
+      "dates_required": "Choose at least one day.",
+      "note_too_long": "Keep the note under 200 characters."
+    },
+    "errors": {
+      "kitchen_forbidden": "You cannot do this here.",
+      "kitchen_not_enough": "Not enough in stock: {{quantity}} {{unit}} left.",
+      "kitchen_not_for_sale": "This item is not sold to them.",
+      "kitchen_allergy": "The child is allergic to {{foods}} in this item.",
+      "kitchen_invalid_quantity": "This quantity cannot be taken.",
+      "kitchen_invalid_dates": "Choose open days from today to 30 days ahead.",
+      "kitchen_invalid_note": "The note is too long.",
+      "kitchen_person_invalid": "This person cannot be charged here.",
+      "kitchen_request_closed": "This request was already answered, served or cancelled.",
+      "kitchen_charge_settled": "It is already paid or deducted from a salary, so it cannot be cancelled.",
+      "kitchen_charge_closed": "It was already cancelled.",
+      "kitchen_reason_required": "Write why it is cancelled.",
+      "kitchen_discount_invalid": "Check the discount’s details.",
+      "kitchen_item_not_found": "This item no longer exists.",
+      "kitchen_item_invalid": "Check the item’s details.",
+      "menu_forbidden": "You do not have permission to change the kitchen.",
+      "network": "Connection problem. Check the internet and try again.",
+      "failed": "Something went wrong. Try again."
+    },
+    "month": {
+      "previous": "Previous month",
+      "next": "Next month",
+      "thisMonth": "This month"
+    },
+    "sales": {
+      "title": "Sales",
+      "count_one": "{{count}} charge",
+      "count_other": "{{count}} charges",
+      "tiles": {
+        "net": "Charged this month",
+        "count_one": "{{count}} taking",
+        "count_other": "{{count}} takings",
+        "discounts": "Discounts given",
+        "children": "Children (invoiced)",
+        "childrenHint": "On the families’ food invoices",
+        "staff": "Staff",
+        "staffHint": "Deducted from salaries",
+        "staffOpen": "{{amount}} still open"
+      },
+      "searchPlaceholder": "Item or name…",
+      "who": "Who",
+      "everyone": "Everyone",
+      "columns": {
+        "date": "Date",
+        "who": "Who",
+        "item": "Item",
+        "price": "Full price",
+        "discount": "Discount",
+        "net": "Charged",
+        "billing": "Billing"
+      },
+      "empty": "Nothing sold this month.",
+      "emptyFiltered": "No charges match.",
+      "emptyHint": "Give an item a price, then take it for someone from the stock list.",
+      "staffOpenTitle": "Staff accounts still open",
+      "staffOpenHint": "Deducted automatically when their next payslip is made.",
+      "cancelAction": "Cancel {{item}}",
+      "cancelTitle": "Cancel this charge?",
+      "cancelBody": "{{quantity}} {{unit}} of {{item}} for {{name}} ({{amount}}): the stock comes back and the charge leaves the bill.",
+      "reason": "Why",
+      "reasonPlaceholder": "e.g. Recorded for the wrong child",
+      "cancelConfirm": "Cancel charge",
+      "cancelled": "The charge was cancelled and the stock put back."
+    },
+    "extras": {
+      "todayTitle": "Children’s extras today",
+      "count_one": "{{count}} request",
+      "count_other": "{{count}} requests",
+      "noneToday": "No extras today.",
+      "noneTodayHint": "Parents’ orders and teachers’ requests for today show here.",
+      "sources": {
+        "parent": "Ordered by the parent",
+        "staff": "Given by staff"
+      },
+      "statuses": {
+        "waiting_parent": "Waiting for parent",
+        "approved": "To serve",
+        "declined": "Parent said no",
+        "served": "Served",
+        "cancelled": "Cancelled",
+        "expired": "Not served"
+      },
+      "serve": "Serve",
+      "served": "{{item}} served to {{child}} and added to the food invoice.",
+      "cancel": "Cancel",
+      "cancelTitle": "Cancel this extra?",
+      "cancelBody": "{{item}} for {{child}} will not be served.",
+      "cancelled": "The extra was cancelled."
+    },
+    "discounts": {
+      "title": "Discounts",
+      "count_one": "{{count}} discount",
+      "count_other": "{{count}} discounts",
+      "add": "Add discount",
+      "edit": "Edit discount",
+      "editNamed": "Edit {{name}}",
+      "hint": "The best discount that applies is used when an item is taken, and shown on the bill.",
+      "nameAr": "Name in Arabic",
+      "nameEn": "Name in English",
+      "forWho": "For whom",
+      "audiences": {
+        "all_staff": "All staff",
+        "all_children": "All children",
+        "staff_member": "One member of staff",
+        "child": "One child"
+      },
+      "item": "On",
+      "itemHint": "One item, or everything sold.",
+      "allItems": "Every item",
+      "percent": "Discount",
+      "from": "From",
+      "to": "Until",
+      "active": "Active",
+      "saved": "The discount was saved.",
+      "empty": "No discounts yet.",
+      "emptyHint": "For example 50% for all staff, or 10% on juice for one child.",
+      "live": "Applies today",
+      "notNow": "Not in its dates",
+      "off": "Off"
+    },
+    "give": {
+      "title": "Give {{child}} an extra",
+      "hint": "Charged on the family’s food invoice. Without the parents’ agreement from enrollment, the parent is asked first.",
+      "choose": "Choose an extra",
+      "noItems": "The kitchen has no extras yet.",
+      "allergic": "Allergic: {{foods}}",
+      "outOfStock": "Out of stock",
+      "quantity": "How many",
+      "less": "One less",
+      "more": "One more",
+      "notePlaceholder": "e.g. Still hungry after lunch",
+      "willServe": "The parents agreed at enrollment: it is served now and {{amount}} is added to the bill.",
+      "willAsk": "The parent is asked first ({{amount}}). It is served only if they agree.",
+      "give": "Give",
+      "askParent": "Ask the parent",
+      "served": "{{item}} given to {{child}}.",
+      "asked": "The parent of {{child}} was asked about {{item}}."
+    },
+    "teacher": {
+      "title": "Extras today",
+      "hint": "Ordered by parents or given by you, for the children you look after today.",
+      "toServe_one": "{{count}} to serve",
+      "toServe_other": "{{count}} to serve",
+      "search": "Child’s name…",
+      "noChildren": "No children to look after today.",
+      "notHere": "Not here",
+      "consent": "Parents agreed to: {{what}}",
+      "snacksDrinks": "snacks and drinks",
+      "meals": "extra meals",
+      "noConsent": "Parents are asked before each extra",
+      "give": "Give extra"
+    },
+    "mine": {
+      "title": "My food and drinks",
+      "hint": "What you took from the kitchen. It is deducted from your next payslip.",
+      "take": "I took something",
+      "takeHint": "Recorded on your account at the staff price, with any discount.",
+      "open": "Still to be deducted",
+      "empty": "Nothing taken this month.",
+      "deductedIn": "Deducted ({{month}})",
+      "item": "Item",
+      "chooseItem": "Choose an item",
+      "recorded": "Recorded on your account."
+    },
+    "parent": {
+      "title": "Extras",
+      "hint": "Extra meals, drinks and snacks for your child. Served extras go on your monthly food invoice.",
+      "invoices": "My invoices",
+      "preApproved": "You agreed to these at enrollment",
+      "asksYou": "Teachers ask you before giving it",
+      "order": "Order",
+      "orders": "Orders and extras",
+      "orderTitle": "{{item}} for {{child}}",
+      "orderHint": "Served on the days you choose and charged once served.",
+      "whichDays": "Which days",
+      "today": "Today",
+      "noOpenDays": "No open days in the next month.",
+      "notePlaceholder": "e.g. With lunch, please",
+      "total_one": "Total for {{count}} day",
+      "total_other": "Total for {{count}} days",
+      "discountApplied": "{{name}}: {{percent}}% off is included.",
+      "confirmOrder": "Order",
+      "ordered_one": "{{item}} ordered for {{child}} for {{count}} day.",
+      "ordered_other": "{{item}} ordered for {{child}} for {{count}} days.",
+      "askedBy": "{{by}} would like to give {{child}} {{item}} × {{quantity}}.",
+      "theTeacher": "The teacher",
+      "approve": "Yes, give it",
+      "decline": "No",
+      "approved": "Approved. The teacher can now give it.",
+      "declined": "Declined. The teacher was told."
+    },
+    "payroll": {
+      "ofWhichFood": "incl. food & drinks {{amount}}",
+      "formHint": "Open food and drinks charges are deducted automatically when the payslip is created."
+    }
+  },
+  "staffAbsence": {
+    "reasons": {
+      "sick": "Sick",
+      "personal": "Personal",
+      "vacation": "Vacation",
+      "training": "Training",
+      "other": "Other"
+    },
+    "states": {
+      "today": "Away today",
+      "upcoming": "Coming",
+      "past": "Past",
+      "cancelled": "Cancelled"
+    },
+    "roles": {
+      "teacher": "Teacher",
+      "manager": "Manager",
+      "branch_admin": "Admin"
+    },
+    "days_one": "{{count}} day",
+    "days_other": "{{count}} days",
+    "recordedBy": "Recorded by {{name}}",
+    "reported": "Your absence was reported. The admins have been told.",
+    "recorded": "The absence was recorded.",
+    "cancel": "Cancel absence",
+    "cancelTitle": "Cancel this absence?",
+    "cancelBody": "The absence from {{from}} to {{to}} will be removed. If it covers today, the backup teacher is told the lead is back.",
+    "cancelConfirm": "Cancel absence",
+    "cancelled": "The absence was cancelled.",
+    "summary_one": "{{count}} day · {{from}}",
+    "summary_other": "{{count}} days · {{from}} to {{to}}",
+    "quick": {
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "threeDays": "3 days from today"
+    },
+    "fields": {
+      "person": "Who is away",
+      "choosePerson": "Choose a member of staff",
+      "when": "When",
+      "from": "From",
+      "to": "To",
+      "reason": "Reason",
+      "note": "Note",
+      "noteHint": "Anything the team should know, e.g. what the class needs today."
+    },
+    "dialog": {
+      "reportTitle": "Report an absence",
+      "reportHint": "The admins are told, and your backup teacher looks after your class on these days.",
+      "recordTitle": "Record an absence",
+      "recordHint": "The member of staff is told. A lead teacher’s class is covered by its backup.",
+      "report": "Report absence",
+      "record": "Record absence",
+      "coverNote": "This includes today: the backup teacher is told now that they cover the class."
+    },
+    "issues": {
+      "person_required": "Choose who is away.",
+      "date_required": "Choose a date.",
+      "in_past": "Choose today or a later day.",
+      "too_far_back": "An absence can be recorded up to 30 days back.",
+      "too_far_ahead": "Choose a date within the next 6 months.",
+      "before_start": "The last day cannot come before the first.",
+      "too_long": "One absence can last up to 61 days. Report a longer one in parts.",
+      "overlaps": "An absence is already reported for some of these days.",
+      "reason_required": "Choose a reason.",
+      "note_too_long": "Keep the note under {{max}} characters."
+    },
+    "errors": {
+      "forbidden": "You cannot report an absence for this person.",
+      "invalid_dates": "These dates cannot be reported. Check the first and last day.",
+      "invalid_reason": "Choose a reason from the list.",
+      "overlaps": "An absence is already reported for some of these days.",
+      "closed": "This absence has already ended or was cancelled.",
+      "note_too_long": "The note is too long.",
+      "network": "Connection problem. Check the internet and try again.",
+      "failed": "Something went wrong. Try again."
+    },
+    "teacher": {
+      "title": "My absences",
+      "subtitle": "Tell the nursery when you will be away. Your backup teacher covers your class.",
+      "listTitle": "Reported absences",
+      "empty": "No absences reported. When you need a day off, report it here."
+    },
+    "banner": {
+      "title_one": "You cover a class today",
+      "title_other": "You cover {{count}} classes today",
+      "classFor": "{{class}}, for {{lead}}",
+      "class": "{{class}}",
+      "hint": "Its reminders (daily reports, pickups) come to you today.",
+      "open": "Open classes"
+    },
+    "admin": {
+      "eyebrow": "Staff",
+      "title": "Staff absences",
+      "subtitle": "Who is away, who covers each class today, and every absence reported.",
+      "awayToday": "Away today",
+      "coveredToday": "Classes a backup covers",
+      "uncoveredToday": "Classes with nobody on duty",
+      "listTitle": "Absences",
+      "views": {
+        "current": "Today and coming",
+        "past": "Past and cancelled"
+      },
+      "emptyCurrent": "Nobody is away today or reported a coming absence.",
+      "emptyPast": "No past absences in the last 60 days."
+    },
+    "board": {
+      "title": "Class cover today",
+      "hint": "When a lead teacher is away, the class’s backup teacher is on duty and gets its reminders.",
+      "lead": "Lead teacher",
+      "backup": "Backup teacher",
+      "none": "Not set",
+      "away": "Away",
+      "covering": "Covering",
+      "children_one": "{{count}} child",
+      "children_other": "{{count}} children",
+      "noClasses": "No classes yet.",
+      "setTeam": "Set the class’s teachers",
+      "status": {
+        "uncovered": "Nobody on duty",
+        "covered": "Backup covering",
+        "no_lead": "No lead teacher",
+        "normal": "Lead in"
+      }
+    }
+  },
   "common": {
+    "optional": "(optional)",
     "open": "Open",
     "today": "Today",
     "yesterday": "Yesterday",
@@ -1124,6 +1644,8 @@
       "moreGroupFoodAndBeverage": "Food & beverage (F&B)",
       "foodAlerts": "Food allergy alerts",
       "mealPlans": "Meal plans",
+      "medicinesToday": "Medicines today",
+      "staffAbsences": "Staff absences",
       "kitchenStock": "Kitchen stock",
       "meals": "Meals",
       "community": "Community",
@@ -2673,6 +3195,8 @@
   },
   "invoice": {
     "itemKinds": {
+      "food_extra": "{{item}} · {{date}}",
+      "food_extra_discount": "{{item}} · {{date}} · {{discount}} −{{percent}}%",
       "meal_plan": "Meals",
       "late_pickup": "Late pickup extra hours · {{date}}",
       "loyalty_discount": "Loyalty points discount ({{points}} points)",
@@ -2709,6 +3233,7 @@
     "types": {
       "monthly": "Monthly",
       "event": "Event",
+      "food_extras": "Food extras",
       "extra_hours": "Extra Hours",
       "other": "Other"
     },
@@ -2745,6 +3270,7 @@
         "all": "All Types",
         "monthly": "Monthly",
         "event": "Event",
+        "food_extras": "Food extras",
         "extra_hours": "Extra Hours",
         "other": "Other"
       },
@@ -3639,7 +4165,7 @@
     },
     "teacher": {
       "title": "Meals",
-      "subtitle": "Today’s allergy alerts for your classes, and the week’s menu.",
+      "subtitle": "Today’s allergy alerts and extras for the children you look after, the week’s menu, and your own food and drinks.",
       "todayAlerts": "Today’s allergy alerts",
       "weekMenu": "The week’s menu"
     },
@@ -3753,6 +4279,10 @@
       "saveItem": "Save item",
       "itemSaved": "The item was saved.",
       "issues": {
+        "price_invalid": "Write a price up to 100000, e.g. 12.50.",
+        "pack_invalid": "Write how many units a pack has (1 or more).",
+        "pack_unit_required": "Name the pack, e.g. carton.",
+        "extra_needs_price": "An extra needs a price for children.",
         "name_required": "Write the item’s name.",
         "name_too_long": "Keep the name under 80 characters.",
         "unit_required": "Write the unit, for example kg.",
@@ -3766,6 +4296,8 @@
       "inStock": "In stock: {{quantity}} {{unit}}",
       "why": "What happened",
       "kinds": {
+        "charged": "Taken for someone",
+        "returned": "Put back",
         "restocked": "Delivered",
         "used": "Used",
         "spoiled": "Thrown away",
@@ -4777,6 +5309,8 @@
       "reportRates": "Report send rate",
       "community": "Community",
       "bottomBarLabel": "Teacher app main sections",
+      "medicines": "Medicines",
+      "absences": "My absences",
       "meals": "Meals",
       "home": "Home",
       "inbox": "Inbox",
@@ -7062,6 +7596,70 @@
     }
   },
   "notificationTemplates": {
+    "medication_due": {
+      "title": "{{medicine}} for {{child}} at {{time}}",
+      "body": "Give {{dosage}} now and record it in the medicine round."
+    },
+    "medication_overdue": {
+      "title": "Overdue: {{medicine}} for {{child}}",
+      "body": "It was due at {{time}} and is not recorded yet."
+    },
+    "medication_given": {
+      "title": "{{child}} had {{medicine}}",
+      "body": "Given: {{dosage}}, at {{time}}."
+    },
+    "medication_skipped": {
+      "title": "{{medicine}} was not given to {{child}}",
+      "body": "Reason: {{reason}}."
+    },
+    "medication_dose_undone": {
+      "title": "Correction: {{medicine}} for {{child}}",
+      "body": "A dose recorded by mistake was undone."
+    },
+    "class_cover_parents": {
+      "title": "{{teacher}} looks after {{class}} today",
+      "body": "The class teacher is away today, so {{teacher}} is with the children."
+    },
+    "extra_served": {
+      "title": "{{child}} had an extra",
+      "body": "{{item}} × {{quantity}} ({{amount}}) was added to your monthly food invoice."
+    },
+    "extra_needs_approval": {
+      "title": "Approve an extra for {{child}}?",
+      "body": "The teacher would like to give {{item}} × {{quantity}} ({{amount}}). Open to say yes or no."
+    },
+    "extra_approved": {
+      "title": "Approved: {{item}} for {{child}}",
+      "body": "The parent agreed. You can give it now."
+    },
+    "extra_declined": {
+      "title": "Declined: {{item}} for {{child}}",
+      "body": "The parent said no to this extra."
+    },
+    "extra_ordered": {
+      "title": "Extra ordered for {{child}}",
+      "body": "The parent ordered {{item}} × {{quantity}} for today."
+    },
+    "class_cover_today": {
+      "title": "You cover {{class}} today",
+      "body": "{{teacher}} is away. You look after {{class}} today, and its reminders come to you."
+    },
+    "class_cover_cancelled": {
+      "title": "The lead of {{class}} is back",
+      "body": "The absence was cancelled, so you no longer cover {{class}} today."
+    },
+    "class_uncovered": {
+      "title": "Nobody is on duty in {{class}}",
+      "body": "The class’s teachers are away on {{date}} and it has no backup teacher. Choose who looks after it."
+    },
+    "staff_absence_reported": {
+      "title": "{{name}} reported an absence",
+      "body": "{{reason}}, from {{from_date}} to {{to_date}}."
+    },
+    "staff_absence_recorded": {
+      "title": "An absence was recorded for you",
+      "body": "{{reason}}, from {{from_date}} to {{to_date}}."
+    },
     "daily_report_sent_by": {
       "title": "{{child}}'s daily report",
       "body": "{{sender}} sent the report for {{date}}: meals, nap, mood and activities."
@@ -8259,6 +8857,10 @@
         "label": "Automated permission reminders",
         "helper": "Automatically remind parents when an event permission deadline is within 48 hours."
       },
+      "notify_parents_of_cover": {
+        "label": "Tell parents about a backup teacher",
+        "helper": "When a class’s teacher is away, tell its parents in the morning which teacher looks after the class that day."
+      },
       "auto_monthly_teacher_reminders_enabled": {
         "label": "Monthly teacher reminders",
         "helper": "Send each teacher their configured reminders at the start of every month."
@@ -8530,7 +9132,7 @@
       "sections": {
         "allergies": "Allergies",
         "conditions": "Health conditions",
-        "medications": "Daily medicines",
+        "medications": "Medicines",
         "vaccinations": "Vaccinations",
         "contacts": "Who to call",
         "doctor": "Doctor & insurance",
@@ -8574,6 +9176,24 @@
         "diagnosed": "Diagnosed"
       },
       "medication": {
+        "instructions": "Instructions",
+        "schedule": "When to give it",
+        "scheduleHint": "The teacher on duty is reminded at each time, and the parents are told when it is given.",
+        "doseTime": "Dose time {{n}}",
+        "removeTime": "Remove time {{n}}",
+        "addTime": "Add a time",
+        "whenNeeded": "No times: given only when needed (e.g. an inhaler for wheezing).",
+        "courseFrom": "Course from",
+        "courseUntil": "Course until",
+        "givenAt": "Given at {{times}}",
+        "onlyWhenNeeded": "Given only when needed",
+        "course": "Course {{from}} – {{to}}",
+        "courseUntilDate": "Course until {{date}}",
+        "courseFromDate": "Course from {{date}}",
+        "today": "Today’s doses",
+        "doseGiven": "given {{time}} by {{by}}",
+        "doseSkipped": "not given: {{reason}}",
+        "doseOpen": "not given yet",
         "expired": "Expired {{date}}",
         "expiring": "Expires {{date}}",
         "ok": "Expires {{date}}",
@@ -8670,6 +9290,7 @@
       },
       "placeholders": {
         "phone": "e.g. 01012345678",
+        "instructions": "e.g. After lunch, or when wheezing",
         "doctor": "e.g. Dr. Hany Saleh",
         "allergy": "e.g. Peanuts",
         "reaction": "e.g. Rash and swelling",
@@ -8678,7 +9299,7 @@
         "conditionSeverity": "e.g. Mild",
         "medication": "e.g. Ventolin",
         "dosage": "e.g. 5 ml",
-        "times": "e.g. 9:00 and 13:00",
+        "times": "e.g. After lunch, or when wheezing",
         "storage": "e.g. In the fridge",
         "document": "e.g. Vaccination card"
       },
@@ -8702,6 +9323,10 @@
         "vaccination": "The vaccination was deleted."
       },
       "issues": {
+        "time_invalid": "Fill in each time, or remove it.",
+        "time_repeated": "Each time once.",
+        "too_many_times": "Up to 6 times a day.",
+        "ends_before_start": "The course cannot end before it starts.",
         "name_required": "Write a name.",
         "too_long": "Keep it under {{max}} characters.",
         "date_future": "This date is in the future.",

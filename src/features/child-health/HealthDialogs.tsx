@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { invalidFieldClass } from '@/components/ui/FieldError';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { FormField, FormProblem } from '@/components/ui/FormField';
 import { Input } from '@/components/ui/input';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Select } from '@/components/ui/select';
@@ -19,6 +20,7 @@ import {
   BLOOD_TYPES,
   conditionIssues,
   CONSENT_STATUSES,
+  MAX_DOSE_TIMES,
   MEDICATION_METHODS,
   medicationIssues,
   NOTES_MAX,
@@ -51,7 +53,6 @@ import {
   vaccinationRow,
   type HealthItemKind,
 } from './childHealthApi';
-import { FormField, FormProblem } from './HealthUi';
 import { useChildHealthChange } from './useChildHealthProfile';
 
 /*
@@ -456,8 +457,12 @@ export function MedicationDialog({ profile, item, onClose }: { profile: ChildHea
     storage: item?.storage ?? '',
     expiryDate: item?.expiryDate ?? '',
     consent: item?.consent ?? 'pending',
+    doseTimes: item?.doseTimes ?? [],
+    startsOn: item?.startsOn ?? '',
+    endsOn: item?.endsOn ?? '',
   }));
   const issues = medicationIssues(form.draft);
+  const setTime = (index: number, value: string) => form.set({ doseTimes: form.draft.doseTimes.map((x, i) => (i === index ? value : x)) });
   const { save, busy, problem } = useItemSave(profile, 'medication', item?.id ?? null, onClose);
   const err = (field: keyof MedicationDraft) => (form.shows(field) ? errorText(t, issues[field]) : null);
   const text = (field: 'name' | 'dosage' | 'times' | 'storage', id: string, label: string, placeholder?: string) => (
@@ -482,7 +487,7 @@ export function MedicationDialog({ profile, item, onClose }: { profile: ChildHea
       <div className="grid gap-3 sm:grid-cols-2">
         {text('name', 'med-name', t('health.fields.medicationName'), t('health.profile.placeholders.medication'))}
         {text('dosage', 'med-dosage', t('health.fields.dosage'), t('health.profile.placeholders.dosage'))}
-        {text('times', 'med-times', t('health.profile.medication.times'), t('health.profile.placeholders.times'))}
+        {text('times', 'med-instructions', t('health.profile.medication.instructions'), t('health.profile.placeholders.instructions'))}
         <FormField id="med-method" label={t('health.profile.medication.method')}>
           <Select id="med-method" value={form.draft.method} onChange={(e) => form.set({ method: e.target.value as MedicationDraft['method'] })}>
             {MEDICATION_METHODS.map((m) => (
@@ -495,6 +500,48 @@ export function MedicationDialog({ profile, item, onClose }: { profile: ChildHea
           <Input id="med-expiry" type="date" value={form.draft.expiryDate} onChange={(e) => form.set({ expiryDate: e.target.value })} />
         </FormField>
       </div>
+      <fieldset className="space-y-3 rounded-xl border border-outline-variant p-3.5" data-testid="dose-times">
+        <legend className="flex items-center gap-1.5 px-1 text-sm font-semibold text-on-surface">
+          <MaterialSymbol name="alarm" size="text-base" className="text-primary" />
+          {t('health.profile.medication.schedule')}
+        </legend>
+        <p className="text-xs text-on-surface-variant">{t('health.profile.medication.scheduleHint')}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          {form.draft.doseTimes.map((time, index) => (
+            <span key={index} className="inline-flex items-center gap-1 rounded-lg border border-outline-variant bg-surface ps-1">
+              <Input
+                type="time"
+                aria-label={t('health.profile.medication.doseTime', { n: index + 1 })}
+                value={time}
+                onChange={(e) => setTime(index, e.target.value)}
+                onBlur={() => form.touch('doseTimes')}
+                className="h-9 w-32 border-0 bg-transparent shadow-none"
+              />
+              <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => form.set({ doseTimes: form.draft.doseTimes.filter((_, i) => i !== index) })}
+                aria-label={t('health.profile.medication.removeTime', { n: index + 1 })}>
+                <MaterialSymbol name="close" size="text-base" />
+              </Button>
+            </span>
+          ))}
+          {form.draft.doseTimes.length < MAX_DOSE_TIMES ? (
+            <Button type="button" variant="outline" size="sm" onClick={() => form.set({ doseTimes: [...form.draft.doseTimes, ''] })} data-testid="add-dose-time">
+              <MaterialSymbol name="add" size="text-base" className="me-1" />
+              {t('health.profile.medication.addTime')}
+            </Button>
+          ) : null}
+        </div>
+        {err('doseTimes') ? <p id="med-times-error" role="alert" className="text-xs text-error">{err('doseTimes')}</p> : null}
+        {!form.draft.doseTimes.length ? <p className="text-xs text-on-surface-variant">{t('health.profile.medication.whenNeeded')}</p> : null}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <FormField id="med-from" label={t('health.profile.medication.courseFrom')} optional>
+            <Input id="med-from" type="date" value={form.draft.startsOn} onChange={(e) => form.set({ startsOn: e.target.value })} />
+          </FormField>
+          <FormField id="med-until" label={t('health.profile.medication.courseUntil')} optional error={err('endsOn')}>
+            <Input id="med-until" type="date" min={form.draft.startsOn || undefined} value={form.draft.endsOn} onChange={(e) => form.set({ endsOn: e.target.value })}
+              onBlur={() => form.touch('endsOn')} className={cn(err('endsOn') && invalidFieldClass)} />
+          </FormField>
+        </div>
+      </fieldset>
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium text-on-surface">{t('health.fields.consent')}</legend>
         <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={t('health.fields.consent')}>

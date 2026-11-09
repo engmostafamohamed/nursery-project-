@@ -77,6 +77,10 @@ export function PayslipForm({ staffOptions, nurseryId, onSubmit }: Props) {
         <div className="space-y-2"><Label>{t('payroll.deductions')}</Label><Input type="number" min={0} value={deductions} onChange={(e) => setDeductions(Number(e.target.value || 0))} /></div>
       </div>
       <div className="space-y-2"><Label>{t('payroll.total')}</Label><Input value={String(total)} readOnly /></div>
+      <p className="flex items-start gap-1.5 rounded-lg bg-surface-high px-3 py-2 text-xs text-on-surface-variant">
+        <span className="material-symbols-outlined text-sm" aria-hidden>restaurant</span>
+        {t('kitchenSales.payroll.formHint')}
+      </p>
       <div className="space-y-2"><Label>{t('invoice.details.notes')}</Label><Input value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
       <Button
         onClick={async () => {

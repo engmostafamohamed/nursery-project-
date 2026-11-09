@@ -5,7 +5,7 @@ import ar from '@/locales/ar.json';
 import en from '@/locales/en.json';
 import type { HealthAlertItem } from '@/lib/healthAlertsCompute';
 
-import { itemIssues, movementIssue, quantityAfter, sortForAttention, stockFlags, stockTotals, type KitchenItem } from './kitchen';
+import { itemDraft, itemIssues, movementIssue, quantityAfter, sortForAttention, stockFlags, stockTotals, type KitchenItem } from './kitchen';
 import { childMatches, isNotBilled, mealPlanIssues, mealPlanTotals, orderedMeals, type MealPlanChild } from './mealPlans';
 import { fnbErrorKey, toKitchenData, toMealPlansData } from './mealPlansApi';
 import { groupUnmatched } from './menu';
@@ -58,7 +58,8 @@ describe('meal plans', () => {
 
 describe('kitchen stock', () => {
   const item = (patch: Partial<KitchenItem>): KitchenItem => ({
-    id: 'i', name: 'Milk', category: 'drinks', quantity: 10, unit: 'liter', lowStockLevel: 3, expiresOn: null, lastRestocked: null, ...patch,
+    id: 'i', name: 'Milk', category: 'drinks', quantity: 10, unit: 'liter', lowStockLevel: 3, expiresOn: null, lastRestocked: null,
+    unitCost: null, childPrice: null, staffPrice: null, packSize: null, packUnit: null, extraKind: null, foodAllergens: [], ...patch,
   });
   const today = '2026-11-08';
 
@@ -89,7 +90,11 @@ describe('kitchen stock', () => {
     expect(quantityAfter('restocked', 2.5, 3)).toBe(5.5);
     expect(quantityAfter('used', 1.2, 3)).toBe(1.8);
     expect(quantityAfter('counted', 7, 3)).toBe(7);
-    expect(itemIssues({ name: '', category: 'food', unit: '', lowStockLevel: 'a', expiresOn: '' })).toEqual({ name: 'name_required', unit: 'unit_required', lowStockLevel: 'level_invalid' });
+    const blank = itemDraft(null);
+    expect(itemIssues({ ...blank, name: '', unit: '', lowStockLevel: 'a' })).toEqual({ name: 'name_required', unit: 'unit_required', lowStockLevel: 'level_invalid' });
+    expect(itemIssues({ ...blank, name: 'Juice', childPrice: '1.234', staffPrice: '200000', packSize: '12' })).toEqual({ childPrice: 'price_invalid', staffPrice: 'price_invalid', packUnit: 'pack_unit_required' });
+    expect(itemIssues({ ...blank, name: 'Juice', extraKind: 'drink' })).toEqual({ extraKind: 'extra_needs_price' });
+    expect(itemIssues({ ...blank, name: 'Juice', extraKind: 'drink', childPrice: '10', packSize: '24', packUnit: 'carton' })).toEqual({});
   });
 
   it('reads get_kitchen_stock', () => {

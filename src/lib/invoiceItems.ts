@@ -34,6 +34,18 @@ export function invoiceItemDescription(item: RawLineItem, language: string = i18
   if (kind === 'loyalty_discount') {
     return i18n.t('invoice.itemKinds.loyalty_discount', { lng, points: Number(item.points ?? 0) });
   }
+  if (kind === 'food_extra') {
+    // An extra from the kitchen: what, on which day, and the discount that explains a total below
+    // quantity × price.
+    const day = text(item.date);
+    const base = { lng, item: text(item.name_en) || text(item.name_ar), date: day ? formatDay(day, lng) : '' };
+    const off = Number(item.discount_amount ?? 0);
+    if (off > 0) {
+      const name = lng === 'ar' ? text(item.discount_name_ar) || text(item.discount_name_en) : text(item.discount_name_en) || text(item.discount_name_ar);
+      return i18n.t('invoice.itemKinds.food_extra_discount', { ...base, discount: name, percent: Number(item.discount_percent ?? 0) });
+    }
+    return i18n.t('invoice.itemKinds.food_extra', base);
+  }
 
   // Older system lines stored description (English) + description_ar; typed lines only description.
   const ar = text(item.name_ar) || (kind ? '' : text(item.description_ar));

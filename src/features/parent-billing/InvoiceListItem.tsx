@@ -15,6 +15,7 @@ const TYPE_ICON: Record<BillingInvoice['type'], string> = {
   event: 'celebration',
   extra_hours: 'more_time',
   other: 'receipt_long',
+  food_extras: 'restaurant',
 };
 
 /**

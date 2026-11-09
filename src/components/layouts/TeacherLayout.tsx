@@ -41,9 +41,11 @@ const primaryNavItems: TeacherNavItem[] = [
 const secondaryNavItems: TeacherNavItem[] = [
   { to: '/teacher/daily-reports', key: 'dailyReports', icon: 'description', feature: 'daily_reports' },
   { to: '/teacher/meals', key: 'meals', icon: 'restaurant' },
+  { to: '/teacher/medicines', key: 'medicines', icon: 'medication' },
   { to: '/teacher/report-rates', key: 'reportRates', icon: 'monitoring', feature: 'class_team' },
   { to: '/teacher/milestones', key: 'milestones', icon: 'social_leaderboard', feature: 'daily_reports' },
   { to: '/teacher/reminders', key: 'reminders', icon: 'alarm' },
+  { to: '/teacher/absences', key: 'absences', icon: 'event_busy' },
   { to: '/teacher/chat', key: 'chat', icon: 'forum', feature: 'chat' },
   { to: '/teacher/family-messages', key: 'familyMessages', icon: 'outgoing_mail', feature: 'messages' },
   { to: '/teacher/media', key: 'media', icon: 'photo_library', feature: 'media_library' },
@@ -113,7 +115,7 @@ export function TeacherLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-32 lg:ps-64 lg:pb-0">
+    <div className="min-h-screen bg-background pb-32 lg:ps-64 lg:pb-20">
       {/* Desktop sidebar — uses the empty side space on wide screens. */}
       <aside className="hidden lg:fixed lg:inset-y-0 lg:start-0 lg:z-40 lg:flex lg:w-64 lg:flex-col lg:border-e lg:border-outline-variant lg:bg-surface">
         <div className="flex items-center gap-2 border-b border-outline-variant px-5 py-4">

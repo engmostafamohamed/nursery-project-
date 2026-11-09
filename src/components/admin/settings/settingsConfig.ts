@@ -74,6 +74,7 @@ export const DEFAULT_SETTINGS: Record<SettingsKey, unknown> = {
   invoice_reminder_days_before: 3,
   auto_permission_reminders_enabled: true,
   auto_monthly_teacher_reminders_enabled: true,
+  notify_parents_of_cover: true,
   parent_registration_enabled: true,
   show_event_attendee_list: true,
   pricing_model: 'fixed',
@@ -183,6 +184,7 @@ export const SETTINGS_TABS: SettingsTabConfig[] = [
       { key: 'invoice_reminder_days_before', type: 'number', min: 0, max: 30 },
       { key: 'auto_permission_reminders_enabled', type: 'boolean' },
       { key: 'auto_monthly_teacher_reminders_enabled', type: 'boolean' },
+      { key: 'notify_parents_of_cover', type: 'boolean' },
     ],
   },
   {

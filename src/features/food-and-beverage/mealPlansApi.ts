@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 
-import { MOVEMENT_KINDS, KITCHEN_CATEGORIES, type KitchenCategory, type KitchenItem, type MovementKind, type StockMovement } from './kitchen';
+import { EXTRA_KINDS, HISTORY_KINDS, KITCHEN_CATEGORIES, type HistoryKind, type ItemDraft, type ItemExtraKind, type KitchenCategory, type KitchenItem, type MovementKind, type StockMovement } from './kitchen';
+import { isFoodAllergen, type FoodAllergen } from './menu';
 import { orderedMeals, type ChildPlan, type MealPlan, type MealPlanChild } from './mealPlans';
 
 /*
@@ -112,18 +113,27 @@ export function toKitchenData(row: Json): KitchenData {
       lowStockLevel: num(i.low_stock_level),
       expiresOn: strOrNull(i.expires_on),
       lastRestocked: strOrNull(i.last_restocked),
+      unitCost: i.unit_cost == null ? null : num(i.unit_cost),
+      childPrice: i.child_price == null ? null : num(i.child_price),
+      staffPrice: i.staff_price == null ? null : num(i.staff_price),
+      packSize: i.pack_size == null ? null : num(i.pack_size),
+      packUnit: strOrNull(i.pack_unit),
+      extraKind: (EXTRA_KINDS as readonly string[]).includes(str(i.extra_kind)) ? (str(i.extra_kind) as ItemExtraKind) : null,
+      foodAllergens: (Array.isArray(i.food_allergens) ? i.food_allergens : []).filter((a): a is FoodAllergen => typeof a === 'string' && isFoodAllergen(a)),
     })),
     movements: list(row.movements).map((m) => ({
       id: str(m.id),
       itemId: str(m.item_id),
       itemName: str(m.item_name),
       unit: str(m.unit),
-      kind: (MOVEMENT_KINDS as readonly string[]).includes(str(m.kind)) ? (str(m.kind) as MovementKind) : 'counted',
+      kind: (HISTORY_KINDS as readonly string[]).includes(str(m.kind)) ? (str(m.kind) as HistoryKind) : 'counted',
       change: num(m.change),
       quantityAfter: num(m.quantity_after),
       note: strOrNull(m.note),
       byAr: strOrNull(m.by_ar),
       byEn: strOrNull(m.by_en),
+      forAr: strOrNull(m.for_ar),
+      forEn: strOrNull(m.for_en),
       at: str(m.at),
     })),
   };
@@ -135,23 +145,25 @@ export async function fetchKitchenStock(nurseryId: string): Promise<KitchenData>
   return toKitchenData(data as Json);
 }
 
-export async function saveKitchenItem(input: {
-  nurseryId: string;
-  id: string | null;
-  name: string;
-  category: KitchenCategory;
-  unit: string;
-  lowStockLevel: number;
-  expiresOn: string | null;
-}): Promise<KitchenData> {
+/** Adds an item or changes it, with its prices, pack and extra kind (blank prices: not sold). */
+export async function saveKitchenItem(input: { nurseryId: string; id: string | null; draft: ItemDraft }): Promise<KitchenData> {
+  const d = input.draft;
+  const amount = (v: string) => (v.trim() ? Number(v) : null);
   const { data, error } = await supabase.rpc('save_kitchen_item' as never, {
     p_nursery_id: input.nurseryId,
     p_id: input.id,
-    p_name: input.name.trim(),
-    p_category: input.category,
-    p_unit: input.unit.trim(),
-    p_low_stock_level: input.lowStockLevel,
-    p_expires_on: input.expiresOn || null,
+    p_name: d.name.trim(),
+    p_category: d.category,
+    p_unit: d.unit.trim(),
+    p_low_stock_level: Number(d.lowStockLevel),
+    p_expires_on: d.expiresOn || null,
+    p_unit_cost: amount(d.unitCost),
+    p_child_price: amount(d.childPrice),
+    p_staff_price: amount(d.staffPrice),
+    p_pack_size: amount(d.packSize),
+    p_pack_unit: d.packSize.trim() ? d.packUnit.trim() : null,
+    p_extra_kind: d.extraKind || null,
+    p_food_allergens: d.foodAllergens,
   } as never);
   if (error) throw error;
   return toKitchenData(data as Json);

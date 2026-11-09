@@ -25,7 +25,7 @@ import {
 import { formatMoneyAmount } from '@/lib/money';
 import { cn } from '@/lib/utils';
 
-const INVOICE_TYPES = ['monthly', 'event', 'extra_hours', 'other'] as const;
+const INVOICE_TYPES = ['monthly', 'event', 'extra_hours', 'food_extras', 'other'] as const;
 
 type MonthGroup = { key: string; label: string; summary: MoneySummary; rows: ParentInvoiceItem[] };
 

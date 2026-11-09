@@ -44,3 +44,24 @@ export function formatTime(value: DateInput | null | undefined, options?: Intl.D
   if (Number.isNaN(d.getTime())) return '—';
   return d.toLocaleTimeString(activeLocale(), { hour: '2-digit', minute: '2-digit', hour12: true, ...options });
 }
+
+/** A calendar day (YYYY-MM-DD) in the app language, read in UTC so no offset moves it; '—' if invalid. */
+export function formatDay(day: string | null | undefined, options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' }): string {
+  if (!day) return '—';
+  const d = new Date(`${day.slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString(activeLocale(), { ...options, timeZone: 'UTC' });
+}
+
+/** A time of day in a given time zone (the nursery's), e.g. "12:05 PM"; the device's when the zone is unknown. */
+export function formatTimeIn(value: DateInput | null | undefined, timeZone: string | null | undefined): string {
+  if (value == null) return '—';
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return '—';
+  const options: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit' };
+  try {
+    return d.toLocaleTimeString(activeLocale(), timeZone ? { ...options, timeZone } : options);
+  } catch {
+    return d.toLocaleTimeString(activeLocale(), options);
+  }
+}

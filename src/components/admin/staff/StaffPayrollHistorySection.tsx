@@ -78,7 +78,14 @@ export function StaffPayrollHistorySection({
                 </td>
                 <td className="px-3 py-2">{t('invoice.egpAmount', { amount: nf.format(Number(r.base_salary ?? 0)) })}</td>
                 <td className="px-3 py-2">{t('invoice.egpAmount', { amount: nf.format(Number(r.bonuses ?? 0)) })}</td>
-                <td className="px-3 py-2">{t('invoice.egpAmount', { amount: nf.format(Number(r.deductions ?? 0)) })}</td>
+                <td className="px-3 py-2">
+                  {t('invoice.egpAmount', { amount: nf.format(Number(r.deductions ?? 0)) })}
+                  {Number(r.kitchen_deductions ?? 0) > 0 ? (
+                    <span className="block text-xs text-on-surface-variant">
+                      {t('kitchenSales.payroll.ofWhichFood', { amount: t('invoice.egpAmount', { amount: nf.format(Number(r.kitchen_deductions)) }) })}
+                    </span>
+                  ) : null}
+                </td>
                 <td className="px-3 py-2 font-medium">
                   {t('invoice.egpAmount', { amount: nf.format(Number(r.total_amount ?? 0)) })}
                 </td>

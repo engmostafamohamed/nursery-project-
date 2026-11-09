@@ -15,7 +15,7 @@ type Invoice = {
   created_at: string;
   paid_at: string | null;
   payment_method: string | null;
-  invoice_type: 'monthly' | 'event' | 'extra_hours' | 'other';
+  invoice_type: 'monthly' | 'event' | 'extra_hours' | 'other' | 'food_extras';
   payments: Array<{ amount: number; method: string; paid_at: string; status: string }>;
   paidAmount: number;
 };
@@ -83,7 +83,7 @@ export function useFinancialReports(nurseryId: string | undefined, preset: Range
         created_at: string;
         paid_at: string | null;
         payment_method: string | null;
-        invoice_type: 'monthly' | 'event' | 'extra_hours' | 'other';
+        invoice_type: 'monthly' | 'event' | 'extra_hours' | 'other' | 'food_extras';
         payments: Array<{ amount: string | number; method: string; paid_at: string; status: string }> | null;
       }>).map((row) => {
         const payments = (row.payments ?? []).map((payment) => ({
@@ -159,7 +159,7 @@ export function useFinancialReports(nurseryId: string | undefined, preset: Range
       });
       return { status, count: rows.length, amount: rows.reduce((s, i) => s + (status === 'paid' ? i.paidAmount : Math.max(0, i.amount - i.paidAmount)), 0) };
     });
-    const typesData = ['monthly', 'event', 'extra_hours', 'other'].map((type) => {
+    const typesData = ['monthly', 'event', 'extra_hours', 'other', 'food_extras'].map((type) => {
       const rows = invoices.filter((i) => i.invoice_type === type);
       return { type, amount: rows.reduce((s, i) => s + i.paidAmount, 0) };
     });

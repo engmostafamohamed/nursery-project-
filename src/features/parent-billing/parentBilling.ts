@@ -4,7 +4,7 @@
  * which apply the same rules as the payment functions on the server.
  */
 
-export type InvoiceType = 'monthly' | 'event' | 'extra_hours' | 'other';
+export type InvoiceType = 'monthly' | 'event' | 'extra_hours' | 'other' | 'food_extras';
 export type InvoiceStatus = 'pending' | 'overdue' | 'paid' | 'cancelled';
 
 export type BillingInvoice = {

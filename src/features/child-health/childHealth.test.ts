@@ -33,6 +33,7 @@ const profile = (patch: Partial<ChildHealthProfile> = {}): ChildHealthProfile =>
   viewer: 'staff',
   canEdit: true,
   today,
+  tz: 'Africa/Cairo',
   child: { id: 'c', nurseryId: 'n', nameAr: 'جنى', nameEn: 'Jana', avatarUrl: null, dob: '2023-11-24', gender: 'female', status: 'active', classNameAr: null, classNameEn: null, bloodType: 'B+' },
   record: { pediatricianName: 'Dr. Hany', pediatricianPhone: null, pediatricianClinic: null, emergencyContactName: null, emergencyContactPhone: null, insuranceProvider: null, insurancePolicyNumber: null, insuranceNotes: null },
   parents: [],
@@ -110,7 +111,7 @@ describe('what needs attention', () => {
     const items = attentionItems(profile({
       record: { ...profile().record, pediatricianName: null },
       allergies: [{ id: 'a', name: 'Peanuts', reaction: null, severity: 'life_threatening', treatment: null, lastReactionDate: null, foodAllergens: ['peanuts'] }],
-      medications: [{ id: 'm', name: 'Ventolin', dosage: null, times: null, method: 'inhaler', storage: null, expiryDate: '2026-11-01', consent: 'pending' }],
+      medications: [{ id: 'm', name: 'Ventolin', dosage: null, times: null, method: 'inhaler', storage: null, expiryDate: '2026-11-01', consent: 'pending', doseTimes: [], startsOn: null, endsOn: null, dosesToday: [] }],
       vaccinations: [{ id: 'v', name: 'MMR', dose: 2, givenOn: null, nextDue: '2026-11-15', givenBy: null, batch: null }],
     }));
     expect(items.map((i) => `${i.kind}:${i.section}`)).toEqual([
@@ -153,7 +154,13 @@ describe('forms', () => {
   it('check allergies, conditions, medicines and vaccinations', () => {
     expect(allergyIssues({ name: ' ', reaction: '', severity: 'mild', treatment: '', lastReactionDate: '2026-12-01', foodAllergens: [] }, today)).toEqual({ name: 'name_required', lastReactionDate: 'date_future' });
     expect(conditionIssues({ name: 'Asthma', severity: '', diagnosisDate: '', treatment: '', triggers: '', emergencyPlan: 'x'.repeat(1001) }, today)).toEqual({ emergencyPlan: 'too_long' });
-    expect(medicationIssues({ name: '', dosage: '', times: '', method: 'oral', storage: '', expiryDate: '', consent: 'pending' })).toEqual({ name: 'name_required' });
+    const med = { name: 'Ventolin', dosage: '', times: '', method: 'oral' as const, storage: '', expiryDate: '', consent: 'pending' as const, doseTimes: ['09:00', '13:00'], startsOn: '', endsOn: '' };
+    expect(medicationIssues({ ...med, name: '' })).toEqual({ name: 'name_required' });
+    expect(medicationIssues(med)).toEqual({});
+    expect(medicationIssues({ ...med, doseTimes: ['09:00', ''] })).toEqual({ doseTimes: 'time_invalid' });
+    expect(medicationIssues({ ...med, doseTimes: ['09:00', '09:00'] })).toEqual({ doseTimes: 'time_repeated' });
+    expect(medicationIssues({ ...med, doseTimes: ['01:00', '02:00', '03:00', '04:00', '05:00', '06:00', '07:00'] })).toEqual({ doseTimes: 'too_many_times' });
+    expect(medicationIssues({ ...med, startsOn: '2026-11-10', endsOn: '2026-11-09' })).toEqual({ endsOn: 'ends_before_start' });
     const vac = { preset: 'other' as const, customName: '', dose: '0', givenOn: '2026-11-01', nextDue: '2026-10-01', givenBy: '', batch: '' };
     expect(vaccinationIssues(vac, today)).toEqual({ customName: 'name_required', dose: 'dose_invalid', nextDue: 'next_before_given' });
     expect(vaccinationIssues({ ...vac, preset: 'mmr', dose: '2', nextDue: '2027-01-01' }, today)).toEqual({});

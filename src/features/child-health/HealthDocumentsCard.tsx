@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { invalidFieldClass } from '@/components/ui/FieldError';
+import { FormField, FormProblem } from '@/components/ui/FormField';
 import { Input } from '@/components/ui/input';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,7 +14,7 @@ import { cn } from '@/lib/utils';
 import { DOCUMENT_TYPES, documentIssue, NOTES_MAX, TEXT_MAX, type ChildHealthProfile } from './childHealth';
 import { healthErrorKey } from './childHealthApi';
 import { formatDay, sectionId } from './healthFormat';
-import { EmptyNote, FormField, FormProblem, HealthCard } from './HealthUi';
+import { EmptyNote, HealthCard } from './HealthUi';
 
 /** The child's medical documents; parents upload new ones here and the nursery is told. */
 export function HealthDocumentsCard({ profile }: { profile: ChildHealthProfile }) {

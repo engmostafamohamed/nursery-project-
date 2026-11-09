@@ -48,6 +48,7 @@ const NAV_SECTIONS: NavSection[] = [
       { key: 'admissions',         to: '/xo-admin/nursery/admissions/applications', icon: 'group_add',             tKey: 'admin.nav.admissions' },
       { key: 'childEnrollment',    to: '/xo-admin/nursery/children/enroll',       icon: 'child_care',             tKey: 'admin.nav.childEnrollment' },
       { key: 'staffOnboarding',    to: '/xo-admin/nursery/staff/onboarding',      icon: 'assignment_ind',         tKey: 'admin.nav.staffOnboarding' },
+      { key: 'staffAbsences',      to: '/xo-admin/nursery/staff/absences',        icon: 'event_busy',             tKey: 'admin.nav.staffAbsences' },
       { key: 'admissionsImport',   to: '/xo-admin/nursery/admissions/import',     icon: 'upload_file',            tKey: 'admin.nav.admissionsImport' },
     ],
   },
@@ -72,6 +73,7 @@ const NAV_SECTIONS: NavSection[] = [
       { key: 'kitchenStock',       to: '/xo-admin/nursery/kitchen',               icon: 'kitchen',                tKey: 'admin.nav.kitchenStock' },
       { key: 'foodAlerts',         to: '/xo-admin/nursery/food-alerts',           icon: 'no_food',                tKey: 'admin.nav.foodAlerts' },
       { key: 'healthAlerts',       to: '/xo-admin/nursery/health/alerts',         icon: 'medical_services',       tKey: 'admin.nav.healthAlerts' },
+      { key: 'medicinesToday',     to: '/xo-admin/nursery/health/medicines',      icon: 'medication',             tKey: 'admin.nav.medicinesToday' },
     ],
   },
   {
@@ -345,7 +347,7 @@ export function XoAdminLayout() {
       </aside>
 
       <div className="lg:ms-64">
-        <main className="px-4 py-4 lg:px-8 lg:py-6">
+        <main className="px-4 pb-28 pt-4 lg:px-8 lg:pt-6">
           <PWAInstallPrompt />
           {isNurseryFeatureRoute ? (
             <section className="mb-5 rounded-xl border border-outline-variant bg-surface-container-lowest p-4 shadow-sm">

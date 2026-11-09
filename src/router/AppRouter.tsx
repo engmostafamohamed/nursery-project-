@@ -115,6 +115,7 @@ export function AppRouter() {
               <Route path="daily-reports" element={<P.DailyReportRatesPage />} />
               <Route path="reports/quarterly" element={<P.AdminReportsPage />} />
               <Route path="staff/onboarding" element={<P.AdminStaffOnboardingPage />} />
+              <Route path="staff/absences" element={<P.AdminStaffAbsencesPage />} />
               <Route path="staff/new" element={<Navigate to="/admin/staff/onboarding" replace />} />
               <Route path="staff" element={<P.AdminStaffDirectoryPage />} />
               <Route path="staff/:staffId" element={<P.AdminStaffProfilePage />} />
@@ -124,6 +125,7 @@ export function AppRouter() {
               <Route path="attendance" element={<P.AdminAttendancePage />} />
               <Route path="scanner" element={<P.QRScannerPage />} />
               <Route path="health/alerts" element={<P.AdminHealthAlertsDashboardPage />} />
+              <Route path="health/medicines" element={<P.AdminMedicinesPage />} />
               <Route path="food-alerts" element={<P.AdminFoodAlertsPage />} />
               <Route path="meal-plans" element={<P.AdminMealPricingPage />} />
               <Route path="kitchen" element={<P.AdminKitchenStockPage />} />
@@ -191,6 +193,8 @@ export function AppRouter() {
               <Route path="attendance" element={<P.TeacherAttendancePage />} />
               <Route path="daily-reports" element={<P.TeacherDailyReportPage />} />
               <Route path="meals" element={<P.TeacherMealsPage />} />
+              <Route path="absences" element={<P.TeacherAbsencesPage />} />
+              <Route path="medicines" element={<P.TeacherMedicinesPage />} />
               <Route path="daily-reports/:childId/:date" element={<P.TeacherDailyReportEditorPage />} />
               <Route path="report-rates" element={<P.DailyReportRatesPage />} />
               <Route path="reports" element={<Navigate to="/teacher/daily-reports" replace />} />
@@ -289,6 +293,7 @@ export function AppRouter() {
               <Route path="nursery/daily-reports" element={<P.DailyReportRatesPage />} />
               <Route path="nursery/reports/quarterly" element={<P.AdminReportsPage />} />
               <Route path="nursery/staff/onboarding" element={<P.AdminStaffOnboardingPage />} />
+              <Route path="nursery/staff/absences" element={<P.AdminStaffAbsencesPage />} />
               <Route path="nursery/staff/new" element={<Navigate to="/xo-admin/nursery/staff/onboarding" replace />} />
               <Route path="nursery/staff" element={<P.AdminStaffDirectoryPage />} />
               <Route path="nursery/staff/:staffId" element={<P.AdminStaffProfilePage />} />
@@ -297,6 +302,7 @@ export function AppRouter() {
               <Route path="nursery/attendance/child/:childId" element={<P.AdminChildAttendanceReportPage />} />
               <Route path="nursery/attendance" element={<P.AdminAttendancePage />} />
               <Route path="nursery/health/alerts" element={<P.AdminHealthAlertsDashboardPage />} />
+              <Route path="nursery/health/medicines" element={<P.AdminMedicinesPage />} />
               <Route path="nursery/food-alerts" element={<P.AdminFoodAlertsPage />} />
               <Route path="nursery/meal-plans" element={<P.AdminMealPricingPage />} />
               <Route path="nursery/kitchen" element={<P.AdminKitchenStockPage />} />

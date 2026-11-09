@@ -1,5 +1,577 @@
 {
+  "medicineRound": {
+    "teacherTitle": "الأدوية",
+    "teacherSubtitle": "جرعات اليوم للأطفال الذين تتولاهم. يصلك تذكير في موعد كل جرعة، ويُبلَّغ ولي الأمر عند تسجيلها.",
+    "adminEyebrow": "الصحة",
+    "adminTitle": "أدوية اليوم",
+    "adminSubtitle": "كل جرعات اليوم في الحضانة: ما أُعطي ومن أعطاه وما تأخر.",
+    "listTitle": "جولة اليوم",
+    "now": "الآن {{time}}",
+    "tiles": {
+      "overdue": "متأخرة",
+      "due": "موعدها الآن",
+      "upcoming": "لاحقًا اليوم",
+      "done": "مسجّلة"
+    },
+    "filters": {
+      "todo": "المطلوب",
+      "done": "المسجّلة",
+      "all": "الكل"
+    },
+    "states": {
+      "overdue": "متأخرة",
+      "due": "موعدها الآن",
+      "upcoming": "لاحقًا",
+      "when_needed": "عند الحاجة",
+      "not_here": "الطفل غير موجود",
+      "given": "أُعطيت",
+      "skipped": "لم تُعطَ"
+    },
+    "reasons": {
+      "absent": "الطفل غائب",
+      "refused": "الطفل رفض",
+      "parent_gave": "أعطاها ولي الأمر",
+      "not_needed": "لم يحتج إليها",
+      "other": "أخرى"
+    },
+    "empty": {
+      "todo": "لا يوجد ما يُعطى الآن.",
+      "done": "لم تُسجَّل جرعات اليوم بعد.",
+      "all": "لا توجد جرعات اليوم.",
+      "none_mine": "لا يوجد دواء اليوم لأي من الأطفال الذين تتولاهم.",
+      "none_nursery": "لا يوجد طفل لديه دواء اليوم."
+    },
+    "given": "أُعطيت",
+    "notGiven": "لم تُعطَ",
+    "undo": "تراجع",
+    "undoTitle": "التراجع عن هذه الجرعة؟",
+    "undoBody": "يعود {{medicine}} لـ{{child}} إلى غير مسجّل، ويُبلَّغ ولي الأمر.",
+    "undone": "تم التراجع عن الجرعة.",
+    "givenBy": "الساعة {{time}} بواسطة {{by}}",
+    "skippedBy": "{{reason}} · {{by}}",
+    "dose": "الجرعة",
+    "time": "الموعد",
+    "method": "الطريقة",
+    "instructions": "التعليمات",
+    "whenNeeded": "عند الحاجة",
+    "recordedGiven": "سُجّل إعطاء {{medicine}} لـ{{child}}، وأُبلغ ولي الأمر.",
+    "recordedSkipped": "سُجّل عدم إعطاء {{medicine}} لـ{{child}}، وأُبلغ ولي الأمر بالسبب.",
+    "dialog": {
+      "givenTitle": "إعطاء {{medicine}} لـ{{child}}",
+      "givenHint": "راجع الجرعة وطريقة الإعطاء، ثم أكّد بعد إعطائها.",
+      "skippedTitle": "لم يُعطَ {{medicine}} لـ{{child}}",
+      "skippedHint": "سيُبلَّغ ولي الأمر بالسبب.",
+      "why": "السبب",
+      "note": "ملاحظة",
+      "noteHint": "يمكن لولي الأمر قراءتها.",
+      "confirmGiven": "نعم، أُعطيت",
+      "confirmSkipped": "تسجيل أنها لم تُعطَ"
+    },
+    "issues": {
+      "reason_required": "اختر السبب.",
+      "note_required": "اكتب ما حدث.",
+      "note_too_long": "اجعل الملاحظة أقل من {{max}} حرف."
+    },
+    "errors": {
+      "forbidden": "لا يمكنك تسجيل أدوية هذا الطفل.",
+      "invalid": "راجع بيانات الجرعة.",
+      "no_consent": "ولي الأمر لم يوافق على هذا الدواء.",
+      "not_active": "انتهت صلاحية هذا الدواء أو مدة العلاج.",
+      "child_not_here": "الطفل غير مسجّل الحضور.",
+      "already_recorded": "هذه الجرعة مسجّلة بالفعل.",
+      "undo_closed": "يمكن التراجع عن جرعات اليوم فقط.",
+      "network": "مشكلة في الاتصال. تحقق من الإنترنت وحاول مرة أخرى.",
+      "failed": "حدث خطأ. حاول مرة أخرى."
+    },
+    "banner": {
+      "title_zero": "لا توجد أدوية الآن",
+      "title_one": "دواء واحد يُعطى الآن",
+      "title_two": "دواءان يُعطيان الآن",
+      "title_few": "{{count}} أدوية تُعطى الآن",
+      "title_many": "{{count}} دواءً يُعطى الآن",
+      "title_other": "{{count}} دواء يُعطى الآن",
+      "overdue_zero": "لا يوجد متأخر",
+      "overdue_one": "واحد متأخر",
+      "overdue_two": "اثنان متأخران",
+      "overdue_few": "{{count}} متأخرة",
+      "overdue_many": "{{count}} متأخرًا",
+      "overdue_other": "{{count}} متأخر",
+      "hint": "افتح الجولة لتسجيلها."
+    }
+  },
+  "kitchenSales": {
+    "currency": "ج.م",
+    "kinds": {
+      "meal": "وجبة إضافية",
+      "drink": "مشروب إضافي",
+      "snack": "سناك إضافي"
+    },
+    "billing": {
+      "open": "مفتوح · المرتب القادم",
+      "deducted": "خُصم من المرتب",
+      "invoiced": "على الفاتورة",
+      "paid": "مدفوع",
+      "no_parent": "بدون حساب ولي أمر",
+      "cancelled": "ملغى"
+    },
+    "page": {
+      "subtitle": "المخزون، وما يبيعه المطبخ للموظفين والأطفال، وإضافات اليوم، والخصومات.",
+      "tabs": "أقسام المطبخ",
+      "tab": {
+        "stock": "المخزون",
+        "sales": "المبيعات",
+        "extras": "إضافات اليوم",
+        "discounts": "الخصومات"
+      }
+    },
+    "item": {
+      "prices": "الأسعار",
+      "childShort": "طفل",
+      "staffShort": "موظف",
+      "notSold": "لا يُباع",
+      "unitHint": "الوحدة التي يُعد ويُباع بها المخزون، مثل زجاجة.",
+      "unitWord": "وحدة",
+      "selling": "البيع",
+      "sellingHint": "الأسعار لكل {{unit}}. اترك السعر فارغًا إذا كان لا يُباع لهم.",
+      "childPrice": "السعر للأطفال",
+      "staffPrice": "السعر للموظفين",
+      "staffPriceHint": "فارغ: نفس سعر الأطفال.",
+      "cost": "تكلفته علينا",
+      "packSize": "العدد في العبوة ({{unit}})",
+      "packUnit": "اسم العبوة",
+      "packUnitPlaceholder": "مثال: كرتونة",
+      "extraKind": "يظهر في المنيو كإضافة",
+      "notExtra": "ليس إضافة",
+      "extraHint": "الإضافات تظهر في منيو أولياء الأمور، ويمكن للمعلّمين إعطاؤها للأطفال.",
+      "contains": "يحتوي على",
+      "containsHint": "لا تُعطى الإضافة أبدًا لطفل لديه حساسية من أحدها."
+    },
+    "packs": {
+      "countIn": "العد بـ",
+      "inPacks": "{{pack}} (× {{size}})",
+      "equals": "= {{quantity}} {{unit}}",
+      "packOf": "{{pack}} فيها {{size}} {{unit}}"
+    },
+    "history": {
+      "for": "لـ{{name}}"
+    },
+    "charge": {
+      "title": "صرف {{item}} لشخص",
+      "titleShort": "صرف {{item}} لشخص",
+      "for": "لمن",
+      "staff": "موظف",
+      "child": "طفل",
+      "staffNotSold": "لا يُباع للموظفين",
+      "childNotSold": "ليس إضافة للأطفال",
+      "whichStaff": "الموظف",
+      "chooseStaff": "اختر موظفًا",
+      "whichChild": "الطفل",
+      "childHint": "يُقدَّم الآن إذا وافق ولي الأمر على الإضافات عند التسجيل، وإلا يُسأل ولي الأمر أولًا.",
+      "searchChild": "اكتب حرفين على الأقل من اسم الطفل",
+      "searchResults": "الأطفال المطابقون",
+      "noChildFound": "لا يوجد طفل بهذا الاسم.",
+      "changeChild": "اختيار طفل آخر",
+      "quantity": "الكمية ({{unit}})",
+      "note": "ملاحظة",
+      "price": "{{quantity}} {{unit}} بالسعر الكامل",
+      "discount": "{{name}} ({{percent}}٪)",
+      "total": "المبلغ المحسوب",
+      "staffBilling": "يُضاف إلى حسابه ويُخصم من مرتبه القادم.",
+      "childBilling": "يُضاف إلى فاتورة الطعام الشهرية للأسرة.",
+      "record": "تسجيل",
+      "staffDone": "سُجّل على حساب الموظف.",
+      "childServed": "قُدِّم وأُضيف إلى فاتورة الطعام للأسرة.",
+      "childAsked": "طُلبت موافقة ولي الأمر."
+    },
+    "quantityIssues": {
+      "required": "اكتب الكمية.",
+      "invalid": "اكتب رقمًا، مثل 2 أو 1.5.",
+      "zero": "اكتب رقمًا أكبر من صفر.",
+      "too_many": "بحد أقصى {{max}} في المرة.",
+      "more_than_stock": "المتوفر {{quantity}} {{unit}} فقط."
+    },
+    "issues": {
+      "person_required": "اختر لمن.",
+      "item_required": "اختر صنفًا.",
+      "reason_required": "اكتب السبب (3 أحرف على الأقل).",
+      "reason_too_long": "اجعله أقل من 200 حرف.",
+      "name_required": "اكتب الاسم.",
+      "name_too_long": "اجعله أقل من 80 حرفًا.",
+      "percent_invalid": "اكتب نسبة من 0.01 إلى 100.",
+      "ends_before_start": "لا يمكن أن تكون النهاية قبل البداية.",
+      "quantity_invalid": "اختر من 1 إلى {{max}}.",
+      "dates_required": "اختر يومًا واحدًا على الأقل.",
+      "note_too_long": "اجعل الملاحظة أقل من 200 حرف."
+    },
+    "errors": {
+      "kitchen_forbidden": "لا يمكنك القيام بهذا هنا.",
+      "kitchen_not_enough": "الكمية غير كافية: المتبقي {{quantity}} {{unit}}.",
+      "kitchen_not_for_sale": "هذا الصنف لا يُباع لهم.",
+      "kitchen_allergy": "الطفل لديه حساسية من {{foods}} الموجود في هذا الصنف.",
+      "kitchen_invalid_quantity": "لا يمكن صرف هذه الكمية.",
+      "kitchen_invalid_dates": "اختر أيام عمل من اليوم حتى 30 يومًا قادمة.",
+      "kitchen_invalid_note": "الملاحظة أطول من المسموح.",
+      "kitchen_person_invalid": "لا يمكن الحساب على هذا الشخص هنا.",
+      "kitchen_request_closed": "تم الرد على هذا الطلب أو تقديمه أو إلغاؤه بالفعل.",
+      "kitchen_charge_settled": "تم دفعه أو خصمه من المرتب بالفعل، لذلك لا يمكن إلغاؤه.",
+      "kitchen_charge_closed": "أُلغي بالفعل.",
+      "kitchen_reason_required": "اكتب سبب الإلغاء.",
+      "kitchen_discount_invalid": "راجع بيانات الخصم.",
+      "kitchen_item_not_found": "هذا الصنف لم يعد موجودًا.",
+      "kitchen_item_invalid": "راجع بيانات الصنف.",
+      "menu_forbidden": "ليست لديك صلاحية لتعديل المطبخ.",
+      "network": "مشكلة في الاتصال. تحقق من الإنترنت وحاول مرة أخرى.",
+      "failed": "حدث خطأ. حاول مرة أخرى."
+    },
+    "month": {
+      "previous": "الشهر السابق",
+      "next": "الشهر التالي",
+      "thisMonth": "هذا الشهر"
+    },
+    "sales": {
+      "title": "المبيعات",
+      "count_zero": "لا توجد عمليات",
+      "count_one": "عملية واحدة",
+      "count_two": "عمليتان",
+      "count_few": "{{count}} عمليات",
+      "count_many": "{{count}} عملية",
+      "count_other": "{{count}} عملية",
+      "tiles": {
+        "net": "المحسوب هذا الشهر",
+        "count_zero": "لا توجد عمليات صرف",
+        "count_one": "عملية صرف واحدة",
+        "count_two": "عمليتا صرف",
+        "count_few": "{{count}} عمليات صرف",
+        "count_many": "{{count}} عملية صرف",
+        "count_other": "{{count}} عملية صرف",
+        "discounts": "الخصومات الممنوحة",
+        "children": "الأطفال (على الفواتير)",
+        "childrenHint": "على فواتير الطعام للأسر",
+        "staff": "الموظفون",
+        "staffHint": "تُخصم من المرتبات",
+        "staffOpen": "{{amount}} ما زال مفتوحًا"
+      },
+      "searchPlaceholder": "الصنف أو الاسم…",
+      "who": "لمن",
+      "everyone": "الكل",
+      "columns": {
+        "date": "التاريخ",
+        "who": "لمن",
+        "item": "الصنف",
+        "price": "السعر الكامل",
+        "discount": "الخصم",
+        "net": "المحسوب",
+        "billing": "الحساب"
+      },
+      "empty": "لم يُبع شيء هذا الشهر.",
+      "emptyFiltered": "لا توجد عمليات مطابقة.",
+      "emptyHint": "ضع سعرًا للصنف، ثم اصرفه لشخص من قائمة المخزون.",
+      "staffOpenTitle": "حسابات موظفين مفتوحة",
+      "staffOpenHint": "تُخصم تلقائيًا عند إنشاء مرتبهم القادم.",
+      "cancelAction": "إلغاء {{item}}",
+      "cancelTitle": "إلغاء هذه العملية؟",
+      "cancelBody": "{{quantity}} {{unit}} من {{item}} لـ{{name}} ({{amount}}): ترجع الكمية للمخزون وتُحذف من الحساب.",
+      "reason": "السبب",
+      "reasonPlaceholder": "مثال: سُجّلت لطفل آخر بالخطأ",
+      "cancelConfirm": "إلغاء العملية",
+      "cancelled": "أُلغيت العملية ورجعت الكمية للمخزون."
+    },
+    "extras": {
+      "todayTitle": "إضافات الأطفال اليوم",
+      "count_zero": "لا توجد طلبات",
+      "count_one": "طلب واحد",
+      "count_two": "طلبان",
+      "count_few": "{{count}} طلبات",
+      "count_many": "{{count}} طلبًا",
+      "count_other": "{{count}} طلب",
+      "noneToday": "لا توجد إضافات اليوم.",
+      "noneTodayHint": "طلبات أولياء الأمور والمعلّمين لليوم تظهر هنا.",
+      "sources": {
+        "parent": "طلبها ولي الأمر",
+        "staff": "أعطاها الموظف"
+      },
+      "statuses": {
+        "waiting_parent": "في انتظار ولي الأمر",
+        "approved": "للتقديم",
+        "declined": "رفض ولي الأمر",
+        "served": "قُدِّمت",
+        "cancelled": "ملغاة",
+        "expired": "لم تُقدَّم"
+      },
+      "serve": "تقديم",
+      "served": "قُدِّم {{item}} لـ{{child}} وأُضيف إلى فاتورة الطعام.",
+      "cancel": "إلغاء",
+      "cancelTitle": "إلغاء هذه الإضافة؟",
+      "cancelBody": "لن يُقدَّم {{item}} لـ{{child}}.",
+      "cancelled": "أُلغيت الإضافة."
+    },
+    "discounts": {
+      "title": "الخصومات",
+      "count_zero": "لا توجد خصومات",
+      "count_one": "خصم واحد",
+      "count_two": "خصمان",
+      "count_few": "{{count}} خصومات",
+      "count_many": "{{count}} خصمًا",
+      "count_other": "{{count}} خصم",
+      "add": "إضافة خصم",
+      "edit": "تعديل الخصم",
+      "editNamed": "تعديل {{name}}",
+      "hint": "يُطبَّق أفضل خصم مناسب عند الصرف، ويظهر في الفاتورة.",
+      "nameAr": "الاسم بالعربية",
+      "nameEn": "الاسم بالإنجليزية",
+      "forWho": "لمن",
+      "audiences": {
+        "all_staff": "كل الموظفين",
+        "all_children": "كل الأطفال",
+        "staff_member": "موظف معيّن",
+        "child": "طفل معيّن"
+      },
+      "item": "على",
+      "itemHint": "صنف واحد، أو كل ما يُباع.",
+      "allItems": "كل الأصناف",
+      "percent": "نسبة الخصم",
+      "from": "من",
+      "to": "حتى",
+      "active": "مفعّل",
+      "saved": "حُفظ الخصم.",
+      "empty": "لا توجد خصومات بعد.",
+      "emptyHint": "مثلًا 50٪ لكل الموظفين، أو 10٪ على العصير لطفل معيّن.",
+      "live": "مطبّق اليوم",
+      "notNow": "خارج مدته",
+      "off": "متوقف"
+    },
+    "give": {
+      "title": "إضافة لـ{{child}}",
+      "hint": "تُحسب على فاتورة الطعام للأسرة. بدون موافقة ولي الأمر عند التسجيل، يُسأل ولي الأمر أولًا.",
+      "choose": "اختر إضافة",
+      "noItems": "لا توجد إضافات في المطبخ بعد.",
+      "allergic": "حساسية: {{foods}}",
+      "outOfStock": "نفدت الكمية",
+      "quantity": "العدد",
+      "less": "واحد أقل",
+      "more": "واحد أكثر",
+      "notePlaceholder": "مثال: ما زال جائعًا بعد الغداء",
+      "willServe": "وافق ولي الأمر عند التسجيل: تُقدَّم الآن ويُضاف {{amount}} إلى الفاتورة.",
+      "willAsk": "سيُسأل ولي الأمر أولًا ({{amount}})، ولا تُقدَّم إلا بموافقته.",
+      "give": "إعطاء",
+      "askParent": "سؤال ولي الأمر",
+      "served": "أُعطي {{item}} لـ{{child}}.",
+      "asked": "سُئل ولي أمر {{child}} عن {{item}}."
+    },
+    "teacher": {
+      "title": "إضافات اليوم",
+      "hint": "طلبها أولياء الأمور أو أعطيتها أنت، للأطفال الذين تتولاهم اليوم.",
+      "toServe_zero": "لا شيء للتقديم",
+      "toServe_one": "واحدة للتقديم",
+      "toServe_two": "اثنتان للتقديم",
+      "toServe_few": "{{count}} للتقديم",
+      "toServe_many": "{{count}} للتقديم",
+      "toServe_other": "{{count}} للتقديم",
+      "search": "اسم الطفل…",
+      "noChildren": "لا يوجد أطفال تتولاهم اليوم.",
+      "notHere": "غير موجود",
+      "consent": "وافق ولي الأمر على: {{what}}",
+      "snacksDrinks": "السناكس والمشروبات",
+      "meals": "الوجبات الإضافية",
+      "noConsent": "يُسأل ولي الأمر قبل كل إضافة",
+      "give": "إعطاء إضافة"
+    },
+    "mine": {
+      "title": "أكلي ومشروباتي",
+      "hint": "ما أخذته من المطبخ، ويُخصم من مرتبك القادم.",
+      "take": "أخذت شيئًا",
+      "takeHint": "يُسجَّل على حسابك بسعر الموظفين مع أي خصم.",
+      "open": "المتبقي للخصم",
+      "empty": "لم تأخذ شيئًا هذا الشهر.",
+      "deductedIn": "خُصم ({{month}})",
+      "item": "الصنف",
+      "chooseItem": "اختر صنفًا",
+      "recorded": "سُجّل على حسابك."
+    },
+    "parent": {
+      "title": "الإضافات",
+      "hint": "وجبات ومشروبات وسناكس إضافية لطفلك. الإضافات المقدَّمة تُضاف إلى فاتورة الطعام الشهرية.",
+      "invoices": "فواتيري",
+      "preApproved": "وافقت عليها عند التسجيل",
+      "asksYou": "يسألك المعلّم قبل إعطائها",
+      "order": "طلب",
+      "orders": "الطلبات والإضافات",
+      "orderTitle": "{{item}} لـ{{child}}",
+      "orderHint": "تُقدَّم في الأيام التي تختارها وتُحسب بعد تقديمها.",
+      "whichDays": "أي أيام",
+      "today": "اليوم",
+      "noOpenDays": "لا توجد أيام عمل في الشهر القادم.",
+      "notePlaceholder": "مثال: مع الغداء من فضلك",
+      "total_zero": "الإجمالي",
+      "total_one": "الإجمالي ليوم واحد",
+      "total_two": "الإجمالي ليومين",
+      "total_few": "الإجمالي لـ{{count}} أيام",
+      "total_many": "الإجمالي لـ{{count}} يومًا",
+      "total_other": "الإجمالي لـ{{count}} يوم",
+      "discountApplied": "{{name}}: خصم {{percent}}٪ محسوب.",
+      "confirmOrder": "تأكيد الطلب",
+      "ordered_zero": "طُلب {{item}} لـ{{child}}.",
+      "ordered_one": "طُلب {{item}} لـ{{child}} ليوم واحد.",
+      "ordered_two": "طُلب {{item}} لـ{{child}} ليومين.",
+      "ordered_few": "طُلب {{item}} لـ{{child}} لـ{{count}} أيام.",
+      "ordered_many": "طُلب {{item}} لـ{{child}} لـ{{count}} يومًا.",
+      "ordered_other": "طُلب {{item}} لـ{{child}} لـ{{count}} يوم.",
+      "askedBy": "{{by}} يريد إعطاء {{child}} {{item}} × {{quantity}}.",
+      "theTeacher": "المعلّم",
+      "approve": "نعم، أعطه",
+      "decline": "لا",
+      "approved": "تمت الموافقة. يمكن للمعلّم إعطاؤها الآن.",
+      "declined": "تم الرفض وأُبلغ المعلّم."
+    },
+    "payroll": {
+      "ofWhichFood": "منها أكل ومشروبات {{amount}}",
+      "formHint": "حسابات الأكل والمشروبات المفتوحة تُخصم تلقائيًا عند إنشاء المرتب."
+    }
+  },
+  "staffAbsence": {
+    "reasons": {
+      "sick": "مرض",
+      "personal": "ظرف شخصي",
+      "vacation": "إجازة",
+      "training": "تدريب",
+      "other": "أخرى"
+    },
+    "states": {
+      "today": "غائب اليوم",
+      "upcoming": "قادمة",
+      "past": "سابقة",
+      "cancelled": "ملغاة"
+    },
+    "roles": {
+      "teacher": "معلّم",
+      "manager": "مدير",
+      "branch_admin": "مدير الفرع"
+    },
+    "days_zero": "{{count}} يوم",
+    "days_one": "يوم واحد",
+    "days_two": "يومان",
+    "days_few": "{{count}} أيام",
+    "days_many": "{{count}} يومًا",
+    "days_other": "{{count}} يوم",
+    "recordedBy": "سجّله {{name}}",
+    "reported": "تم إبلاغ غيابك، ووصل الإشعار للإدارة.",
+    "recorded": "تم تسجيل الغياب.",
+    "cancel": "إلغاء الغياب",
+    "cancelTitle": "إلغاء هذا الغياب؟",
+    "cancelBody": "سيُحذف الغياب من {{from}} إلى {{to}}. إذا كان يشمل اليوم، يُبلَّغ المعلّم البديل بعودة المعلّم الأساسي.",
+    "cancelConfirm": "إلغاء الغياب",
+    "cancelled": "تم إلغاء الغياب.",
+    "summary_zero": "{{from}}",
+    "summary_one": "يوم واحد · {{from}}",
+    "summary_two": "يومان · من {{from}} إلى {{to}}",
+    "summary_few": "{{count}} أيام · من {{from}} إلى {{to}}",
+    "summary_many": "{{count}} يومًا · من {{from}} إلى {{to}}",
+    "summary_other": "{{count}} يوم · من {{from}} إلى {{to}}",
+    "quick": {
+      "today": "اليوم",
+      "tomorrow": "غدًا",
+      "threeDays": "3 أيام من اليوم"
+    },
+    "fields": {
+      "person": "من الغائب",
+      "choosePerson": "اختر أحد الموظفين",
+      "when": "متى",
+      "from": "من",
+      "to": "إلى",
+      "reason": "السبب",
+      "note": "ملاحظة",
+      "noteHint": "أي شيء يحتاج الفريق معرفته، مثل ما يحتاجه الفصل اليوم."
+    },
+    "dialog": {
+      "reportTitle": "إبلاغ عن غياب",
+      "reportHint": "تُبلَّغ الإدارة، ويتولى المعلّم البديل فصلك في هذه الأيام.",
+      "recordTitle": "تسجيل غياب",
+      "recordHint": "يُبلَّغ الموظف. فصل المعلّم الأساسي يتولاه المعلّم البديل.",
+      "report": "إبلاغ عن الغياب",
+      "record": "تسجيل الغياب",
+      "coverNote": "الغياب يشمل اليوم: سيُبلَّغ المعلّم البديل الآن أنه مسؤول عن الفصل."
+    },
+    "issues": {
+      "person_required": "اختر الشخص الغائب.",
+      "date_required": "اختر تاريخًا.",
+      "in_past": "اختر اليوم أو يومًا بعده.",
+      "too_far_back": "يمكن تسجيل الغياب حتى 30 يومًا للخلف.",
+      "too_far_ahead": "اختر تاريخًا خلال الأشهر الستة القادمة.",
+      "before_start": "لا يمكن أن يكون آخر يوم قبل أول يوم.",
+      "too_long": "الغياب الواحد حتى 61 يومًا. أبلغ عن الغياب الأطول على أجزاء.",
+      "overlaps": "يوجد غياب مُبلَّغ عنه بالفعل في بعض هذه الأيام.",
+      "reason_required": "اختر سببًا.",
+      "note_too_long": "اجعل الملاحظة أقل من {{max}} حرفًا."
+    },
+    "errors": {
+      "forbidden": "لا يمكنك الإبلاغ عن غياب لهذا الشخص.",
+      "invalid_dates": "لا يمكن الإبلاغ عن هذه التواريخ. راجع أول وآخر يوم.",
+      "invalid_reason": "اختر سببًا من القائمة.",
+      "overlaps": "يوجد غياب مُبلَّغ عنه بالفعل في بعض هذه الأيام.",
+      "closed": "هذا الغياب انتهى بالفعل أو أُلغي.",
+      "note_too_long": "الملاحظة أطول من المسموح.",
+      "network": "مشكلة في الاتصال. تحقق من الإنترنت وحاول مرة أخرى.",
+      "failed": "حدث خطأ. حاول مرة أخرى."
+    },
+    "teacher": {
+      "title": "غياباتي",
+      "subtitle": "أبلغ الحضانة عندما تكون غائبًا، وسيتولى المعلّم البديل فصلك.",
+      "listTitle": "الغيابات المُبلَّغ عنها",
+      "empty": "لا توجد غيابات. عندما تحتاج إلى يوم إجازة، أبلغ عنه هنا."
+    },
+    "banner": {
+      "title_zero": "أنت مسؤول عن فصل اليوم",
+      "title_one": "أنت مسؤول عن فصل اليوم",
+      "title_two": "أنت مسؤول عن فصلين اليوم",
+      "title_few": "أنت مسؤول عن {{count}} فصول اليوم",
+      "title_many": "أنت مسؤول عن {{count}} فصلًا اليوم",
+      "title_other": "أنت مسؤول عن {{count}} فصل اليوم",
+      "classFor": "{{class}}، بدلًا من {{lead}}",
+      "class": "{{class}}",
+      "hint": "تذكيرات الفصل (التقارير اليومية والاستلام) تصل إليك اليوم.",
+      "open": "فتح الفصول"
+    },
+    "admin": {
+      "eyebrow": "الموظفون",
+      "title": "غياب الموظفين",
+      "subtitle": "من الغائب، ومن يتولى كل فصل اليوم، وكل الغيابات المُبلَّغ عنها.",
+      "awayToday": "غائبون اليوم",
+      "coveredToday": "فصول يتولاها البديل",
+      "uncoveredToday": "فصول بدون معلّم",
+      "listTitle": "الغيابات",
+      "views": {
+        "current": "اليوم والقادمة",
+        "past": "السابقة والملغاة"
+      },
+      "emptyCurrent": "لا يوجد غائب اليوم ولا غياب قادم.",
+      "emptyPast": "لا توجد غيابات سابقة خلال آخر 60 يومًا."
+    },
+    "board": {
+      "title": "تغطية الفصول اليوم",
+      "hint": "عندما يغيب المعلّم الأساسي، يتولى المعلّم البديل الفصل وتصله تذكيراته.",
+      "lead": "المعلّم الأساسي",
+      "backup": "المعلّم البديل",
+      "none": "غير محدد",
+      "away": "غائب",
+      "covering": "يتولى الفصل",
+      "children_zero": "لا يوجد أطفال",
+      "children_one": "طفل واحد",
+      "children_two": "طفلان",
+      "children_few": "{{count}} أطفال",
+      "children_many": "{{count}} طفلًا",
+      "children_other": "{{count}} طفل",
+      "noClasses": "لا توجد فصول بعد.",
+      "setTeam": "تحديد معلّمي الفصل",
+      "status": {
+        "uncovered": "لا يوجد معلّم",
+        "covered": "البديل يتولى الفصل",
+        "no_lead": "بدون معلّم أساسي",
+        "normal": "المعلّم الأساسي حاضر"
+      }
+    }
+  },
   "common": {
+    "optional": "(اختياري)",
     "open": "فتح",
     "today": "اليوم",
     "yesterday": "أمس",
@@ -1158,6 +1730,8 @@
       "moreGroupFoodAndBeverage": "الأطعمة والمشروبات (F&B)",
       "foodAlerts": "تنبيهات حساسية الطعام",
       "mealPlans": "خطط الوجبات",
+      "medicinesToday": "أدوية اليوم",
+      "staffAbsences": "غياب الموظفين",
       "kitchenStock": "مخزون المطبخ",
       "meals": "الوجبات",
       "community": "المجتمع",
@@ -2733,6 +3307,8 @@
   },
   "invoice": {
     "itemKinds": {
+      "food_extra": "{{item}} · {{date}}",
+      "food_extra_discount": "{{item}} · {{date}} · {{discount}} −{{percent}}٪",
       "meal_plan": "الوجبات",
       "late_pickup": "ساعات إضافية لتأخر الاستلام · {{date}}",
       "loyalty_discount": "خصم نقاط الولاء ({{points}} نقطة)",
@@ -2769,6 +3345,7 @@
     "types": {
       "monthly": "شهرية",
       "event": "فعالية",
+      "food_extras": "إضافات الطعام",
       "extra_hours": "ساعات إضافية",
       "other": "أخرى"
     },
@@ -2805,6 +3382,7 @@
         "all": "كل الأنواع",
         "monthly": "شهرية",
         "event": "فعالية",
+        "food_extras": "إضافات الطعام",
         "extra_hours": "ساعات إضافية",
         "other": "أخرى"
       },
@@ -3723,7 +4301,7 @@
     },
     "teacher": {
       "title": "الوجبات",
-      "subtitle": "تنبيهات الحساسية لفصولك اليوم، ومنيو الأسبوع.",
+      "subtitle": "تنبيهات الحساسية والإضافات اليوم للأطفال الذين تتولاهم، ومنيو الأسبوع، وأكلك ومشروباتك.",
       "todayAlerts": "تنبيهات الحساسية اليوم",
       "weekMenu": "منيو الأسبوع"
     },
@@ -3849,6 +4427,10 @@
       "saveItem": "حفظ الصنف",
       "itemSaved": "تم حفظ الصنف.",
       "issues": {
+        "price_invalid": "اكتب سعرًا حتى 100000، مثل 12.50.",
+        "pack_invalid": "اكتب عدد الوحدات في العبوة (1 أو أكثر).",
+        "pack_unit_required": "اكتب اسم العبوة، مثل كرتونة.",
+        "extra_needs_price": "الإضافة تحتاج سعرًا للأطفال.",
         "name_required": "اكتب اسم الصنف.",
         "name_too_long": "اجعل الاسم أقل من 80 حرفًا.",
         "unit_required": "اكتب الوحدة، مثل كجم.",
@@ -3862,6 +4444,8 @@
       "inStock": "في المخزون: {{quantity}} {{unit}}",
       "why": "ماذا حدث",
       "kinds": {
+        "charged": "صرف لشخص",
+        "returned": "إرجاع",
         "restocked": "تم التوريد",
         "used": "تم الاستخدام",
         "spoiled": "تم التخلص منه",
@@ -4920,6 +5504,8 @@
     },
     "nav": {
       "bottomBarLabel": "أقسام تطبيق المعلم",
+      "medicines": "الأدوية",
+      "absences": "غياباتي",
       "meals": "الوجبات",
       "home": "الرئيسية",
       "inbox": "الوارد",
@@ -7257,6 +7843,70 @@
     }
   },
   "notificationTemplates": {
+    "medication_due": {
+      "title": "{{medicine}} لـ{{child}} الساعة {{time}}",
+      "body": "أعطِ {{dosage}} الآن وسجّلها في جولة الأدوية."
+    },
+    "medication_overdue": {
+      "title": "متأخر: {{medicine}} لـ{{child}}",
+      "body": "كان موعده الساعة {{time}} ولم يُسجَّل بعد."
+    },
+    "medication_given": {
+      "title": "أخذ {{child}} {{medicine}}",
+      "body": "أُعطي: {{dosage}}، الساعة {{time}}."
+    },
+    "medication_skipped": {
+      "title": "لم يُعطَ {{medicine}} لـ{{child}}",
+      "body": "السبب: {{reason}}."
+    },
+    "medication_dose_undone": {
+      "title": "تصحيح: {{medicine}} لـ{{child}}",
+      "body": "أُلغيت جرعة سُجّلت بالخطأ."
+    },
+    "class_cover_parents": {
+      "title": "{{teacher}} مع فصل {{class}} اليوم",
+      "body": "معلّم الفصل غائب اليوم، لذلك {{teacher}} مع الأطفال."
+    },
+    "extra_served": {
+      "title": "حصل {{child}} على إضافة",
+      "body": "أُضيف {{item}} × {{quantity}} ({{amount}}) إلى فاتورة الطعام الشهرية."
+    },
+    "extra_needs_approval": {
+      "title": "هل توافق على إضافة لـ{{child}}؟",
+      "body": "يريد المعلّم إعطاء {{item}} × {{quantity}} ({{amount}}). افتح للرد بنعم أو لا."
+    },
+    "extra_approved": {
+      "title": "تمت الموافقة: {{item}} لـ{{child}}",
+      "body": "وافق ولي الأمر، يمكنك إعطاؤها الآن."
+    },
+    "extra_declined": {
+      "title": "تم الرفض: {{item}} لـ{{child}}",
+      "body": "رفض ولي الأمر هذه الإضافة."
+    },
+    "extra_ordered": {
+      "title": "طلب إضافة لـ{{child}}",
+      "body": "طلب ولي الأمر {{item}} × {{quantity}} لليوم."
+    },
+    "class_cover_today": {
+      "title": "أنت مسؤول عن فصل {{class}} اليوم",
+      "body": "{{teacher}} غائب. تتولى فصل {{class}} اليوم وتصلك تذكيراته."
+    },
+    "class_cover_cancelled": {
+      "title": "المعلّم الأساسي لفصل {{class}} عاد",
+      "body": "أُلغي الغياب، لذلك لم تعد مسؤولًا عن فصل {{class}} اليوم."
+    },
+    "class_uncovered": {
+      "title": "لا يوجد معلّم في فصل {{class}}",
+      "body": "معلّمو الفصل غائبون يوم {{date}} ولا يوجد معلّم بديل. اختر من يتولى الفصل."
+    },
+    "staff_absence_reported": {
+      "title": "{{name}} أبلغ عن غياب",
+      "body": "{{reason}}، من {{from_date}} إلى {{to_date}}."
+    },
+    "staff_absence_recorded": {
+      "title": "تم تسجيل غياب لك",
+      "body": "{{reason}}، من {{from_date}} إلى {{to_date}}."
+    },
     "daily_report_sent_by": {
       "title": "التقرير اليومي لـ {{child}}",
       "body": "تقرير يوم {{date}} من {{sender}}: الوجبات والقيلولة والمزاج والأنشطة."
@@ -8478,6 +9128,10 @@
         "label": "تذكيرات الموافقات التلقائية",
         "helper": "تذكير أولياء الأمور تلقائيًا عند اقتراب موعد موافقة فعالية خلال 48 ساعة."
       },
+      "notify_parents_of_cover": {
+        "label": "إبلاغ أولياء الأمور بالمعلّم البديل",
+        "helper": "عند غياب معلّم الفصل، يُبلَّغ أولياء أمور الفصل صباحًا بالمعلّم الذي يتولى الفصل ذلك اليوم."
+      },
       "auto_monthly_teacher_reminders_enabled": {
         "label": "تذكيرات المعلمين الشهرية",
         "helper": "إرسال التذكيرات المهيأة لكل معلم في بداية كل شهر."
@@ -8768,7 +9422,7 @@
       "sections": {
         "allergies": "الحساسية",
         "conditions": "الحالات الصحية",
-        "medications": "الأدوية اليومية",
+        "medications": "الأدوية",
         "vaccinations": "التطعيمات",
         "contacts": "بمن نتصل",
         "doctor": "الطبيب والتأمين",
@@ -8812,6 +9466,24 @@
         "diagnosed": "تاريخ التشخيص"
       },
       "medication": {
+        "instructions": "التعليمات",
+        "schedule": "مواعيد الإعطاء",
+        "scheduleHint": "يصل تذكير للمعلّم المسؤول في كل موعد، ويُبلَّغ ولي الأمر عند إعطائه.",
+        "doseTime": "موعد الجرعة {{n}}",
+        "removeTime": "حذف الموعد {{n}}",
+        "addTime": "إضافة موعد",
+        "whenNeeded": "بدون مواعيد: يُعطى عند الحاجة فقط (مثل بخاخ عند الكحة).",
+        "courseFrom": "بداية العلاج",
+        "courseUntil": "نهاية العلاج",
+        "givenAt": "يُعطى الساعة {{times}}",
+        "onlyWhenNeeded": "يُعطى عند الحاجة فقط",
+        "course": "العلاج من {{from}} إلى {{to}}",
+        "courseUntilDate": "العلاج حتى {{date}}",
+        "courseFromDate": "العلاج من {{date}}",
+        "today": "جرعات اليوم",
+        "doseGiven": "أُعطيت {{time}} بواسطة {{by}}",
+        "doseSkipped": "لم تُعطَ: {{reason}}",
+        "doseOpen": "لم تُعطَ بعد",
         "expired": "انتهت {{date}}",
         "expiring": "تنتهي {{date}}",
         "ok": "تنتهي {{date}}",
@@ -8908,6 +9580,7 @@
       },
       "placeholders": {
         "phone": "مثال: 01012345678",
+        "instructions": "مثال: بعد الغداء، أو عند الكحة",
         "doctor": "مثال: د. هاني صالح",
         "allergy": "مثال: الفول السوداني",
         "reaction": "مثال: طفح وتورّم",
@@ -8916,7 +9589,7 @@
         "conditionSeverity": "مثال: بسيطة",
         "medication": "مثال: فنتولين",
         "dosage": "مثال: 5 مل",
-        "times": "مثال: 9:00 و13:00",
+        "times": "مثال: بعد الغداء، أو عند الكحة",
         "storage": "مثال: في الثلاجة",
         "document": "مثال: كارت التطعيم"
       },
@@ -8940,6 +9613,10 @@
         "vaccination": "حُذف التطعيم."
       },
       "issues": {
+        "time_invalid": "اكتب كل موعد أو احذفه.",
+        "time_repeated": "كل موعد مرة واحدة.",
+        "too_many_times": "حتى 6 مواعيد في اليوم.",
+        "ends_before_start": "لا يمكن أن ينتهي العلاج قبل بدايته.",
         "name_required": "اكتب الاسم.",
         "too_long": "اجعله أقل من {{max}} حرفًا.",
         "date_future": "هذا التاريخ في المستقبل.",

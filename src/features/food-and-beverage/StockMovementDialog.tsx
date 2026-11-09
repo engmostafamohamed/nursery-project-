@@ -25,12 +25,16 @@ export function StockMovementDialog({ nurseryId, item, mode, onClose }: { nurser
   const { t } = useTranslation();
   const [kind, setKind] = useState<MovementKind>(KINDS[mode][0]);
   const [quantity, setQuantity] = useState('');
+  // A delivery can be counted in packs (10 cartons of 12 = 120 bottles).
+  const packSize = item.packSize && item.packUnit ? item.packSize : null;
+  const [inPacks, setInPacks] = useState(mode === 'restock' && packSize !== null);
+  const units = inPacks && packSize && /^\d+(\.\d{1,2})?$/.test(quantity.trim()) ? String(Math.round(Number(quantity) * packSize * 100) / 100) : quantity;
   const [expiresOn, setExpiresOn] = useState('');
   const [note, setNote] = useState('');
   const [tried, setTried] = useState(false);
-  const issue = movementIssue(kind, quantity, item.quantity);
+  const issue = movementIssue(kind, units, item.quantity);
   const showIssue = issue && (tried || quantity !== '');
-  const save = useKitchenChange(nurseryId, () => recordStockMovement({ itemId: item.id, kind, quantity: Number(quantity), expiresOn: kind === 'restocked' ? expiresOn : null, note }));
+  const save = useKitchenChange(nurseryId, () => recordStockMovement({ itemId: item.id, kind, quantity: Number(units), expiresOn: kind === 'restocked' ? expiresOn : null, note }));
 
   const submit = async () => {
     setTried(true);
@@ -64,12 +68,24 @@ export function StockMovementDialog({ nurseryId, item, mode, onClose }: { nurser
             </div>
           ) : null}
           <div className="space-y-1">
-            <Label htmlFor="movement-quantity">{mode === 'count' ? t('fnb.kitchen.countedQuantity') : t('fnb.kitchen.quantity')}</Label>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Label htmlFor="movement-quantity">{mode === 'count' ? t('fnb.kitchen.countedQuantity') : t('fnb.kitchen.quantity')}</Label>
+              {kind === 'restocked' && packSize ? (
+                <span className="inline-flex rounded-full border border-outline-variant p-0.5 text-xs" role="radiogroup" aria-label={t('kitchenSales.packs.countIn')}>
+                  {[false, true].map((packs) => (
+                    <button key={String(packs)} type="button" role="radio" aria-checked={inPacks === packs} onClick={() => setInPacks(packs)}
+                      className={cn('rounded-full px-2.5 py-1 font-medium', inPacks === packs ? 'bg-primary text-primary-foreground' : 'text-on-surface-variant')}>
+                      {packs ? t('kitchenSales.packs.inPacks', { pack: item.packUnit, size: packSize, unit: item.unit }) : item.unit}
+                    </button>
+                  ))}
+                </span>
+              ) : null}
+            </div>
             <div className="relative">
               <Input id="movement-quantity" autoFocus inputMode="decimal" value={quantity} aria-invalid={Boolean(showIssue)}
                 aria-describedby={showIssue ? 'movement-quantity-error' : 'movement-after'} className={cn('pe-16', showIssue && 'border-error')}
                 onChange={(e) => setQuantity(e.target.value.replace(/[^\d.]/g, ''))} />
-              <span className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-xs text-on-surface-variant">{item.unit}</span>
+              <span className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-xs text-on-surface-variant">{inPacks ? item.packUnit : item.unit}</span>
             </div>
             {showIssue ? (
               <p id="movement-quantity-error" role="alert" className="text-xs text-error">
@@ -78,7 +94,8 @@ export function StockMovementDialog({ nurseryId, item, mode, onClose }: { nurser
             ) : quantity ? (
               <p id="movement-after" className="flex items-center gap-1 text-xs text-on-surface-variant">
                 <MaterialSymbol name="arrow_forward" size="text-sm" className="rtl:rotate-180" />
-                {t('fnb.kitchen.after', { quantity: quantityAfter(kind, Number(quantity), item.quantity), unit: item.unit })}
+                {inPacks ? `${t('kitchenSales.packs.equals', { quantity: units, unit: item.unit })} · ` : ''}
+                {t('fnb.kitchen.after', { quantity: quantityAfter(kind, Number(units), item.quantity), unit: item.unit })}
               </p>
             ) : null}
           </div>

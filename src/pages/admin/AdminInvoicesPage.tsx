@@ -58,7 +58,7 @@ export function AdminInvoicesPage() {
   // ?type=extra_hours (e.g. from the financial dashboard) opens the list on that type.
   const [type, setType] = useState<AdminInvoiceTypeFilter>(() => {
     const fromUrl = searchParams.get('type');
-    return fromUrl === 'monthly' || fromUrl === 'event' || fromUrl === 'extra_hours' || fromUrl === 'other' ? fromUrl : 'all';
+    return fromUrl === 'monthly' || fromUrl === 'event' || fromUrl === 'extra_hours' || fromUrl === 'other' || fromUrl === 'food_extras' ? fromUrl : 'all';
   });
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<AdminInvoiceSort>('created_desc');
@@ -206,7 +206,7 @@ export function AdminInvoicesPage() {
             </FilterField>
             <FilterField label={t('invoice.table.type')}>
               <Select value={type} onChange={(e) => setType(e.target.value as AdminInvoiceTypeFilter)}>
-                {(['all', 'monthly', 'event', 'extra_hours', 'other'] as const).map((value) => (
+                {(['all', 'monthly', 'event', 'extra_hours', 'food_extras', 'other'] as const).map((value) => (
                   <option key={value} value={value}>{t(`invoice.filters.types.${value}`)}</option>
                 ))}
               </Select>

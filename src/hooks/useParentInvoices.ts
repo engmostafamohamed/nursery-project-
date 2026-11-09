@@ -17,7 +17,7 @@ export type ParentInvoiceItem = {
   paidAmount: number;
   /** Still owed: amount less completed payments (0 once paid or cancelled). */
   balance: number;
-  type: 'monthly' | 'event' | 'extra_hours' | 'other';
+  type: 'monthly' | 'event' | 'extra_hours' | 'other' | 'food_extras';
   status: 'pending' | 'paid' | 'overdue' | 'cancelled';
   /** True when the parent has submitted a payment that finance has not yet confirmed. */
   inReview: boolean;
@@ -115,7 +115,7 @@ export function useParentInvoices({ parentId, childId, status, sort }: UseParent
         id: string;
         generated_invoice_number: string | null;
         amount: string;
-        invoice_type: 'monthly' | 'event' | 'extra_hours' | 'other';
+        invoice_type: 'monthly' | 'event' | 'extra_hours' | 'other' | 'food_extras';
         status: 'pending' | 'paid' | 'overdue' | 'cancelled';
         due_date: string;
         created_at: string;

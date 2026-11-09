@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { formatTimeIn } from '@/lib/datetime';
 import { cn } from '@/lib/utils';
 
 import {
@@ -14,6 +15,7 @@ import {
   vaccinationState,
   type Allergy,
   type Condition,
+  type DoseRecord,
   type HealthViewer,
   type Medication,
   type Vaccination,
@@ -208,7 +210,7 @@ export function ConditionsCard({ conditions, viewer, ...editing }: { conditions:
 const MED_TONE = { expired: 'error', expiring: 'warning', ok: 'success', no_date: 'neutral' } as const;
 const CONSENT_TONE = { granted: 'success', pending: 'warning', denied: 'error' } as const;
 
-export function MedicationsCard({ medications, today, viewer, ...editing }: { medications: Medication[]; today: string; viewer: HealthViewer } & Editing<Medication>) {
+export function MedicationsCard({ medications, today, tz, viewer, ...editing }: { medications: Medication[]; today: string; tz: string; viewer: HealthViewer } & Editing<Medication>) {
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language.startsWith('ar');
   return (
@@ -247,8 +249,9 @@ export function MedicationsCard({ medications, today, viewer, ...editing }: { me
                     {t(`health.profile.medication.consent.${m.consent}`)}
                   </Pill>
                 </div>
+                <DoseSchedule medication={m} tz={tz} />
                 <dl className="mt-3 grid gap-3 sm:grid-cols-3">
-                  <Detail label={t('health.profile.medication.times')} value={m.times} />
+                  <Detail label={t('health.profile.medication.instructions')} value={m.times} />
                   <Detail label={t('health.profile.medication.method')} value={t(`health.method.${m.method}`)} />
                   <Detail label={t('health.profile.medication.storage')} value={m.storage} />
                 </dl>
@@ -308,5 +311,64 @@ export function VaccinationsCard({ vaccinations, today, viewer, ...editing }: { 
         </ul>
       )}
     </HealthCard>
+  );
+}
+
+/**
+ * When a medicine is given (its times, or "when needed"), its course, and what happened today:
+ * each time given (at what time, by whom) or not given (and why), or still to come.
+ */
+function DoseSchedule({ medication: m, tz }: { medication: Medication; tz: string }) {
+  const { t, i18n } = useTranslation();
+  const isArabic = i18n.language.startsWith('ar');
+  const clock = (iso: string) => formatTimeIn(iso, tz);
+  const by = (d: DoseRecord) => (isArabic ? d.byAr || d.byEn : d.byEn || d.byAr);
+  const doseFor = (time: string) => m.dosesToday.find((d) => d.scheduledTime === time);
+  const extra = m.dosesToday.filter((d) => !d.scheduledTime);
+
+  return (
+    <div className="mt-3 space-y-2 rounded-lg bg-surface-container-lowest p-3" data-testid="dose-schedule">
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-on-surface-variant">
+        <MaterialSymbol name="alarm" size="text-sm" className="text-primary" />
+        {m.doseTimes.length ? t('health.profile.medication.givenAt', { times: m.doseTimes.join(' · ') }) : t('health.profile.medication.onlyWhenNeeded')}
+        {m.startsOn || m.endsOn ? (
+          <span>
+            ·{' '}
+            {m.startsOn && m.endsOn
+              ? t('health.profile.medication.course', { from: formatDay(m.startsOn, isArabic), to: formatDay(m.endsOn, isArabic) })
+              : m.endsOn
+                ? t('health.profile.medication.courseUntilDate', { date: formatDay(m.endsOn, isArabic) })
+                : t('health.profile.medication.courseFromDate', { date: formatDay(m.startsOn, isArabic) })}
+          </span>
+        ) : null}
+      </p>
+      {m.doseTimes.length || extra.length ? (
+        <ul className="flex flex-wrap gap-1.5" aria-label={t('health.profile.medication.today')}>
+          {m.doseTimes.map((time) => {
+            const d = doseFor(time);
+            return (
+              <li key={time}>
+                {d ? (
+                  <Pill tone={d.status === 'given' ? 'success' : 'warning'} icon={d.status === 'given' ? 'check_circle' : 'block'}>
+                    <span dir="ltr">{time}</span>
+                    {' · '}
+                    {d.status === 'given'
+                      ? t('health.profile.medication.doseGiven', { time: clock(d.recordedAt), by: by(d) })
+                      : t('health.profile.medication.doseSkipped', { reason: t(`medicineRound.reasons.${d.skipReason ?? 'other'}`) })}
+                  </Pill>
+                ) : (
+                  <Pill tone="neutral" icon="schedule"><span dir="ltr">{time}</span> · {t('health.profile.medication.doseOpen')}</Pill>
+                )}
+              </li>
+            );
+          })}
+          {extra.map((d) => (
+            <li key={d.id}>
+              <Pill tone="success" icon="check_circle">{t('health.profile.medication.doseGiven', { time: clock(d.recordedAt), by: by(d) })}</Pill>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
   );
 }

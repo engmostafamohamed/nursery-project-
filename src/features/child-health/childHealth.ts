@@ -102,16 +102,37 @@ export type Condition = {
   emergencyPlan: string | null;
 };
 
+export type DoseRecord = {
+  id: string;
+  /** The dose time it was for (HH:MM), or null for a when-needed dose. */
+  scheduledTime: string | null;
+  status: 'given' | 'skipped';
+  skipReason: string | null;
+  note: string | null;
+  recordedAt: string;
+  byAr: string;
+  byEn: string;
+};
+
 export type Medication = {
   id: string;
   name: string;
   dosage: string | null;
+  /** Instructions as written (e.g. "after lunch", "when wheezing"). */
   times: string | null;
   method: MedicationMethod;
   storage: string | null;
   expiryDate: string | null;
   consent: ConsentStatus;
+  /** The times of day it is given (HH:MM, sorted); none: only when needed. */
+  doseTimes: string[];
+  startsOn: string | null;
+  endsOn: string | null;
+  dosesToday: DoseRecord[];
 };
+
+/** The most dose times a medicine may have in a day. */
+export const MAX_DOSE_TIMES = 6;
 
 export type Vaccination = {
   id: string;
@@ -129,6 +150,8 @@ export type ChildHealthProfile = {
   viewer: HealthViewer;
   canEdit: boolean;
   today: string;
+  /** The nursery's time zone, for the times doses were recorded. */
+  tz: string;
   child: HealthChild;
   record: HealthRecord;
   parents: HealthParent[];
@@ -404,12 +427,28 @@ export function conditionIssues(d: ConditionDraft, today: string): Issues<keyof 
   return issues;
 }
 
-export type MedicationDraft = { name: string; dosage: string; times: string; method: MedicationMethod; storage: string; expiryDate: string; consent: ConsentStatus };
+export type MedicationDraft = {
+  name: string;
+  dosage: string;
+  times: string;
+  method: MedicationMethod;
+  storage: string;
+  expiryDate: string;
+  consent: ConsentStatus;
+  doseTimes: string[];
+  startsOn: string;
+  endsOn: string;
+};
 export function medicationIssues(d: MedicationDraft): Issues<keyof MedicationDraft> {
   const issues: Issues<keyof MedicationDraft> = {};
   if (!d.name.trim()) issues.name = 'name_required';
   else if (tooLong(d.name)) issues.name = 'too_long';
   for (const field of ['dosage', 'times', 'storage'] as const) if (tooLong(d[field])) issues[field] = 'too_long';
+  const times = d.doseTimes.filter(Boolean);
+  if (times.length !== d.doseTimes.length || times.some((t) => !/^([01]\d|2[0-3]):[0-5]\d$/.test(t))) issues.doseTimes = 'time_invalid';
+  else if (new Set(times).size !== times.length) issues.doseTimes = 'time_repeated';
+  else if (times.length > MAX_DOSE_TIMES) issues.doseTimes = 'too_many_times';
+  if (d.startsOn && d.endsOn && d.endsOn < d.startsOn) issues.endsOn = 'ends_before_start';
   return issues;
 }
 
@@ -469,6 +508,7 @@ export function toChildHealthProfile(raw: unknown): ChildHealthProfile {
     viewer: r.viewer === 'parent' ? 'parent' : 'staff',
     canEdit: r.can_edit === true,
     today: typeof r.today === 'string' ? r.today.slice(0, 10) : new Date().toISOString().slice(0, 10),
+    tz: typeof r.tz === 'string' && r.tz ? r.tz : 'Africa/Cairo',
     child: {
       id: text(c.id),
       nurseryId: text(c.nursery_id),
@@ -539,6 +579,19 @@ export function toChildHealthProfile(raw: unknown): ChildHealthProfile {
       storage: str(m.storage_requirements),
       expiryDate: str(m.expiry_date),
       consent: (CONSENT_STATUSES as readonly unknown[]).includes(m.parent_consent_status) ? (m.parent_consent_status as ConsentStatus) : 'pending',
+      doseTimes: strings(m.dose_times).map((t) => t.slice(0, 5)).sort(),
+      startsOn: str(m.starts_on),
+      endsOn: str(m.ends_on),
+      dosesToday: list(m.doses_today).map((d) => ({
+        id: text(d.id),
+        scheduledTime: str(d.scheduled_time),
+        status: d.status === 'skipped' ? 'skipped' : 'given',
+        skipReason: str(d.skip_reason),
+        note: str(d.note),
+        recordedAt: text(d.recorded_at),
+        byAr: text(d.by_ar),
+        byEn: text(d.by_en),
+      })),
     })),
     vaccinations: list(r.vaccinations).map((v) => ({
       id: text(v.id),

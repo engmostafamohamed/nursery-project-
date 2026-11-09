@@ -28,6 +28,9 @@ import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatTile } from '@/components/ui/StatTile';
+import { MedicineDueBanner } from '@/features/medicine-round/MedicineDueBanner';
+import { CoverBanner } from '@/features/staff-absence/CoverBanner';
+import { useMyAbsences } from '@/features/staff-absence/useStaffAbsence';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useMyDailyReports } from '@/hooks/useDailyReportWorkflow';
 import { useMyClassChildren, useMyClasses } from '@/hooks/useFamilyMessages';
@@ -96,6 +99,8 @@ export function TeacherHomePage() {
   const reports = useMyDailyReports(user?.id, null);
   const canSeeRates = useCan('class_team');
   const reportRows = reports.data ?? [];
+  // The classes this teacher covers today as their backup.
+  const myAbsences = useMyAbsences();
   const reportTally = reportDay(reportRows);
   const nextReport = reportRows.find((r) => stageOf(r) === 'not_started' || stageOf(r) === 'in_progress');
 
@@ -223,6 +228,9 @@ export function TeacherHomePage() {
           />
         </div>
       </section>
+
+      <CoverBanner covering={myAbsences.data?.covering ?? []} />
+      <MedicineDueBanner />
 
       {/* The day's reports: an alarm as the end of the day nears */}
       {reportRows.length || canSeeRates ? (
