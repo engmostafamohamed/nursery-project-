@@ -50,6 +50,16 @@ export const chargeStaffItem = (input: { itemId: string; quantity: number; staff
     p_idempotency_key: input.key,
   }, (raw) => String(raw ?? ''));
 
+/** The store charges a child an item (diapers, a uniform): out of stock, on the family's extras invoice; the parents are told. */
+export const chargeChildStockItem = (input: { childId: string; itemId: string; quantity: number; note?: string; key: string }) =>
+  rpc<string>('charge_child_stock_item', {
+    p_child_id: input.childId,
+    p_item_id: input.itemId,
+    p_quantity: input.quantity,
+    p_note: input.note?.trim() || null,
+    p_idempotency_key: input.key,
+  }, (raw) => String(raw ?? ''));
+
 /** Staff give a child an extra: served now with the parents' consent, otherwise it waits for them. */
 export const giveChildExtra = (input: { childId: string; itemId: string; quantity: number; note?: string; key: string }) =>
   rpc<{ status: 'served' | 'waiting_parent' }>('give_child_extra', {

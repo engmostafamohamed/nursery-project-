@@ -1,4 +1,110 @@
 {
+  "stock": {
+    "page": {
+      "eyebrow": "Operations",
+      "title": "Warehouse",
+      "subtitle": "Everything the nursery keeps, in one stock: the kitchen’s food and drinks and the store’s classroom supplies, cleaning, hygiene, first aid, toys and furniture. Deliveries, issues to classes, use, counts and sales.",
+      "tabs": "Warehouse views",
+      "tab": {
+        "stock": "Stock",
+        "history": "History and usage"
+      },
+      "kitchenSales": "Kitchen sales and extras",
+      "openWarehouse": "Whole warehouse",
+      "loadFailed": "The warehouse could not be loaded. Check the connection and try again."
+    },
+    "sections": {
+      "label": "Section",
+      "both": "Kitchen and store",
+      "kitchen": "Kitchen",
+      "store": "Store",
+      "allKitchen": "All kitchen items",
+      "allStore": "All store items"
+    },
+    "empty": "Nothing in the warehouse yet.",
+    "emptyHint": "Add what the nursery keeps, then record its first delivery.",
+    "searchPlaceholder": "Item or where it is kept…",
+    "tiles": {
+      "worth": "Worth {{amount}} at cost"
+    },
+    "takeKinds": {
+      "issued": "Issued",
+      "used": "Used",
+      "spoiled": "Thrown away or broken"
+    },
+    "issue": {
+      "class": "To class",
+      "noClass": "No class",
+      "takenBy": "Taken by",
+      "nobody": "Nobody named",
+      "takenByHint": "Who took it from the store.",
+      "targetRequired": "Choose the class it went to or who took it.",
+      "notePlaceholder": "e.g. For the art activity"
+    },
+    "spoiledPlaceholder": "e.g. Past its date, broken",
+    "delivery": {
+      "supplier": "Supplier",
+      "supplierPlaceholder": "e.g. Al Nour Bookshop",
+      "supplierTooLong": "Keep the supplier under {{max}} characters.",
+      "unitCost": "Cost per {{unit}}",
+      "lastCost": "Last cost {{amount}}",
+      "total": "This delivery costs"
+    },
+    "item": {
+      "location": "Kept in",
+      "locationHint": "Where to find it: a room, a shelf.",
+      "locationKitchen": "e.g. Kitchen fridge",
+      "locationStore": "e.g. Store room · shelf 2",
+      "sellingHint": "Leave the prices blank if it is not sold. With a price for children it can be charged to a child (on the family’s monthly extras invoice); with a staff price, staff can buy it.",
+      "costShort": "Cost {{amount}}"
+    },
+    "history": {
+      "title": "Every movement",
+      "allKinds": "Everything",
+      "when": "When",
+      "change": "Change",
+      "details": "To or from",
+      "worth": "Worth",
+      "empty": "Nothing moved this month.",
+      "showing": "Showing {{shown}} of {{total}}",
+      "more_one": "Show {{count}} more",
+      "more_other": "Show {{count}} more",
+      "toClass": "to {{name}}",
+      "takenBy": "taken by {{name}}",
+      "from": "from {{name}}"
+    },
+    "month": {
+      "received": "Received",
+      "deliveries_one": "{{count}} delivery",
+      "deliveries_other": "{{count}} deliveries",
+      "out": "Went out",
+      "outHint": "Issued {{issued}} · used {{used}}",
+      "spoiled": "Thrown away",
+      "sales": "Sold",
+      "salesHint": "Charged to staff and children, after discounts."
+    },
+    "byClass": {
+      "title": "What the classes took",
+      "hint": "Issued to each class this month, at cost.",
+      "empty": "Nothing was issued to a class this month.",
+      "staffOnly": "Staff (no class)",
+      "issues_one": "Issued once",
+      "issues_other": "Issued {{count}} times",
+      "items_one": "{{count}} item",
+      "items_other": "{{count}} different items",
+      "line": "{{issues}} · {{items}}"
+    },
+    "byCategory": {
+      "title": "By category",
+      "empty": "No movements this month.",
+      "in": "In",
+      "out": "Out",
+      "spoiled": "Thrown away"
+    },
+    "errors": {
+      "forbidden": "You may not change this part of the stock."
+    }
+  },
   "medicineRound": {
     "teacherTitle": "Medicines",
     "teacherSubtitle": "Today’s doses for the children you look after. You are reminded at each dose’s time; the parents are told when you record it.",
@@ -148,6 +254,9 @@
       "for": "for {{name}}"
     },
     "charge": {
+      "storeChildNotSold": "No price for children",
+      "storeChildHint": "Charged now on the family’s monthly extras invoice; the parents are told.",
+      "storeChildDone": "Charged to the family’s extras invoice. The parents were told.",
       "title": "Take {{item}} for someone",
       "titleShort": "Take {{item}} for someone",
       "for": "Who is it for",
@@ -169,10 +278,10 @@
       "discount": "{{name}} ({{percent}}%)",
       "total": "Charged",
       "staffBilling": "Added to their account and deducted from their next payslip.",
-      "childBilling": "Added to the family’s monthly food invoice.",
+      "childBilling": "Added to the family’s monthly extras invoice.",
       "record": "Record",
       "staffDone": "Recorded on the staff member’s account.",
-      "childServed": "Served and added to the family’s food invoice.",
+      "childServed": "Served and added to the family’s extras invoice.",
       "childAsked": "The parent was asked to approve it."
     },
     "quantityIssues": {
@@ -230,7 +339,7 @@
         "count_other": "{{count}} takings",
         "discounts": "Discounts given",
         "children": "Children (invoiced)",
-        "childrenHint": "On the families’ food invoices",
+        "childrenHint": "On the families’ extras invoices",
         "staff": "Staff",
         "staffHint": "Deducted from salaries",
         "staffOpen": "{{amount}} still open"
@@ -279,7 +388,7 @@
         "expired": "Not served"
       },
       "serve": "Serve",
-      "served": "{{item}} served to {{child}} and added to the food invoice.",
+      "served": "{{item}} served to {{child}} and added to the extras invoice.",
       "cancel": "Cancel",
       "cancelTitle": "Cancel this extra?",
       "cancelBody": "{{item}} for {{child}} will not be served.",
@@ -318,7 +427,7 @@
     },
     "give": {
       "title": "Give {{child}} an extra",
-      "hint": "Charged on the family’s food invoice. Without the parents’ agreement from enrollment, the parent is asked first.",
+      "hint": "Charged on the family’s extras invoice. Without the parents’ agreement from enrollment, the parent is asked first.",
       "choose": "Choose an extra",
       "noItems": "The kitchen has no extras yet.",
       "allergic": "Allergic: {{foods}}",
@@ -362,7 +471,7 @@
     },
     "parent": {
       "title": "Extras",
-      "hint": "Extra meals, drinks and snacks for your child. Served extras go on your monthly food invoice.",
+      "hint": "Extra meals, drinks and snacks for your child. Served extras go on your monthly extras invoice.",
       "invoices": "My invoices",
       "preApproved": "You agreed to these at enrollment",
       "asksYou": "Teachers ask you before giving it",
@@ -1640,7 +1749,7 @@
       "admissionsImport": "Admissions Import",
       "loyalty": "Loyalty",
       "surveys": "Surveys",
-      "inventory": "Inventory",
+      "inventory": "Warehouse",
       "moreGroupFoodAndBeverage": "Food & beverage (F&B)",
       "foodAlerts": "Food allergy alerts",
       "mealPlans": "Meal plans",
@@ -3233,7 +3342,7 @@
     "types": {
       "monthly": "Monthly",
       "event": "Event",
-      "food_extras": "Food extras",
+      "food_extras": "Extras and purchases",
       "extra_hours": "Extra Hours",
       "other": "Other"
     },
@@ -3270,7 +3379,7 @@
         "all": "All Types",
         "monthly": "Monthly",
         "event": "Event",
-        "food_extras": "Food extras",
+        "food_extras": "Extras and purchases",
         "extra_hours": "Extra Hours",
         "other": "Other"
       },
@@ -4256,12 +4365,22 @@
       "namePlaceholder": "e.g. Rice",
       "category": "Category",
       "categories": {
+        "supplies": "Classroom supplies",
+        "cleaning": "Cleaning",
+        "hygiene": "Hygiene and diapers",
+        "medical": "First aid",
+        "toys": "Toys",
+        "furniture": "Furniture and equipment",
+        "other": "Other",
         "food": "Food",
         "drinks": "Drinks",
         "kitchen_supplies": "Kitchen supplies"
       },
       "unit": "Unit",
       "units": {
+        "roll": "roll",
+        "set": "set",
+        "sheet": "sheet",
         "kg": "kg",
         "g": "g",
         "liter": "liter",
@@ -4279,6 +4398,7 @@
       "saveItem": "Save item",
       "itemSaved": "The item was saved.",
       "issues": {
+        "location_too_long": "Keep it under 60 characters.",
         "price_invalid": "Write a price up to 100000, e.g. 12.50.",
         "pack_invalid": "Write how many units a pack has (1 or more).",
         "pack_unit_required": "Name the pack, e.g. carton.",
@@ -4290,12 +4410,13 @@
       },
       "modes": {
         "restock": "Delivery",
-        "take": "Use",
+        "take": "Take out",
         "count": "Count"
       },
       "inStock": "In stock: {{quantity}} {{unit}}",
       "why": "What happened",
       "kinds": {
+        "issued": "Issued",
         "charged": "Taken for someone",
         "returned": "Put back",
         "restocked": "Delivered",
@@ -4357,6 +4478,8 @@
       "leftAfter": "{{quantity}} {{unit}} left"
     },
     "errors": {
+      "stock_issue_target": "Choose a class of this nursery or a member of its staff.",
+      "stock_invalid_cost": "Check the delivery’s cost and supplier.",
       "failed": "Something went wrong. Try again.",
       "menu_forbidden": "You do not have permission to change the menu.",
       "menu_invalid_dishes": "The menu could not be saved. Check the dishes.",
@@ -7620,9 +7743,17 @@
       "title": "{{teacher}} looks after {{class}} today",
       "body": "The class teacher is away today, so {{teacher}} is with the children."
     },
+    "stock_attention": {
+      "title": "Stock needs attention",
+      "body": "Out of stock: {{out}} · running low: {{low}} · expired: {{expired}} · expiring soon: {{expiring}}."
+    },
+    "stock_child_charged": {
+      "title": "{{item}} for {{child}}",
+      "body": "{{quantity}} {{unit}} of {{item}} ({{amount}} EGP) was added to your monthly extras invoice."
+    },
     "extra_served": {
       "title": "{{child}} had an extra",
-      "body": "{{item}} × {{quantity}} ({{amount}}) was added to your monthly food invoice."
+      "body": "{{item}} × {{quantity}} ({{amount}}) was added to your monthly extras invoice."
     },
     "extra_needs_approval": {
       "title": "Approve an extra for {{child}}?",

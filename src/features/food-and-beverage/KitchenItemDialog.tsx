@@ -11,28 +11,37 @@ import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Select } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
-import { COMMON_UNITS, EXTRA_KINDS, itemDraft, itemIssues, KITCHEN_CATEGORIES, type ItemDraft, type ItemField, type KitchenCategory, type KitchenItem } from './kitchen';
-import { fnbErrorKey, saveKitchenItem } from './mealPlansApi';
+import {
+  categoriesOf, COMMON_UNITS, EXTRA_KINDS, itemDraft, itemIssues, KITCHEN_CATEGORIES, LOCATION_MAX, sectionOf, STORE_CATEGORIES,
+  type ItemDraft, type ItemField, type KitchenItem, type StockCategory, type StockScope,
+} from './kitchen';
+import { saveKitchenItem, stockErrorKey } from './mealPlansApi';
 import { FOOD_ALLERGENS } from './menu';
 import { useKitchenChange } from './useMealPlansAndKitchen';
 
 const EXTRA_ICON = { meal: 'lunch_dining', drink: 'local_cafe', snack: 'cookie' } as const;
 
 /**
- * Adding a kitchen item (it starts at 0; restock it after) or changing it: what it is, when to
- * reorder, and how it is sold: the price for children and for staff, what it costs, the pack it
- * comes in, whether parents and teachers see it as an extra on the menu, and the foods it contains
- * (an extra is never given to a child allergic to one of them).
+ * Adding an item (it starts at 0; record its first delivery after) or changing it: what it is, its
+ * category (the kitchen's or the store's, as the page allows), where it is kept, when to reorder, and
+ * how it is sold: the price for children and for staff, what it costs, the pack it comes in; for the
+ * kitchen's items also whether parents and teachers see it as an extra on the menu, and the foods it
+ * contains (an extra is never given to a child allergic to one of them).
  */
-export function KitchenItemDialog({ nurseryId, item, onClose }: { nurseryId: string; item: KitchenItem | null; onClose: () => void }) {
+export function KitchenItemDialog({ nurseryId, item, scope = 'kitchen', onClose }: { nurseryId: string; item: KitchenItem | null; scope?: StockScope; onClose: () => void }) {
   const { t } = useTranslation();
-  const [draft, setDraft] = useState<ItemDraft>(() => itemDraft(item));
+  const [draft, setDraft] = useState<ItemDraft>(() => itemDraft(item, scope));
+  const kitchen = sectionOf(draft.category) === 'kitchen';
   const [touched, setTouched] = useState<Partial<Record<ItemField, boolean>>>({});
   const [tried, setTried] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const issues = itemIssues(draft);
   const save = useKitchenChange(nurseryId, () => saveKitchenItem({ nurseryId, id: item?.id ?? null, draft }));
   const set = (patch: Partial<ItemDraft>) => setDraft((d) => ({ ...d, ...patch }));
+  // Only the kitchen's items are menu extras or carry food allergens.
+  const setCategory = (category: StockCategory) =>
+    set(sectionOf(category) === 'kitchen' ? { category } : { category, extraKind: '', foodAllergens: [] });
+  const option = (c: StockCategory) => <option key={c} value={c}>{t(`fnb.kitchen.categories.${c}`)}</option>;
   const blur = (field: ItemField) => () => setTouched((s) => ({ ...s, [field]: true }));
   const err = (field: ItemField) => ((tried || touched[field]) && issues[field] ? t(`fnb.kitchen.issues.${issues[field]}`) : null);
 
@@ -46,7 +55,7 @@ export function KitchenItemDialog({ nurseryId, item, onClose }: { nurseryId: str
       toast.success(t('fnb.kitchen.itemSaved'));
       onClose();
     } catch (error) {
-      setProblem(t(fnbErrorKey(error)));
+      setProblem(t(stockErrorKey(error)));
     }
   };
 
@@ -83,8 +92,13 @@ export function KitchenItemDialog({ nurseryId, item, onClose }: { nurseryId: str
                 className={cn(err('name') && invalidFieldClass)} onChange={(e) => set({ name: e.target.value })} onBlur={blur('name')} />
             </FormField>
             <FormField id="kitchen-category" label={t('fnb.kitchen.category')}>
-              <Select id="kitchen-category" value={draft.category} onChange={(e) => set({ category: e.target.value as KitchenCategory })}>
-                {KITCHEN_CATEGORIES.map((c) => <option key={c} value={c}>{t(`fnb.kitchen.categories.${c}`)}</option>)}
+              <Select id="kitchen-category" value={draft.category} onChange={(e) => setCategory(e.target.value as StockCategory)}>
+                {scope === 'all' ? (
+                  <>
+                    <optgroup label={t('stock.sections.kitchen')}>{KITCHEN_CATEGORIES.map(option)}</optgroup>
+                    <optgroup label={t('stock.sections.store')}>{STORE_CATEGORIES.map(option)}</optgroup>
+                  </>
+                ) : categoriesOf(scope).map(option)}
               </Select>
             </FormField>
             <FormField id="kitchen-unit" label={t('fnb.kitchen.unit')} error={err('unit')} hint={t('kitchenSales.item.unitHint')}>
@@ -99,6 +113,11 @@ export function KitchenItemDialog({ nurseryId, item, onClose }: { nurseryId: str
             <FormField id="kitchen-expiry" label={t('fnb.kitchen.expiry')} optional>
               <Input id="kitchen-expiry" type="date" value={draft.expiresOn} onChange={(e) => set({ expiresOn: e.target.value })} />
             </FormField>
+            <FormField id="kitchen-location" label={t('stock.item.location')} optional error={err('location')} hint={t('stock.item.locationHint')} className="sm:col-span-2">
+              <Input id="kitchen-location" value={draft.location} maxLength={LOCATION_MAX + 10} placeholder={t(kitchen ? 'stock.item.locationKitchen' : 'stock.item.locationStore')}
+                aria-invalid={Boolean(err('location'))} className={cn(err('location') && invalidFieldClass)}
+                onChange={(e) => set({ location: e.target.value })} onBlur={blur('location')} />
+            </FormField>
           </div>
 
           <fieldset className="space-y-3 rounded-xl border border-outline-variant p-4">
@@ -106,7 +125,7 @@ export function KitchenItemDialog({ nurseryId, item, onClose }: { nurseryId: str
               <MaterialSymbol name="sell" size="text-base" className="text-primary" />
               {t('kitchenSales.item.selling')}
             </legend>
-            <p className="text-xs text-on-surface-variant">{t('kitchenSales.item.sellingHint', { unit: draft.unit || t('kitchenSales.item.unitWord') })}</p>
+            <p className="text-xs text-on-surface-variant">{t(kitchen ? 'kitchenSales.item.sellingHint' : 'stock.item.sellingHint', { unit: draft.unit || t('kitchenSales.item.unitWord') })}</p>
             <div className="grid gap-3 sm:grid-cols-3">
               {money('childPrice', 'kitchen-child-price', t('kitchenSales.item.childPrice'))}
               {money('staffPrice', 'kitchen-staff-price', t('kitchenSales.item.staffPrice'), t('kitchenSales.item.staffPriceHint'))}
@@ -122,6 +141,7 @@ export function KitchenItemDialog({ nurseryId, item, onClose }: { nurseryId: str
                   className={cn(err('packUnit') && invalidFieldClass)} onChange={(e) => set({ packUnit: e.target.value })} onBlur={blur('packUnit')} />
               </FormField>
             </div>
+            {kitchen ? (
             <div className="space-y-2">
               <p className="text-sm font-medium text-on-surface">{t('kitchenSales.item.extraKind')}</p>
               <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={t('kitchenSales.item.extraKind')}>
@@ -144,6 +164,8 @@ export function KitchenItemDialog({ nurseryId, item, onClose }: { nurseryId: str
               </div>
               {err('extraKind') ? <p id="kitchen-extra-error" role="alert" className="text-xs text-error">{err('extraKind')}</p> : <p className="text-xs text-on-surface-variant">{t('kitchenSales.item.extraHint')}</p>}
             </div>
+            ) : null}
+            {kitchen ? (
             <div className="space-y-2">
               <p className="text-sm font-medium text-on-surface">{t('kitchenSales.item.contains')}</p>
               <div className="flex flex-wrap gap-1.5">
@@ -168,6 +190,7 @@ export function KitchenItemDialog({ nurseryId, item, onClose }: { nurseryId: str
               </div>
               <p className="text-xs text-on-surface-variant">{t('kitchenSales.item.containsHint')}</p>
             </div>
+            ) : null}
           </fieldset>
 
           <FormProblem message={problem} />

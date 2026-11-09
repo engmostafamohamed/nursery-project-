@@ -111,7 +111,7 @@ test.describe.serial('Kitchen sales and extras', () => {
     await teacherPage.reload();
     await expect(child.getByTestId('serve-extra')).toHaveCount(2);
     await child.getByTestId('serve-extra').first().click();
-    await expect(teacherPage.getByText('UI Juice served to UI Reem and added to the food invoice.')).toBeVisible();
+    await expect(teacherPage.getByText('UI Juice served to UI Reem and added to the extras invoice.')).toBeVisible();
     const [invoice] = await sql<{ amount: string; lines: number }>(`
       select amount::text, jsonb_array_length(line_items_json -> 'items') as lines from public.invoices
        where invoice_type = 'food_extras' and line_items_json ->> 'child_id' = '${childId}'`);

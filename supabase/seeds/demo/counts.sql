@@ -20,4 +20,11 @@ select
   (select count(*) from public.permissions) as event_permissions,
   (select count(*) from public.courses) as courses,
   (select count(*) from public.course_enrollments) as course_enrollments,
+  (select count(*) from public.inventory) as stock_items,
+  (select count(*) from public.inventory_movements) as stock_movements,
+  (select count(*) from public.kitchen_charges where cancelled_at is null) as kitchen_and_store_charges,
+  (select count(*) from public.invoices where invoice_type = 'food_extras') as extras_invoices,
+  (select count(*) from public.child_extra_requests) as children_extras,
+  (select count(*) from public.child_meal_plans) as children_meal_plans,
+  (select count(*) from public.menu_dishes) as menu_dishes,
   pg_size_pretty(pg_database_size(current_database())) as database_size;

@@ -1,78 +1,110 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
+import { Link, useSearchParams } from 'react-router-dom';
 
-import { ActionGate } from '@/components/shared/ActionGate';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
-import { useInventory } from '@/hooks/useInventory';
+import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { PageHeader } from '@/components/ui/PageHeader';
+import type { StockScope } from '@/features/food-and-beverage/kitchen';
+import { KitchenItemDialog } from '@/features/food-and-beverage/KitchenItemDialog';
+import { KitchenStockPanel } from '@/features/food-and-beverage/KitchenStockPanel';
+import { StockHistoryPanel } from '@/features/food-and-beverage/StockHistoryPanel';
+import { useStock } from '@/features/food-and-beverage/useMealPlansAndKitchen';
+import { getNurseryCalendarDateString } from '@/lib/nurseryDay';
+import { cn } from '@/lib/utils';
 import { useSettings } from '@/lib/useSettings';
 
+const TABS = [
+  { key: 'stock', icon: 'inventory_2' },
+  { key: 'history', icon: 'history' },
+] as const;
+type Tab = (typeof TABS)[number]['key'];
+
+/**
+ * The warehouse: everything the nursery keeps, the kitchen's food and drinks and the store's
+ * classroom supplies, cleaning, hygiene, first aid, toys and furniture, in one stock. Deliveries,
+ * issues to classes, use, counts and sales are recorded here (the kitchen's page shows its own part,
+ * with its sales, extras and discounts); the history tab shows a month of it. The tab is kept in
+ * the address, and ?show=attention (the daily stock alert's link) opens what needs attention.
+ */
 export function AdminInventoryPage() {
   const { t } = useTranslation();
   const { nurseryId } = useSettings();
-  const inventory = useInventory(nurseryId ?? undefined);
-  const [itemName, setItemName] = useState('');
-  const [category, setCategory] = useState<'supplies' | 'toys' | 'furniture' | 'food'>('supplies');
-  const [quantity, setQuantity] = useState(0);
-  const [threshold, setThreshold] = useState(5);
+  const [params, setParams] = useSearchParams();
+  const tab: Tab = TABS.some((x) => x.key === params.get('tab')) ? (params.get('tab') as Tab) : 'stock';
+  const query = useStock(nurseryId, 'all');
+  const [newItem, setNewItem] = useState(false);
+  const thisMonth = getNurseryCalendarDateString().slice(0, 7);
+  const data = query.data;
+  const canEdit = Boolean(data?.canEdit);
+  // A new item goes in a section the viewer may change.
+  const addScope: StockScope = data?.canEditKitchen && data.canEditStore ? 'all' : data?.canEditStore ? 'store' : 'kitchen';
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-lg font-semibold text-on-surface">{t('inventory.adminTitle')}</h1>
-      <ActionGate feature="inventory" action="create">
-      <section className="grid gap-2 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 md:grid-cols-4">
-        <Input placeholder={t('inventory.itemName')} value={itemName} onChange={(e) => setItemName(e.target.value)} />
-        <Select className="h-11 rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={category} onChange={(e) => setCategory(e.target.value as 'supplies' | 'toys' | 'furniture' | 'food')}>
-          {(['supplies', 'toys', 'furniture', 'food'] as const).map((c) => <option key={c} value={c}>{t(`inventory.categories.${c}`)}</option>)}
-        </Select>
-        <Input type="number" value={quantity} onChange={(e) => setQuantity(Number(e.target.value || 0))} />
-        <Input type="number" value={threshold} onChange={(e) => setThreshold(Number(e.target.value || 0))} />
-        <Button
-          className="md:col-span-4"
-          onClick={() => {
-            if (!nurseryId || !itemName) return;
-            void inventory.saveItem({
-              nursery_id: nurseryId,
-              item_name: itemName,
-              category,
-              quantity,
-              low_stock_threshold: threshold,
-            }).then(() => {
-              setItemName('');
-              setQuantity(0);
-              toast.success(t('inventory.saved'));
-            });
-          }}
-        >
-          {t('inventory.addItem')}
-        </Button>
-      </section>
-      </ActionGate>
+    <div className="space-y-5">
+      <PageHeader
+        icon="warehouse"
+        eyebrow={t('stock.page.eyebrow')}
+        title={t('stock.page.title')}
+        description={t('stock.page.subtitle')}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            {data?.canEditKitchen ? (
+              <Button asChild variant="outline">
+                <Link to="/admin/kitchen?tab=sales">
+                  <MaterialSymbol name="point_of_sale" size="text-lg" className="me-1" />
+                  {t('stock.page.kitchenSales')}
+                </Link>
+              </Button>
+            ) : null}
+            {canEdit && tab === 'stock' ? (
+              <Button type="button" onClick={() => setNewItem(true)}>
+                <MaterialSymbol name="add" size="text-lg" className="me-1" />
+                {t('fnb.kitchen.newItem')}
+              </Button>
+            ) : null}
+          </div>
+        }
+      >
+        <div role="tablist" aria-label={t('stock.page.tabs')} className="-my-1 flex gap-1 overflow-x-auto">
+          {TABS.map((x) => (
+            <button
+              key={x.key}
+              type="button"
+              role="tab"
+              aria-selected={tab === x.key}
+              onClick={() => setParams(x.key === 'stock' ? {} : { tab: x.key }, { replace: true })}
+              className={cn(
+                'inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors',
+                tab === x.key ? 'bg-primary text-primary-foreground shadow-sm' : 'text-on-surface-variant hover:bg-surface-high',
+              )}
+            >
+              <MaterialSymbol name={x.icon} size="text-lg" />
+              {t(`stock.page.tab.${x.key}`)}
+            </button>
+          ))}
+        </div>
+      </PageHeader>
 
-      <section className="space-y-2 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
-        {inventory.items.map((item) => {
-          const qty = Number(item.quantity ?? 0);
-          const low = Number(item.low_stock_threshold ?? item.reorder_level ?? 0);
-          const lowStock = qty < low;
-          return (
-            <article key={String(item.id)} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-outline-variant bg-surface text-foreground p-2">
-              <div>
-                <p className="font-medium">{String(item.item_name)}</p>
-                <p className="text-xs text-on-surface-variant">{t(`inventory.categories.${String(item.category)}`)} • {t('inventory.qty')}: {qty}</p>
-                {lowStock ? <p className="text-xs text-error">{t('inventory.lowStockAlert')}</p> : null}
-              </div>
-              <ActionGate feature="inventory" action="update">
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => void inventory.adjustStock({ id: String(item.id), nextQuantity: qty - 1 })}>-1</Button>
-                  <Button size="sm" variant="outline" onClick={() => void inventory.adjustStock({ id: String(item.id), nextQuantity: qty + 1 })}>+1</Button>
-                </div>
-              </ActionGate>
-            </article>
-          );
-        })}
-      </section>
+      {query.isError ? (
+        <p role="alert" className="rounded-xl border border-error/40 bg-error/5 p-4 text-sm text-error">{t('stock.page.loadFailed')}</p>
+      ) : null}
+
+      {!nurseryId ? null : tab === 'history' ? (
+        <StockHistoryPanel nurseryId={nurseryId} scope="all" thisMonth={thisMonth} />
+      ) : (
+        <KitchenStockPanel
+          nurseryId={nurseryId}
+          data={data}
+          loading={query.isLoading}
+          thisMonth={thisMonth}
+          onNewItem={() => setNewItem(true)}
+          scope="all"
+          initialAttention={params.get('show') === 'attention' ? 'attention' : 'all'}
+        />
+      )}
+
+      {newItem && nurseryId ? <KitchenItemDialog nurseryId={nurseryId} item={null} scope={addScope} onClose={() => setNewItem(false)} /> : null}
     </div>
   );
 }

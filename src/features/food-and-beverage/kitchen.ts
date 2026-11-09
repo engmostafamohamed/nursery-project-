@@ -1,14 +1,35 @@
 import { addDays, type FoodAllergen } from './menu';
 
 /*
- * Kitchen stock as plain data and rules: what an item's state is (out, low, expired, expiring
- * soon), the page's totals, and the checks on a stock change (the database refuses the same:
- * record_kitchen_movement).
+ * The nursery's stock as plain data and rules: the kitchen's section and the store's (one stock,
+ * stock_scope in the database), what an item's state is (out, low, expired, expiring soon), the
+ * page's totals, and the checks on a stock change (the database refuses the same:
+ * record_kitchen_movement, save_kitchen_item).
  */
 
 export const KITCHEN_CATEGORIES = ['food', 'drinks', 'kitchen_supplies'] as const;
 export type KitchenCategory = (typeof KITCHEN_CATEGORIES)[number];
-export const MOVEMENT_KINDS = ['restocked', 'used', 'spoiled', 'counted'] as const;
+/** The rest of the nursery's things: classroom supplies, cleaning, hygiene, first aid, toys, furniture. */
+export const STORE_CATEGORIES = ['supplies', 'cleaning', 'hygiene', 'medical', 'toys', 'furniture', 'other'] as const;
+export type StoreCategory = (typeof STORE_CATEGORIES)[number];
+export const STOCK_CATEGORIES = [...KITCHEN_CATEGORIES, ...STORE_CATEGORIES] as const;
+export type StockCategory = (typeof STOCK_CATEGORIES)[number];
+export type StockSection = 'kitchen' | 'store';
+/** What a page shows: one section or both. */
+export type StockScope = StockSection | 'all';
+
+export const isStockCategory = (v: unknown): v is StockCategory => (STOCK_CATEGORIES as readonly unknown[]).includes(v);
+export const sectionOf = (category: StockCategory): StockSection => ((KITCHEN_CATEGORIES as readonly string[]).includes(category) ? 'kitchen' : 'store');
+export const categoriesOf = (scope: StockScope): readonly StockCategory[] =>
+  scope === 'kitchen' ? KITCHEN_CATEGORIES : scope === 'store' ? STORE_CATEGORIES : STOCK_CATEGORIES;
+
+export const CATEGORY_ICON: Record<StockCategory, string> = {
+  food: 'grocery', drinks: 'local_drink', kitchen_supplies: 'soup_kitchen',
+  supplies: 'palette', cleaning: 'cleaning_services', hygiene: 'baby_changing_station', medical: 'medical_services',
+  toys: 'toys', furniture: 'chair', other: 'category',
+};
+
+export const MOVEMENT_KINDS = ['restocked', 'used', 'issued', 'spoiled', 'counted'] as const;
 export type MovementKind = (typeof MOVEMENT_KINDS)[number];
 /** What the history shows: the changes above, and an item charged to someone or put back. */
 export const HISTORY_KINDS = [...MOVEMENT_KINDS, 'charged', 'returned'] as const;
@@ -16,14 +37,21 @@ export type HistoryKind = (typeof HISTORY_KINDS)[number];
 export const EXTRA_KINDS = ['meal', 'drink', 'snack'] as const;
 export type ItemExtraKind = (typeof EXTRA_KINDS)[number];
 /** Units offered when adding an item; any other can be typed. */
-export const COMMON_UNITS = ['kg', 'g', 'liter', 'piece', 'pack', 'box', 'can', 'bottle', 'dozen'] as const;
+export const COMMON_UNITS = ['kg', 'g', 'liter', 'piece', 'pack', 'box', 'can', 'bottle', 'dozen', 'roll', 'set', 'sheet'] as const;
+export const LOCATION_MAX = 60;
+export const SUPPLIER_MAX = 80;
 /** An item expiring within this many days is flagged. */
 export const EXPIRING_SOON_DAYS = 3;
 
 export type KitchenItem = {
   id: string;
   name: string;
-  category: KitchenCategory;
+  category: StockCategory;
+  section: StockSection;
+  /** Where it is kept (store room, shelf…). */
+  location: string | null;
+  /** Whether the viewer may change it (the kitchen's and the store's editors differ). */
+  canEdit: boolean;
   quantity: number;
   unit: string;
   lowStockLevel: number;
@@ -55,8 +83,31 @@ export type StockMovement = {
   /** Who an item was charged to. */
   forAr: string | null;
   forEn: string | null;
+  category: StockCategory | null;
+  /** An issue: the class it went to and who took it. */
+  classId: string | null;
+  classAr: string | null;
+  classEn: string | null;
+  takenByAr: string | null;
+  takenByEn: string | null;
+  /** A delivery: who supplied it. */
+  supplier: string | null;
+  /** What a unit was worth when it moved, and the movement's worth. */
+  unitCost: number | null;
+  value: number | null;
   at: string;
 };
+
+/** What the stock is worth at cost (items without a cost left out), and how many in stock have none. */
+export function stockValue(items: Pick<KitchenItem, 'quantity' | 'unitCost'>[]): { value: number; uncosted: number } {
+  let value = 0;
+  let uncosted = 0;
+  for (const item of items) {
+    if (item.unitCost === null) uncosted += item.quantity > 0 ? 1 : 0;
+    else value += Math.max(item.quantity, 0) * item.unitCost;
+  }
+  return { value: Math.round(value * 100) / 100, uncosted };
+}
 
 export type StockFlags = { out: boolean; low: boolean; expired: boolean; expiringSoon: boolean };
 
@@ -103,7 +154,7 @@ export function movementIssue(kind: MovementKind, text: string, current: number)
   if (!/^\d+(\.\d{1,2})?$/.test(trimmed)) return 'invalid';
   const quantity = Number(trimmed);
   if (kind !== 'counted' && quantity === 0) return 'zero';
-  if ((kind === 'used' || kind === 'spoiled') && quantity > current + 1e-9) return 'more_than_stock';
+  if ((kind === 'used' || kind === 'issued' || kind === 'spoiled') && quantity > current + 1e-9) return 'more_than_stock';
   return null;
 }
 
@@ -115,7 +166,8 @@ export function quantityAfter(kind: MovementKind, quantity: number, current: num
 
 export type ItemDraft = {
   name: string;
-  category: KitchenCategory;
+  category: StockCategory;
+  location: string;
   unit: string;
   lowStockLevel: string;
   expiresOn: string;
@@ -127,21 +179,21 @@ export type ItemDraft = {
   extraKind: ItemExtraKind | '';
   foodAllergens: FoodAllergen[];
 };
-export type ItemIssue = 'name_required' | 'name_too_long' | 'unit_required' | 'level_invalid' | 'price_invalid' | 'pack_invalid' | 'pack_unit_required' | 'extra_needs_price';
-export type ItemField = 'name' | 'unit' | 'lowStockLevel' | 'unitCost' | 'childPrice' | 'staffPrice' | 'packSize' | 'packUnit' | 'extraKind';
+export type ItemIssue = 'name_required' | 'name_too_long' | 'unit_required' | 'level_invalid' | 'price_invalid' | 'pack_invalid' | 'pack_unit_required' | 'extra_needs_price' | 'location_too_long';
+export type ItemField = 'name' | 'unit' | 'lowStockLevel' | 'unitCost' | 'childPrice' | 'staffPrice' | 'packSize' | 'packUnit' | 'extraKind' | 'location';
 
 const AMOUNT = /^\d+(\.\d{1,2})?$/;
 
-/** A new item's draft, or an item's as it is. */
-export function itemDraft(item: KitchenItem | null): ItemDraft {
+/** A new item's draft (in the first category of the page's section), or an item's as it is. */
+export function itemDraft(item: KitchenItem | null, scope: StockScope = 'kitchen'): ItemDraft {
   const money = (v: number | null) => (v == null ? '' : String(v));
   return item
     ? {
-        name: item.name, category: item.category, unit: item.unit, lowStockLevel: String(item.lowStockLevel), expiresOn: item.expiresOn ?? '',
+        name: item.name, category: item.category, location: item.location ?? '', unit: item.unit, lowStockLevel: String(item.lowStockLevel), expiresOn: item.expiresOn ?? '',
         unitCost: money(item.unitCost), childPrice: money(item.childPrice), staffPrice: money(item.staffPrice),
         packSize: money(item.packSize), packUnit: item.packUnit ?? '', extraKind: item.extraKind ?? '', foodAllergens: item.foodAllergens,
       }
-    : { name: '', category: 'food', unit: 'kg', lowStockLevel: '1', expiresOn: '', unitCost: '', childPrice: '', staffPrice: '', packSize: '', packUnit: '', extraKind: '', foodAllergens: [] };
+    : { name: '', category: categoriesOf(scope)[0], location: '', unit: scope === 'store' ? 'piece' : 'kg', lowStockLevel: '1', expiresOn: '', unitCost: '', childPrice: '', staffPrice: '', packSize: '', packUnit: '', extraKind: '', foodAllergens: [] };
 }
 
 export function itemIssues(draft: ItemDraft): Partial<Record<ItemField, ItemIssue>> {
@@ -158,6 +210,15 @@ export function itemIssues(draft: ItemDraft): Partial<Record<ItemField, ItemIssu
   if (pack && (!AMOUNT.test(pack) || Number(pack) < 1 || Number(pack) > 10000)) issues.packSize = 'pack_invalid';
   else if (pack && !draft.packUnit.trim()) issues.packUnit = 'pack_unit_required';
   else if (!pack && draft.packUnit.trim()) issues.packSize = 'pack_invalid';
-  if (draft.extraKind && !draft.childPrice.trim()) issues.extraKind = 'extra_needs_price';
+  if (draft.extraKind && sectionOf(draft.category) === 'kitchen' && !draft.childPrice.trim()) issues.extraKind = 'extra_needs_price';
+  if (draft.location.trim().length > LOCATION_MAX) issues.location = 'location_too_long';
   return issues;
+}
+
+/** A delivery's price and supplier: blank, or an amount; the supplier at most SUPPLIER_MAX characters. */
+export function restockIssue(unitCost: string, supplier: string): 'price_invalid' | 'supplier_too_long' | null {
+  const cost = unitCost.trim();
+  if (cost && (!AMOUNT.test(cost) || Number(cost) > 100000)) return 'price_invalid';
+  if (supplier.trim().length > SUPPLIER_MAX) return 'supplier_too_long';
+  return null;
 }

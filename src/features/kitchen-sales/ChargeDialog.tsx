@@ -15,15 +15,16 @@ import { cn } from '@/lib/utils';
 import { ChildSearch } from './ChildSearch';
 import { newTakingKey, useMoney } from './kitchenLook';
 import { bestDiscount, chargePreview, quantityIssue, type KitchenDiscount, type StaffPerson } from './kitchenSales';
-import { chargeStaffItem, errorDetail, giveChildExtra, kitchenErrorKey, type KitchenChild } from './kitchenSalesApi';
+import { chargeChildStockItem, chargeStaffItem, errorDetail, giveChildExtra, kitchenErrorKey, type KitchenChild } from './kitchenSalesApi';
 import { useKitchenSale } from './useKitchenSales';
 
 type Consumer = 'staff' | 'child';
 
 /**
  * Taking an item for someone: a member of staff (charged to their account, deducted from their next
- * payslip) or a child (an extra: served now if the parents agreed at enrollment, otherwise sent to
- * them to approve). Shows the price, the discount that applies and what is charged before saving.
+ * payslip) or a child: from the kitchen, an extra (served now if the parents agreed at enrollment,
+ * otherwise sent to them to approve); from the store, charged at once to the family's extras invoice
+ * (the parents are told). Shows the price, the discount that applies and what is charged before saving.
  */
 export function ChargeDialog({
   nurseryId,
@@ -43,9 +44,12 @@ export function ChargeDialog({
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language.startsWith('ar');
   const money = useMoney();
-  const forChildren = item.extraKind !== null && item.childPrice !== null;
+  const store = item.section === 'store';
+  const forChildren = item.childPrice !== null && (store || item.extraKind !== null);
+  const childMax = store ? 100 : 10;
   const forStaff = (item.staffPrice ?? item.childPrice) !== null;
-  const [consumer, setConsumer] = useState<Consumer>(forStaff ? 'staff' : 'child');
+  // The store's priced items (diapers, uniforms) are mostly for children; the kitchen's for staff.
+  const [consumer, setConsumer] = useState<Consumer>((store && forChildren) || !forStaff ? 'child' : 'staff');
   const [staffId, setStaffId] = useState('');
   const [child, setChild] = useState<KitchenChild | null>(null);
   const [quantity, setQuantity] = useState('1');
@@ -55,7 +59,7 @@ export function ChargeDialog({
   const key = useRef(newTakingKey());
 
   const personId = consumer === 'staff' ? staffId : child?.id ?? '';
-  const qIssue = quantityIssue(quantity, item.quantity, consumer === 'child' ? 10 : 1000);
+  const qIssue = quantityIssue(quantity, item.quantity, consumer === 'child' ? childMax : 1000);
   const personIssue = !personId ? 'person_required' : null;
   const price = consumer === 'staff' ? item.staffPrice ?? item.childPrice ?? 0 : item.childPrice ?? 0;
   const discount = personId ? bestDiscount(discounts, { itemId: item.id, consumer, personId }, today) : null;
@@ -65,6 +69,10 @@ export function ChargeDialog({
     if (consumer === 'staff') {
       await chargeStaffItem({ itemId: item.id, quantity: Number(quantity), staffUserId: staffId, note, key: key.current });
       return { staff: true, served: true };
+    }
+    if (store) {
+      await chargeChildStockItem({ childId: personId, itemId: item.id, quantity: Number(quantity), note, key: key.current });
+      return { staff: false, served: true };
     }
     const result = await giveChildExtra({ childId: personId, itemId: item.id, quantity: Number(quantity), note, key: key.current });
     return { staff: false, served: result.status === 'served' };
@@ -77,7 +85,7 @@ export function ChargeDialog({
     setProblem(null);
     try {
       const result = await run.mutateAsync(undefined);
-      toast.success(t(result.staff ? 'kitchenSales.charge.staffDone' : result.served ? 'kitchenSales.charge.childServed' : 'kitchenSales.charge.childAsked'));
+      toast.success(t(result.staff ? 'kitchenSales.charge.staffDone' : store ? 'kitchenSales.charge.storeChildDone' : result.served ? 'kitchenSales.charge.childServed' : 'kitchenSales.charge.childAsked'));
       onClose();
     } catch (error) {
       const k = kitchenErrorKey(error);
@@ -122,7 +130,7 @@ export function ChargeDialog({
                   <span>
                     <span className="block">{t(`kitchenSales.charge.${c}`)}</span>
                     <span className="block text-xs font-normal text-on-surface-variant">
-                      {allowed ? money(c === 'staff' ? item.staffPrice ?? item.childPrice ?? 0 : item.childPrice ?? 0) : t(`kitchenSales.charge.${c}NotSold`)}
+                      {allowed ? money(c === 'staff' ? item.staffPrice ?? item.childPrice ?? 0 : item.childPrice ?? 0) : t(c === 'child' && store ? 'kitchenSales.charge.storeChildNotSold' : `kitchenSales.charge.${c}NotSold`)}
                     </span>
                   </span>
                 </button>
@@ -138,7 +146,7 @@ export function ChargeDialog({
               </Select>
             </FormField>
           ) : (
-            <FormField id="charge-child" label={t('kitchenSales.charge.whichChild')} error={tried && personIssue ? t('kitchenSales.issues.person_required') : null} hint={t('kitchenSales.charge.childHint')}>
+            <FormField id="charge-child" label={t('kitchenSales.charge.whichChild')} error={tried && personIssue ? t('kitchenSales.issues.person_required') : null} hint={t(store ? 'kitchenSales.charge.storeChildHint' : 'kitchenSales.charge.childHint')}>
               <ChildSearch id="charge-child" nurseryId={nurseryId} value={child} onChange={setChild} invalid={tried && Boolean(personIssue)} />
             </FormField>
           )}
@@ -147,7 +155,7 @@ export function ChargeDialog({
             <FormField
               id="charge-quantity"
               label={t('kitchenSales.charge.quantity', { unit: item.unit })}
-              error={(tried || quantity !== '1') && qIssue ? t(`kitchenSales.quantityIssues.${qIssue}`, { quantity: item.quantity, unit: item.unit, max: consumer === 'child' ? 10 : 1000 }) : null}
+              error={(tried || quantity !== '1') && qIssue ? t(`kitchenSales.quantityIssues.${qIssue}`, { quantity: item.quantity, unit: item.unit, max: consumer === 'child' ? childMax : 1000 }) : null}
             >
               <Input id="charge-quantity" inputMode="decimal" dir="ltr" value={quantity} onChange={(e) => setQuantity(e.target.value.replace(/[^\d.]/g, ''))}
                 aria-invalid={Boolean(qIssue)} className={cn((tried || quantity !== '1') && qIssue && invalidFieldClass)} />

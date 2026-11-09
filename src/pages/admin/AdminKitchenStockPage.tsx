@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
@@ -45,12 +45,20 @@ export function AdminKitchenStockPage() {
         title={t('fnb.kitchen.title')}
         description={t('kitchenSales.page.subtitle')}
         actions={
-          canEdit && tab === 'stock' ? (
-            <Button type="button" onClick={() => setNewItem(true)}>
-              <MaterialSymbol name="add" size="text-lg" className="me-1" />
-              {t('fnb.kitchen.newItem')}
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <Link to="/admin/inventory">
+                <MaterialSymbol name="warehouse" size="text-lg" className="me-1" />
+                {t('stock.page.openWarehouse')}
+              </Link>
             </Button>
-          ) : null
+            {canEdit && tab === 'stock' ? (
+              <Button type="button" onClick={() => setNewItem(true)}>
+                <MaterialSymbol name="add" size="text-lg" className="me-1" />
+                {t('fnb.kitchen.newItem')}
+              </Button>
+            ) : null}
+          </div>
         }
       >
         {canEdit ? (

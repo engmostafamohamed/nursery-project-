@@ -41,11 +41,13 @@ Every run gives the same data: names, amounts and ids come from fixed keys, not 
 | `17_invoices_and_payments.sql` | Tuition invoices since August and their payments: paid, part-paid, waiting for confirmation, overdue. |
 | `18_events.sql` | Six events per branch (past and coming) and the families' permission answers. |
 | `19_courses.sql` | Four after-school courses per new branch and their enrolments. |
+| `20_kitchen_stock_and_meals.sql` | Four weeks of every branch's kitchen and warehouse, made by the app's own functions as the people who would do it (the admin, the class's teacher, staff, parents), then dated back: 40 items (20 kitchen, 20 store) with prices, packs and where they are kept; deliveries with their supplier and cost; the kitchen's use; supplies issued to classes; staff taking drinks and lunch (with the staff discount); children's extras (given by a teacher with or without the parents' consent, or ordered by a parent); diapers and uniforms charged to a child; spoiled and broken things; the month's stock count; a few cancelled charges. Every child's charge is a line on the family's monthly extras invoice (last month's mostly paid). Also the meal plans, the children on them (on this month's unpaid tuition invoice), and the weekly menus. It replaces the branch's kitchen data on every run and fails if the stock, charges and invoices don't add up. |
 | `99_finish.sql` | Drops the helpers and refreshes the planner's statistics. |
 | `counts.sql` | What the database holds afterwards (the runner prints it). |
 
-Files marked `{{branches}}` run a few branches at a time (`SEED_DEMO_BATCH`, 4 by default): the database
-stops any statement after two minutes, and each file runs as one statement (one transaction).
+Files marked `{{branches}}` run a few branches at a time (`SEED_DEMO_BATCH`, 4 by default; a file can ask for
+fewer with a `-- batch: n` line, as `20` does): the database stops any statement after two minutes, and each
+file runs as one statement (one transaction).
 
 ## Signing in
 

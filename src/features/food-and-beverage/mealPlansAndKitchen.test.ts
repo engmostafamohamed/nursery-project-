@@ -5,9 +5,12 @@ import ar from '@/locales/ar.json';
 import en from '@/locales/en.json';
 import type { HealthAlertItem } from '@/lib/healthAlertsCompute';
 
-import { itemDraft, itemIssues, movementIssue, quantityAfter, sortForAttention, stockFlags, stockTotals, type KitchenItem } from './kitchen';
+import {
+  categoriesOf, itemDraft, itemIssues, movementIssue, quantityAfter, restockIssue, sectionOf, sortForAttention, stockFlags, stockTotals, stockValue,
+  STOCK_CATEGORIES, type KitchenItem,
+} from './kitchen';
 import { childMatches, isNotBilled, mealPlanIssues, mealPlanTotals, orderedMeals, type MealPlanChild } from './mealPlans';
-import { fnbErrorKey, toKitchenData, toMealPlansData } from './mealPlansApi';
+import { fnbErrorKey, stockErrorKey, toKitchenData, toMealPlansData, toStockHistory } from './mealPlansApi';
 import { groupUnmatched } from './menu';
 
 const child = (patch: Partial<MealPlanChild>): MealPlanChild => ({
@@ -58,7 +61,7 @@ describe('meal plans', () => {
 
 describe('kitchen stock', () => {
   const item = (patch: Partial<KitchenItem>): KitchenItem => ({
-    id: 'i', name: 'Milk', category: 'drinks', quantity: 10, unit: 'liter', lowStockLevel: 3, expiresOn: null, lastRestocked: null,
+    id: 'i', name: 'Milk', category: 'drinks', section: 'kitchen', location: null, canEdit: true, quantity: 10, unit: 'liter', lowStockLevel: 3, expiresOn: null, lastRestocked: null,
     unitCost: null, childPrice: null, staffPrice: null, packSize: null, packUnit: null, extraKind: null, foodAllergens: [], ...patch,
   });
   const today = '2026-11-08';
@@ -98,10 +101,80 @@ describe('kitchen stock', () => {
   });
 
   it('reads get_kitchen_stock', () => {
-    const data = toKitchenData({ can_edit: true, today, items: [{ id: 'a', name: 'Milk', category: 'toys', quantity: '3.00', low_stock_level: 2 }],
+    const data = toKitchenData({ can_edit: true, today, items: [{ id: 'a', name: 'Milk', category: 'stationery', quantity: '3.00', low_stock_level: 2 }],
                                  movements: [{ id: 'm', kind: 'odd', change: '-4', quantity_after: 6 }] });
-    expect(data.items[0]).toMatchObject({ category: 'food', quantity: 3, lowStockLevel: 2, expiresOn: null });
-    expect(data.movements[0]).toMatchObject({ kind: 'counted', change: -4, quantityAfter: 6 });
+    expect(data.items[0]).toMatchObject({ category: 'other', section: 'store', quantity: 3, lowStockLevel: 2, expiresOn: null, canEdit: true, location: null });
+    expect(data.movements[0]).toMatchObject({ kind: 'counted', change: -4, quantityAfter: 6, classId: null, value: null });
+    // Without the newer fields, the kitchen's editor is its editor.
+    expect(data).toMatchObject({ canEditKitchen: true, canEditStore: false, classes: [], staff: [], month: { receivedValue: 0 } });
+  });
+});
+
+describe('the warehouse', () => {
+  const item = (patch: Partial<KitchenItem>): KitchenItem => ({
+    id: 'i', name: 'Crayons', category: 'supplies', section: 'store', location: null, canEdit: true, quantity: 10, unit: 'box', lowStockLevel: 3,
+    expiresOn: null, lastRestocked: null, unitCost: null, childPrice: null, staffPrice: null, packSize: null, packUnit: null, extraKind: null, foodAllergens: [], ...patch,
+  });
+
+  it('keeps the kitchen and the store as two sections of one stock', () => {
+    expect(categoriesOf('kitchen')).toEqual(['food', 'drinks', 'kitchen_supplies']);
+    expect(categoriesOf('store')).toEqual(['supplies', 'cleaning', 'hygiene', 'medical', 'toys', 'furniture', 'other']);
+    expect(categoriesOf('all')).toEqual(STOCK_CATEGORIES);
+    expect(sectionOf('hygiene')).toBe('store');
+    expect(sectionOf('drinks')).toBe('kitchen');
+    expect(itemDraft(null, 'store')).toMatchObject({ category: 'supplies', unit: 'piece', location: '' });
+  });
+
+  it('values the stock at cost and counts what has no cost', () => {
+    expect(stockValue([item({ quantity: 10, unitCost: 35 }), item({ quantity: 2.5, unitCost: 4.2 }), item({ quantity: 4 }), item({ quantity: 0 }), item({ quantity: -1, unitCost: 9 })]))
+      .toEqual({ value: 360.5, uncosted: 1 });
+  });
+
+  it('checks an issue, a delivery and an item as the database does', () => {
+    expect(movementIssue('issued', '11', 10)).toBe('more_than_stock');
+    expect(movementIssue('issued', '10', 10)).toBeNull();
+    expect(quantityAfter('issued', 4, 10)).toBe(6);
+    expect(restockIssue('', '')).toBeNull();
+    expect(restockIssue('32.5', 'Al Nour')).toBeNull();
+    expect(restockIssue('3.456', '')).toBe('price_invalid');
+    expect(restockIssue('', 'x'.repeat(81))).toBe('supplier_too_long');
+    const blank = itemDraft(null, 'store');
+    expect(itemIssues({ ...blank, name: 'Crayons', location: 'x'.repeat(61) })).toEqual({ location: 'location_too_long' });
+    // A store item is never an extra, so its kind needs no price.
+    expect(itemIssues({ ...blank, name: 'Diapers', extraKind: 'snack' })).toEqual({});
+  });
+
+  it('reads a month of history', () => {
+    const h = toStockHistory({
+      month: '2026-11', today: '2026-11-09',
+      summary: { deliveries: 3, received_value: '1100.00', issued_value: 130, used_value: '20', spoiled_value: 0, issues: 1, sales_net: '36' },
+      movements: [{ id: 'm', kind: 'issued', change: '-4', quantity_after: 20, category: 'supplies', class_id: 'k', class_en: 'Butterflies', taken_by_en: 'Hala', unit_cost: '32.50', value: '130.00' }],
+      by_class: [{ class_id: 'k', name_en: 'Butterflies', issues: 1, items: 1, value: '130.00' }, { class_id: null, issues: 2, items: 1, value: 0 }],
+      by_category: [{ category: 'supplies', in_value: '780', out_value: 130, spoiled_value: null }, { category: 'nonsense' }],
+    });
+    expect(h.summary).toEqual({ deliveries: 3, receivedValue: 1100, issuedValue: 130, usedValue: 20, spoiledValue: 0, issues: 1, salesNet: 36 });
+    expect(h.movements[0]).toMatchObject({ kind: 'issued', classEn: 'Butterflies', takenByEn: 'Hala', unitCost: 32.5, value: 130, category: 'supplies' });
+    expect(h.byClass.map((c) => c.classId)).toEqual(['k', null]);
+    expect(h.byCategory[1]).toMatchObject({ category: 'other', inValue: 0 });
+    expect(stockErrorKey({ message: 'menu_forbidden' })).toBe('stock.errors.forbidden');
+    expect(stockErrorKey({ message: 'stock_issue_target' })).toBe('fnb.errors.stock_issue_target');
+  });
+
+  it('has its texts in both languages', () => {
+    const lookup = (dict: unknown, key: string) =>
+      key.split('.').reduce<unknown>((node, part) => (node && typeof node === 'object' ? (node as Record<string, unknown>)[part] : undefined), dict);
+    const keys = [
+      ...STOCK_CATEGORIES.map((c) => `fnb.kitchen.categories.${c}`),
+      ...['issued', 'used', 'spoiled'].map((k) => `stock.takeKinds.${k}`),
+      'fnb.kitchen.kinds.issued', 'fnb.errors.stock_issue_target', 'fnb.errors.stock_invalid_cost', 'fnb.kitchen.issues.location_too_long',
+      'stock.page.title', 'stock.errors.forbidden', 'stock.issue.targetRequired', 'stock.delivery.supplierTooLong',
+      'kitchenSales.charge.storeChildHint', 'kitchenSales.charge.storeChildDone', 'kitchenSales.charge.storeChildNotSold',
+      ...['stock_attention', 'stock_child_charged'].flatMap((k) => [`notificationTemplates.${k}.title`, `notificationTemplates.${k}.body`]),
+    ];
+    for (const key of keys) {
+      expect(typeof lookup(en, key), `en ${key}`).toBe('string');
+      expect(typeof lookup(ar, key), `ar ${key}`).toBe('string');
+    }
   });
 });
 

@@ -144,11 +144,11 @@ select is(
 -- ---------------------------------------------------------------------------------------------
 -- Kitchen stock
 select throws_ok(
-  $$ select public.save_kitchen_item('00000000-0000-4000-9400-00000000000a', null, 'Teddy bears', 'toys', 'piece', 1, null) $$,
-  '22023', 'kitchen_item_invalid', 'only kitchen categories belong in kitchen stock'
+  $$ select public.save_kitchen_item('00000000-0000-4000-9400-00000000000a', null, 'Teddy bears', 'art', 'piece', 1, null) $$,
+  '22023', 'kitchen_item_invalid', 'a category of neither the kitchen nor the store is refused'
 );
 select set_config('t.k1', public.save_kitchen_item('00000000-0000-4000-9400-00000000000a', null, 'Milk', 'drinks', 'liter', 5, null)::text, true);
-insert into public.inventory (nursery_id, item_name, category, quantity, unit) values ('00000000-0000-4000-9400-00000000000a', 'Crayons', 'art', 40, 'box');
+select set_config('t.k0', public.save_kitchen_item('00000000-0000-4000-9400-00000000000a', null, 'Crayons', 'supplies', 'box', 1, null)::text, true);
 create function pg_temp.milk() returns uuid language sql as $$
   select id from public.inventory where nursery_id = '00000000-0000-4000-9400-00000000000a' and item_name = 'Milk'
 $$;

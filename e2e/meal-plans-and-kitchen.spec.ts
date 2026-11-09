@@ -105,8 +105,8 @@ test.describe.serial('F&B: meal plans, kitchen stock and health alerts', () => {
     await delivery.getByRole('button', { name: 'Record' }).click();
     await expect(row).toContainText('Expiring soon');
 
-    await row.getByRole('button', { name: 'Use' }).click();
-    const use = page.getByRole('dialog', { name: /Use/ });
+    await row.getByRole('button', { name: 'Take out' }).click();
+    const use = page.getByRole('dialog', { name: /Take out/ });
     await use.getByLabel('Quantity').fill('7');
     await expect(use.locator('#movement-quantity-error')).toHaveText('Only 5 liter is in stock.');
     await use.getByLabel('Quantity').fill('4');

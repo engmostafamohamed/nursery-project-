@@ -13,3 +13,6 @@ analyze public.daily_reports;
 analyze public.invoices;
 analyze public.payment_attempts;
 analyze public.permissions;
+analyze public.inventory_movements;
+analyze public.kitchen_charges;
+analyze public.menu_dishes;

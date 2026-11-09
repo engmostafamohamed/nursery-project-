@@ -137,9 +137,10 @@ export function TBody({ children }: { children: ReactNode }) {
  * A row; with `onClick` the whole row opens something and works with Enter / Space too.
  * Links, buttons and fields inside the row keep their own behaviour.
  */
-export function Tr({ children, onClick, className }: { children: ReactNode; onClick?: () => void; className?: string }) {
+export function Tr({ children, onClick, className, 'data-testid': testId }: { children: ReactNode; onClick?: () => void; className?: string; 'data-testid'?: string }) {
   return (
     <tr
+      data-testid={testId}
       className={cn(
         'transition-colors hover:bg-surface-container-lowest',
         onClick && 'cursor-pointer outline-none focus-visible:bg-surface-container-lowest',

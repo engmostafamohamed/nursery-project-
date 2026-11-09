@@ -104,8 +104,10 @@ function main() {
   try {
     for (const file of files) {
       const sql = readFileSync(path.join(SEED_DIR, file), 'utf8');
+      // A slow file can ask for smaller batches with a "-- batch: n" line (never more than BATCH).
+      const size = Math.min(BATCH, Math.max(1, Number(sql.match(/^-- batch: (\d+)/m)?.[1] ?? BATCH)));
       const batches = sql.includes('{{branches}}')
-        ? Array.from({ length: Math.ceil(BRANCHES / BATCH) }, (_, i) => Array.from({ length: BATCH }, (_, j) => i * BATCH + j + 1).filter((n) => n <= BRANCHES))
+        ? Array.from({ length: Math.ceil(BRANCHES / size) }, (_, i) => Array.from({ length: size }, (_, j) => i * size + j + 1).filter((n) => n <= BRANCHES))
         : [null];
       const started = Date.now();
       for (const batch of batches) {
