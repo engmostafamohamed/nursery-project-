@@ -50,8 +50,29 @@ jobs:
           test -n "$SUPABASE_DB_PASSWORD" || { echo "::error::Missing secret SUPABASE_DB_PASSWORD in the '$TARGET_ENVIRONMENT' GitHub environment"; exit 1; }
           [[ "$SUPABASE_PROJECT_REF" =~ ^[a-z]{20}$ ]] || { echo "::error::'$SUPABASE_PROJECT_REF' is not a Supabase project ref"; exit 1; }
 
+      # The run's log needs a GitHub sign-in to read, but its annotations do not: say plainly which
+      # secret is wrong instead of failing inside `supabase link` with only "exit code 1".
+      - name: Check the access token
+        shell: bash
+        run: |
+          status=$(curl -s -o /dev/null -m 30 -w '%{http_code}' -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF")
+          case "$status" in
+            200) echo "The access token can read project $SUPABASE_PROJECT_REF." ;;
+            401) echo "::error::SUPABASE_ACCESS_TOKEN in the '$TARGET_ENVIRONMENT' GitHub environment is invalid, expired or revoked. Create a new token in Supabase (Account > Access Tokens) with the project and the Project Settings, API Keys and API Key Secrets permissions (Read), then update the secret."; exit 1 ;;
+            403) echo "::error::SUPABASE_ACCESS_TOKEN in the '$TARGET_ENVIRONMENT' GitHub environment cannot read project $SUPABASE_PROJECT_REF. Create a token scoped to this project with the Project Settings, API Keys and API Key Secrets permissions (Read)."; exit 1 ;;
+            404) echo "::error::Project $SUPABASE_PROJECT_REF is not visible to the account of SUPABASE_ACCESS_TOKEN."; exit 1 ;;
+            *) echo "::error::Supabase answered HTTP $status when checking SUPABASE_ACCESS_TOKEN; try the run again."; exit 1 ;;
+          esac
+
       - name: Link the project
-        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+        shell: bash
+        run: |
+          set -o pipefail
+          if ! supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD" 2>&1 | tee link.log; then
+            echo "::error::supabase link failed (a wrong SUPABASE_DB_PASSWORD shows as a password authentication error): $(tail -n 3 link.log | tr '\n' ' ')"
+            exit 1
+          fi
 
       - name: Preview pending migrations
         run: supabase db push --linked --dry-run
