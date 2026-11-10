@@ -21,6 +21,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { TableCard } from '@/components/ui/DataTable';
+import { Fact, FactList } from '@/components/ui/FactList';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StaffAbsencesPanel } from '@/features/staff-absence/StaffAbsencesPanel';
@@ -34,6 +36,7 @@ import { useStaffAttendanceMonth } from '@/hooks/useStaffAttendanceMonth';
 import { useStaffPayrollRecords } from '@/hooks/useStaffPayrollRecords';
 import { useStaffSchedules } from '@/hooks/useStaffSchedules';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { formatDay } from '@/lib/datetime';
 import { getNurseryCalendarDateString } from '@/lib/nurseryDay';
 
 const TABS = ['personal', 'classes', 'schedule', 'attendance', 'absences', 'documents', 'payroll'] as const;
@@ -113,12 +116,13 @@ export function AdminStaffProfilePage() {
     (isArabic ? roleData?.name_ar || roleData?.name_en : roleData?.name_en || roleData?.name_ar) ||
     t(`staff.departments.${String(selected.department ?? 'teaching')}`);
   const position = selected.position && selected.position !== '—' && selected.position !== roleLabel ? selected.position : null;
+  // Their place in each class shows in the header already, in the reader's language.
   const teamPerson = teams.data?.staff.find((s) => s.id === userId);
   const teamClasses = (teamPerson?.classes ?? []).flatMap((c) => {
     const cls = teams.data?.classes.find((k) => k.id === c.class_id);
     return cls ? [{ cls, role: c.role }] : [];
   });
-  const todayClock = (todayAttendance.data ?? []).find((r) => r.work_date === today) ?? null;
+  const todayClock = (todayAttendance.data?.days ?? []).find((r) => r.work_date === (todayAttendance.data?.today || today)) ?? null;
   const classHref = (classId: string) => `${base}/classes/${classId}?tab=team`;
 
   const nf = new Intl.NumberFormat(isArabic ? 'ar-EG' : 'en-GB', {
@@ -132,7 +136,7 @@ export function AdminStaffProfilePage() {
         name={{ ...nameLines, primary: name }}
         email={(u.email as string | null) ?? null}
         roleLabel={roleLabel}
-        position={position}
+        position={teamClasses.length ? null : position}
         active={String(u.status ?? 'active') === 'active'}
         awayToday={absences.summary.awayToday}
         todayClock={todayClock}
@@ -191,43 +195,31 @@ export function AdminStaffProfilePage() {
       ) : null}
 
       {tab === 'personal' ? (
-        <Card>
-          <CardContent className="grid gap-4 p-4 md:grid-cols-2">
-            <div>
-              <p className="text-xs text-on-surface-variant">{t('staff.profile.contact')}</p>
-              <p className="text-sm">{String(u.email ?? '—')}</p>
-              <p className="text-sm">{String(u.phone ?? '—')}</p>
-            </div>
-            <div>
-              <p className="text-xs text-on-surface-variant">{t('staff.profile.contract')}</p>
-              <p className="text-sm">{t(`staff.contractTypes.${String(selected.contract_type)}`)}</p>
-              <p className="text-sm">
-                {t('staff.hireDate')}: {String(selected.hire_date ?? '—')}
-              </p>
-            </div>
-            <div className="md:col-span-2">
-              <p className="text-xs text-on-surface-variant">{t('staff.address')}</p>
-              <p className="text-sm">{String(selected.address ?? '—')}</p>
-            </div>
-            <div>
-              <p className="text-xs text-on-surface-variant">{t('staff.nationalId')}</p>
-              <p className="text-sm">{String(selected.national_id ?? '—')}</p>
-            </div>
-            <div>
-              <p className="text-xs text-on-surface-variant">{t('staff.salary')}</p>
-              <p className="text-sm">
-                {selected.salary_amount != null
-                  ? t('invoice.egpAmount', { amount: nf.format(Number(selected.salary_amount)) })
-                  : '—'}
-              </p>
-            </div>
-            <div className="md:col-span-2">
-              <p className="text-xs text-on-surface-variant">{t('staff.emergencyName')}</p>
-              <p className="text-sm">{String(selected.emergency_contact_name ?? '—')}</p>
-              <p className="text-sm">{String(selected.emergency_contact_phone ?? '—')}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="grid gap-5 lg:grid-cols-2" data-testid="staff-personal">
+          <TableCard title={t('staff.profile.contact')}>
+            <FactList>
+              <Fact icon="call" label={t('staff.profile.phone')} ltr value={u.phone ? <a href={`tel:${String(u.phone)}`} className="hover:text-primary">{String(u.phone)}</a> : null} />
+              <Fact icon="mail" label={t('staff.profile.email')} ltr value={u.email ? <a href={`mailto:${String(u.email)}`} className="break-all hover:text-primary">{String(u.email)}</a> : null} />
+              <Fact icon="home" label={t('staff.address')} value={selected.address} />
+              <Fact icon="contact_emergency" label={t('staff.emergencyName')} value={selected.emergency_contact_name} />
+              <Fact icon="phone_in_talk" label={t('staff.emergencyPhone')} ltr value={selected.emergency_contact_phone} />
+            </FactList>
+          </TableCard>
+          <TableCard title={t('staff.profile.workTitle')}>
+            <FactList>
+              <Fact icon="apartment" label={t('staff.department')} value={t(`staff.departments.${String(selected.department ?? 'teaching')}`)} />
+              <Fact icon="work" label={t('staff.position')} value={selected.position && selected.position !== '—' ? selected.position : null} />
+              <Fact icon="contract" label={t('staff.contractType')} value={t(`staff.contractTypes.${String(selected.contract_type)}`)} />
+              <Fact icon="event" label={t('staff.hireDate')} value={selected.hire_date ? formatDay(String(selected.hire_date)) : null} />
+              <Fact icon="id_card" label={t('staff.nationalId')} ltr value={selected.national_id} />
+              <Fact
+                icon="payments"
+                label={t('staff.salary')}
+                value={selected.salary_amount != null ? t('invoice.egpAmount', { amount: nf.format(Number(selected.salary_amount)) }) : null}
+              />
+            </FactList>
+          </TableCard>
+        </div>
       ) : null}
 
       {tab === 'schedule' ? (
@@ -241,8 +233,8 @@ export function AdminStaffProfilePage() {
 
       {tab === 'attendance' ? (
         <div className="space-y-4">
-          <StaffAttendanceCalendar month={attMonth} onMonthChange={setAttMonth} rows={attQ.data ?? []} />
-          <StaffAttendanceHistory rows={attQ.data ?? []} month={attMonth} />
+          <StaffAttendanceCalendar month={attMonth} onMonthChange={setAttMonth} data={attQ.data} absences={absences.absences} />
+          <StaffAttendanceHistory rows={attQ.data?.days ?? []} month={attMonth} />
         </div>
       ) : null}
 

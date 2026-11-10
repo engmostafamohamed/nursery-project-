@@ -11,6 +11,7 @@ import { COVER_LOOK, REASON_ICON } from '@/features/staff-absence/absenceLook';
 import { coverStatus } from '@/features/staff-absence/staffAbsence';
 import { RecordStaffTimeDialog } from '@/features/staff-clock/RecordStaffTimeDialog';
 import type { BilingualNames } from '@/hooks/useBilingualNames';
+import { STAFF_LATE_AFTER_MINUTES } from '@/lib/staffMonth';
 import { cn, getUserInitials } from '@/lib/utils';
 
 import { CLOCK_LOOK, DUTY_LOOK } from './classLook';
@@ -153,7 +154,7 @@ function MemberRow({ member, names, format, schoolDay, dayOpen, href, onOpen, on
   const name = names.lines(member.nameAr, member.nameEn);
   const clock = clockState(member);
   const clockLook = CLOCK_LOOK[clock];
-  const late = (member.lateMinutes ?? 0) > 5;
+  const late = (member.lateMinutes ?? 0) > STAFF_LATE_AFTER_MINUTES;
   const clocked = clock === 'in' || clock === 'left';
 
   const clockLine =

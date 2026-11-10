@@ -4,9 +4,7 @@ import { DataTable, StatusPill, TableCard, TableEmpty, TablePagination, TBody, T
 import { usePagination } from '@/hooks/usePagination';
 import type { StaffAttendanceDayRow } from '@/hooks/useStaffAttendanceMonth';
 import { formatDay, formatTime } from '@/lib/datetime';
-
-/** Late when they came more than this many minutes after opening (the class page's rule too). */
-const LATE_AFTER_MINUTES = 5;
+import { STAFF_LATE_AFTER_MINUTES } from '@/lib/staffMonth';
 
 /**
  * A member of staff's days in the month, newest first: when they came and left, the hours, whether
@@ -37,7 +35,7 @@ export function StaffAttendanceHistory({ rows, month }: { rows: StaffAttendanceD
             {pager.pageItems.map((r) => {
               const checkIn = r.check_in_at ?? r.clock_in;
               const checkOut = r.check_out_at ?? r.clock_out;
-              const late = (r.late_minutes ?? 0) > LATE_AFTER_MINUTES;
+              const late = (r.late_minutes ?? 0) > STAFF_LATE_AFTER_MINUTES;
               return (
                 <Tr key={r.id} data-testid="staff-day-row">
                   <Td className="whitespace-nowrap font-medium text-on-surface">{formatDay(r.work_date, { weekday: 'short', day: 'numeric', month: 'short' })}</Td>

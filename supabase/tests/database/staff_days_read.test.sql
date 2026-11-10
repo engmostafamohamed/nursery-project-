@@ -1,6 +1,6 @@
 -- Database test · a member of staff's days, read for their page (get_staff_days): the admin reads
--- anyone's at the branch, including someone with no HR record, newest last with how late and who
--- recorded it; the person reads their own; another teacher, a parent and another branch's admin
+-- anyone's at the branch, including someone with no HR record, oldest first with how late and who
+-- recorded it, and the branch's school days in the range (a holiday is not one); the person reads their own; another teacher, a parent and another branch's admin
 -- cannot; the dates are checked.
 -- Rolled back.
 --
@@ -10,7 +10,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(8);
+select plan(11);
 
 insert into public.nurseries (id, name_ar, name_en, working_days, opens_at, closes_at) values
   ('00000000-0000-4000-9910-00000000000a', 'حضانة الأيام', 'Days Nursery', '["sun", "mon", "tue", "wed", "thu", "fri", "sat"]', '08:00', '17:00'),
@@ -33,6 +33,10 @@ update public.users u
   ) as v(id, role, name_en, nursery)
  where u.id = v.id::uuid;
 
+-- Three days ago is a holiday at the branch.
+insert into public.academic_calendars (nursery_id, year, holidays_json)
+values ('00000000-0000-4000-9910-00000000000a', extract(year from current_date - 3)::integer, jsonb_build_array((current_date - 3)::text));
+
 -- Two days for the nanny (no HR record, so no staff_id): one late and clocked by herself, one recorded by the admin.
 insert into public.staff_attendance (user_id, nursery_id, work_date, check_in_at, check_out_at, status, late_minutes, source, notes)
 values
@@ -52,20 +56,23 @@ $$;
 
 select pg_temp.act_as('00000000-0000-4000-9910-000000000a01');
 select set_config('t.days', public.get_staff_days('00000000-0000-4000-9910-000000000a03', current_date - 30, current_date)::text, true);
-select is(jsonb_array_length(current_setting('t.days')::jsonb), 2, 'the admin reads the nanny''s days, though she has no HR record');
+select is(jsonb_array_length(current_setting('t.days')::jsonb -> 'days'), 2, 'the admin reads the nanny''s days, though she has no HR record');
 select is(
-  (select string_agg(format('%s:%s:%s', d ->> 'status', d ->> 'late_minutes', d ->> 'source'), ' ') from jsonb_array_elements(current_setting('t.days')::jsonb) d),
+  (select string_agg(format('%s:%s:%s', d ->> 'status', d ->> 'late_minutes', d ->> 'source'), ' ') from jsonb_array_elements(current_setting('t.days')::jsonb -> 'days') d),
   'late:20:self present:0:admin',
   'oldest first, with how late and who recorded each'
 );
-select is(current_setting('t.days')::jsonb -> 1 ->> 'notes', 'Forgot her phone', 'with the admin''s note');
+select is(current_setting('t.days')::jsonb -> 'days' -> 1 ->> 'notes', 'Forgot her phone', 'with the admin''s note');
+select ok(not ((current_setting('t.days')::jsonb -> 'school_days') @> to_jsonb((current_date - 3)::text)), 'a holiday is not a school day');
+select ok((current_setting('t.days')::jsonb -> 'school_days') @> to_jsonb((current_date - 4)::text), 'the day before it is');
+select is(current_setting('t.days')::jsonb ->> 'today', public.nursery_today('00000000-0000-4000-9910-00000000000a')::text, 'with the branch''s today');
 select throws_ok(
   $$ select public.get_staff_days('00000000-0000-4000-9910-000000000a03', current_date, current_date - 1) $$,
   '22023', 'staff_clock_invalid', 'the dates are checked'
 );
 
 select pg_temp.act_as('00000000-0000-4000-9910-000000000a03');
-select is(jsonb_array_length(public.get_staff_days('00000000-0000-4000-9910-000000000a03', current_date - 30, current_date)), 2, 'she reads her own days');
+select is(jsonb_array_length(public.get_staff_days('00000000-0000-4000-9910-000000000a03', current_date - 30, current_date) -> 'days'), 2, 'she reads her own days');
 
 select pg_temp.act_as('00000000-0000-4000-9910-000000000a02');
 select throws_ok(

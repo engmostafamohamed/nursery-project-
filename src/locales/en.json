@@ -6274,6 +6274,7 @@
       "daysCount": "Days: {{count}}",
       "stillIn": "Still in",
       "noDays": "No days recorded in this month.",
+      "workTitle": "Work",
       "contact": "Contact",
       "email": "Email",
       "phone": "Phone",
@@ -6288,8 +6289,18 @@
       "stat": {
         "worked": "Days worked",
         "late": "Late arrivals",
-        "absent": "Absences (weekdays)",
-        "absentHint": "Weekdays in month minus days with attendance"
+        "away": "Days away (reported)",
+        "missing": "Days with no record",
+        "missingHint": "School days gone by with no clocking and no reported absence"
+      },
+      "states": {
+        "on_time": "On time",
+        "late": "Late",
+        "away": "Away (reported)",
+        "missing": "No record",
+        "waiting": "Not in yet today",
+        "upcoming": "Still to come",
+        "off": "Nursery closed"
       }
     },
     "payrollHistory": {
