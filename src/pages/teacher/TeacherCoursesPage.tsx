@@ -8,6 +8,7 @@ import { useAuthSession } from '@/hooks/useAuthSession';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useNurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
 import { useTeacherCourses, useTeacherCourseEnrollees } from '@/hooks/useTeacherCourses';
+import { CourseSessionsPanel } from '@/features/course-sessions/CourseSessionsPanel';
 
 const CATEGORY_COLORS: Record<string, string> = {
   sport: 'bg-blue-100 text-blue-900',
@@ -143,6 +144,10 @@ export function TeacherCoursesPage() {
                       {t('teacher.courses.rosterHeading')}
                     </p>
                     <RosterPanel courseId={course.id} />
+                    <p className="mb-2 mt-5 text-xs font-medium uppercase tracking-wide text-on-surface-variant">
+                      {t('teacher.courses.sessionsHeading')}
+                    </p>
+                    <CourseSessionsPanel courseId={course.id} />
                   </div>
                 ) : null}
               </div>

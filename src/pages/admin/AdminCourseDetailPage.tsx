@@ -22,6 +22,7 @@ import {
   type CourseEnrollmentRow,
   type CourseInvoiceRow,
 } from '@/hooks/useAdminCourseDetail';
+import { CourseSessionsPanel } from '@/features/course-sessions/CourseSessionsPanel';
 import { useNurseryChildrenPicker } from '@/hooks/useNurseryChildrenPicker';
 import { supabase } from '@/lib/supabase';
 
@@ -133,7 +134,7 @@ export function AdminCourseDetailPage() {
   const isAr = i18n.language.startsWith('ar');
   const queryClient = useQueryClient();
 
-  const [tab, setTab] = useState<'roster' | 'invoices'>('roster');
+  const [tab, setTab] = useState<'roster' | 'sessions' | 'invoices'>('roster');
   const [enrollModalOpen, setEnrollModalOpen] = useState(false);
   const [selectedChildId, setSelectedChildId] = useState('');
   const [enrolling, setEnrolling] = useState(false);
@@ -343,7 +344,7 @@ export function AdminCourseDetailPage() {
 
       {/* Tabs */}
       <div className="flex gap-2 border-b border-outline-variant">
-        {(['roster', 'invoices'] as const).map((tabKey) => (
+        {(['roster', 'sessions', 'invoices'] as const).map((tabKey) => (
           <button
             key={tabKey}
             type="button"
@@ -426,6 +427,9 @@ export function AdminCourseDetailPage() {
           ) : null}
         </div>
       ) : null}
+
+      {/* Sessions tab: cancelling a session (its time becomes extra time for the children who stay) */}
+      {tab === 'sessions' && courseId ? <CourseSessionsPanel courseId={courseId} /> : null}
 
       {/* Invoices tab */}
       {tab === 'invoices' ? (

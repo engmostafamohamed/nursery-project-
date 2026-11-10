@@ -3271,6 +3271,7 @@
       "detail": {
         "editCourse": "Edit course",
         "tabRoster": "Roster",
+        "tabSessions": "Sessions",
         "tabInvoices": "Invoices",
         "statsEnrolled": "{{count}} enrolled",
         "statsPendingInvoices": "{{count}} invoice(s) pending",
@@ -6071,6 +6072,7 @@
       "emptyTitle": "No courses assigned",
       "emptyDescription": "You have not been assigned to any courses yet.",
       "enrolledCount": "{{count}} students",
+      "sessionsHeading": "Sessions",
       "rosterHeading": "Enrolled students",
       "emptyRosterTitle": "No students enrolled",
       "emptyRosterDescription": "No students have been enrolled in this course yet."
@@ -8393,6 +8395,45 @@
       "rates_forbidden": "You need the class team permission to see the send rate."
     }
   },
+  "courseSessions": {
+    "hint": "A child’s course time is not charged as extra hours. If you cancel a session, the children who stay at the nursery during it are charged that time as extra hours, and their parents get a message at the end of the day with your reason.",
+    "emptyTitle": "No sessions in these weeks",
+    "emptyBody": "The course has no sessions from last week to four weeks ahead. Check its days, times and dates.",
+    "upcoming": "Coming sessions",
+    "pastWeek": "Last week",
+    "today": "Today",
+    "cancelledPill": "Cancelled",
+    "cancelledBy": "Cancelled by {{name}}",
+    "reason": "Reason",
+    "cancel": "Cancel session",
+    "restore": "Undo cancel",
+    "cancelTitle": "Cancel the session of {{date}}?",
+    "cancelBody": "The children who stay at the nursery during the session’s time are charged it as extra hours. Their parents get a message at the end of the day with this reason.",
+    "reasonHint": "Parents will read this reason.",
+    "reasonPlaceholder": "e.g. The course teacher is ill",
+    "reasonIssues": {
+      "required": "Write why the session is cancelled.",
+      "too_long": "Keep the reason to {{max}} characters or fewer."
+    },
+    "keep": "Keep the session",
+    "cancelConfirm": "Cancel the session",
+    "cancelDone": "The session is cancelled.",
+    "rebilled_one": "Extra hours were worked out again for 1 child who came that day.",
+    "rebilled_other": "Extra hours were worked out again for {{count}} children who came that day.",
+    "restoreTitle": "Undo the cancellation of {{date}}?",
+    "restoreBody": "The session’s time is covered by the course again, and any extra hours charged for it are taken back.",
+    "restoreDone": "The session is back on.",
+    "errors": {
+      "course_forbidden": "Only the nursery’s admins and the course’s teacher can change its sessions.",
+      "course_session_invalid_range": "These dates could not be read. Open the page again.",
+      "course_session_out_of_window": "Only sessions from the last 7 days up to 90 days ahead can be changed.",
+      "course_session_reason_required": "Write why the session is cancelled.",
+      "course_session_reason_too_long": "Keep the reason to 300 characters or fewer.",
+      "course_session_not_scheduled": "The course has no session on that day.",
+      "network": "We can’t reach the server. Check your internet connection and try again.",
+      "failed": "Something went wrong. Try again."
+    }
+  },
   "notificationTemplates": {
     "medication_due": {
       "title": "{{medicine}} for {{child}} at {{time}}",
@@ -8533,6 +8574,14 @@
     "attendance_checkin_cancelled": {
       "title": "Check-in cancelled",
       "body": "The check-in for {{child}} was cancelled because it was recorded by mistake."
+    },
+    "course_session_cancelled": {
+      "title": "{{course}} session cancelled",
+      "body": "{{child}}’s {{course}} session on {{date}} was cancelled. Reason: {{reason}}. The {{minutes}} minutes spent at the nursery instead were counted as extra hours. Extra hours that day: {{hours}}",
+      "segments": {
+        "covered": " ({{covered}} from package)",
+        "fee": " · Amount: {{fee}}"
+      }
     },
     "extra_hours_accruing": {
       "title": "Extra hours being charged",
