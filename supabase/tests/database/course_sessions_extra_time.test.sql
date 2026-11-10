@@ -1,10 +1,11 @@
 -- Database test · courses during extra hours. Closing time 14:00, extra time billed by the quarter
 -- hour from closing at 60 EGP an hour. Art runs 14:30–15:30 and Drama 15:00–16:00 every day.
--- A child's course time is not extra time (two courses at once count once); a cancelled session's
--- time is, the day is billed again when a session is cancelled or restored, and after the
--- nursery's end of the day the parents get one notice with the course and the reason. Only the
--- nursery's admins and the course's teacher manage sessions. The day tested is yesterday, plus
--- today for the end-of-day timing. Rolled back.
+-- A child's courses cover the time from closing until their last course ends (the wait before a
+-- course included); only the time after it is extra. A cancelled session covers nothing: the day is
+-- billed again, the families of a session still to come are told at once (and told again if it is
+-- back on), and after the nursery's end of the day the parents of a child whose extra time grew get
+-- one notice with the reason. Only the nursery's admins and the course's teacher manage sessions.
+-- The days tested are yesterday, today and tomorrow. Rolled back.
 --
 -- Run against the local database:   supabase test db
 begin;
@@ -12,14 +13,19 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(27);
+select plan(32);
 
 -- Yesterday in the nursery's time zone, and a moment of a day there.
 create function pg_temp.d() returns date language sql as $$ select (now() at time zone 'Africa/Cairo')::date - 1 $$;
 create function pg_temp.at(p_day date, p_time time) returns timestamptz language sql as $$ select (p_day + p_time) at time zone 'Africa/Cairo' $$;
 -- The day's charge as "(extra hours,fee)".
 create function pg_temp.charge(p_attendance uuid) returns text language sql as $$
-  select (extra_hours::numeric(6,2), extra_fee::numeric(8,2))::text from public.attendance_records where id = p_attendance
+  select (coalesce(extra_hours, 0)::numeric(6,2), coalesce(extra_fee, 0)::numeric(8,2))::text from public.attendance_records where id = p_attendance
+$$;
+-- The day's charge and its extra-hours invoice.
+create function pg_temp.billed(p_attendance uuid) returns text language sql as $$
+  select pg_temp.charge(p_attendance) || ' ' || coalesce((select i.amount::numeric(8,2)::text from public.invoices i where i.id = a.late_charge_invoice_id), 'no invoice')
+    from public.attendance_records a where a.id = p_attendance
 $$;
 -- What the calculation gives for a day as of its checkout: "(late minutes,hours)".
 create function pg_temp.calc(p_attendance uuid) returns text language sql as $$
@@ -29,6 +35,12 @@ create function pg_temp.calc(p_attendance uuid) returns text language sql as $$
     join public.nursery_settings ns on ns.nursery_id = ch.nursery_id
    cross join lateral public.attendance_compute_extra_time(a, ns, a.check_out) c
    where a.id = p_attendance
+$$;
+-- The notices of a template for a day, as "count | course | reason".
+create function pg_temp.notices(p_template text, p_day date) returns text language sql as $$
+  select format('%s | %s | %s', count(*), min(n.template_params -> 'course' ->> 'en'), coalesce(min(n.template_params ->> 'reason'), '-'))
+    from public.notifications n
+   where n.template_key = p_template and n.nursery_id = '00000000-0000-4000-9400-00000000000a' and n.template_params ->> 'date' = p_day::text
 $$;
 create function pg_temp.act_as(p_user uuid) returns void language plpgsql as $$
 begin
@@ -67,12 +79,14 @@ insert into public.children (id, nursery_id, full_name_ar, full_name_en, dob, st
   ('00000000-0000-4000-9400-0000000000c1', '00000000-0000-4000-9400-00000000000a', 'ليلى', 'Laila', '2022-01-01', 'active', '2026-01-01'),
   ('00000000-0000-4000-9400-0000000000c2', '00000000-0000-4000-9400-00000000000a', 'عمر', 'Omar', '2022-01-01', 'active', '2026-01-01'),
   ('00000000-0000-4000-9400-0000000000c3', '00000000-0000-4000-9400-00000000000a', 'سارة', 'Sara', '2022-01-01', 'active', '2026-01-01'),
-  ('00000000-0000-4000-9400-0000000000c4', '00000000-0000-4000-9400-00000000000a', 'نور', 'Nour', '2022-01-01', 'active', '2026-01-01');
+  ('00000000-0000-4000-9400-0000000000c4', '00000000-0000-4000-9400-00000000000a', 'نور', 'Nour', '2022-01-01', 'active', '2026-01-01'),
+  ('00000000-0000-4000-9400-0000000000c5', '00000000-0000-4000-9400-00000000000a', 'يارا', 'Yara', '2022-01-01', 'active', '2026-01-01');
 insert into public.parent_children (parent_id, child_id, is_primary) values
   ('00000000-0000-4000-9400-000000000a04', '00000000-0000-4000-9400-0000000000c1', true),
   ('00000000-0000-4000-9400-000000000a05', '00000000-0000-4000-9400-0000000000c2', true),
   ('00000000-0000-4000-9400-000000000a04', '00000000-0000-4000-9400-0000000000c3', true),
-  ('00000000-0000-4000-9400-000000000a04', '00000000-0000-4000-9400-0000000000c4', true);
+  ('00000000-0000-4000-9400-000000000a04', '00000000-0000-4000-9400-0000000000c4', true),
+  ('00000000-0000-4000-9400-000000000a05', '00000000-0000-4000-9400-0000000000c5', true);
 
 insert into public.courses (id, nursery_id, title_ar, title_en, schedule_days, schedule_time_start, schedule_time_end, status, teacher_user_id) values
   ('00000000-0000-4000-9400-0000000000e1', '00000000-0000-4000-9400-00000000000a', 'رسم', 'Art',
@@ -90,34 +104,40 @@ insert into public.course_enrollments (course_id, child_id, status, enrolled_at)
   ('00000000-0000-4000-9400-0000000000e1', '00000000-0000-4000-9400-0000000000c1', 'active', now() - interval '30 days'),
   ('00000000-0000-4000-9400-0000000000e2', '00000000-0000-4000-9400-0000000000c1', 'active', now() - interval '30 days'),
   ('00000000-0000-4000-9400-0000000000e1', '00000000-0000-4000-9400-0000000000c3', 'active', now() - interval '30 days'),
-  ('00000000-0000-4000-9400-0000000000e1', '00000000-0000-4000-9400-0000000000c4', 'active', now() - interval '30 days');
+  ('00000000-0000-4000-9400-0000000000e1', '00000000-0000-4000-9400-0000000000c4', 'active', now() - interval '30 days'),
+  ('00000000-0000-4000-9400-0000000000e2', '00000000-0000-4000-9400-0000000000c5', 'active', now() - interval '30 days');
 
--- Yesterday: Laila and Omar picked up at 16:15, Sara at 14:10. Today: Nour picked up at 16:15.
+-- Yesterday: Laila (Art and Drama) and Omar (no course) picked up at 16:15, Sara (Art) at 15:45,
+-- Yara (Drama) at 14:40, still waiting for it. Today: Nour (Art) picked up at 16:15.
 insert into public.attendance_records (id, child_id, attendance_date, check_in, check_out) values
   ('00000000-0000-4000-9400-0000000007a1', '00000000-0000-4000-9400-0000000000c1', pg_temp.d(), pg_temp.at(pg_temp.d(), '08:00'), pg_temp.at(pg_temp.d(), '16:15')),
   ('00000000-0000-4000-9400-0000000007a2', '00000000-0000-4000-9400-0000000000c2', pg_temp.d(), pg_temp.at(pg_temp.d(), '08:00'), pg_temp.at(pg_temp.d(), '16:15')),
-  ('00000000-0000-4000-9400-0000000007a3', '00000000-0000-4000-9400-0000000000c3', pg_temp.d(), pg_temp.at(pg_temp.d(), '08:00'), pg_temp.at(pg_temp.d(), '14:10')),
+  ('00000000-0000-4000-9400-0000000007a3', '00000000-0000-4000-9400-0000000000c3', pg_temp.d(), pg_temp.at(pg_temp.d(), '08:00'), pg_temp.at(pg_temp.d(), '15:45')),
+  ('00000000-0000-4000-9400-0000000007a5', '00000000-0000-4000-9400-0000000000c5', pg_temp.d(), pg_temp.at(pg_temp.d(), '08:00'), pg_temp.at(pg_temp.d(), '14:40')),
   ('00000000-0000-4000-9400-0000000007a4', '00000000-0000-4000-9400-0000000000c4', pg_temp.d() + 1, pg_temp.at(pg_temp.d() + 1, '08:00'), pg_temp.at(pg_temp.d() + 1, '16:15'));
 
 -- ---------------------------------------------------------------------------------------------
--- Course time is not extra time
+-- The courses and the wait before them are not extra time
 select is(pg_temp.calc('00000000-0000-4000-9400-0000000007a2'), '(135,2.25)',
   'a child in no course: 14:00 to 16:15 is 2 h 15 of extra time');
-select is(pg_temp.calc('00000000-0000-4000-9400-0000000007a1'), '(45,0.75)',
-  'a child in Art and Drama: 14:30 to 16:00 is course time (counted once), so 45 minutes are extra time');
+select is(pg_temp.calc('00000000-0000-4000-9400-0000000007a1'), '(15,0.25)',
+  'a child in Art and Drama: 14:00 until Drama ends at 16:00 is covered (the wait and both courses), so 15 minutes are extra');
+select is(pg_temp.calc('00000000-0000-4000-9400-0000000007a5'), '(0,0.00)',
+  'a child picked up at 14:40 while waiting for Drama pays nothing for the wait');
 select is(
   (select public.course_runs_on(c, pg_temp.d())::text from public.courses c where c.id = '00000000-0000-4000-9400-0000000000e5'),
   'false',
-  'a course whose time cannot be read has no sessions (nothing is taken off by mistake)'
+  'a course whose time cannot be read has no sessions (nothing is covered by mistake)'
 );
 
 -- Each child picked up and billed.
 select set_config('test.billed', (select string_agg(public.apply_attendance_late_charge(a.id, a.check_out, 'checkout', true)::text, ',')
-  from public.attendance_records a where a.id in ('00000000-0000-4000-9400-0000000007a1', '00000000-0000-4000-9400-0000000007a2', '00000000-0000-4000-9400-0000000007a3')), true);
+  from public.attendance_records a where a.attendance_date = pg_temp.d() and a.child_id::text like '00000000-0000-4000-9400-%'), true);
 select is(
-  pg_temp.charge('00000000-0000-4000-9400-0000000007a1') || pg_temp.charge('00000000-0000-4000-9400-0000000007a2') || pg_temp.charge('00000000-0000-4000-9400-0000000007a3'),
-  '(0.75,45.00)(2.25,135.00)(0.25,15.00)',
-  'at pickup Laila pays for 45 minutes, Omar for 2 h 15, Sara (gone before her course) for 10 minutes rounded to a quarter'
+  pg_temp.charge('00000000-0000-4000-9400-0000000007a1') || pg_temp.charge('00000000-0000-4000-9400-0000000007a2')
+  || pg_temp.charge('00000000-0000-4000-9400-0000000007a3') || pg_temp.charge('00000000-0000-4000-9400-0000000007a5'),
+  '(0.25,15.00)(2.25,135.00)(0.25,15.00)(0.00,0.00)',
+  'at pickup: Laila 15 minutes, Omar 2 h 15, Sara the 15 minutes after Art, Yara nothing'
 );
 
 -- ---------------------------------------------------------------------------------------------
@@ -158,21 +178,16 @@ select throws_ok(
 -- The Art teacher cancels yesterday's session after the fact.
 select pg_temp.act_as('00000000-0000-4000-9400-000000000a02');
 select is(
-  (select format('%s / %s', r ->> 'reason', r ->> 'rebilled')
+  (select format('%s / %s / %s', r ->> 'reason', r ->> 'rebilled', r ->> 'notified')
      from (select public.cancel_course_session('00000000-0000-4000-9400-0000000000e1', pg_temp.d(), '  The teacher is sick  ') r) x),
-  'The teacher is sick / 2',
-  'the course''s teacher cancels a session with its reason; the day of its two children who came is billed again'
+  'The teacher is sick / 2 / 0',
+  'the course''s teacher cancels a past session with its reason: its two children who came are billed again; nobody is told at once'
 );
 reset role;
-select is(
-  pg_temp.charge('00000000-0000-4000-9400-0000000007a1') || ' ' ||
-  (select i.amount::numeric(8,2)::text from public.invoices i join public.attendance_records a on a.late_charge_invoice_id = i.id
-    where a.id = '00000000-0000-4000-9400-0000000007a1'),
-  '(1.25,75.00) 75.00',
-  'Art''s time is extra time now: Laila pays for 1 h 15 (Drama still covers 15:00–16:00), and her invoice grows with it'
-);
-select is(pg_temp.charge('00000000-0000-4000-9400-0000000007a3'), '(0.25,15.00)',
-  'Sara, who went home before Art, pays the same');
+select is(pg_temp.billed('00000000-0000-4000-9400-0000000007a3'), '(1.75,105.00) 105.00',
+  'Sara had no other course: 14:00 to 15:45 is extra time now, and her invoice grows with it');
+select is(pg_temp.charge('00000000-0000-4000-9400-0000000007a1'), '(0.25,15.00)',
+  'Laila pays the same: Drama still covers 14:00 to 16:00');
 
 select pg_temp.act_as('00000000-0000-4000-9400-000000000a02');
 select is(
@@ -185,34 +200,29 @@ select is(
 -- ---------------------------------------------------------------------------------------------
 -- The end-of-day notice
 reset role;
-select is(public.run_course_cancellation_notices(), 1, 'after the day: one notice (Laila); Sara''s extra time had nothing to do with Art');
+select is(public.run_course_cancellation_notices(), 1, 'after the day: one notice (Sara); Laila''s extra time did not change');
 select is(
   (select format('%s|%s|%s|%s|%s|%s|%s|%s', (n.user_id = '00000000-0000-4000-9400-000000000a04')::text, p -> 'course' ->> 'en', p ->> 'reason', p ->> 'minutes',
                  p ->> 'hours', p ->> 'fee', p ->> 'date', p -> 'segments')
      from public.notifications n cross join lateral (select n.template_params as p) x
     where n.template_key = 'course_session_cancelled' and n.nursery_id = '00000000-0000-4000-9400-00000000000a'),
-  format('true|Art|The teacher is sick|30|1.25|75.00|%s|["fee"]', pg_temp.d()),
-  'Laila''s mother is told the course, the reason, the 30 minutes no course covered, and the day''s extra time and fee'
+  format('true|Art|The teacher is sick|90|1.75|105.00|%s|["fee"]', pg_temp.d()),
+  'Sara''s mother is told the course, the reason, the 90 minutes Art would have covered, and the day''s extra time and fee'
 );
 select is(public.run_course_cancellation_notices(), 0, 'each child and day is told once');
 
 -- Undoing the cancellation bills the day again, with less extra time.
 select pg_temp.act_as('00000000-0000-4000-9400-000000000a01');
 select is(
-  (public.restore_course_session('00000000-0000-4000-9400-0000000000e1', pg_temp.d()) ->> 'rebilled'),
-  '2',
-  'the admin restores the session'
+  (select format('%s / %s', r ->> 'rebilled', r ->> 'notified') from (select public.restore_course_session('00000000-0000-4000-9400-0000000000e1', pg_temp.d()) r) x),
+  '2 / 0',
+  'the admin restores the past session'
 );
 reset role;
-select is(
-  pg_temp.charge('00000000-0000-4000-9400-0000000007a1') || ' ' ||
-  (select i.amount::numeric(8,2)::text from public.invoices i join public.attendance_records a on a.late_charge_invoice_id = i.id
-    where a.id = '00000000-0000-4000-9400-0000000007a1'),
-  '(0.75,45.00) 45.00',
-  'Laila is back to 45 minutes, and the unpaid invoice goes down again'
-);
+select is(pg_temp.billed('00000000-0000-4000-9400-0000000007a3'), '(0.25,15.00) 15.00',
+  'Sara is back to 15 minutes, and the unpaid invoice goes down again');
 
--- An admin's correction still bills the corrected day (now through the shared re-billing).
+-- An admin's correction still bills the corrected day (through the shared re-billing).
 select pg_temp.act_as('00000000-0000-4000-9400-000000000a01');
 select lives_ok(
   format($$ select public.admin_correct_attendance('00000000-0000-4000-9400-0000000007a2', %L, %L, 'Picked up at three') $$,
@@ -223,40 +233,61 @@ reset role;
 select is(pg_temp.charge('00000000-0000-4000-9400-0000000007a2'), '(1.00,60.00)', 'and Omar pays for one hour');
 
 -- ---------------------------------------------------------------------------------------------
--- Today: the notice waits for the nursery's end of the day
+-- A session still to come: the families are told at once, and again if it is back on
 select pg_temp.act_as('00000000-0000-4000-9400-000000000a01');
-select set_config('test.today', public.cancel_course_session('00000000-0000-4000-9400-0000000000e1', pg_temp.d() + 1, 'Room is being painted')::text, true);
-reset role;
-update public.nursery_settings set end_of_day_checklist_time = '23:59:59' where nursery_id = '00000000-0000-4000-9400-00000000000a';
-select is(public.run_course_cancellation_notices(), 0, 'today''s cancellation is not told before the end of the day');
-update public.nursery_settings set end_of_day_checklist_time = '00:00' where nursery_id = '00000000-0000-4000-9400-00000000000a';
-select is(public.run_course_cancellation_notices(), 1, 'and is once the end of the day has come and the child has gone home');
 select is(
-  (select format('%s|%s', n.template_params ->> 'reason', n.template_params ->> 'date') from public.notifications n
-    where n.template_key = 'course_session_cancelled' and n.template_params ->> 'date' = (pg_temp.d() + 1)::text),
-  format('Room is being painted|%s', pg_temp.d() + 1),
-  'with today''s reason'
+  (select format('%s / %s', r ->> 'rebilled', r ->> 'notified')
+     from (select public.cancel_course_session('00000000-0000-4000-9400-0000000000e1', pg_temp.d() + 2, 'Trip to the zoo') r) x),
+  '0 / 3',
+  'cancelling tomorrow''s Art tells the parents of its three children at once'
+);
+reset role;
+select is(pg_temp.notices('course_session_cancelled_ahead', pg_temp.d() + 2), '3 | Art | Trip to the zoo',
+  'with the course and the reason (and the day and time)');
+select pg_temp.act_as('00000000-0000-4000-9400-000000000a01');
+select is(
+  (public.cancel_course_session('00000000-0000-4000-9400-0000000000e1', pg_temp.d() + 2, 'Trip to the zoo (bus booked)') ->> 'notified'),
+  '0',
+  'changing the reason does not tell the families twice'
+);
+select is(
+  (public.restore_course_session('00000000-0000-4000-9400-0000000000e1', pg_temp.d() + 2) ->> 'notified') || ' / ' ||
+  pg_temp.notices('course_session_restored', pg_temp.d() + 2),
+  '3 / 3 | Art | -',
+  'undoing it tells them the session is back on'
 );
 
 -- ---------------------------------------------------------------------------------------------
--- Before opening: a morning course is not early-arrival time
+-- Today: the end-of-day notice waits for the nursery's end of the day
+select set_config('test.today', public.cancel_course_session('00000000-0000-4000-9400-0000000000e1', pg_temp.d() + 1, 'Room is being painted')::text, true);
+reset role;
+update public.nursery_settings set end_of_day_checklist_time = '23:59:59' where nursery_id = '00000000-0000-4000-9400-00000000000a';
+select is(public.run_course_cancellation_notices(), 0, 'today''s cancellation is not told as extra time before the end of the day');
+update public.nursery_settings set end_of_day_checklist_time = '00:00' where nursery_id = '00000000-0000-4000-9400-00000000000a';
+select is(public.run_course_cancellation_notices(), 1, 'and is once the end of the day has come and the child has gone home');
+select is(pg_temp.notices('course_session_cancelled', pg_temp.d() + 1), '1 | Art | Room is being painted', 'with today''s reason');
+
+-- ---------------------------------------------------------------------------------------------
+-- Before opening: a morning course covers the whole early arrival
 update public.nursery_settings set early_arrival_billing_enabled = true where nursery_id = '00000000-0000-4000-9400-00000000000a';
 insert into public.course_enrollments (course_id, child_id, status, enrolled_at)
 values ('00000000-0000-4000-9400-0000000000e4', '00000000-0000-4000-9400-0000000000c2', 'active', now() - interval '30 days');
-update public.attendance_records set check_in = pg_temp.at(pg_temp.d(), '07:00'), early_minutes = 60 where id = '00000000-0000-4000-9400-0000000007a2';
-select is(pg_temp.calc('00000000-0000-4000-9400-0000000007a2'), '(60,1.25)',
-  'Omar came at 07:00 for Quran (07:00–07:45): only 15 minutes before opening are extra, plus the hour after closing');
+update public.attendance_records set check_in = pg_temp.at(pg_temp.d(), '06:30'), early_minutes = 90 where id = '00000000-0000-4000-9400-0000000007a2';
+select is(pg_temp.calc('00000000-0000-4000-9400-0000000007a2'), '(60,1.00)',
+  'Omar came at 06:30 for Quran (07:00–07:45): the wait and the course before opening are covered; only the hour after closing is extra');
 
 -- ---------------------------------------------------------------------------------------------
 select ok(
   not has_function_privilege('authenticated', 'public.attendance_rebill_late_charge(uuid)', 'execute')
-  and not has_function_privilege('authenticated', 'public.child_course_minutes(uuid, date, timestamptz, timestamptz, boolean)', 'execute')
+  and not has_function_privilege('authenticated', 'public.course_cover_minutes(uuid, date, timestamptz, timestamptz, timestamptz, timestamptz, boolean)', 'execute')
+  and not has_function_privilege('authenticated', 'public.course_session_tell_families(public.courses, date, text, text)', 'execute')
   and not has_function_privilege('authenticated', 'public.course_session_rebill(uuid, date)', 'execute')
   and not has_function_privilege('authenticated', 'public.run_course_cancellation_notices()', 'execute')
   and not has_table_privilege('authenticated', 'public.course_session_cancellations', 'select')
   and has_function_privilege('authenticated', 'public.cancel_course_session(uuid, date, text)', 'execute')
-  and not has_function_privilege('anon', 'public.get_course_sessions(uuid, date, date)', 'execute'),
-  'signed-in users reach sessions only through the three course functions; the billing parts are not callable'
+  and not has_function_privilege('anon', 'public.get_course_sessions(uuid, date, date)', 'execute')
+  and to_regprocedure('public.child_course_minutes(uuid, date, timestamptz, timestamptz, boolean)') is null,
+  'signed-in users reach sessions only through the three course functions; the billing and notice parts are not callable'
 );
 
 select * from finish();

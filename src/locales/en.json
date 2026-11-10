@@ -8396,7 +8396,7 @@
     }
   },
   "courseSessions": {
-    "hint": "A child’s course time is not charged as extra hours. If you cancel a session, the children who stay at the nursery during it are charged that time as extra hours, and their parents get a message at the end of the day with your reason.",
+    "hint": "A child’s course time, and the wait before it, is not charged as extra hours. If you cancel a session still to come, its families are told at once; the children who stay at the nursery are charged the time the course would have covered as extra hours, and their parents get a message at the end of the day with your reason.",
     "emptyTitle": "No sessions in these weeks",
     "emptyBody": "The course has no sessions from last week to four weeks ahead. Check its days, times and dates.",
     "upcoming": "Coming sessions",
@@ -8408,7 +8408,7 @@
     "cancel": "Cancel session",
     "restore": "Undo cancel",
     "cancelTitle": "Cancel the session of {{date}}?",
-    "cancelBody": "The children who stay at the nursery during the session’s time are charged it as extra hours. Their parents get a message at the end of the day with this reason.",
+    "cancelBody": "If the session is still to come, the families of its children are told now, with this reason. The children who stay at the nursery are charged the time the course would have covered as extra hours, and their parents get a message about it at the end of the day.",
     "reasonHint": "Parents will read this reason.",
     "reasonPlaceholder": "e.g. The course teacher is ill",
     "reasonIssues": {
@@ -8420,8 +8420,10 @@
     "cancelDone": "The session is cancelled.",
     "rebilled_one": "Extra hours were worked out again for 1 child who came that day.",
     "rebilled_other": "Extra hours were worked out again for {{count}} children who came that day.",
+    "notified_one": "The parents of 1 child were told.",
+    "notified_other": "The parents of {{count}} children were told.",
     "restoreTitle": "Undo the cancellation of {{date}}?",
-    "restoreBody": "The session’s time is covered by the course again, and any extra hours charged for it are taken back.",
+    "restoreBody": "The session’s time, and the wait before it, is covered by the course again; any extra hours charged for it are taken back, and if the session is still to come its families are told it is back on.",
     "restoreDone": "The session is back on.",
     "errors": {
       "course_forbidden": "Only the nursery’s admins and the course’s teacher can change its sessions.",
@@ -8582,6 +8584,14 @@
         "covered": " ({{covered}} from package)",
         "fee": " · Amount: {{fee}}"
       }
+    },
+    "course_session_cancelled_ahead": {
+      "title": "{{course}} session cancelled",
+      "body": "{{child}}’s {{course}} session on {{date}} ({{start_time}}–{{end_time}}) is cancelled. Reason: {{reason}}. If {{child}} stays at the nursery during that time, it counts as extra hours."
+    },
+    "course_session_restored": {
+      "title": "{{course}} session is back on",
+      "body": "{{child}}’s {{course}} session on {{date}} ({{start_time}}–{{end_time}}) will take place as planned."
     },
     "extra_hours_accruing": {
       "title": "Extra hours being charged",

@@ -33,6 +33,17 @@ export type CourseSessions = {
   sessions: CourseSession[];
 };
 
+/** What cancelling or restoring did beyond the session: days billed again, children's families told. */
+export type SessionChange = { rebilled: number; notified: number };
+
+/** The notes to show after a change, each with its count (families told first). */
+export function changeNotes(change: SessionChange): Array<{ key: 'courseSessions.notified' | 'courseSessions.rebilled'; count: number }> {
+  return [
+    ...(change.notified > 0 ? [{ key: 'courseSessions.notified' as const, count: change.notified }] : []),
+    ...(change.rebilled > 0 ? [{ key: 'courseSessions.rebilled' as const, count: change.rebilled }] : []),
+  ];
+}
+
 export type ReasonIssue = 'required' | 'too_long';
 
 export function reasonIssue(reason: string): ReasonIssue | null {

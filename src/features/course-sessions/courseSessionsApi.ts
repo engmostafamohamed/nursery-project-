@@ -2,7 +2,7 @@ import { errorTextKey } from '@/lib/errorCode';
 import { count, day, list, obj, text, textOrNull, type JsonRecord } from '@/lib/jsonRead';
 import { supabase } from '@/lib/supabase';
 
-import type { CourseSessions, NamePair } from './courseSessions';
+import type { CourseSessions, NamePair, SessionChange } from './courseSessions';
 
 /*
  * A course's sessions through get_course_sessions, cancel_course_session and
@@ -36,8 +36,8 @@ export async function fetchCourseSessions(courseId: string, from: string, to: st
   return toCourseSessions(obj(data));
 }
 
-/** How many children's days were billed again. */
-export type SessionChange = { rebilled: number };
+/** What a cancel or restore did beyond the session (cancel_course_session / restore_course_session). */
+export const toSessionChange = (data: unknown): SessionChange => ({ rebilled: count(obj(data).rebilled), notified: count(obj(data).notified) });
 
 export async function cancelCourseSession(input: { courseId: string; date: string; reason: string }): Promise<SessionChange> {
   const { data, error } = await supabase.rpc('cancel_course_session' as never, {
@@ -46,13 +46,13 @@ export async function cancelCourseSession(input: { courseId: string; date: strin
     p_reason: input.reason.trim(),
   } as never);
   if (error) throw error;
-  return { rebilled: count(obj(data).rebilled) };
+  return toSessionChange(data);
 }
 
 export async function restoreCourseSession(input: { courseId: string; date: string }): Promise<SessionChange> {
   const { data, error } = await supabase.rpc('restore_course_session' as never, { p_course_id: input.courseId, p_day: input.date } as never);
   if (error) throw error;
-  return { rebilled: count(obj(data).rebilled) };
+  return toSessionChange(data);
 }
 
 export const COURSE_SESSION_ERROR_CODES = [

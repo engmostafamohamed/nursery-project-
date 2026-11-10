@@ -30,6 +30,7 @@ describe('course session texts', () => {
       ...['required', 'too_long'].map((issue) => `courseSessions.reasonIssues.${issue}`),
       ...['Roster', 'Sessions', 'Invoices'].map((tab) => `admin.courses.detail.tab${tab}`),
       ...['title', 'body', 'segments.covered', 'segments.fee'].map((part) => `notificationTemplates.course_session_cancelled.${part}`),
+      ...['course_session_cancelled_ahead', 'course_session_restored'].flatMap((key) => [`notificationTemplates.${key}.title`, `notificationTemplates.${key}.body`]),
     ])).toEqual([]);
   });
 
@@ -43,8 +44,8 @@ describe('course session texts', () => {
     expect(missingTexts(keys)).toEqual([]);
   });
 
-  it('the count has every Arabic plural form', () => {
-    expect(missingArabicPlurals(['courseSessions.rebilled'])).toEqual([]);
+  it('the counts have every Arabic plural form', () => {
+    expect(missingArabicPlurals(['courseSessions.rebilled', 'courseSessions.notified'])).toEqual([]);
   });
 
   it('the parents’ end-of-day notice names the course, the day, the reason and the extra time', () => {
@@ -59,5 +60,27 @@ describe('course session texts', () => {
     expect(ar.body).toContain('السبب: The teacher is sick');
     expect(ar.body).toContain('ليلى');
     expect(ar.body).toContain('المبلغ');
+  });
+
+  it('the families are told about a session still to come with its day, time and reason, and when it is back on', () => {
+    const params = {
+      child: { ar: 'ليلى', en: 'Laila' },
+      course: { ar: 'رسم', en: 'Art' },
+      reason: 'Trip to the zoo',
+      date: '2026-11-12',
+      start_time: '2026-11-12T12:30:00Z',
+      end_time: '2026-11-12T13:30:00Z',
+      tz: 'Africa/Cairo',
+    };
+    const cancelled = notificationText({ template_key: 'course_session_cancelled_ahead', template_params: params }, 'en');
+    expect(cancelled.title).toBe('Art session cancelled');
+    expect(cancelled.body).toContain('Laila’s Art session on 12 Nov 2026');
+    expect(cancelled.body).toMatch(/2:30.*3:30/); // 14:30–15:30 in Cairo
+    expect(cancelled.body).toContain('Reason: Trip to the zoo.');
+    expect(notificationText({ template_key: 'course_session_restored', template_params: params }, 'en').title).toBe('Art session is back on');
+
+    const ar = notificationText({ template_key: 'course_session_cancelled_ahead', template_params: params }, 'ar');
+    expect(ar.title).toBe('إلغاء حصة رسم');
+    expect(ar.body).toContain('السبب: Trip to the zoo');
   });
 });

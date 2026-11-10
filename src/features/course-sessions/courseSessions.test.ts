@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { canChange, listRange, reasonIssue, REASON_MAX, sessionTime, splitSessions, type CourseSession } from './courseSessions';
+import { canChange, changeNotes, listRange, reasonIssue, REASON_MAX, sessionTime, splitSessions, type CourseSession } from './courseSessions';
 
 const session = (date: string, patch: Partial<CourseSession> = {}): CourseSession => ({
   date, cancelled: false, reason: null, cancelledAt: null, cancelledBy: null, ...patch,
@@ -20,6 +20,17 @@ describe('cancelling a session', () => {
     expect(canChange('2026-11-03', window)).toBe(true);
     expect(canChange('2027-02-08', window)).toBe(true);
     expect(canChange('2027-02-09', window)).toBe(false);
+  });
+});
+
+describe('after a cancel or restore', () => {
+  it('says how many children’s families were told, then how many days were billed again, leaving out what did not happen', () => {
+    expect(changeNotes({ rebilled: 2, notified: 26 })).toEqual([
+      { key: 'courseSessions.notified', count: 26 },
+      { key: 'courseSessions.rebilled', count: 2 },
+    ]);
+    expect(changeNotes({ rebilled: 3, notified: 0 })).toEqual([{ key: 'courseSessions.rebilled', count: 3 }]);
+    expect(changeNotes({ rebilled: 0, notified: 0 })).toEqual([]);
   });
 });
 

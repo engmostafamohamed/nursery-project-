@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -13,11 +12,13 @@ import { cn } from '@/lib/utils';
 
 import { REASON_MAX, reasonIssue } from './courseSessions';
 import { courseSessionErrorKey } from './courseSessionsApi';
+import { toastSessionChange } from './sessionChangeToast';
 import type { useCourseSessionChanges } from './useCourseSessions';
 
 /**
- * Cancelling one session, always with a reason: the children who stay at the nursery during it are
- * charged that time as extra time, and their parents read the reason in the end-of-day notice.
+ * Cancelling one session, always with a reason: the families of a session still to come are told at
+ * once; the children who stay at the nursery are charged the time it would have covered as extra
+ * time, and their parents read the reason in the end-of-day notice.
  */
 export function CancelSessionDialog({ date, cancel, onClose }: {
   date: string;
@@ -36,8 +37,7 @@ export function CancelSessionDialog({ date, cancel, onClose }: {
     if (issue || cancel.isPending) return;
     setProblem(null);
     try {
-      const { rebilled } = await cancel.mutateAsync({ date, reason });
-      toast.success(t('courseSessions.cancelDone'), rebilled ? { description: t('courseSessions.rebilled', { count: rebilled }) } : undefined);
+      toastSessionChange(t, t('courseSessions.cancelDone'), await cancel.mutateAsync({ date, reason }));
       onClose();
     } catch (error) {
       setProblem(t(courseSessionErrorKey(error)));

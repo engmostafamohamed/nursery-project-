@@ -13,6 +13,7 @@ import { CancelSessionDialog } from './CancelSessionDialog';
 import { canChange, sessionTime, splitSessions, type CourseSession } from './courseSessions';
 import { courseSessionErrorKey } from './courseSessionsApi';
 import { CourseSessionRow } from './CourseSessionRow';
+import { toastSessionChange } from './sessionChangeToast';
 import { useCourseSessionChanges, useCourseSessions } from './useCourseSessions';
 
 /**
@@ -45,8 +46,7 @@ export function CourseSessionsPanel({ courseId }: { courseId: string }) {
     });
     if (!ok) return;
     try {
-      const { rebilled } = await changes.restore.mutateAsync(session.date);
-      toast.success(t('courseSessions.restoreDone'), rebilled ? { description: t('courseSessions.rebilled', { count: rebilled }) } : undefined);
+      toastSessionChange(t, t('courseSessions.restoreDone'), await changes.restore.mutateAsync(session.date));
     } catch (error) {
       toast.error(t(courseSessionErrorKey(error)));
     }
