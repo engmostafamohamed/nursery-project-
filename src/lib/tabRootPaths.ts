@@ -97,6 +97,7 @@ const ADMIN_ROOTS = [
   '/admin/meal-plans',
   '/admin/kitchen',
   '/admin/staff/absences',
+  '/admin/classes/teams',
   '/admin/health/medicines',
   '/admin/qr-codes',
   '/admin/calendar',

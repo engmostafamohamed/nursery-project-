@@ -48,7 +48,7 @@ describe('class screens', () => {
       ...['on_duty', 'covering', 'away', 'standby', 'inactive'].map((s) => `classProfile.duty.${s}`),
       ...CHILD_FILTERS.map((f) => `classProfile.filters.${f}`),
       ...['sent', 'scheduled', 'draft', 'failed'].map((s) => `classProfile.activity.status.${s}`),
-      ...['covered', 'uncovered', 'no_lead'].map((s) => `classProfile.team.cover.${s}`),
+      ...['covered', 'uncovered', 'lead_away', 'no_lead'].map((s) => `classProfile.team.cover.${s}`),
       ...['notFound', 'forbidden', 'network', 'failed'].map((s) => `classProfile.errors.${s}`),
       // Reused from other screens.
       ...CHILD_ABSENCE_REASONS.map((r) => `attendance.absence.reasons.${r}`),

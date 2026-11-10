@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { clockState, teamClockSummary, todaySummary, toClassProfile, type ClassChild, type TeamMember } from '@/features/classes/classProfile';
+import { clockState, todaySummary, toClassProfile, type ClassChild, type TeamMember } from '@/features/classes/classProfile';
 import ar from '@/locales/ar.json';
 import en from '@/locales/en.json';
 
@@ -63,7 +63,6 @@ describe('the class page’s day', () => {
       member({ id: 'e', role: 'substitute', onDuty: false }),
     ];
     expect(team.map(clockState)).toEqual(['in', 'left', 'not_in', 'away', 'not_in']);
-    expect(teamClockSummary(team)).toEqual({ expected: 3, in: 1, left: 1, late: 1 });
   });
 
   it('keeps a child who has not come yet apart from the absent ones while the nursery is open', () => {
@@ -87,7 +86,7 @@ describe('texts', () => {
       'classTeam.roles.nanny', 'classTeam.tiles.withoutNanny', 'classTeam.filters.noNanny', 'classTeam.filters.nannies',
       'classTeam.card.noNannies', 'classTeam.card.addNanny', 'teacher.classesHub.nannyBadge',
       'classProfile.attendance.expected', 'classProfile.filters.not_arrived', 'classProfile.today.notArrived', 'classProfile.today.notArrivedHint',
-      ...['title', 'inCount', 'details', 'empty', 'closed', 'inSince', 'notInYet', 'didNotClock', 'covering', 'away', 'onTime', 'clockHint', 'byAdmin', 'record', 'correct']
+      ...['inSince', 'notInYet', 'didNotClock', 'away', 'onTime', 'clockHint', 'byAdmin', 'record', 'correct']
         .map((k) => `classProfile.teamToday.${k}`),
       ...['titleNotIn', 'titleIn', 'titleLeft', 'opensAt', 'onTime', 'clockIn', 'clockOut', 'confirmOutTitle', 'recordedByAdmin', 'absentToday']
         .map((k) => `staffClock.${k}`),

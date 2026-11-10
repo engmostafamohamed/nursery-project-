@@ -12,15 +12,13 @@ import { ClassDetailsPanel } from './ClassDetailsPanel';
 import { ClassProfileHero } from './ClassProfileHero';
 import { tabFrom, todaySummary, type ChildFilter, type ClassProfile, type ClassProfileTab } from './classProfile';
 import { ClassTeamPanel } from './ClassTeamPanel';
-import { ClassTeamToday } from './ClassTeamToday';
 import { ClassTodayTiles } from './ClassTodayTiles';
 import { ClassWaitlistPanel } from './ClassWaitlistPanel';
 import { useClassFormat } from './useClassFormat';
 
 /**
- * Everything about one class on one page: the header with today's numbers and who works with the
- * class today, then its children, team,
- * activity, waiting list and details in tabs. The open tab is kept in the address (?tab=team), so
+ * Everything about one class on one page: the header with today's numbers, then its children, team
+ * (who works with it today), activity, waiting list and details in tabs. The open tab is kept in the address (?tab=team), so
  * a link, a reload or Back lands on it.
  */
 export function ClassProfileView({ profile, base }: { profile: ClassProfile; base: string }) {
@@ -68,10 +66,7 @@ export function ClassProfileView({ profile, base }: { profile: ClassProfile; bas
       </Link>
 
       <ClassProfileHero profile={profile} names={names} base={base}>
-        <div className="space-y-4">
-          <ClassTodayTiles summary={summary} active={tab === 'children' ? childFilter : 'all'} onPick={showChildren} />
-          <ClassTeamToday profile={profile} names={names} format={format} base={base} onOpenTeam={() => openTab('team')} />
-        </div>
+        <ClassTodayTiles summary={summary} active={tab === 'children' ? childFilter : 'all'} onPick={showChildren} />
       </ClassProfileHero>
 
       <Tabs value={tab} onValueChange={(value) => openTab(tabFrom(value))}>

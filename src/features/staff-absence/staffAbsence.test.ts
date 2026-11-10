@@ -8,6 +8,7 @@ import {
   absenceIssues,
   absenceState,
   coverStatus,
+  needsTeam,
   daysBetween,
   overlapsExisting,
   sortAbsences,
@@ -75,6 +76,10 @@ describe('class cover', () => {
     expect(coverStatus(cls({}))).toBe('normal');
     expect(coverStatus(cls({ coveredByBackup: true }))).toBe('covered');
     expect(coverStatus(cls({ onDuty: 0 }))).toBe('uncovered');
+    // The lead away, no backup, an assistant in: not "lead in".
+    expect(coverStatus(cls({ lead: { id: 'l', nameAr: '', nameEn: 'Lead', away: true }, backup: null, onDuty: 1 }))).toBe('lead_away');
+    expect(needsTeam(cls({ lead: { id: 'l', nameAr: '', nameEn: 'Lead', away: true }, backup: null, onDuty: 1 }))).toBe(true);
+    expect(needsTeam(cls({}))).toBe(false);
     expect(coverStatus(cls({ onDuty: 0, children: 0, lead: null }))).toBe('no_lead');
     const sorted = sortClassCover([
       cls({ classId: 'a', nameEn: 'A' }),
@@ -104,7 +109,7 @@ describe('texts', () => {
     const keys = [
       ...ABSENCE_REASONS.map((r) => `staffAbsence.reasons.${r}`),
       ...['today', 'upcoming', 'past', 'cancelled'].map((s) => `staffAbsence.states.${s}`),
-      ...['uncovered', 'covered', 'no_lead', 'normal'].map((s) => `staffAbsence.board.status.${s}`),
+      ...['uncovered', 'lead_away', 'covered', 'no_lead', 'normal'].map((s) => `staffAbsence.board.status.${s}`),
       ...['person_required', 'date_required', 'in_past', 'too_far_back', 'too_far_ahead', 'before_start', 'too_long', 'overlaps', 'reason_required', 'note_too_long'].map((k) => `staffAbsence.issues.${k}`),
       ...['class_cover_today', 'class_cover_cancelled', 'class_uncovered', 'staff_absence_reported', 'staff_absence_recorded'].flatMap((k) => [`notificationTemplates.${k}.title`, `notificationTemplates.${k}.body`]),
     ];

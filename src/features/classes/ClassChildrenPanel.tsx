@@ -49,7 +49,7 @@ export function ClassChildrenPanel({
   const [search, setSearch] = useState('');
   const counts = useMemo(() => filterCounts(profile.children), [profile.children]);
   const shown = useMemo(() => filterChildren(profile.children, filter, search), [profile.children, filter, search]);
-  const pager = usePagination(shown, 25, `${filter}|${search}`);
+  const pager = usePagination(shown, 10, `${filter}|${search}`);
   const open = (child: ClassChild) => navigate(`${base}/children/${child.id}`);
   const canClear = filter !== 'all' || Boolean(search.trim());
 
@@ -81,7 +81,7 @@ export function ClassChildrenPanel({
           </div>
         ) : null
       }
-      pagination={shown.length ? <TablePagination pager={pager} /> : null}
+      pagination={shown.length ? <TablePagination pager={pager} pageSizeOptions={[10, 25, 50]} /> : null}
     >
       {!profile.children.length ? (
         <TableEmpty

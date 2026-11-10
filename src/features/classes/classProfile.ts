@@ -372,16 +372,6 @@ export function clockState(m: Pick<TeamMember, 'clockIn' | 'clockOut' | 'absence
   return m.absence ? 'away' : 'not_in';
 }
 
-/** The team's clocking today: how many of those expected (not away) are in, and who is late. */
-export function teamClockSummary(team: TeamMember[]): { expected: number; in: number; left: number; late: number } {
-  const working = team.filter((m) => m.active && !m.absence && m.role !== 'substitute');
-  return {
-    expected: working.length,
-    in: working.filter((m) => m.clockIn && !m.clockOut).length,
-    left: working.filter((m) => m.clockIn && m.clockOut).length,
-    late: working.filter((m) => (m.lateMinutes ?? 0) > 5).length,
-  };
-}
 
 /**
  * A team member today: in, covering for the lead, away, a backup not needed today, or unable to sign

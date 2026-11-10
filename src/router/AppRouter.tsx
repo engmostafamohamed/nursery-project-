@@ -138,6 +138,7 @@ export function AppRouter() {
               <Route path="messages/broadcasts" element={<P.AdminBroadcastHistoryPage />} />
               <Route path="classes" element={<P.AdminClassesListPage />} />
               <Route path="classes/new" element={<P.AdminClassDetailPage />} />
+              <Route path="classes/teams" element={<P.ClassTeamPage />} />
               <Route path="classes/:classId" element={<P.AdminClassProfilePage />} />
               <Route path="classes/:classId/edit" element={<P.AdminClassDetailPage />} />
               <Route path="classes/:classId/announcements" element={<P.AdminClassAnnouncementsPage />} />
@@ -145,7 +146,7 @@ export function AppRouter() {
               <Route path="settings/positions" element={<P.AdminPositionsPage />} />
               <Route path="settings/features" element={<P.AdminFeaturesPage />} />
               <Route path="settings/roles" element={<P.AdminRolesPage />} />
-              <Route path="settings/team" element={<P.ClassTeamPage />} />
+              <Route path="settings/team" element={<Navigate to="/admin/classes/teams" replace />} />
             </Route>
           </Route>
 
@@ -316,6 +317,7 @@ export function AppRouter() {
               <Route path="nursery/messages/broadcasts" element={<P.AdminBroadcastHistoryPage />} />
               <Route path="nursery/classes" element={<P.AdminClassesListPage />} />
               <Route path="nursery/classes/new" element={<P.AdminClassDetailPage />} />
+              <Route path="nursery/classes/teams" element={<P.ClassTeamPage />} />
               <Route path="nursery/classes/:classId" element={<P.AdminClassProfilePage />} />
               <Route path="nursery/classes/:classId/edit" element={<P.AdminClassDetailPage />} />
               <Route path="nursery/classes/:classId/announcements" element={<P.AdminClassAnnouncementsPage />} />
@@ -323,7 +325,7 @@ export function AppRouter() {
               <Route path="nursery/settings/positions" element={<P.AdminPositionsPage />} />
               <Route path="nursery/settings/features" element={<P.AdminFeaturesPage />} />
               <Route path="nursery/settings/roles" element={<P.AdminRolesPage />} />
-              <Route path="nursery/settings/team" element={<P.ClassTeamPage />} />
+              <Route path="nursery/settings/team" element={<Navigate to="/xo-admin/nursery/classes/teams" replace />} />
             </Route>
           </Route>
 

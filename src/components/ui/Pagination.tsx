@@ -21,6 +21,11 @@ type Props = {
   pageSize?: number;
   pageSizeOptions?: number[];
   onPageSizeChange?: (size: number) => void;
+  /**
+   * Tables: keep the rows-per-page picker and the page buttons (the arrows greyed out) even when every
+   * row fits on one page, so the table always reads as one that pages. Otherwise they show only with pages.
+   */
+  alwaysShowControls?: boolean;
   className?: string;
 };
 
@@ -39,8 +44,7 @@ const BUTTON =
 
 /**
  * The pager under a list: "Showing X–Y of Z", an optional rows-per-page picker, and
- * previous / page / next controls. Arrows flip in RTL. Renders nothing when there is
- * nothing to page through.
+ * previous / page / next controls. Arrows flip in RTL. Renders nothing when the list is empty.
  */
 export function Pagination({
   page,
@@ -56,13 +60,21 @@ export function Pagination({
   pageSize,
   pageSizeOptions = DEFAULT_PAGE_SIZES,
   onPageSizeChange,
+  alwaysShowControls = false,
   className,
 }: Props) {
   const { t, i18n } = useTranslation();
-  const canResize = Boolean(onPageSizeChange && pageSize);
-  const smallestSize = Math.min(...pageSizeOptions);
-  if (pageCount <= 1 && !(canResize && (total ?? 0) > smallestSize)) return null;
+  // The size in use is always one of the choices (a list may start at 25 when the choices are 10, 20, 50).
+  const sizes = [...new Set([...pageSizeOptions, ...(pageSize ? [pageSize] : [])])].sort((a, b) => a - b);
+  const smallestSize = Math.min(...sizes);
   const knownTotal = total !== undefined;
+  const any = (total ?? 0) > 0;
+  // The rows-per-page picker when there is more than its smallest page to show (in a table: always).
+  const canResize = Boolean(onPageSizeChange && pageSize) && (alwaysShowControls ? any : (total ?? 0) > smallestSize);
+  // The page buttons with more than one page (in a table: whenever there is anything).
+  const showNav = pageCount > 1 || (alwaysShowControls && any && knownTotal);
+  // The band shows how many there are whenever there is anything.
+  if (pageCount <= 1 && !any) return null;
   const isRTL = i18n.language === 'ar';
 
   return (
@@ -79,20 +91,20 @@ export function Pagination({
       </p>
       <div className="flex flex-wrap items-center gap-3">
         {canResize ? (
-          <label className="flex items-center gap-2 text-xs text-on-surface-variant">
+          <label className="flex items-center gap-2 whitespace-nowrap text-xs text-on-surface-variant">
             {t('common.rowsPerPage')}
             <Select
               value={pageSize}
               onChange={(e) => onPageSizeChange?.(Number(e.target.value))}
               className="h-9 rounded-lg border border-outline-variant bg-surface px-2 text-xs font-medium text-on-surface"
             >
-              {pageSizeOptions.map((size) => (
+              {sizes.map((size) => (
                 <option key={size} value={size}>{size}</option>
               ))}
             </Select>
           </label>
         ) : null}
-        {pageCount > 1 ? (
+        {showNav ? (
           <nav className="flex items-center gap-1" aria-label={t('common.pagination')}>
             <button type="button" onClick={onPrev} disabled={!hasPrev} aria-label={t('common.previous')} className={BUTTON}>
               <MaterialSymbol name={isRTL ? 'chevron_right' : 'chevron_left'} size="text-base" />

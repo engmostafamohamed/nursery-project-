@@ -1,15 +1,16 @@
 import { useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { StaffAttendanceCalendar } from '@/components/admin/staff/StaffAttendanceCalendar';
+import { StaffClassesTable } from '@/components/admin/staff/StaffClassesTable';
 import { StaffDocumentsSection } from '@/components/admin/staff/StaffDocumentsSection';
 import { StaffPayrollHistorySection } from '@/components/admin/staff/StaffPayrollHistorySection';
 import { StaffProfileEditDialog } from '@/components/admin/staff/StaffProfileEditDialog';
+import { StaffProfileHero } from '@/components/admin/staff/StaffProfileHero';
 import { StaffAttendanceHistory } from '@/components/admin/StaffAttendanceHistory';
 import { StaffScheduleEditor } from '@/components/admin/StaffScheduleEditor';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -21,15 +22,38 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { StaffAbsencesPanel } from '@/features/staff-absence/StaffAbsencesPanel';
+import { usePersonAbsences } from '@/features/staff-absence/usePersonAbsences';
+import { useAdminBasePath } from '@/hooks/useAdminBasePath';
+import { useBilingualNames } from '@/hooks/useBilingualNames';
+import { useClassTeams } from '@/hooks/useClassTeams';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useStaff } from '@/hooks/useStaff';
 import { useStaffAttendanceMonth } from '@/hooks/useStaffAttendanceMonth';
 import { useStaffPayrollRecords } from '@/hooks/useStaffPayrollRecords';
 import { useStaffSchedules } from '@/hooks/useStaffSchedules';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { staffAvatarUrl } from '@/lib/staffAvatar';
-import { getUserInitials } from '@/lib/utils';
+import { getNurseryCalendarDateString } from '@/lib/nurseryDay';
 
+const TABS = ['personal', 'classes', 'schedule', 'attendance', 'absences', 'documents', 'payroll'] as const;
+type Tab = (typeof TABS)[number];
+const TAB_ICON: Record<Tab, string> = {
+  personal: 'person',
+  classes: 'school',
+  schedule: 'calendar_month',
+  attendance: 'how_to_reg',
+  absences: 'event_busy',
+  documents: 'description',
+  payroll: 'payments',
+};
+const tabFrom = (value: string | null): Tab => (TABS as readonly string[]).includes(value ?? '') ? (value as Tab) : 'personal';
+
+/**
+ * A member of staff: who they are and where they stand today (the header: away, in since when, their
+ * classes), then their details, classes, schedule, attendance, absences, documents and pay in tabs. The
+ * open tab is kept in the address (?tab=absences), so a link from another page lands on it.
+ */
 export function AdminStaffProfilePage() {
   const { staffId } = useParams<{ staffId: string }>();
   const { t, i18n } = useTranslation();
@@ -40,7 +64,18 @@ export function AdminStaffProfilePage() {
     () => staff.staff.find((s) => String(s.id) === staffId || String(s.user_id) === staffId),
     [staff.staff, staffId],
   );
-  const [tab, setTab] = useState<'personal' | 'schedule' | 'attendance' | 'documents' | 'payroll'>('personal');
+  const [params, setParams] = useSearchParams();
+  const tab = tabFrom(params.get('tab'));
+  const setTab = (next: Tab) =>
+    setParams(
+      (current) => {
+        const updated = new URLSearchParams(current);
+        if (next === 'personal') updated.delete('tab');
+        else updated.set('tab', next);
+        return updated;
+      },
+      { replace: true },
+    );
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deactivateOpen, setDeactivateOpen] = useState(false);
@@ -51,60 +86,82 @@ export function AdminStaffProfilePage() {
     nurseryId: profile?.nursery_id ?? undefined,
     profileId,
   });
-  const attQ = useStaffAttendanceMonth(profileId, attMonth);
   const payrollRec = useStaffPayrollRecords(profile?.nursery_id ?? undefined, profileId);
+  const nurseryId = profile?.nursery_id ?? null;
+  const base = useAdminBasePath();
+  const names = useBilingualNames(nurseryId);
+  const teams = useClassTeams(nurseryId);
+  const today = getNurseryCalendarDateString();
+  // Days are read by the person's account: staff without an HR record clock in too.
+  const userId = selected ? String(selected.user_id) : null;
+  const attQ = useStaffAttendanceMonth(userId, attMonth);
+  const todayAttendance = useStaffAttendanceMonth(userId, today.slice(0, 7));
+  const absences = usePersonAbsences(userId);
 
   const u = (selected?.user as Record<string, unknown> | null) ?? {};
-  const name = String(u.name_ar ?? u.name_en ?? u.full_name_ar ?? u.full_name_en ?? 'Staff');
-  const avatar = staffAvatarUrl(name);
   const raw = selected as unknown as Record<string, unknown>;
 
   if (!selected) {
     return <p className="text-sm text-on-surface-variant">{t('staff.notFound')}</p>;
   }
 
-  const nf = new Intl.NumberFormat(i18n.language?.startsWith('ar') ? 'ar-EG' : 'en-GB', {
+  const isArabic = i18n.language.startsWith('ar');
+  const nameLines = names.lines(u.name_ar as string | null, u.name_en as string | null);
+  const name = nameLines.primary || t('staff.profile.fallbackName');
+  const roleData = u.role_data as { name_ar?: string | null; name_en?: string | null } | null;
+  const roleLabel =
+    (isArabic ? roleData?.name_ar || roleData?.name_en : roleData?.name_en || roleData?.name_ar) ||
+    t(`staff.departments.${String(selected.department ?? 'teaching')}`);
+  const position = selected.position && selected.position !== '—' && selected.position !== roleLabel ? selected.position : null;
+  const teamPerson = teams.data?.staff.find((s) => s.id === userId);
+  const teamClasses = (teamPerson?.classes ?? []).flatMap((c) => {
+    const cls = teams.data?.classes.find((k) => k.id === c.class_id);
+    return cls ? [{ cls, role: c.role }] : [];
+  });
+  const todayClock = (todayAttendance.data ?? []).find((r) => r.work_date === today) ?? null;
+  const classHref = (classId: string) => `${base}/classes/${classId}?tab=team`;
+
+  const nf = new Intl.NumberFormat(isArabic ? 'ar-EG' : 'en-GB', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
 
   return (
-    <div className="space-y-6 pb-8">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex gap-3">
-          <Avatar className="h-16 w-16">
-            <AvatarImage src={avatar} alt="" />
-            <AvatarFallback>{getUserInitials(name, (u.email as string | null) ?? null)}</AvatarFallback>
-          </Avatar>
-          <div>
-            <h1 className="text-lg font-semibold text-on-surface">{name}</h1>
-            <p className="text-sm text-on-surface-variant">
-              {t(`staff.departments.${String(selected.department ?? 'teaching')}`)} · {String(selected.position ?? '—')}
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" className="gap-1" onClick={() => setEditOpen(true)} disabled={!selected.hasStaffProfile}>
-            <MaterialSymbol name="edit" size="text-lg" />
-            {t('staff.editProfile')}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="gap-1"
-            onClick={() =>
-              toast.message(`${t('staff.profile.certificateToast')}\n${t('staff.profile.certificateToastAr')}`)
-            }
-          >
-            <MaterialSymbol name="badge" size="text-lg" />
-            {t('staff.profile.certificate')}
-          </Button>
-          <Button type="button" variant="outline" className="gap-1 text-error" onClick={() => setDeactivateOpen(true)}>
-            <MaterialSymbol name="person_off" size="text-lg" />
-            {t('staff.deactivate')}
-          </Button>
-        </div>
-      </div>
+    <div className="space-y-5 pb-8">
+      <StaffProfileHero
+        name={{ ...nameLines, primary: name }}
+        email={(u.email as string | null) ?? null}
+        roleLabel={roleLabel}
+        position={position}
+        active={String(u.status ?? 'active') === 'active'}
+        awayToday={absences.summary.awayToday}
+        todayClock={todayClock}
+        teamClasses={teamClasses}
+        classHref={classHref}
+        actions={
+          <>
+            <Button type="button" variant="outline" className="gap-1" onClick={() => setEditOpen(true)} disabled={!selected.hasStaffProfile}>
+              <MaterialSymbol name="edit" size="text-lg" />
+              {t('staff.editProfile')}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="gap-1"
+              onClick={() =>
+                toast.message(`${t('staff.profile.certificateToast')}\n${t('staff.profile.certificateToastAr')}`)
+              }
+            >
+              <MaterialSymbol name="badge" size="text-lg" />
+              {t('staff.profile.certificate')}
+            </Button>
+            <Button type="button" variant="outline" className="gap-1 text-error" onClick={() => setDeactivateOpen(true)}>
+              <MaterialSymbol name="person_off" size="text-lg" />
+              {t('staff.deactivate')}
+            </Button>
+          </>
+        }
+      />
 
       {!selected.hasStaffProfile ? (
         <Card>
@@ -112,19 +169,26 @@ export function AdminStaffProfilePage() {
         </Card>
       ) : null}
 
-      <div className="flex flex-wrap gap-2">
-        {(['personal', 'schedule', 'attendance', 'documents', 'payroll'] as const).map((k) => (
-          <Button
-            key={k}
-            type="button"
-            size="sm"
-            variant={tab === k ? 'default' : 'outline'}
-            onClick={() => setTab(k)}
-          >
-            {t(`staff.tabs.${k}`)}
-          </Button>
-        ))}
-      </div>
+      <Tabs value={tab} onValueChange={(value) => setTab(tabFrom(value))}>
+        <div className="max-w-full overflow-x-auto">
+          <TabsList className="h-11">
+            {TABS.map((k) => (
+              <TabsTrigger key={k} value={k} className="gap-1.5 px-3.5 py-2 text-sm">
+                <MaterialSymbol name={TAB_ICON[k]} size="text-base" />
+                {t(`staff.tabs.${k}`)}
+                {k === 'classes' && teamClasses.length ? (
+                  <span className="rounded-full bg-surface-high px-1.5 text-[11px] font-semibold tabular-nums text-on-surface-variant">{teamClasses.length}</span>
+                ) : null}
+                {k === 'absences' && absences.summary.awayToday ? <span className="h-2 w-2 rounded-full bg-warning" aria-hidden /> : null}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
+      </Tabs>
+
+      {tab === 'classes' ? (
+        <StaffClassesTable personName={name} teamClasses={teamClasses} staff={teams.data?.staff ?? []} classHref={classHref} teamsHref={`${base}/classes/teams`} />
+      ) : null}
 
       {tab === 'personal' ? (
         <Card>
@@ -175,15 +239,14 @@ export function AdminStaffProfilePage() {
         </section>
       ) : null}
 
-      {tab === 'attendance' && profileId ? (
+      {tab === 'attendance' ? (
         <div className="space-y-4">
           <StaffAttendanceCalendar month={attMonth} onMonthChange={setAttMonth} rows={attQ.data ?? []} />
-          <StaffAttendanceHistory rows={(attQ.data ?? []) as Array<Record<string, unknown>>} />
+          <StaffAttendanceHistory rows={attQ.data ?? []} month={attMonth} />
         </div>
       ) : null}
-      {tab === 'attendance' && !profileId ? (
-        <p className="text-sm text-on-surface-variant">{t('staff.profile.onboardingBanner')}</p>
-      ) : null}
+
+      {tab === 'absences' && selected.user_id ? <StaffAbsencesPanel userId={String(selected.user_id)} name={name} /> : null}
 
       {tab === 'documents' && profileId && profile?.nursery_id ? (
         <StaffDocumentsSection

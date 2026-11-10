@@ -1,10 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
 
 import { ActionGate } from '@/components/shared/ActionGate';
-import { confirm } from '@/components/ui/confirm';
 import { Button } from '@/components/ui/button';
 import {
   DataTable,
@@ -28,12 +26,15 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/select';
 import { StatTile } from '@/components/ui/StatTile';
 import { capacityFill } from '@/features/classes/classCapacity';
+import { DeleteClassDialog } from '@/features/class-editor/DeleteClassDialog';
 import { ClassCapacityMeter } from '@/features/classes/ClassCapacityMeter';
+import { ClassesSectionTabs } from '@/features/classes/ClassesSectionTabs';
 import { useActiveNurseryId } from '@/hooks/useActiveNurseryId';
 import { useAdminBasePath } from '@/hooks/useAdminBasePath';
 import { useBilingualNames } from '@/hooks/useBilingualNames';
-import { useDeleteClass, useNurseryClasses, type NurseryClassRow } from '@/hooks/useClassStaff';
+import { useNurseryClasses, type NurseryClassRow } from '@/hooks/useClassStaff';
 import { usePagination } from '@/hooks/usePagination';
+import { useTableSort } from '@/hooks/useTableSort';
 
 type SortKey = 'name' | 'grade' | 'lead' | 'roster';
 type QuickFilter = 'all' | 'over' | 'noLead';
@@ -48,24 +49,12 @@ export function AdminClassesListPage() {
   const { activeNurseryId } = useActiveNurseryId();
   const names = useBilingualNames(activeNurseryId);
   const classesQuery = useNurseryClasses(activeNurseryId);
-  const deleteMut = useDeleteClass();
+  // Deleting asks where the class's children go first (DeleteClassDialog).
+  const [deleting, setDeleting] = useState<NurseryClassRow | null>(null);
 
   const [search, setSearch] = useState('');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
-  const [sortBy, setSortBy] = useState<SortKey>('name');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
-
-  const onDelete = async (classId: string) => {
-    if (!(await confirm({ description: t('admin.classes.actions.deleteConfirm'), variant: 'danger' })))
-      return;
-    try {
-      await deleteMut.mutateAsync(classId);
-      toast.success(t('admin.classes.toasts.deletedOk'));
-    } catch (err) {
-      console.error(err);
-      toast.error(t('admin.classes.toasts.deleteFailed'));
-    }
-  };
+  const sort = useTableSort<SortKey>('name');
 
   const stats = useMemo(() => {
     const data = classesQuery.data ?? [];
@@ -78,39 +67,22 @@ export function AdminClassesListPage() {
     };
   }, [classesQuery.data]);
 
-  const rows = useMemo<NurseryClassRow[]>(() => {
-    const data = classesQuery.data ?? [];
+  const filtered = useMemo<NurseryClassRow[]>(() => {
     const q = search.trim().toLowerCase();
-    const filtered = data.filter((c) => {
+    return (classesQuery.data ?? []).filter((c) => {
       if (quickFilter === 'over' && !isOverCapacity(c)) return false;
       if (quickFilter === 'noLead' && c.lead) return false;
       if (!q) return true;
       return `${c.name_ar} ${c.name_en} ${c.grade_level ?? ''} ${c.room_number ?? ''}`.toLowerCase().includes(q);
     });
-    const dir = sortDir === 'asc' ? 1 : -1;
-    const person = (p: NurseryClassRow['lead']) => (p ? names.text(p.name_ar, p.name_en) : '—');
-    return [...filtered].sort((a, b) => {
-      switch (sortBy) {
-        case 'grade':
-          return (a.grade_level ?? '').localeCompare(b.grade_level ?? '') * dir;
-        case 'lead':
-          return person(a.lead).localeCompare(person(b.lead)) * dir;
-        case 'roster':
-          return (a.child_count - b.child_count) * dir;
-        case 'name':
-        default:
-          return names.text(a.name_ar, a.name_en).localeCompare(names.text(b.name_ar, b.name_en)) * dir;
-      }
-    });
-  }, [classesQuery.data, search, quickFilter, sortBy, sortDir, names]);
-
-  const toggleSort = (key: SortKey) => {
-    if (sortBy === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-    else {
-      setSortBy(key);
-      setSortDir('asc');
-    }
-  };
+  }, [classesQuery.data, search, quickFilter]);
+  const person = (p: NurseryClassRow['lead']) => (p ? names.text(p.name_ar, p.name_en) : '—');
+  const rows = sort.sorted(filtered, {
+    name: (a, b) => names.text(a.name_ar, a.name_en).localeCompare(names.text(b.name_ar, b.name_en)),
+    grade: (a, b) => (a.grade_level ?? '').localeCompare(b.grade_level ?? ''),
+    lead: (a, b) => person(a.lead).localeCompare(person(b.lead)),
+    roster: (a, b) => a.child_count - b.child_count,
+  });
 
   const filtersActive = quickFilter !== 'all' || Boolean(search.trim());
   const clearFilters = () => {
@@ -118,14 +90,14 @@ export function AdminClassesListPage() {
     setSearch('');
   };
   const toggleQuick = (value: QuickFilter) => setQuickFilter((current) => (current === value ? 'all' : value));
-  const pager = usePagination(rows, 10, `${quickFilter}|${search.trim().toLowerCase()}|${sortBy}|${sortDir}`);
-
-  const sortFor = (key: SortKey) => ({ active: sortBy === key, direction: sortDir, onToggle: () => toggleSort(key) });
+  const pager = usePagination(rows, 10, `${quickFilter}|${search.trim().toLowerCase()}|${sort.key}`);
+  const sortFor = sort.sortFor;
 
   const capacity = capacityFill(stats.children, stats.capacity || null);
 
   return (
     <div className="space-y-5 pb-8">
+      <ClassesSectionTabs />
       <PageHeader
         icon="school"
         title={t('admin.classes.list.title')}
@@ -187,7 +159,7 @@ export function AdminClassesListPage() {
             </FilterField>
           </FilterBar>
         }
-        pagination={classesQuery.isLoading || rows.length === 0 ? null : <TablePagination pager={pager} />}
+        pagination={classesQuery.isLoading || rows.length === 0 ? null : <TablePagination pager={pager} pageSizeOptions={[10, 25, 50]} />}
       >
         {classesQuery.isLoading ? (
           <TableLoading rows={3} />
@@ -198,7 +170,7 @@ export function AdminClassesListPage() {
             description={t('admin.classes.list.emptyDescription')}
           />
         ) : (
-          <DataTable minWidth={960}>
+          <DataTable minWidth={1040}>
             <THead>
               <Th sort={sortFor('name')}>{t('admin.classes.list.colName')}</Th>
               <Th sort={sortFor('grade')}>{t('admin.classes.list.colGrade')}</Th>
@@ -206,6 +178,7 @@ export function AdminClassesListPage() {
               <Th sort={sortFor('lead')}>{t('admin.classes.list.colLead')}</Th>
               <Th>{t('admin.classes.list.colBackup')}</Th>
               <Th>{t('admin.classes.list.colAssistants')}</Th>
+              <Th>{t('admin.classes.list.colNannies')}</Th>
               <Th sort={sortFor('roster')}>{t('admin.classes.list.colRoster')}</Th>
               <Th align="end">{t('common.actions')}</Th>
             </THead>
@@ -250,6 +223,7 @@ export function AdminClassesListPage() {
                       )}
                     </Td>
                     <Td className="tabular-nums text-on-surface-variant">{c.assistants.length}</Td>
+                    <Td className="tabular-nums text-on-surface-variant">{c.nannies.length}</Td>
                     <Td>
                       <ClassCapacityMeter count={c.child_count} capacity={c.capacity} />
                     </Td>
@@ -262,8 +236,7 @@ export function AdminClassesListPage() {
                           <IconAction
                             icon="delete"
                             label={`${t('common.delete')}: ${name.primary}`}
-                            onClick={() => void onDelete(c.id)}
-                            disabled={deleteMut.isPending}
+                            onClick={() => setDeleting(c)}
                             danger
                           />
                         </ActionGate>
@@ -276,6 +249,19 @@ export function AdminClassesListPage() {
           </DataTable>
         )}
       </TableCard>
+
+      {deleting ? (
+        <DeleteClassDialog
+          classId={deleting.id}
+          className={names.text(deleting.name_ar, deleting.name_en)}
+          childrenCount={deleting.child_count}
+          classes={(classesQuery.data ?? [])
+            .filter((c) => c.id !== deleting.id)
+            .map((c) => ({ id: c.id, nameAr: c.name_ar, nameEn: c.name_en, gradeLevel: c.grade_level, capacity: c.capacity, children: c.child_count }))}
+          onDeleted={() => setDeleting(null)}
+          onClose={() => setDeleting(null)}
+        />
+      ) : null}
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AbsenceDialog } from '@/features/staff-absence/AbsenceDialog';
-import { AbsenceList } from '@/features/staff-absence/AbsenceList';
+import { AbsenceTable } from '@/features/staff-absence/AbsenceTable';
 import { CoverBanner } from '@/features/staff-absence/CoverBanner';
 import { absenceErrorKey } from '@/features/staff-absence/staffAbsenceApi';
 import { useMyAbsences } from '@/features/staff-absence/useStaffAbsence';
@@ -40,10 +40,7 @@ export function TeacherAbsencesPage() {
       ) : (
         <>
           <CoverBanner covering={query.data.covering} />
-          <section aria-labelledby="my-absences" className="space-y-3 rounded-2xl border border-outline-variant bg-surface p-4 shadow-sm sm:p-5">
-            <h2 id="my-absences" className="font-semibold text-on-surface">{t('staffAbsence.teacher.listTitle')}</h2>
-            <AbsenceList absences={query.data.absences} today={query.data.today} emptyText={t('staffAbsence.teacher.empty')} />
-          </section>
+          <AbsenceTable absences={query.data.absences} today={query.data.today} title={t('staffAbsence.teacher.listTitle')} emptyText={t('staffAbsence.teacher.empty')} />
           {open ? <AbsenceDialog today={query.data.today} existing={query.data.absences} onClose={() => setOpen(false)} /> : null}
         </>
       )}

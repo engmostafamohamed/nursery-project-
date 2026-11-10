@@ -37,13 +37,15 @@ test('class team, the teacher dashboard and a message the family reads', async (
 
     // ---- The admin adds the assistant to the class.
     const admin = await as(browser, n.admin);
-    await admin.goto('/admin/settings/team');
-    const card = admin.locator('article', { has: admin.getByRole('heading', { name: 'UI Class' }) });
+    await admin.goto('/admin/classes/teams');
+    await admin.getByTestId('team-row').filter({ hasText: 'UI Class' }).click();
+    const card = admin.getByTestId('team-dialog');
     await expect(card).toBeVisible();
     await expect(card.getByRole('combobox', { name: 'Lead teacher' })).toHaveValue(n.teacher.id);
     await card.getByRole('combobox', { name: 'Add an assistant' }).selectOption(assistant.id);
     await expect(admin.getByText('Saved')).toBeVisible();
     await expect(card.getByRole('listitem').filter({ hasText: 'UI Assistant' })).toBeVisible();
+    await card.getByTestId('team-dialog-done').click();
     await admin.getByRole('tab', { name: /Recent changes/ }).click();
     await expect(admin.getByText('UI Assistant joined UI Class as Assistant')).toBeVisible();
     const [notice] = await sql<{ template_key: string }>(

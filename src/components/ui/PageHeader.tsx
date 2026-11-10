@@ -4,6 +4,8 @@ import { cn } from '@/lib/utils';
 
 type PageHeaderProps = {
   icon: string;
+  /** Shown in place of the icon, e.g. a person's photo or initials. */
+  media?: ReactNode;
   title: string;
   eyebrow?: string;
   description?: ReactNode;
@@ -15,14 +17,16 @@ type PageHeaderProps = {
 };
 
 /** A page's title card: icon, title and actions, with optional bands (stats, filters) below. */
-export function PageHeader({ icon, title, eyebrow, description, actions, children, className }: PageHeaderProps) {
+export function PageHeader({ icon, media, title, eyebrow, description, actions, children, className }: PageHeaderProps) {
   return (
     <section className={cn('overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm', className)}>
       <div className="flex flex-col gap-4 bg-surface-container-lowest p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-md">
-            <span className="material-symbols-outlined text-2xl" aria-hidden>{icon}</span>
-          </span>
+          {media ?? (
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-md">
+              <span className="material-symbols-outlined text-2xl" aria-hidden>{icon}</span>
+            </span>
+          )}
           <div className="min-w-0">
             {eyebrow ? <p className="text-xs font-semibold uppercase text-primary">{eyebrow}</p> : null}
             <h1 className="text-2xl font-bold leading-tight text-on-surface">{title}</h1>

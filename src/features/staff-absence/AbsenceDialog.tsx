@@ -27,18 +27,21 @@ export function AbsenceDialog({
   today,
   existing,
   staff,
+  personId = '',
   onClose,
 }: {
   today: string;
   existing: Absence[];
   /** Given for an admin, who chooses whose absence it is. */
   staff?: StaffMember[];
+  /** The person already chosen (recording from their page). */
+  personId?: string;
   onClose: () => void;
 }) {
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language.startsWith('ar');
   const asAdmin = Boolean(staff);
-  const [draft, setDraft] = useState<AbsenceDraft>({ userId: '', startsOn: today, endsOn: today, reason: '', note: '' });
+  const [draft, setDraft] = useState<AbsenceDraft>({ userId: personId, startsOn: today, endsOn: today, reason: '', note: '' });
   const [touched, setTouched] = useState<Partial<Record<AbsenceField, boolean>>>({});
   const [tried, setTried] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);

@@ -102,22 +102,33 @@ export type ClassCover = {
   coveredByBackup: boolean;
 };
 
-export type CoverStatus = 'normal' | 'covered' | 'uncovered' | 'no_lead';
+/** How a class stands today, the most urgent first (the order lists and filters use). */
+export const COVER_STATUSES = ['uncovered', 'lead_away', 'covered', 'no_lead', 'normal'] as const;
+export type CoverStatus = (typeof COVER_STATUSES)[number];
 
 /**
  * How a class stands today: its lead is in ('normal'); the lead is away and the backup covers
- * ('covered'); nobody is on duty while children are enrolled ('uncovered'); or no lead is named.
+ * ('covered'); the lead is away with no backup, only the assistants are in ('lead_away'); nobody is
+ * on duty while children are enrolled ('uncovered'); or no lead is named.
  */
 export function coverStatus(c: ClassCover): CoverStatus {
   if (c.onDuty === 0 && c.children > 0) return 'uncovered';
   if (c.coveredByBackup) return 'covered';
   if (!c.lead) return 'no_lead';
+  if (c.lead.away) return 'lead_away';
   return 'normal';
 }
 
-const COVER_RANK: Record<CoverStatus, number> = { uncovered: 0, covered: 1, no_lead: 2, normal: 3 };
+/** Whether a class needs its team set: nobody on duty, no lead, or its lead away with no backup. */
+export function needsTeam(c: ClassCover): boolean {
+  const status = coverStatus(c);
+  return status === 'uncovered' || status === 'lead_away' || status === 'no_lead' || Boolean(c.lead?.away && !c.backup);
+}
+
+/** The place of a status in COVER_STATUSES: the most urgent first. */
+export const coverRank = (c: ClassCover): number => COVER_STATUSES.indexOf(coverStatus(c));
 export function sortClassCover(items: ClassCover[]): ClassCover[] {
-  return [...items].sort((a, b) => COVER_RANK[coverStatus(a)] - COVER_RANK[coverStatus(b)] || a.nameEn.localeCompare(b.nameEn));
+  return [...items].sort((a, b) => coverRank(a) - coverRank(b) || a.nameEn.localeCompare(b.nameEn));
 }
 
 // -----------------------------------------------------------------------------------------------

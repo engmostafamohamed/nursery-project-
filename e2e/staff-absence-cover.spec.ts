@@ -1,7 +1,8 @@
 // Teacher absences and class cover, end to end against the real database: the lead teacher reports
 // an absence (checked under the fields); the backup teacher is told and sees the class they cover;
 // the admin sees who covers each class, records an absence for the backup too (the class is then left
-// with nobody), and cancels the lead's absence (the lead is back on duty).
+// with nobody), and cancels the lead's absence (the lead is back on duty); an absence row opens that
+// member of staff's page on their absences, where another one is recorded for them.
 import { expect, test } from '@playwright/test';
 
 import { addTeacher, cleanupTestNursery, createTestNursery, signIn, sql, type TestNursery } from './support/nursery';
@@ -79,5 +80,24 @@ test.describe.serial('Staff absences and class cover', () => {
     await page.getByRole('dialog', { name: 'Cancel this absence?' }).getByRole('button', { name: 'Cancel absence' }).click();
     await expect(page.getByText('The absence was cancelled.')).toBeVisible();
     await expect(card).toContainText('Lead in');
+  });
+
+  test('an absence row opens that member of staff, on their absences', async ({ page }) => {
+    await signIn(page, n!.admin);
+    await page.goto('/admin/staff/absences');
+    await page.getByTestId('absence-item').filter({ hasText: 'UI Backup Nour' }).click();
+    await expect(page).toHaveURL(new RegExp(`/admin/staff/${backup!.id}\\?tab=absences$`));
+    const panel = page.getByTestId('staff-absences');
+    await expect(panel.getByTestId('absence-item')).toHaveCount(1);
+    await expect(panel.getByTestId('absence-item')).toContainText('Training');
+    await expect(panel).toContainText('Away');
+
+    // Recording another one from here: the person is already chosen; a day already taken is refused.
+    await panel.getByTestId('record-person-absence').click();
+    const dialog = page.getByRole('dialog', { name: 'Record an absence' });
+    await expect(dialog.getByLabel('Who is away')).toHaveValue(backup!.id);
+    await dialog.getByRole('radio', { name: 'Personal' }).click();
+    await dialog.getByRole('button', { name: 'Record absence' }).click();
+    await expect(dialog.locator('#absence-to-error')).toHaveText('An absence is already reported for some of these days.');
   });
 });

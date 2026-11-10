@@ -14,6 +14,7 @@ select
   (select count(*) from public.attendance_records) as attendance_records,
   (select count(*) from public.attendance_absence_reports) as absence_reports,
   (select count(*) from public.staff_attendance) as staff_attendance_days,
+  (select count(*) from public.staff_absences where cancelled_at is null) as staff_absences,
   (select count(*) from public.class_staff where role = 'nanny') as nannies,
   (select count(*) from public.daily_reports where status = 'published') as sent_daily_reports,
   (select count(*) from public.invoices) as invoices,

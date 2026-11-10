@@ -27,6 +27,8 @@ export type NurseryClassRow = {
   /** The backup teacher who covers the class when the lead is away. */
   substitute: StaffPerson | null;
   assistants: StaffPerson[];
+  /** The carers beside the teachers. */
+  nannies: StaffPerson[];
   child_count: number;
 };
 
@@ -53,21 +55,20 @@ async function fetchUsersByIds(ids: string[]): Promise<Map<string, StaffPerson>>
   );
 }
 
-/** All classes for a nursery, with lead, assistants, and child counts. */
+/**
+ * All classes for a nursery, with their team and child counts (get_nursery_classes): read through a
+ * function so a class just created, changed or deleted shows at once (the service worker answers
+ * table reads from its cache first).
+ */
 export function useNurseryClasses(nurseryId: string | null | undefined) {
   return useQuery({
     queryKey: ['nursery-classes', nurseryId ?? null],
     enabled: Boolean(nurseryId),
     queryFn: async (): Promise<NurseryClassRow[]> => {
       if (!nurseryId) return [];
-      const { data: classRows, error } = await supabase
-        .from('classes')
-        .select('id, nursery_id, name_ar, name_en, grade_level, capacity, room_number')
-        .eq('nursery_id', nurseryId)
-        .is('deleted_at', null)
-        .order('name_en', { ascending: true });
+      const { data, error } = await supabase.rpc('get_nursery_classes' as never, { p_nursery_id: nurseryId } as never);
       if (error) throw error;
-      const classes = (classRows ?? []) as Array<{
+      const rows = (Array.isArray(data) ? data : []) as Array<{
         id: string;
         nursery_id: string;
         name_ar: string;
@@ -75,40 +76,16 @@ export function useNurseryClasses(nurseryId: string | null | undefined) {
         grade_level: string | null;
         capacity: number | null;
         room_number: string | null;
+        child_count: number;
+        staff: Array<StaffPerson & { user_id: string; role: ClassStaffRole }>;
       }>;
-      if (!classes.length) return [];
-      const classIds = classes.map((c) => c.id);
-
-      const [staffRes, childRes] = await Promise.all([
-        supabase
-          .from('class_staff')
-          .select('class_id, user_id, role')
-          .in('class_id', classIds),
-        supabase
-          .from('children')
-          .select('class_id')
-          .in('class_id', classIds)
-          .eq('status', 'active'),
-      ]);
-      if (staffRes.error) throw staffRes.error;
-      if (childRes.error) throw childRes.error;
-      const staffRows = (staffRes.data ?? []) as Array<{ class_id: string; user_id: string; role: ClassStaffRole }>;
-      const childRows = (childRes.data ?? []) as Array<{ class_id: string | null }>;
-
-      const userMap = await fetchUsersByIds(Array.from(new Set(staffRows.map((s) => s.user_id))));
-      const childCountByClass = new Map<string, number>();
-      for (const c of childRows) {
-        if (!c.class_id) continue;
-        childCountByClass.set(c.class_id, (childCountByClass.get(c.class_id) ?? 0) + 1);
-      }
-
-      return classes.map((c) => ({
+      return rows.map(({ staff, ...c }) => ({
         ...c,
+        child_count: Number(c.child_count) || 0,
         ...groupClassStaff(
-          staffRows.filter((s) => s.class_id === c.id),
-          userMap,
+          staff.map((p) => ({ user_id: p.user_id, role: p.role })),
+          new Map(staff.map((p) => [p.user_id, { id: p.user_id, name_ar: p.name_ar, name_en: p.name_en, email: p.email, phone: p.phone }])),
         ),
-        child_count: childCountByClass.get(c.id) ?? 0,
       }));
     },
   });

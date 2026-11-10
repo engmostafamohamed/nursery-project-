@@ -18,6 +18,7 @@ export const STATE_TONE: Record<AbsenceState, 'primary' | 'warning' | 'neutral'>
 
 export const COVER_LOOK: Record<CoverStatus, { tone: 'error' | 'warning' | 'neutral' | 'success'; icon: string }> = {
   uncovered: { tone: 'error', icon: 'person_off' },
+  lead_away: { tone: 'warning', icon: 'warning' },
   covered: { tone: 'warning', icon: 'swap_horiz' },
   no_lead: { tone: 'neutral', icon: 'help' },
   normal: { tone: 'success', icon: 'check_circle' },

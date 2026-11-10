@@ -1,686 +1,295 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import { confirm } from '@/components/ui/confirm';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { FormField, FormProblem } from '@/components/ui/FormField';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
+import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/select';
+import { classDraft, classEditorErrorKey, draftIssues, placesAfter, sameDraft, capacityOf, type ClassDraft, type DraftField } from '@/features/class-editor/classEditor';
+import { useClassEditor, useSaveClass, useMoveChildren } from '@/features/class-editor/classEditorApi';
+import { ChildPickerTable } from '@/features/class-editor/ChildPickerTable';
+import { ClassDetailsFields } from '@/features/class-editor/ClassDetailsFields';
+import { ClassRosterTable } from '@/features/class-editor/ClassRosterTable';
+import { DeleteClassDialog } from '@/features/class-editor/DeleteClassDialog';
+import { OverCapacityNote } from '@/features/class-editor/OverCapacityNote';
+import { ClassTeamCard } from '@/features/class-team/ClassTeamCard';
+import { useClassTeamEditing } from '@/features/class-team/useClassTeamEditing';
 import { useActiveNurseryId } from '@/hooks/useActiveNurseryId';
-import {
-  useAddClassAssistant,
-  useAssignChildToClass,
-  useClassRoster,
-  useClassWithStaff,
-  useCreateClass,
-  useDeleteClass,
-  useNurseryClasses,
-  useNurseryTeachers,
-  useRemoveClassStaff,
-  useSetClassLead,
-  useSetClassSubstitute,
-  useUnassignedChildren,
-  useUpdateClassDetails,
-  type StaffPerson,
-} from '@/hooks/useClassStaff';
 import { useAdminBasePath } from '@/hooks/useAdminBasePath';
-import { useBilingualNames } from '@/hooks/useBilingualNames';
+import { useClassTeamActions } from '@/hooks/useClassTeams';
+import { pickName } from '@/lib/classTeam';
+import { cn } from '@/lib/utils';
 
+/** A titled part of the page. */
+function Panel({ icon, title, description, actions, children, testId }: { icon: string; title: string; description?: string; actions?: ReactNode; children: ReactNode; testId?: string }) {
+  return (
+    <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm" data-testid={testId}>
+      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-outline-variant bg-surface-container-lowest px-4 py-3 sm:px-5">
+        <div className="flex min-w-0 items-start gap-2.5">
+          <MaterialSymbol name={icon} size="text-xl" className="mt-0.5 text-primary" />
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-on-surface">{title}</h2>
+            {description ? <p className="text-xs text-on-surface-variant">{description}</p> : null}
+          </div>
+        </div>
+        {actions}
+      </header>
+      <div className="p-4 sm:p-5">{children}</div>
+    </section>
+  );
+}
+
+/**
+ * Creating a class or changing it.
+ *   * New: its details, its lead and backup teacher, and the children who start in it (those without
+ *     a class first). Created in one go, then the class's page opens.
+ *   * Existing: the details (saved with the bar at the bottom, which shows once something changed),
+ *     the team (lead, backup, assistants, nannies: each change saved at once, as on Team & classes),
+ *     the children's table (add, move, take out), and deleting the class (its children move first).
+ * Every problem shows under its field as it is typed; the database checks the same.
+ */
 export function AdminClassDetailPage() {
   const { classId: rawClassId } = useParams();
   const isNew = !rawClassId || rawClassId === 'new';
-  const { t } = useTranslation();
+  const classId = isNew ? null : rawClassId ?? null;
+  const { t, i18n } = useTranslation();
+  const isArabic = i18n.language.startsWith('ar');
   const navigate = useNavigate();
   const base = useAdminBasePath();
   const { activeNurseryId } = useActiveNurseryId();
+  const editorQuery = useClassEditor(isNew ? activeNurseryId : null, classId);
+  const editor = editorQuery.data;
+  const nurseryId = editor?.nurseryId || (isNew ? activeNurseryId : null);
+  const team = useClassTeamEditing(nurseryId);
+  const { assign } = useClassTeamActions(nurseryId);
+  const save = useSaveClass();
+  const moveIn = useMoveChildren();
 
-  const classQuery = useClassWithStaff(isNew ? null : rawClassId ?? null);
-  // For existing classes, lock nursery-scoped pickers (teachers, unassigned
-  // children, sibling classes) to the class's own nursery so an admin who
-  // switches the sidebar picker mid-edit doesn't mix data across nurseries.
-  // For the new-class flow, the active picker selection is the target nursery.
-  const nurseryId = isNew ? activeNurseryId : classQuery.data?.nursery_id ?? null;
-  const names = useBilingualNames(nurseryId);
-  const person = (p: StaffPerson | null | undefined) => (p ? names.text(p.name_ar, p.name_en) : '—');
-
-  const teachersQuery = useNurseryTeachers(nurseryId);
-  const rosterQuery = useClassRoster(isNew ? null : rawClassId ?? null);
-  const unassignedQuery = useUnassignedChildren(nurseryId);
-  const otherClassesQuery = useNurseryClasses(nurseryId);
-
-  const updateMut = useUpdateClassDetails();
-  const createMut = useCreateClass();
-  const deleteMut = useDeleteClass();
-  const setLeadMut = useSetClassLead();
-  const setBackupMut = useSetClassSubstitute();
-  const addAssistMut = useAddClassAssistant();
-  const removeStaffMut = useRemoveClassStaff();
-  const assignChildMut = useAssignChildToClass();
-
-  // Form state for Details tab.
-  const [nameAr, setNameAr] = useState('');
-  const [nameEn, setNameEn] = useState('');
-  const [gradeLevel, setGradeLevel] = useState('');
-  const [roomNumber, setRoomNumber] = useState('');
-  const [capacity, setCapacity] = useState('');
+  const [draft, setDraft] = useState<ClassDraft>(() => classDraft(null));
+  const [loaded, setLoaded] = useState<ClassDraft | null>(null);
+  const [touched, setTouched] = useState<Partial<Record<DraftField, boolean>>>({});
+  const [tried, setTried] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  // New class only: its first team and children.
   const [leadId, setLeadId] = useState('');
   const [backupId, setBackupId] = useState('');
+  const [startWith, setStartWith] = useState<Set<string>>(new Set());
+  const [overOk, setOverOk] = useState(false);
 
-  // Refill the form whenever a new copy of the class arrives.
-  const [filledFrom, setFilledFrom] = useState<typeof classQuery.data>(undefined);
-  if (classQuery.data && classQuery.data !== filledFrom) {
-    const c = classQuery.data;
-    setFilledFrom(c);
-    setNameAr(c.name_ar ?? '');
-    setNameEn(c.name_en ?? '');
-    setGradeLevel(c.grade_level ?? '');
-    setRoomNumber(c.room_number ?? '');
-    setCapacity(c.capacity != null ? String(c.capacity) : '');
-    setLeadId(c.lead?.id ?? '');
-    setBackupId(c.substitute?.id ?? '');
+  // The form follows the class's saved details when they change (a save, another tab), unless
+  // something is being typed: children added meanwhile never undo an edit in progress.
+  const fresh = editor?.cls ? classDraft(editor.cls) : null;
+  if (fresh && (!loaded || !sameDraft(fresh, loaded))) {
+    setLoaded(fresh);
+    if (!loaded || sameDraft(draft, loaded)) setDraft(fresh);
   }
 
-  // Pickers.
-  const [assistantPick, setAssistantPick] = useState('');
-  const [childPick, setChildPick] = useState('');
-  const [movePicks, setMovePicks] = useState<Record<string, string>>({});
-  // New-class flow: pre-select children to assign on creation.
-  const [initialChildIds, setInitialChildIds] = useState<Set<string>>(new Set());
-  const [initialChildSearch, setInitialChildSearch] = useState('');
+  const saved = useMemo(() => classDraft(editor?.cls ?? null), [editor?.cls]);
+  const issues = draftIssues(draft, editor?.classes ?? []);
+  const dirty = isNew ? !sameDraft(draft, saved) || Boolean(leadId || backupId || startWith.size) : !sameDraft(draft, saved);
+  const shown = (field: DraftField) => tried || Boolean(touched[field]);
+  const teamClass = team.classes.find((c) => c.id === classId) ?? null;
+  const activeStaff = team.staff.filter((s) => s.status === 'active');
+  const staffName = (s: { name_ar: string | null; name_en: string | null }) => pickName(s, i18n.language);
+  const className = editor?.cls ? (isArabic ? editor.cls.nameAr || editor.cls.nameEn : editor.cls.nameEn || editor.cls.nameAr) : '';
+  const newPlaces = placesAfter(0, startWith.size, capacityOf(draft));
+  const busy = save.isPending || moveIn.isPending || assign.isPending;
+  const canSave = isNew ? Boolean(editor?.can.create) : Boolean(editor?.can.update);
 
-  const teacherOptions = teachersQuery.data ?? [];
-  // The lead and the backup must be two different teachers, so each picker hides the other one.
-  const leadOptions = teacherOptions.filter((u) => u.id !== backupId);
-  const backupOptions = teacherOptions.filter((u) => u.id !== leadId);
-  const assignedAssistantIds = new Set((classQuery.data?.assistants ?? []).map((a) => a.id));
-  const assistantCandidates = teacherOptions.filter(
-    (u) => !assignedAssistantIds.has(u.id) && u.id !== leadId && u.id !== backupId,
-  );
-
-  const onSaveDetails = async () => {
-    if (!nameAr.trim() && !nameEn.trim()) {
-      toast.error(t('admin.classes.validation.nameRequired'));
-      return;
-    }
-    if (leadId && leadId === backupId) {
-      toast.error(t('admin.classes.validation.backupIsLead'));
-      return;
-    }
-    const payload = {
-      name_ar: nameAr.trim() || nameEn.trim(),
-      name_en: nameEn.trim() || nameAr.trim(),
-      grade_level: gradeLevel.trim() || null,
-      room_number: roomNumber.trim() || null,
-      capacity: capacity.trim() ? Number(capacity) : null,
-    };
+  const submit = async () => {
+    setTried(true);
+    if (Object.keys(issues).length || busy) return;
+    if (isNew && newPlaces.over && !overOk) return;
+    setProblem(null);
     try {
-      if (isNew) {
-        if (!nurseryId) {
-          toast.error(t('admin.classes.validation.noActiveNursery'));
-          return;
-        }
-        const newId = await createMut.mutateAsync({ nursery_id: nurseryId, ...payload });
-        // The class exists now, so a failed teacher assignment is reported but does not undo it.
-        if (leadId) {
-          try {
-            await setLeadMut.mutateAsync({ classId: newId, userId: leadId });
-          } catch {
-            toast.error(t('admin.classes.toasts.leadAssignFailed'));
-          }
-        }
-        if (backupId) {
-          try {
-            await setBackupMut.mutateAsync({ classId: newId, userId: backupId });
-          } catch {
-            toast.error(t('admin.classes.toasts.backupAssignFailed'));
-          }
-        }
-        const childrenToAssign = Array.from(initialChildIds);
-        let assignedCount = 0;
-        if (childrenToAssign.length > 0) {
-          const results = await Promise.allSettled(
-            childrenToAssign.map((childId) =>
-              assignChildMut.mutateAsync({ childId, classId: newId }),
-            ),
-          );
-          assignedCount = results.filter((r) => r.status === 'fulfilled').length;
-          const failed = results.length - assignedCount;
-          if (failed > 0) {
-            toast.error(t('admin.classes.toasts.someChildrenAssignFailed', { count: failed }));
-          }
-        }
-        toast.success(
-          assignedCount > 0
-            ? t('admin.classes.toasts.createdWithChildren', { count: assignedCount })
-            : t('admin.classes.toasts.createdOk'),
-        );
-        navigate(`${base}/classes/${newId}/edit`, { replace: true });
-      } else if (rawClassId) {
-        await updateMut.mutateAsync({ classId: rawClassId, ...payload });
-        // Lead first, then backup, so swapping the two teachers works in one save.
-        const currentLead = classQuery.data?.lead?.id ?? '';
-        if (leadId !== currentLead) {
-          await setLeadMut.mutateAsync({ classId: rawClassId, userId: leadId || null });
-        }
-        if (backupId !== (classQuery.data?.substitute?.id ?? '')) {
-          await setBackupMut.mutateAsync({ classId: rawClassId, userId: backupId || null });
-        }
-        toast.success(t('admin.classes.toasts.updatedOk'));
-        navigate(`${base}/classes/${rawClassId}`);
+      const id = await save.mutateAsync({ nurseryId: isNew ? nurseryId : null, id: classId, draft });
+      if (!isNew) {
+        toast.success(t('classEditor.saved'));
+        setTried(false);
+        setTouched({});
+        return;
       }
-    } catch (err) {
-      console.error(err);
-      const e = err as { message?: string; details?: string; hint?: string } | null;
-      const detail =
-        err instanceof Error
-          ? err.message
-          : e?.message || e?.details || e?.hint || JSON.stringify(err);
-      toast.error(`${t('admin.classes.toasts.saveFailed')}: ${detail}`);
+      // The class exists now: the team and the children follow, each reported if it fails.
+      const troubles: string[] = [];
+      for (const [userId, role] of [[leadId, 'lead'], [backupId, 'substitute']] as const) {
+        if (!userId) continue;
+        try {
+          await assign.mutateAsync({ classId: id, userId, role });
+        } catch {
+          troubles.push(t(role === 'lead' ? 'classEditor.create.leadFailed' : 'classEditor.create.backupFailed'));
+        }
+      }
+      let added = 0;
+      if (startWith.size) {
+        try {
+          added = (await moveIn.mutateAsync({ childIds: [...startWith], classId: id, overCapacityOk: overOk })).moved;
+        } catch (error) {
+          troubles.push(t(classEditorErrorKey(error)));
+        }
+      }
+      for (const message of troubles) toast.error(message);
+      toast.success(added ? t('classEditor.create.doneWithChildren', { count: added }) : t('classEditor.create.done'));
+      navigate(`${base}/classes/${id}`, { replace: true });
+    } catch (error) {
+      setProblem(t(classEditorErrorKey(error)));
     }
   };
 
-  const onDelete = async () => {
-    if (!rawClassId) return;
-    if (!(await confirm({ description: t('admin.classes.actions.deleteConfirm'), variant: 'danger' })))
-      return;
-    try {
-      await deleteMut.mutateAsync(rawClassId);
-      toast.success(t('admin.classes.toasts.deletedOk'));
-      navigate(`${base}/classes`);
-    } catch (err) {
-      console.error(err);
-      toast.error(t('admin.classes.toasts.deleteFailed'));
-    }
-  };
-
-  const onAddAssistant = async () => {
-    if (!rawClassId || !assistantPick) return;
-    try {
-      await addAssistMut.mutateAsync({ classId: rawClassId, userId: assistantPick });
-      setAssistantPick('');
-      toast.success(t('admin.classes.toasts.assistantAdded'));
-    } catch (err) {
-      console.error(err);
-      toast.error(t('admin.classes.toasts.saveFailed'));
-    }
-  };
-
-  const onRemoveAssistant = async (userId: string) => {
-    if (!rawClassId) return;
-    try {
-      await removeStaffMut.mutateAsync({ classId: rawClassId, userId });
-      toast.success(t('admin.classes.toasts.assistantRemoved'));
-    } catch (err) {
-      console.error(err);
-      toast.error(t('admin.classes.toasts.saveFailed'));
-    }
-  };
-
-  const onAddChild = async () => {
-    if (!rawClassId || !childPick) return;
-    try {
-      await assignChildMut.mutateAsync({ childId: childPick, classId: rawClassId });
-      setChildPick('');
-      toast.success(t('admin.classes.toasts.childAdded'));
-    } catch (err) {
-      console.error(err);
-      toast.error(t('admin.classes.toasts.saveFailed'));
-    }
-  };
-
-  const onRemoveChild = async (childId: string) => {
-    try {
-      await assignChildMut.mutateAsync({ childId, classId: null, sourceClassId: rawClassId });
-      toast.success(t('admin.classes.toasts.childRemoved'));
-    } catch (err) {
-      console.error(err);
-      toast.error(t('admin.classes.toasts.saveFailed'));
-    }
-  };
-
-  const onMoveChild = async (childId: string) => {
-    const targetClass = movePicks[childId];
-    if (!targetClass) return;
-    try {
-      await assignChildMut.mutateAsync({ childId, classId: targetClass, sourceClassId: rawClassId });
-      setMovePicks((prev) => {
-        const next = { ...prev };
-        delete next[childId];
-        return next;
-      });
-      toast.success(t('admin.classes.toasts.childMoved'));
-    } catch (err) {
-      console.error(err);
-      toast.error(t('admin.classes.toasts.saveFailed'));
-    }
-  };
-
-  const otherClasses = useMemo(
-    () => (otherClassesQuery.data ?? []).filter((c) => c.id !== rawClassId),
-    [otherClassesQuery.data, rawClassId],
-  );
-
-  // Save is enabled only once the form differs from the loaded class (or, for a
-  // new class, once anything has been entered).
-  const isDirty = useMemo(() => {
-    if (isNew) {
-      return (
-        nameAr.trim() !== '' ||
-        nameEn.trim() !== '' ||
-        gradeLevel.trim() !== '' ||
-        roomNumber.trim() !== '' ||
-        capacity.trim() !== '' ||
-        leadId !== '' ||
-        backupId !== '' ||
-        initialChildIds.size > 0
-      );
-    }
-    const c = classQuery.data;
-    if (!c) return false;
-    return (
-      nameAr !== (c.name_ar ?? '') ||
-      nameEn !== (c.name_en ?? '') ||
-      gradeLevel !== (c.grade_level ?? '') ||
-      roomNumber !== (c.room_number ?? '') ||
-      capacity !== (c.capacity != null ? String(c.capacity) : '') ||
-      leadId !== (c.lead?.id ?? '') ||
-      backupId !== (c.substitute?.id ?? '')
-    );
-  }, [
-    isNew,
-    nameAr,
-    nameEn,
-    gradeLevel,
-    roomNumber,
-    capacity,
-    leadId,
-    backupId,
-    initialChildIds,
-    classQuery.data,
-  ]);
-
-  const initialChildCandidates = useMemo(() => {
-    const list = unassignedQuery.data ?? [];
-    const q = initialChildSearch.trim().toLowerCase();
-    if (!q) return list;
-    return list.filter((c) => {
-      const ar = (c.full_name_ar ?? '').toLowerCase();
-      const en = (c.full_name_en ?? '').toLowerCase();
-      return ar.includes(q) || en.includes(q);
-    });
-  }, [unassignedQuery.data, initialChildSearch]);
-
-  const toggleInitialChild = (id: string) => {
-    setInitialChildIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const selectAllVisibleChildren = () => {
-    setInitialChildIds((prev) => {
-      const next = new Set(prev);
-      for (const c of initialChildCandidates) next.add(c.id);
-      return next;
-    });
-  };
-
-  const clearAllInitialChildren = () => setInitialChildIds(new Set());
-
-  if (!isNew && classQuery.isLoading) return <LoadingSkeleton />;
-  if (!isNew && !classQuery.data) {
-    return (
-      <EmptyState
-        icon="school"
-        title={t('admin.classes.detail.notFoundTitle')}
-        description={t('admin.classes.detail.notFoundDescription')}
-      />
-    );
+  if (editorQuery.isPending && (classId || nurseryId)) return <LoadingSkeleton />;
+  if (!isNew && (editorQuery.isError || !editor?.cls)) {
+    return <EmptyState icon="school" title={t('admin.classes.detail.notFoundTitle')} description={t('admin.classes.detail.notFoundDescription')} />;
+  }
+  if (isNew && !nurseryId) {
+    return <EmptyState icon="school" title={t('classEditor.noNurseryTitle')} description={t('admin.classes.validation.noActiveNursery')} />;
   }
 
-  const classData = classQuery.data;
-  const overCapacity =
-    classData?.capacity != null && classData.capacity > 0 && classData.child_count > classData.capacity;
+  const back = isNew ? `${base}/classes` : `${base}/classes/${classId}`;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">
-            {isNew
-              ? t('admin.classes.detail.newTitle')
-              : names.text(classData?.name_ar, classData?.name_en)}
-          </h1>
-          <p className="text-sm text-foreground-secondary">
-            {isNew ? t('admin.classes.detail.newSubtitle') : t('admin.classes.detail.subtitle')}
-          </p>
-        </div>
-        {!isNew ? (
-          <Button variant="outline" onClick={onDelete} disabled={deleteMut.isPending}>
-            <span className="material-symbols-outlined me-1 text-base" aria-hidden>delete</span>
-            {t('common.delete')}
-          </Button>
-        ) : null}
-      </div>
+    <div className="space-y-5 pb-28" data-testid="class-editor">
+      <Link to={back} className="inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/10">
+        <MaterialSymbol name="arrow_back" size="text-lg" className="rtl:rotate-180" />
+        {isNew ? t('classProfile.backToClasses') : t('classEditor.backToClass', { class: className })}
+      </Link>
 
-        {/* DETAILS */}
-        <section>
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('admin.classes.tabs.details')}</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>{t('admin.classes.fields.nameAr')}</Label>
-                <Input value={nameAr} onChange={(e) => setNameAr(e.target.value)} dir="rtl" />
-              </div>
-              <div className="space-y-2">
-                <Label>{t('admin.classes.fields.nameEn')}</Label>
-                <Input value={nameEn} onChange={(e) => setNameEn(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>{t('admin.classes.fields.gradeLevel')}</Label>
-                <Input value={gradeLevel} onChange={(e) => setGradeLevel(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>{t('admin.classes.fields.roomNumber')}</Label>
-                <Input value={roomNumber} onChange={(e) => setRoomNumber(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>{t('admin.classes.fields.capacity')}</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={capacity}
-                  onChange={(e) => setCapacity(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{t('admin.classes.fields.leadTeacher')}</Label>
-                <Select value={leadId} onChange={(e) => setLeadId(e.target.value)}>
-                  <option value="">{t('admin.classes.fields.noLead')}</option>
-                  {leadOptions.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {person(u)}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>{t('admin.classes.fields.backupTeacher')}</Label>
-                <Select value={backupId} onChange={(e) => setBackupId(e.target.value)}>
-                  <option value="">{t('admin.classes.fields.noBackup')}</option>
-                  {backupOptions.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {person(u)}
-                    </option>
-                  ))}
-                </Select>
-                <p className="text-xs text-foreground-secondary">{t('admin.classes.fields.backupHelp')}</p>
-              </div>
-              {isNew ? (
-                <div className="md:col-span-2 space-y-3 rounded-md border border-border-subtle bg-surface-low p-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-medium text-foreground">
-                        {t('admin.classes.detail.assignChildrenTitle')}
-                      </p>
-                      <p className="text-xs text-foreground-secondary">
-                        {t('admin.classes.detail.assignChildrenHelp')}
-                      </p>
-                    </div>
-                    <p className="text-xs text-foreground-secondary">
-                      {t('admin.classes.detail.assignChildrenSelected', { count: initialChildIds.size })}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Input
-                      value={initialChildSearch}
-                      onChange={(e) => setInitialChildSearch(e.target.value)}
-                      placeholder={t('admin.classes.detail.assignChildrenSearch')}
-                      className="max-w-xs"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={selectAllVisibleChildren}
-                      disabled={initialChildCandidates.length === 0}
-                    >
-                      {t('admin.classes.detail.assignChildrenSelectAll')}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={clearAllInitialChildren}
-                      disabled={initialChildIds.size === 0}
-                    >
-                      {t('admin.classes.detail.assignChildrenClear')}
-                    </Button>
-                  </div>
-                  {unassignedQuery.isLoading ? (
-                    <LoadingSkeleton />
-                  ) : (unassignedQuery.data ?? []).length === 0 ? (
-                    <p className="text-sm text-foreground-secondary">
-                      {t('admin.classes.detail.noUnassignedChildren')}
-                    </p>
-                  ) : initialChildCandidates.length === 0 ? (
-                    <p className="text-sm text-foreground-secondary">
-                      {t('admin.classes.detail.assignChildrenSearchEmpty')}
-                    </p>
-                  ) : (
-                    <ul className="max-h-72 overflow-y-auto divide-y divide-border-subtle rounded-md border border-border-subtle bg-surface-container-lowest">
-                      {initialChildCandidates.map((c) => {
-                        const checked = initialChildIds.has(c.id);
-                        const inputId = `initial-child-${c.id}`;
-                        return (
-                          <li key={c.id} className="flex items-center gap-3 px-3 py-2">
-                            <Checkbox
-                              id={inputId}
-                              checked={checked}
-                              onCheckedChange={() => toggleInitialChild(c.id)}
-                            />
-                            <Label htmlFor={inputId} className="cursor-pointer text-sm font-normal">
-                              {names.text(c.full_name_ar, c.full_name_en)}
-                            </Label>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </div>
-              ) : null}
-            </CardContent>
-          </Card>
-        </section>
-
-        {!isNew ? (
+      <PageHeader
+        icon={isNew ? 'add_circle' : 'edit'}
+        eyebrow={t('classProfile.eyebrow')}
+        title={isNew ? t('classEditor.newTitle') : t('classEditor.editTitle', { class: className })}
+        description={isNew ? t('classEditor.newDescription') : t('classEditor.editDescription')}
+        actions={!isNew ? (
           <>
-            {/* STAFF */}
-            <section className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('admin.classes.staff.teachersTitle')}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-md border border-border-subtle bg-surface-low p-3">
-                    <p className="text-xs text-foreground-secondary">{t('admin.classes.staff.currentLead')}</p>
-                    <p className="text-sm font-medium text-foreground">
-                      {person(classData?.lead)}
-                    </p>
-                  </div>
-                  <div className="rounded-md border border-border-subtle bg-surface-low p-3">
-                    <p className="text-xs text-foreground-secondary">{t('admin.classes.staff.currentBackup')}</p>
-                    <p className="text-sm font-medium text-foreground">
-                      {person(classData?.substitute)}
-                    </p>
-                  </div>
-                </div>
-                <p className="text-xs text-foreground-secondary">
-                  {t('admin.classes.staff.leadHelp')}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('admin.classes.staff.assistantsTitle')}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex flex-wrap items-end gap-2">
-                  <div className="flex-1 min-w-[220px] space-y-1">
-                    <Label>{t('admin.classes.staff.addAssistant')}</Label>
-                    <Select value={assistantPick} onChange={(e) => setAssistantPick(e.target.value)}>
-                      <option value="">{t('common.select')}</option>
-                      {assistantCandidates.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {person(u)}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-                  <Button onClick={onAddAssistant} disabled={!assistantPick || addAssistMut.isPending}>
-                    {t('admin.classes.actions.add')}
-                  </Button>
-                </div>
-
-                {(classData?.assistants ?? []).length === 0 ? (
-                  <p className="text-sm text-foreground-secondary">
-                    {t('admin.classes.staff.noAssistants')}
-                  </p>
-                ) : (
-                  <ul className="space-y-2">
-                    {(classData?.assistants ?? []).map((a) => (
-                      <li
-                        key={a.id}
-                        className="flex items-center justify-between rounded-md border border-border-subtle bg-surface-low p-3"
-                      >
-                        <div>
-                          <p className="text-sm font-medium text-foreground">{person(a)}</p>
-                          <p className="text-xs text-foreground-secondary">{a.email ?? a.phone ?? ''}</p>
-                        </div>
-                        <Button variant="outline" size="sm" onClick={() => onRemoveAssistant(a.id)}>
-                          {t('common.delete')}
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
-            </section>
-
-            {/* ROSTER */}
-            <section>
-              <Card>
-            <CardHeader>
-              <CardTitle>{t('admin.classes.roster.title')}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-wrap items-center gap-3">
-                <p className={overCapacity ? 'text-sm font-semibold text-error' : 'text-sm text-foreground-secondary'}>
-                  {t('admin.classes.roster.count', {
-                    count: classData?.child_count ?? 0,
-                    capacity: classData?.capacity ?? '—',
-                  })}
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-end gap-2">
-                <div className="flex-1 min-w-[220px] space-y-1">
-                  <Label>{t('admin.classes.roster.addChild')}</Label>
-                  <Select value={childPick} onChange={(e) => setChildPick(e.target.value)}>
-                    <option value="">{t('common.select')}</option>
-                    {(unassignedQuery.data ?? []).map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {names.text(c.full_name_ar, c.full_name_en)}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-                <Button onClick={onAddChild} disabled={!childPick || assignChildMut.isPending}>
-                  {t('admin.classes.actions.add')}
-                </Button>
-              </div>
-
-              {rosterQuery.isLoading ? (
-                <LoadingSkeleton />
-              ) : (rosterQuery.data ?? []).length === 0 ? (
-                <p className="text-sm text-foreground-secondary">{t('admin.classes.roster.empty')}</p>
-              ) : (
-                <ul className="space-y-2">
-                  {(rosterQuery.data ?? []).map((child) => (
-                    <li
-                      key={child.id}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border-subtle bg-surface-low p-3"
-                    >
-                      <p className="text-sm font-medium text-foreground">
-                        {names.text(child.full_name_ar, child.full_name_en)}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Select
-                          value={movePicks[child.id] ?? ''}
-                          onChange={(e) => setMovePicks((prev) => ({ ...prev, [child.id]: e.target.value }))}
-                          className="h-9 max-w-[200px]"
-                        >
-                          <option value="">{t('admin.classes.roster.moveTo')}</option>
-                          {otherClasses.map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {names.text(c.name_ar, c.name_en)}
-                            </option>
-                          ))}
-                        </Select>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => onMoveChild(child.id)}
-                          disabled={!movePicks[child.id]}
-                        >
-                          {t('admin.classes.actions.move')}
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => onRemoveChild(child.id)}>
-                          {t('admin.classes.actions.removeFromClass')}
-                        </Button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-              </Card>
-            </section>
+            <Button asChild variant="outline" className="gap-1.5">
+              <Link to={`${base}/classes/${classId}`}>
+                <MaterialSymbol name="visibility" size="text-base" />
+                {t('classEditor.openClass')}
+              </Link>
+            </Button>
+            {editor?.can.delete ? (
+              <Button type="button" variant="outline" className="gap-1.5 text-error" onClick={() => setDeleting(true)} data-testid="delete-class">
+                <MaterialSymbol name="delete" size="text-base" />
+                {t('classEditor.delete.button')}
+              </Button>
+            ) : null}
           </>
-        ) : null}
+        ) : undefined}
+      />
 
-      {/* Sticky bottom action bar */}
-      <div className="sticky bottom-0 -mx-4 mt-2 flex items-center justify-end gap-2 border-t border-border-subtle bg-surface px-4 py-3">
-        <Button variant="secondary" onClick={() => navigate(isNew ? `${base}/classes` : `${base}/classes/${rawClassId}`)}>
-          {t('common.cancel')}
-        </Button>
-        <Button
-          onClick={onSaveDetails}
-          disabled={
-            !isDirty ||
-            updateMut.isPending ||
-            createMut.isPending ||
-            setLeadMut.isPending ||
-            setBackupMut.isPending ||
-            assignChildMut.isPending
-          }
-        >
-          {isNew ? t('admin.classes.actions.create') : t('common.saveChanges')}
-        </Button>
-      </div>
+      <Panel icon="info" title={t('classEditor.detailsTitle')} description={t('classEditor.detailsDescription')}>
+        <ClassDetailsFields
+          draft={draft}
+          onChange={(patch) => { setDraft((d) => ({ ...d, ...patch })); setProblem(null); }}
+          issues={issues}
+          shown={shown}
+          onBlur={(field) => setTouched((s) => ({ ...s, [field]: true }))}
+          gradeLevels={editor?.gradeLevels ?? []}
+          childrenCount={isNew ? startWith.size : editor?.children.length ?? 0}
+          disabled={!canSave}
+        />
+      </Panel>
+
+      {isNew ? (
+        <>
+          <Panel icon="groups" title={t('classEditor.teamTitle')} description={t('classEditor.create.teamDescription')}>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField id="new-lead" label={t('classTeam.roles.lead')} optional hint={t('classEditor.create.leadHint')}>
+                <Select id="new-lead" value={leadId} onChange={(e) => setLeadId(e.target.value)}>
+                  <option value="">{t('classEditor.create.noOne')}</option>
+                  {activeStaff.filter((s) => s.id !== backupId).map((s) => <option key={s.id} value={s.id}>{staffName(s)}</option>)}
+                </Select>
+              </FormField>
+              <FormField id="new-backup" label={t('classTeam.roles.substitute')} optional hint={t('admin.classes.fields.backupHelp')}>
+                <Select id="new-backup" value={backupId} onChange={(e) => setBackupId(e.target.value)}>
+                  <option value="">{t('classEditor.create.noOne')}</option>
+                  {activeStaff.filter((s) => s.id !== leadId).map((s) => <option key={s.id} value={s.id}>{staffName(s)}</option>)}
+                </Select>
+              </FormField>
+            </div>
+            <p className="mt-3 text-xs text-on-surface-variant">{t('classEditor.create.moreTeamLater')}</p>
+          </Panel>
+
+          <Panel
+            icon="child_care"
+            title={t('classEditor.create.childrenTitle')}
+            description={t('classEditor.create.childrenDescription')}
+            actions={<span className="rounded-full bg-surface-high px-2.5 py-1 text-xs font-medium text-on-surface-variant">{t('classEditor.add.summary', { count: startWith.size })}</span>}
+          >
+            <ChildPickerTable candidates={editor?.candidates ?? []} selected={startWith} onChange={setStartWith} today={editor?.today ?? ''} />
+            {newPlaces.over ? <div className="mt-3"><OverCapacityNote over={newPlaces.over} checked={overOk} onChange={setOverOk} /></div> : null}
+          </Panel>
+        </>
+      ) : (
+        <>
+          <Panel
+            icon="groups"
+            title={t('classEditor.teamTitle')}
+            description={t('classEditor.teamDescription')}
+            actions={
+              <Button asChild variant="ghost" size="sm" className="gap-1 text-primary">
+                <Link to={`${base}/classes/teams${classId ? `?edit=${classId}` : ''}`}>
+                  {t('classEditor.allTeams')}
+                  <MaterialSymbol name="chevron_right" size="text-base" className="rtl:rotate-180" />
+                </Link>
+              </Button>
+            }
+            testId="class-editor-team"
+          >
+            {teamClass ? (
+              <ClassTeamCard
+                cls={teamClass}
+                staff={team.staff}
+                nameOf={team.nameOf}
+                canUpdate={team.canUpdate}
+                busy={team.busy}
+                problem={team.problemFor(teamClass.id)}
+                onPlace={(role, userId) => void team.place(teamClass, role, userId)}
+                onRemove={(userId) => void team.takeOut(teamClass, userId)}
+              />
+            ) : team.query.isPending ? <LoadingSkeleton /> : <p className="text-sm text-on-surface-variant">{t('classEditor.teamUnavailable')}</p>}
+          </Panel>
+
+          {editor ? <ClassRosterTable editor={editor} className={className} base={base} canUpdate={editor.can.update} /> : null}
+        </>
+      )}
+
+      {canSave && (isNew || dirty) ? (
+        <div className="sticky bottom-4 z-20 me-20 rounded-xl border border-outline-variant bg-surface/95 p-3 shadow-lg backdrop-blur sm:px-4" data-testid="class-save-bar">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className={cn('flex items-center gap-2 text-sm', Object.keys(issues).length && tried ? 'text-error' : 'text-on-surface-variant')}>
+              <MaterialSymbol name={Object.keys(issues).length && tried ? 'error' : 'edit_note'} size="text-lg" />
+              {Object.keys(issues).length && tried ? t('classEditor.fixProblems') : isNew ? t('classEditor.create.ready') : t('classEditor.unsaved')}
+            </p>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" disabled={busy} onClick={() => (isNew ? navigate(back) : (setDraft(saved), setTried(false), setTouched({})))}>
+                {isNew ? t('common.cancel') : t('classEditor.discard')}
+              </Button>
+              <Button type="button" onClick={() => void submit()} disabled={busy || (!isNew && !dirty)} aria-busy={busy} data-testid="class-save">
+                {busy ? t('common.saving') : isNew ? t('admin.classes.actions.create') : t('common.saveChanges')}
+              </Button>
+            </div>
+          </div>
+          <div className="empty:hidden [&>*]:mt-3">
+            <FormProblem message={problem} />
+          </div>
+        </div>
+      ) : null}
+
+      {deleting && editor?.cls ? (
+        <DeleteClassDialog
+          classId={editor.cls.id}
+          className={className}
+          childrenCount={editor.children.length}
+          classes={editor.classes}
+          onDeleted={() => navigate(`${base}/classes`, { replace: true })}
+          onClose={() => setDeleting(false)}
+        />
+      ) : null}
     </div>
   );
 }

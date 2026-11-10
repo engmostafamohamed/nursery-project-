@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { StatusPill, TableCard, TableEmpty } from '@/components/ui/DataTable';
+import { DataTable, IconAction, StatusPill, TableCard, TableEmpty, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { NameStack } from '@/components/ui/NameStack';
+import { TeamChangesTable, type TeamChangeRow } from '@/features/class-team/TeamChangesTable';
 import { COVER_LOOK, REASON_ICON } from '@/features/staff-absence/absenceLook';
 import { coverStatus } from '@/features/staff-absence/staffAbsence';
 import { RecordStaffTimeDialog } from '@/features/staff-clock/RecordStaffTimeDialog';
@@ -14,20 +14,42 @@ import type { BilingualNames } from '@/hooks/useBilingualNames';
 import { cn, getUserInitials } from '@/lib/utils';
 
 import { CLOCK_LOOK, DUTY_LOOK } from './classLook';
-import { classCover, clockState, dutyState, type ClassProfile, type TeamChange, type TeamMember } from './classProfile';
+import { classCover, clockState, dutyState, type ClassProfile, type TeamMember } from './classProfile';
 import type { ClassFormat } from './useClassFormat';
 
+const RING: Record<ReturnType<typeof clockState>, string> = {
+  in: 'ring-success',
+  left: 'ring-outline-variant',
+  not_in: 'ring-warning',
+  away: 'ring-outline-variant',
+};
+
 /**
- * Who teaches and looks after the class and who is with it today: the lead, the backup, the
+ * Who teaches and looks after the class and who is with it today, as rows: the lead, the backup, the
  * assistants and the nannies, each with their state today (on duty, covering for the lead, away and
- * until when), their clocking in and out (recorded by hand when someone forgot), and how to reach
- * them; then the team's last changes. The team itself is set on the Team & classes page.
+ * until when), their clocking in and out (recorded by hand when someone forgot) and how to reach them;
+ * a row opens that member of staff's page. Then the team's last changes. The team itself is set on
+ * the Teams page (Classes section).
  */
 export function ClassTeamPanel({ profile, names, format, base }: { profile: ClassProfile; names: BilingualNames; format: ClassFormat; base: string }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const cover = coverStatus(classCover(profile));
   const coverLook = COVER_LOOK[cover];
   const [recording, setRecording] = useState<TeamMember | null>(null);
+  const className = names.lines(profile.info.nameAr, profile.info.nameEn).primary;
+  const personHref = (id: string) => `${base}/staff/${id}`;
+
+  const changes: TeamChangeRow[] = profile.teamChanges.map((c) => ({
+    id: c.id,
+    action: c.action,
+    classId: profile.info.id,
+    className,
+    personName: names.lines(c.nameAr, c.nameEn).primary,
+    role: c.role,
+    by: c.byAr || c.byEn ? names.lines(c.byAr, c.byEn).primary : '',
+    at: c.at,
+  }));
 
   return (
     <div className="space-y-5">
@@ -44,7 +66,7 @@ export function ClassTeamPanel({ profile, names, format, base }: { profile: Clas
               </Link>
             </Button>
             <Button asChild size="sm" className="gap-1.5">
-              <Link to={`${base}/settings/team`}>
+              <Link to={`${base}/classes/teams?edit=${profile.info.id}`}>
                 <MaterialSymbol name="groups" size="text-base" />
                 {t('classProfile.team.manage')}
               </Link>
@@ -68,11 +90,31 @@ export function ClassTeamPanel({ profile, names, format, base }: { profile: Clas
           </div>
         ) : null}
         {profile.team.length ? (
-          <ul className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-3" data-testid="class-team">
-            {profile.team.map((member) => (
-              <MemberCard key={member.id} member={member} names={names} format={format} schoolDay={profile.schoolDay} dayOpen={profile.dayOpen} onRecord={() => setRecording(member)} />
-            ))}
-          </ul>
+          <DataTable minWidth={980} className="mt-1">
+            <THead>
+              <Th>{t('classProfile.team.cols.member')}</Th>
+              <Th>{t('classProfile.team.cols.today')}</Th>
+              <Th>{t('classProfile.team.cols.clock')}</Th>
+              <Th>{t('classProfile.team.cols.contact')}</Th>
+              <Th>{t('classProfile.team.cols.since')}</Th>
+              <Th align="end">{t('classProfile.team.cols.actions')}</Th>
+            </THead>
+            <TBody>
+              {profile.team.map((member) => (
+                <MemberRow
+                  key={member.id}
+                  member={member}
+                  names={names}
+                  format={format}
+                  schoolDay={profile.schoolDay}
+                  dayOpen={profile.dayOpen}
+                  href={personHref(member.id)}
+                  onOpen={() => navigate(personHref(member.id))}
+                  onRecord={() => setRecording(member)}
+                />
+              ))}
+            </TBody>
+          </DataTable>
         ) : (
           <TableEmpty icon="group_off" title={t('classProfile.team.emptyTitle')} description={t('classProfile.team.emptyDescription')} />
         )}
@@ -89,27 +131,20 @@ export function ClassTeamPanel({ profile, names, format, base }: { profile: Clas
         />
       ) : null}
 
-      <TableCard title={t('classProfile.team.historyTitle')} description={t('classProfile.team.historyDescription')}>
-        {profile.teamChanges.length ? (
-          <ol className="divide-y divide-outline-variant">
-            {profile.teamChanges.map((change) => (
-              <ChangeRow key={change.id} change={change} names={names} format={format} className={names.lines(profile.info.nameAr, profile.info.nameEn).primary} />
-            ))}
-          </ol>
-        ) : (
-          <p className="px-4 py-6 text-center text-sm text-on-surface-variant sm:px-5">{t('classTeam.changes.empty')}</p>
-        )}
-      </TableCard>
+      <TeamChangesTable rows={changes} title={t('classProfile.team.historyTitle')} description={t('classProfile.team.historyDescription')} showClass={false} />
     </div>
   );
 }
 
-function MemberCard({ member, names, format, schoolDay, dayOpen, onRecord }: {
+/** One member of the team: who, where they stand today, their clocking, how to reach them; the row opens their page. */
+function MemberRow({ member, names, format, schoolDay, dayOpen, href, onOpen, onRecord }: {
   member: TeamMember;
   names: BilingualNames;
   format: ClassFormat;
   schoolDay: boolean;
   dayOpen: boolean;
+  href: string;
+  onOpen: () => void;
   onRecord: () => void;
 }) {
   const { t } = useTranslation();
@@ -119,91 +154,98 @@ function MemberCard({ member, names, format, schoolDay, dayOpen, onRecord }: {
   const clock = clockState(member);
   const clockLook = CLOCK_LOOK[clock];
   const late = (member.lateMinutes ?? 0) > 5;
+  const clocked = clock === 'in' || clock === 'left';
+
+  const clockLine =
+    !schoolDay && clock === 'not_in'
+      ? t('classProfile.closedToday')
+      : clock === 'in'
+        ? t('classProfile.teamToday.inSince', { time: format.time(member.clockIn) })
+        : clock === 'left'
+          ? t('classProfile.teamToday.leftAt', { from: format.time(member.clockIn), to: format.time(member.clockOut) })
+          : clock === 'away'
+            ? t('classProfile.teamToday.away')
+            : dayOpen ? t('classProfile.teamToday.notInYet') : t('classProfile.teamToday.didNotClock');
 
   return (
-    <li className={cn('flex flex-col gap-3 rounded-xl border bg-surface p-4', state === 'away' ? 'border-warning/40' : 'border-outline-variant')} data-testid="class-team-member">
-      <div className="flex items-start gap-3">
-        <Avatar className={cn('h-11 w-11 shrink-0', member.role === 'lead' ? 'bg-primary/10' : 'bg-surface-high')}>
-          <AvatarFallback className={cn('text-xs', member.role === 'lead' ? 'text-primary' : 'text-on-surface-variant')}>
+    <Tr onClick={onOpen} className={cn(state === 'away' && 'bg-warning/5')} data-testid="class-team-member">
+      <Td>
+        <span className="flex items-center gap-3">
+          <span
+            className={cn(
+              'flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold ring-2 ring-offset-2 ring-offset-surface',
+              RING[clock],
+              member.role === 'lead' ? 'bg-primary/10 text-primary' : 'bg-surface-high text-on-surface-variant',
+            )}
+            aria-hidden
+          >
             {getUserInitials(name.primary, member.email)}
-          </AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <NameStack name={name} strong />
-          <p className="mt-0.5 text-xs font-medium text-primary">{t(`classTeam.roles.${member.role}`)}</p>
-        </div>
-      </div>
-      <div className="space-y-1">
+          </span>
+          <span className="min-w-0">
+            <Link to={href} className="block hover:text-primary hover:underline">
+              <NameStack name={name} strong />
+            </Link>
+            <span className="block text-xs font-medium text-primary">
+              {member.covering ? t('classProfile.duty.covering') : t(`classTeam.roles.${member.role}`)}
+            </span>
+          </span>
+        </span>
+      </Td>
+      <Td>
         <StatusPill tone={look.tone} icon={look.icon}>{t(`classProfile.duty.${state}`)}</StatusPill>
         {member.absence ? (
-          <p className="flex items-center gap-1 text-xs text-on-surface-variant">
+          <p className="mt-1 flex items-center gap-1 text-xs text-on-surface-variant">
             <MaterialSymbol name={REASON_ICON[member.absence.reason]} size="text-sm" />
             {t(`staffAbsence.reasons.${member.absence.reason}`)} · {t('classProfile.duty.until', { date: format.day(member.absence.endsOn) })}
           </p>
         ) : null}
-      </div>
-      <div className="flex items-center justify-between gap-2 rounded-lg bg-surface-container-lowest px-3 py-2" data-testid="member-clock">
-        <span className="min-w-0 text-sm">
+      </Td>
+      <Td>
+        <span className="block min-w-0" data-testid="member-clock">
           <span className="flex items-center gap-1.5 font-medium text-on-surface">
-            <MaterialSymbol name={clockLook.icon} size="text-base" className={clock === 'in' ? 'text-success' : clock === 'not_in' && schoolDay ? 'text-warning' : 'text-on-surface-variant'} />
-            {clock === 'in'
-              ? t('classProfile.teamToday.inSince', { time: format.time(member.clockIn) })
-              : clock === 'left'
-                ? t('classProfile.teamToday.leftAt', { from: format.time(member.clockIn), to: format.time(member.clockOut) })
-                : clock === 'away' ? t('classProfile.teamToday.away') : dayOpen ? t('classProfile.teamToday.notInYet') : t('classProfile.teamToday.didNotClock')}
+            <MaterialSymbol
+              name={clockLook.icon}
+              size="text-base"
+              className={clock === 'in' ? 'text-success' : clock === 'not_in' && schoolDay ? 'text-warning' : 'text-on-surface-variant'}
+            />
+            {clockLine}
           </span>
           <span className="block text-xs text-on-surface-variant">
-            {late ? <span className="text-warning">{t('classProfile.teamToday.lateBy', { count: member.lateMinutes ?? 0 })}</span> : clock === 'in' || clock === 'left' ? t('classProfile.teamToday.onTime') : t('classProfile.teamToday.clockHint')}
+            {late && clock !== 'away' ? (
+              <span className="text-warning">{t('classProfile.teamToday.lateBy', { count: member.lateMinutes ?? 0 })}</span>
+            ) : clocked ? t('classProfile.teamToday.onTime') : clock === 'not_in' && schoolDay ? t('classProfile.teamToday.clockHint') : null}
             {member.clockSource === 'admin' ? ` · ${t('classProfile.teamToday.byAdmin')}` : ''}
           </span>
         </span>
-        <Button type="button" variant="ghost" size="sm" className="shrink-0 gap-1" onClick={onRecord} data-testid="record-time">
-          <MaterialSymbol name="edit_calendar" size="text-base" />
-          {clock === 'not_in' || clock === 'away' ? t('classProfile.teamToday.record') : t('classProfile.teamToday.correct')}
-        </Button>
-      </div>
-      <div className="space-y-1.5 border-t border-outline-variant pt-3 text-sm">
-        {member.phone ? (
-          <a href={`tel:${member.phone}`} className="flex items-center gap-2 text-on-surface hover:text-primary">
-            <MaterialSymbol name="call" size="text-base" className="text-on-surface-variant" />
-            <span dir="ltr">{member.phone}</span>
-          </a>
-        ) : null}
-        {member.email ? (
-          <a href={`mailto:${member.email}`} className="flex min-w-0 items-center gap-2 text-on-surface hover:text-primary">
-            <MaterialSymbol name="mail" size="text-base" className="shrink-0 text-on-surface-variant" />
-            <span className="truncate" dir="ltr">{member.email}</span>
-          </a>
-        ) : null}
-        <p className="flex items-center gap-2 text-xs text-on-surface-variant">
-          <MaterialSymbol name="event" size="text-base" />
-          {t('classProfile.team.since', { date: format.day(member.since) })}
-        </p>
-      </div>
-    </li>
-  );
-}
-
-const CHANGE_ICON: Record<TeamChange['action'], string> = { assigned: 'person_add', changed: 'swap_horiz', removed: 'person_remove' };
-
-/** A change in a sentence ("Sara joined Butterflies as Assistant"): names in the reader's language only. */
-function ChangeRow({ change, names, format, className }: { change: TeamChange; names: BilingualNames; format: ClassFormat; className: string }) {
-  const { t } = useTranslation();
-  const name = names.lines(change.nameAr, change.nameEn).primary;
-  const role = change.role ? t(`classTeam.roles.${change.role}`) : '';
-  const by = names.lines(change.byAr, change.byEn).primary;
-  return (
-    <li className="flex items-start gap-3 px-4 py-3 sm:px-5">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-high text-on-surface-variant">
-        <MaterialSymbol name={CHANGE_ICON[change.action]} size="text-base" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm text-on-surface">{t(`classTeam.changes.${change.action}`, { name, class: className, role })}</p>
-        <p className="text-xs text-on-surface-variant">
-          {format.moment(change.at)}
-          {change.byAr || change.byEn ? ` · ${t('classTeam.changes.by', { name: by })}` : ''}
-        </p>
-      </div>
-    </li>
+      </Td>
+      <Td>
+        <span className="flex max-w-[16rem] flex-col gap-0.5 text-sm">
+          {member.phone ? (
+            <a href={`tel:${member.phone}`} className="inline-flex items-center gap-1.5 text-on-surface hover:text-primary">
+              <MaterialSymbol name="call" size="text-sm" className="text-on-surface-variant" />
+              <span dir="ltr">{member.phone}</span>
+            </a>
+          ) : null}
+          {member.email ? (
+            <a href={`mailto:${member.email}`} className="inline-flex min-w-0 items-center gap-1.5 text-xs text-on-surface-variant hover:text-primary">
+              <MaterialSymbol name="mail" size="text-sm" />
+              <span className="truncate" dir="ltr">{member.email}</span>
+            </a>
+          ) : null}
+          {!member.phone && !member.email ? <span className="text-xs text-on-surface-variant">—</span> : null}
+        </span>
+      </Td>
+      <Td className="whitespace-nowrap text-on-surface-variant">{format.day(member.since)}</Td>
+      <Td align="end">
+        <span className="inline-flex items-center gap-0.5">
+          <IconAction
+            icon="edit_calendar"
+            label={t(clocked ? 'classProfile.team.correctFor' : 'classProfile.team.recordFor', { name: name.primary })}
+            onClick={onRecord}
+          />
+          <IconAction icon="badge" label={t('staffAbsence.table.openPerson', { name: name.primary })} to={href} />
+        </span>
+      </Td>
+    </Tr>
   );
 }

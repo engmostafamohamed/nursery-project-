@@ -50,6 +50,168 @@
       }
     }
   },
+  "classEditor": {
+    "saved": "The class was saved.",
+    "noNurseryTitle": "Choose a nursery first",
+    "backToClass": "Back to {{class}}",
+    "newTitle": "New class",
+    "editTitle": "Edit {{class}}",
+    "newDescription": "Name the class, choose its teachers and the children who start in it.",
+    "editDescription": "The class’s details, its team and its children.",
+    "openClass": "Open the class page",
+    "detailsTitle": "Class details",
+    "detailsDescription": "One name is enough: the other language uses it until you add one.",
+    "teamTitle": "Team",
+    "teamDescription": "Changes here are saved at once. The lead teacher sends the daily reports.",
+    "allTeams": "All classes’ teams",
+    "teamUnavailable": "The team could not be loaded.",
+    "fixProblems": "Fix the problems shown above.",
+    "unsaved": "You have changes that aren’t saved.",
+    "discard": "Discard",
+    "issues": {
+      "name_required": "Enter the class’s name in Arabic or English.",
+      "name_too_long": "Keep the name under {{max}} characters.",
+      "name_taken": "Another class already has this name.",
+      "too_long": "Keep it under {{max}} characters.",
+      "capacity_invalid": "Enter a number of places from 1 to 100."
+    },
+    "fields": {
+      "nameAr": "Name in Arabic",
+      "nameArPlaceholder": "مثلًا: الفراشات",
+      "nameEn": "Name in English",
+      "nameEnPlaceholder": "e.g. Butterflies",
+      "gradeLevel": "Age group",
+      "gradeLevelPlaceholder": "e.g. KG1 (4–5 years)",
+      "gradeLevelHint": "Pick one in use or type a new one.",
+      "roomNumber": "Room",
+      "roomPlaceholder": "e.g. G04",
+      "capacity": "Places",
+      "capacityHint": "How many children the class takes (up to {{max}}). Leave empty for no limit.",
+      "capacityBelow": "The class has {{count}} children: {{capacity}} places leaves it over capacity.",
+      "capacityUse": "{{count}} of {{capacity}} places taken · {{free}} free"
+    },
+    "picker": {
+      "scope": "Which children",
+      "unassigned": "Without a class",
+      "all": "All children",
+      "search": "Child’s name or code",
+      "noMatch": "No child matches this search.",
+      "none": "No children to add.",
+      "noneHint": "Every child of the nursery is already in this class.",
+      "selectPage": "Select this page",
+      "select": "Select {{name}}",
+      "currentClass": "Class now",
+      "noClass": "No class"
+    },
+    "table": {
+      "child": "Child",
+      "age": "Age",
+      "gender": "Gender",
+      "since": "At the nursery since"
+    },
+    "gender": {
+      "male": "Boy",
+      "female": "Girl"
+    },
+    "add": {
+      "title": "Add children to {{class}}",
+      "description": "Children without a class are shown first. A child from another class moves here; the parents are told.",
+      "done_one": "{{count}} child added to {{class}}.",
+      "done_other": "{{count}} children added to {{class}}.",
+      "summary_one": "{{count}} child chosen",
+      "summary_other": "{{count}} children chosen",
+      "moving_one": "{{count}} moves from another class",
+      "moving_other": "{{count}} move from other classes",
+      "noLimit": "The class will have {{after}} children (no limit on places).",
+      "places": "The class will have {{after}} of {{capacity}} places.",
+      "confirm_one": "Add {{count}} child",
+      "confirm_other": "Add {{count}} children"
+    },
+    "over": {
+      "message_one": "This puts the class {{count}} child over its places.",
+      "message_other": "This puts the class {{count}} children over its places.",
+      "confirm": "Add them anyway"
+    },
+    "move": {
+      "titleOne": "Move {{name}} to another class",
+      "titleMany_one": "Move {{count}} child to another class",
+      "titleMany_other": "Move {{count}} children to another class",
+      "description": "The parents are told the new class.",
+      "to": "Move to",
+      "required": "Choose a class.",
+      "choose": "Choose a class…",
+      "fill": "{{count}}/{{capacity}}",
+      "fillNoLimit": "{{count}} children",
+      "done_one": "{{count}} child moved to {{class}}.",
+      "done_other": "{{count}} children moved to {{class}}.",
+      "confirm": "Move"
+    },
+    "delete": {
+      "button": "Delete class",
+      "title": "Delete {{class}}?",
+      "withChildren_one": "Its child moves to another class first. This can’t be undone.",
+      "withChildren_other": "Its {{count}} children move to another class first. This can’t be undone.",
+      "empty": "The class has no children. This can’t be undone.",
+      "moveTo": "Move the children to",
+      "noOtherClass": "There is no other class to move them to. Create one first, or take the children out of this class.",
+      "teamLeaves": "Its teachers and nannies leave the class; their accounts stay.",
+      "confirm": "Delete class",
+      "done": "{{class}} was deleted."
+    },
+    "remove": {
+      "titleOne": "Take {{name}} out of {{class}}?",
+      "titleMany_one": "Take {{count}} child out of {{class}}?",
+      "titleMany_other": "Take {{count}} children out of {{class}}?",
+      "body": "They stay enrolled at the nursery, without a class, until you put them in one.",
+      "confirm": "Take out",
+      "done_one": "{{count}} child taken out of the class.",
+      "done_other": "{{count}} children taken out of the class."
+    },
+    "roster": {
+      "title": "Children in this class",
+      "count_one": "{{count}} child",
+      "count_other": "{{count}} children",
+      "description": "Open a child’s record from their name. Tick several to move them or take them out together.",
+      "add": "Add children",
+      "selected_one": "{{count}} child selected",
+      "selected_other": "{{count}} children selected",
+      "move": "Move to another class",
+      "remove": "Take out of the class",
+      "clearSelection": "Clear selection",
+      "noMatch": "No child matches this search.",
+      "empty": "No children in this class yet.",
+      "emptyHint": "Add children without a class, or move some from another class.",
+      "moveOne": "Move {{name}}",
+      "removeOne": "Take {{name}} out of the class"
+    },
+    "create": {
+      "teamDescription": "Optional now: assistants and nannies are added on the class’s edit page.",
+      "leadHint": "Sends the class’s daily reports.",
+      "noOne": "Nobody yet",
+      "moreTeamLater": "Assistants and nannies can be added once the class exists.",
+      "childrenTitle": "Children who start in the class",
+      "childrenDescription": "Optional: choose them now or add them later.",
+      "leadFailed": "The class was created, but the lead teacher could not be set. Set it on its edit page.",
+      "backupFailed": "The class was created, but the backup teacher could not be set. Set it on its edit page.",
+      "done": "The class was created.",
+      "doneWithChildren_one": "The class was created with {{count}} child.",
+      "doneWithChildren_other": "The class was created with {{count}} children.",
+      "ready": "Check the details, then create the class."
+    },
+    "errors": {
+      "forbidden": "You may not change classes.",
+      "not_found": "This class no longer exists.",
+      "name_required": "Enter the class’s name.",
+      "name_taken": "Another class already has this name.",
+      "text_too_long": "A text is too long.",
+      "capacity_invalid": "Enter a number of places from 1 to 100.",
+      "children_invalid": "Some of these children can’t be put in this class.",
+      "over_capacity": "This would put the class over its places.",
+      "has_children": "Move the class’s children to another class first.",
+      "network": "We can’t reach the server. Check your internet connection and try again.",
+      "failed": "Something went wrong. Try again."
+    }
+  },
   "stock": {
     "page": {
       "eyebrow": "Operations",
@@ -649,7 +811,7 @@
       "subtitle": "Who is away, who covers each class today, and every absence reported.",
       "awayToday": "Away today",
       "coveredToday": "Classes a backup covers",
-      "uncoveredToday": "Classes with nobody on duty",
+      "uncoveredToday": "Classes that need cover",
       "listTitle": "Absences",
       "views": {
         "current": "Today and coming",
@@ -657,6 +819,30 @@
       },
       "emptyCurrent": "Nobody is away today or reported a coming absence.",
       "emptyPast": "No past absences in the last 60 days."
+    },
+    "profile": {
+      "title": "Absences",
+      "description": "The last six months and the coming ones. Cancel one that hasn’t ended if they come in after all.",
+      "today": "Today",
+      "awayToday": "Away",
+      "notAway": "Not away",
+      "daysAway": "Days away, last 6 months",
+      "coming": "Coming absences",
+      "empty": "No absences recorded for {{name}}."
+    },
+    "table": {
+      "openPerson": "Open {{name}}’s page",
+      "count": "Absences: {{count}}",
+      "person": "Staff member",
+      "dates": "Dates",
+      "reason": "Reason",
+      "state": "Status",
+      "note": "Note",
+      "actions": "Actions",
+      "searchLabel": "Search",
+      "search": "Staff member’s name",
+      "allReasons": "All reasons",
+      "noMatch": "No absence matches these filters."
     },
     "board": {
       "title": "Class cover today",
@@ -670,8 +856,19 @@
       "children_other": "{{count}} children",
       "noClasses": "No classes yet.",
       "setTeam": "Set the class’s teachers",
+      "count": "Classes: {{count}}",
+      "searchLabel": "Search",
+      "search": "Class or teacher",
+      "show": "Show",
+      "all": "All classes",
+      "class": "Class",
+      "today": "Today",
+      "actions": "Actions",
+      "openClass": "Open {{class}}",
+      "noMatch": "No class matches these filters.",
       "status": {
         "uncovered": "Nobody on duty",
+        "lead_away": "Lead away, no backup",
         "covered": "Backup covering",
         "no_lead": "No lead teacher",
         "normal": "Lead in"
@@ -1912,7 +2109,7 @@
       "broadcastHistory": "Broadcasts log",
       "notifications": "Notifications",
       "settings": "Settings",
-      "rbacTeam": "Team & classes",
+      "rbacTeam": "Teams",
       "dailyReportRates": "Daily report rate",
       "rbacPositions": "Positions",
       "rbacRoles": "Roles",
@@ -1958,6 +2155,7 @@
         "colLead": "Lead teacher",
         "colBackup": "Backup teacher",
         "colAssistants": "Assistants",
+        "colNannies": "Nannies",
         "colRoster": "Children assigned",
         "noLead": "Unassigned",
         "noBackup": "None"
@@ -5564,7 +5762,7 @@
     "nav": {
 
       "familyMessages": "Messages",
-      "team": "Team & classes",
+      "team": "Teams",
       "reportRates": "Report send rate",
       "community": "Community",
       "bottomBarLabel": "Teacher app main sections",
@@ -5988,8 +6186,10 @@
     "sharedNo": "Not shared",
     "tabs": {
       "personal": "Personal Info",
+      "classes": "Classes",
       "schedule": "Schedule",
       "attendance": "Attendance History",
+      "absences": "Absences",
       "documents": "Documents",
       "payroll": "Payroll"
     },
@@ -6060,6 +6260,20 @@
       "exportErrorAr": "تعذر تصدير الملف."
     },
     "profile": {
+      "fallbackName": "Member of staff",
+      "awayToday": "Away · {{reason}} · until {{date}}",
+      "classesTitle": "Classes",
+      "classesDescription": "The classes {{name}} works in and how each team stands. Select a class to open its team.",
+      "classesEmpty": "{{name}} isn’t on any class team.",
+      "cols": {
+        "place": "Place",
+        "children": "Children",
+        "status": "Status",
+        "notes": "Note"
+      },
+      "daysCount": "Days: {{count}}",
+      "stillIn": "Still in",
+      "noDays": "No days recorded in this month.",
       "contact": "Contact",
       "email": "Email",
       "phone": "Phone",
@@ -7320,18 +7534,10 @@
       "details": "Details"
     },
     "teamToday": {
-      "title": "Today’s team",
-      "inCount": "{{in}} of {{expected}} in",
-      "late_one": "{{count}} late",
-      "late_other": "{{count}} late",
-      "details": "Team details",
-      "empty": "No teacher or nanny is assigned to this class yet.",
-      "closed": "The nursery is closed today",
       "inSince": "In since {{time}}",
       "leftAt": "{{from}} – {{to}}",
       "notInYet": "Not clocked in yet",
       "didNotClock": "Did not clock in",
-      "covering": "Covering for the lead today",
       "lateBy_one": "{{count}} min late",
       "lateBy_other": "{{count}} min late",
       "away": "Away today",
@@ -7410,18 +7616,28 @@
       "title": "Team",
       "count_one": "{{count}} person",
       "count_other": "{{count}} people",
-      "description": "Who teaches and looks after this class, and who is with it today.",
-      "manage": "Team & classes",
+      "description": "Who teaches and looks after this class, and who is with it today. Select someone to open their page.",
+      "manage": "Teams",
+      "cols": {
+        "member": "Member",
+        "today": "Today",
+        "clock": "Clocking in and out",
+        "contact": "Contact",
+        "since": "On the team since",
+        "actions": "Actions"
+      },
+      "recordFor": "Record {{name}}’s time",
+      "correctFor": "Correct {{name}}’s time",
       "absences": "Absences",
-      "since": "On the team since {{date}}",
       "emptyTitle": "No teachers in this class",
-      "emptyDescription": "Choose a lead teacher, a backup and assistants on the Team & classes page.",
+      "emptyDescription": "Choose a lead teacher, a backup and assistants on the Teams page.",
       "historyTitle": "Team changes",
       "historyDescription": "The last changes to this class's team.",
       "cover": {
         "covered": "The lead teacher is away today, so the backup teacher looks after the class.",
         "uncovered": "Nobody from the team is in today. Choose someone to look after the class.",
-        "no_lead": "This class has no lead teacher. Choose one on the Team & classes page.",
+        "lead_away": "The lead teacher is away today and the class has no backup teacher: only the assistants are with it. Choose a backup teacher.",
+        "no_lead": "This class has no lead teacher. Choose one on the Teams page.",
         "normal": "The lead teacher is in today."
       }
     },
@@ -7565,15 +7781,21 @@
       "due": "Due {{date}}"
     }
   },
+  "classesSection": {
+    "label": "Classes section",
+    "classes": "Classes",
+    "teams": "Teams"
+  },
   "classTeam": {
-    "title": "Team & classes",
-    "description": "Choose each class’s lead teacher, assistants, nannies and backup teacher.",
+    "title": "Teams",
+    "description": "Who leads, assists, looks after and backs up each class. A class needs a lead teacher to send its daily reports.",
     "readOnly": "You can see the teams. Changing them needs the Class team permission.",
     "saved": "Saved",
     "removed": "Removed from the class",
     "tiles": {
       "classes": "Classes",
       "withoutLead": "Without a lead teacher",
+      "withoutBackup": "Without a backup teacher",
       "withoutAssistant": "Without an assistant",
       "withoutNanny": "Without a nanny",
       "teachers": "Teachers",
@@ -7592,6 +7814,9 @@
       "show": "Show",
       "allClasses": "All classes",
       "noLead": "No lead teacher",
+      "attention": "Needs attention",
+      "noBackup": "No backup teacher",
+      "complete": "Complete team",
       "noAssistant": "No assistant",
       "allTeachers": "All teachers",
       "noClass": "No class",
@@ -7654,6 +7879,65 @@
       "classes": "No classes yet.",
       "teachers": "No teachers yet.",
       "noMatch": "Nothing matches these filters."
+    },
+    "status": {
+      "no_lead": "No lead teacher",
+      "incomplete": "Incomplete",
+      "complete": "Complete"
+    },
+    "gaps": {
+      "label": "Missing: {{list}}",
+      "no_lead": "lead teacher",
+      "no_backup": "backup",
+      "no_assistant": "assistant",
+      "no_nanny": "nanny"
+    },
+    "check": {
+      "leadRequired": "A class needs a lead teacher: they send its daily reports.",
+      "inactive": "{{name}}’s account is inactive. Choose someone else.",
+      "leadsOthers_one": "Also leads {{count}} other class.",
+      "leadsOthers_other": "Also leads {{count}} other classes.",
+      "noBackup": "No backup: if the lead teacher is away, nobody covers the class."
+    },
+    "table": {
+      "title": "Class teams",
+      "count": "Classes: {{count}}",
+      "hint": "Select a class to change its team. The classes that need attention come first.",
+      "hintView": "Select a class to see its team.",
+      "class": "Class",
+      "lead": "Lead teacher",
+      "backup": "Backup teacher",
+      "assistants": "Assistants",
+      "nannies": "Nannies",
+      "status": "Team",
+      "actions": "Actions",
+      "edit": "Change the team of {{class}}",
+      "view": "See the team of {{class}}",
+      "openClass": "Open {{class}}",
+      "none": "None",
+      "notSet": "Not set",
+      "inactive": "Account inactive",
+      "more": "+{{count}}",
+      "leadNote": "The lead teacher sends the class’s daily reports; the backup covers when they are away."
+    },
+    "dialog": {
+      "title": "Team of {{class}}",
+      "description": "Each change is saved as you make it, and the person is told.",
+      "done": "Done",
+      "openClass": "Open the class"
+    },
+    "changesTable": {
+      "count": "Changes: {{count}}",
+      "change": "Change",
+      "class": "Class",
+      "by": "By",
+      "when": "When",
+      "allChanges": "All changes",
+      "actions": {
+        "assigned": "Joined",
+        "changed": "Place changed",
+        "removed": "Left"
+      }
     },
     "errors": {
       "forbidden": "You are not allowed to change class teams.",
@@ -8078,6 +8362,10 @@
     "stock_child_charged": {
       "title": "{{item}} for {{child}}",
       "body": "{{quantity}} {{unit}} of {{item}} ({{amount}} EGP) was added to your monthly extras invoice."
+    },
+    "child_class_changed": {
+      "title": "{{child}} has a new class",
+      "body": "{{child}} is now in {{class}}."
     },
     "extra_served": {
       "title": "{{child}} had an extra",

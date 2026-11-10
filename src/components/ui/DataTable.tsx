@@ -59,10 +59,10 @@ const PAGER_BAND = 'px-4 py-3 sm:px-5';
 
 /** The pager band of a TableCard when the server pages the list (pass the Pagination props yourself). */
 export function TablePager(props: ComponentProps<typeof Pagination>) {
-  return <Pagination {...props} className={cn(PAGER_BAND, props.className)} />;
+  return <Pagination alwaysShowControls {...props} className={cn(PAGER_BAND, props.className)} />;
 }
 
-/** The pager band of a TableCard for a client-side `usePagination` list; nothing when one page fits. */
+/** The pager band of a TableCard for a client-side `usePagination` list; nothing when the list is empty. */
 export function TablePagination<T>({ pager, pageSizeOptions }: { pager: Pager<T>; pageSizeOptions?: number[] }) {
   return (
     <Pagination
@@ -79,6 +79,7 @@ export function TablePagination<T>({ pager, pageSizeOptions }: { pager: Pager<T>
       pageSize={pager.pageSize}
       pageSizeOptions={pageSizeOptions}
       onPageSizeChange={pager.setPageSize}
+      alwaysShowControls
       className={PAGER_BAND}
     />
   );
