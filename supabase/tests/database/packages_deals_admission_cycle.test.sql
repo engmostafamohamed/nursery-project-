@@ -272,7 +272,7 @@ select is(
 );
 
 select is(
-  (select (billing_period, duration_months, locked_price, next_invoice_date = current_date + interval '3 months')::text
+  (select (billing_period, duration_months, locked_price, next_invoice_date = (now() at time zone 'Africa/Cairo')::date + interval '3 months')::text
      from public.child_tuition_subscriptions
     where child_id = current_setting('test.child_id')::uuid and status = 'active'),
   '(quarterly,3,2700.00,t)',
