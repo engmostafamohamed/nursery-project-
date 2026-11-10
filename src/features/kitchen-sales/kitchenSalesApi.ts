@@ -2,6 +2,7 @@
  * Kitchen sales and children's extras over the network. Every read and write is a database function
  * (the service worker answers table reads from its cache first, so a change would not show at once).
  */
+import { errorTextKey } from '@/lib/errorCode';
 import { supabase } from '@/lib/supabase';
 
 import {
@@ -108,14 +109,8 @@ const CODES = [
   'kitchen_reason_required', 'kitchen_discount_invalid', 'kitchen_item_not_found', 'kitchen_item_invalid', 'menu_forbidden',
 ] as const;
 
-/** The text key for a failed call (kitchenSales.errors.<code>). */
-export function kitchenErrorKey(error: unknown): string {
-  const message = (error as { message?: string } | null)?.message ?? '';
-  const hit = CODES.find((c) => message.includes(c));
-  if (hit) return `kitchenSales.errors.${hit}`;
-  if (/failed to fetch|network|load failed/i.test(message)) return 'kitchenSales.errors.network';
-  return 'kitchenSales.errors.failed';
-}
+/** The text key for a failed call (kitchenSales.errors.<code>, network, failed). */
+export const kitchenErrorKey = (error: unknown): string => errorTextKey(error, CODES, 'kitchenSales.errors');
 
 /** The detail of an error (e.g. the allergens of kitchen_allergy, the stock of kitchen_not_enough). */
 export const errorDetail = (error: unknown): string => String((error as { details?: string } | null)?.details ?? '');

@@ -1,4 +1,5 @@
 /* Staff absences over the network: reads and writes are database functions (so a change shows at once). */
+import { errorTextKey } from '@/lib/errorCode';
 import { supabase } from '@/lib/supabase';
 
 import { toMyAbsences, toStaffAbsences, type AbsenceDraft, type MyAbsences, type StaffAbsences } from './staffAbsence';
@@ -32,12 +33,7 @@ export async function cancelAbsence(id: string): Promise<void> {
   if (error) throw error;
 }
 
-/** The text key for a failed read or write. */
-export function absenceErrorKey(error: unknown): string {
-  const message = (error as { message?: string } | null)?.message ?? '';
-  const known = ['absence_forbidden', 'absence_invalid_dates', 'absence_invalid_reason', 'absence_overlaps', 'absence_closed', 'absence_note_too_long'];
-  const hit = known.find((k) => message.includes(k));
-  if (hit) return `staffAbsence.errors.${hit.replace('absence_', '')}`;
-  if (/failed to fetch|network|load failed/i.test(message)) return 'staffAbsence.errors.network';
-  return 'staffAbsence.errors.failed';
-}
+const ABSENCE_CODES = ['absence_forbidden', 'absence_invalid_dates', 'absence_invalid_reason', 'absence_overlaps', 'absence_closed', 'absence_note_too_long'] as const;
+
+/** The text key for a failed read or write (staffAbsence.errors.<code without absence_>, network, failed). */
+export const absenceErrorKey = (error: unknown): string => errorTextKey(error, ABSENCE_CODES, 'staffAbsence.errors', 'absence_');

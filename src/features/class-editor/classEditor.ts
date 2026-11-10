@@ -4,6 +4,7 @@
  * save_class), the children lists' searches, and what adding children does to the places.
  */
 import { ageOn } from '@/features/child-health/childHealth';
+import { errorTextKey } from '@/lib/errorCode';
 import { count, day, list, numberOrNull, obj, text, textOrNull } from '@/lib/jsonRead';
 
 export const NAME_MAX = 60;
@@ -152,13 +153,10 @@ export function candidatesIn(candidates: Candidate[], scope: CandidateScope, sea
 /** Age in whole years and months on `today`, or null without a birth date. */
 export const ageOf = (dob: string | null, today: string) => ageOn(dob, today);
 
-/** The text key for a refused call (classEditor.errors.<code>). */
-export function classEditorErrorKey(error: unknown): string {
-  const message = (error as { message?: string } | null)?.message ?? '';
-  const codes = ['class_forbidden', 'class_not_found', 'class_name_required', 'class_name_taken', 'class_text_too_long', 'class_capacity_invalid',
-    'class_children_invalid', 'class_over_capacity', 'class_has_children'];
-  const hit = codes.find((c) => message.includes(c));
-  if (hit) return `classEditor.errors.${hit.replace('class_', '')}`;
-  if (/failed to fetch|network|load failed/i.test(message)) return 'classEditor.errors.network';
-  return 'classEditor.errors.failed';
-}
+const CLASS_EDITOR_CODES = [
+  'class_forbidden', 'class_not_found', 'class_name_required', 'class_name_taken', 'class_text_too_long', 'class_capacity_invalid',
+  'class_children_invalid', 'class_over_capacity', 'class_has_children',
+] as const;
+
+/** The text key for a refused call (classEditor.errors.<code without class_>, network, failed). */
+export const classEditorErrorKey = (error: unknown): string => errorTextKey(error, CLASS_EDITOR_CODES, 'classEditor.errors', 'class_');

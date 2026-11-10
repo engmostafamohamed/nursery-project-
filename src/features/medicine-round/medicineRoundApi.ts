@@ -1,4 +1,5 @@
 /* Today's medicine round over the network (database functions, so a dose shows the moment it is recorded). */
+import { errorTextKey } from '@/lib/errorCode';
 import { supabase } from '@/lib/supabase';
 
 import { toRound, type Round, type SkipReason } from './medicineRound';
@@ -27,11 +28,5 @@ export async function undoDose(doseId: string): Promise<void> {
 
 const CODES = ['medication_forbidden', 'medication_invalid', 'medication_no_consent', 'medication_not_active', 'medication_child_not_here', 'medication_already_recorded', 'medication_undo_closed'] as const;
 
-/** The text key for a failed call (medicineRound.errors.<code>). */
-export function roundErrorKey(error: unknown): string {
-  const message = (error as { message?: string } | null)?.message ?? '';
-  const hit = CODES.find((c) => message.includes(c));
-  if (hit) return `medicineRound.errors.${hit.replace('medication_', '')}`;
-  if (/failed to fetch|network|load failed/i.test(message)) return 'medicineRound.errors.network';
-  return 'medicineRound.errors.failed';
-}
+/** The text key for a failed call (medicineRound.errors.<code without medication_>, network, failed). */
+export const roundErrorKey = (error: unknown): string => errorTextKey(error, CODES, 'medicineRound.errors', 'medication_');

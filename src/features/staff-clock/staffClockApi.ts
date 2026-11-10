@@ -6,6 +6,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { classProfileKeys } from '@/features/classes/useClassProfile';
+import { errorTextKey } from '@/lib/errorCode';
 import { supabase } from '@/lib/supabase';
 
 import { toMyStaffDay, toStaffDay, type MyStaffDay, type StaffDay } from './staffClock';
@@ -31,14 +32,8 @@ export const recordStaffAttendance = async (input: { userId: string; day: string
 
 const CODES = ['staff_clock_forbidden', 'staff_clock_already_in', 'staff_clock_already_out', 'staff_clock_not_in', 'staff_clock_invalid', 'staff_clock_person'] as const;
 
-/** The text key for a failed call (staffClock.errors.<code>). */
-export function staffClockErrorKey(error: unknown): string {
-  const message = (error as { message?: string } | null)?.message ?? '';
-  const hit = CODES.find((c) => message.includes(c));
-  if (hit) return `staffClock.errors.${hit.replace('staff_clock_', '')}`;
-  if (/failed to fetch|network|load failed/i.test(message)) return 'staffClock.errors.network';
-  return 'staffClock.errors.failed';
-}
+/** The text key for a failed call (staffClock.errors.<code without staff_clock_>, network, failed). */
+export const staffClockErrorKey = (error: unknown): string => errorTextKey(error, CODES, 'staffClock.errors', 'staff_clock_');
 
 export const myStaffDayKey = ['staff-clock', 'me'] as const;
 

@@ -4,6 +4,7 @@
  * allergies, conditions, medicines and vaccinations are rows the branch's admins may change.
  */
 import { isFoodAllergen, type FoodAllergen } from '@/features/food-and-beverage/menu';
+import { errorCodeIn, errorMessage, errorTextKey } from '@/lib/errorCode';
 import { supabase } from '@/lib/supabase';
 
 import {
@@ -113,14 +114,14 @@ export async function deleteHealthItem(kind: HealthItemKind, id: string): Promis
   if (error) throw error;
 }
 
-/** The text key for a failed read or write. */
+const HEALTH_CODES = ['health_forbidden', 'health_phone_invalid', 'health_contact_incomplete', 'health_blood_type_invalid', 'health_text_too_long'] as const;
+
+/** A write the table's own rules refused (no health code of ours in it). */
+const refusedByTableRules = (error: unknown) =>
+  (error as { code?: unknown } | null)?.code === '42501' || /row-level security|permission denied/i.test(errorMessage(error));
+
+/** The text key for a failed read or write (health.profile.errors.<code without health_>, forbidden, network, failed). */
 export function healthErrorKey(error: unknown): string {
-  const e = (error ?? {}) as { message?: string; code?: string };
-  const message = e.message ?? '';
-  const known = ['health_forbidden', 'health_phone_invalid', 'health_contact_incomplete', 'health_blood_type_invalid', 'health_text_too_long'];
-  const hit = known.find((k) => message.includes(k));
-  if (hit) return `health.profile.errors.${hit.replace('health_', '')}`;
-  if (e.code === '42501' || /row-level security|permission denied/i.test(message)) return 'health.profile.errors.forbidden';
-  if (/failed to fetch|network|load failed/i.test(message)) return 'health.profile.errors.network';
-  return 'health.profile.errors.failed';
+  if (!errorCodeIn(error, HEALTH_CODES) && refusedByTableRules(error)) return 'health.profile.errors.forbidden';
+  return errorTextKey(error, HEALTH_CODES, 'health.profile.errors', 'health_');
 }

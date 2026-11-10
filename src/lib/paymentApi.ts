@@ -1,3 +1,4 @@
+import { errorCodeIn } from '@/lib/errorCode';
 import { supabase } from '@/lib/supabase';
 
 /**
@@ -196,9 +197,8 @@ const PAYMENT_ERROR_CODES = [
 
 /** Translation key and values for a payment RPC error (payment.errors.<code>). */
 export function paymentError(error: unknown): { key: string; values: Record<string, string> } {
-  const e = (error ?? {}) as { message?: unknown; details?: unknown };
-  const message = typeof e.message === 'string' ? e.message : String(error ?? '');
-  const code = PAYMENT_ERROR_CODES.find((c) => message.includes(c));
+  const e = (error ?? {}) as { details?: unknown };
+  const code = errorCodeIn(error, PAYMENT_ERROR_CODES);
   if (!code) return { key: 'payment.errors.actionFailed', values: {} };
   // payment_exceeds_balance and payment_full_amount_required carry the amount still payable in their detail.
   const amount = typeof e.details === 'string' && /^\d+(\.\d+)?$/.test(e.details) ? Number(e.details).toFixed(2) : '';

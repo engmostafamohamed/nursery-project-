@@ -2,6 +2,7 @@
  * Signing in as plain rules (no React, no network): what is wrong with what was typed, and which
  * message a failed sign-in or sign-in link shows. The messages never say whether an account exists.
  */
+import { isNetworkError } from '@/lib/errorCode';
 import { PASSWORD_MIN_LENGTH, resetEmailProblem, type ResetEmailProblem } from '@/lib/passwordReset';
 
 export type IdentifierProblem = 'required';
@@ -26,7 +27,7 @@ export function magicLinkProblem(value: string): ResetEmailProblem | null {
 type AuthFailure = { code?: string | null; status?: number | null; name?: string | null; message?: string | null } | null | undefined;
 
 const isNetwork = (error: NonNullable<AuthFailure>) =>
-  error.name === 'AuthRetryableFetchError' || error.status === 0 || /failed to fetch|network|load failed/i.test(error.message ?? '');
+  error.name === 'AuthRetryableFetchError' || error.status === 0 || isNetworkError(error);
 const isRateLimited = (error: NonNullable<AuthFailure>) =>
   error.status === 429 || ['over_request_rate_limit', 'over_email_send_rate_limit'].includes(error.code ?? '');
 

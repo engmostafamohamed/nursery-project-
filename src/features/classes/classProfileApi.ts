@@ -1,4 +1,5 @@
 /* The class profile over the network: one read, a database function, so the page shows one moment. */
+import { errorCodeIn, isNetworkError } from '@/lib/errorCode';
 import { supabase } from '@/lib/supabase';
 
 import { toClassProfile, type ClassProfile } from './classProfile';
@@ -11,9 +12,7 @@ export async function fetchClassProfile(classId: string): Promise<ClassProfile> 
 
 /** The text key for a failed read: the class is gone, the reader may not see it, or the network failed. */
 export function classProfileErrorKey(error: unknown): string {
-  const message = (error as { message?: string } | null)?.message ?? '';
-  if (message.includes('class_not_found')) return 'classProfile.errors.notFound';
-  if (message.includes('class_forbidden')) return 'classProfile.errors.forbidden';
-  if (/failed to fetch|network|load failed/i.test(message)) return 'classProfile.errors.network';
-  return 'classProfile.errors.failed';
+  const code = errorCodeIn(error, ['class_not_found', 'class_forbidden'] as const);
+  if (code) return code === 'class_not_found' ? 'classProfile.errors.notFound' : 'classProfile.errors.forbidden';
+  return isNetworkError(error) ? 'classProfile.errors.network' : 'classProfile.errors.failed';
 }
