@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 
 import { movementIssue, quantityAfter, restockIssue, SUPPLIER_MAX, type KitchenItem, type MovementKind } from './kitchen';
 import { recordStockMovement, stockErrorKey, type StockClass, type StockPerson } from './mealPlansApi';
-import { localName } from './menu';
+import { localName } from '@/lib/bilingualName';
 import { useKitchenChange } from './useMealPlansAndKitchen';
 
 export type MovementMode = 'restock' | 'take' | 'count';

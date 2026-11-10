@@ -1,4 +1,5 @@
-import { addDays, type FoodAllergen } from './menu';
+import { addDays } from './menuPeriod';
+import type { FoodAllergen } from './menu';
 
 /*
  * The nursery's stock as plain data and rules: the kitchen's section and the store's (one stock,

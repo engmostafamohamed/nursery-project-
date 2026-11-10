@@ -6,8 +6,10 @@ import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { cn } from '@/lib/utils';
 
 import { dayLabel, MEAL_LOOK } from './mealLook';
-import { alertsByDayAndChild, groupUnmatched, localName, severityTone, type ChildAlert } from './menu';
-import type { FoodAlerts } from './menuApi';
+import { alertsByDayAndChild, groupUnmatched, type ChildAlert } from './foodAlerts';
+import { localName } from '@/lib/bilingualName';
+import { severityTone } from './menu';
+import type { FoodAlerts } from './foodAlertsApi';
 
 /**
  * Who must not eat what: per day, each child once (worst reaction first) with the dishes and why,

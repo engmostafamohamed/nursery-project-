@@ -1,3 +1,4 @@
+import { errorTextKey } from '@/lib/errorCode';
 import { supabase } from '@/lib/supabase';
 
 import { EXTRA_KINDS, HISTORY_KINDS, isStockCategory, sectionOf, type HistoryKind, type ItemDraft, type ItemExtraKind, type KitchenItem, type MovementKind, type StockCategory, type StockMovement, type StockScope } from './kitchen';
@@ -322,11 +323,7 @@ export async function fetchFamilyMealPlans(): Promise<FamilyChildPlan[]> {
 const CODES = ['menu_forbidden', 'meal_plan_invalid', 'meal_plan_not_found', 'kitchen_item_invalid', 'kitchen_item_not_found', 'kitchen_invalid_quantity', 'kitchen_not_enough', 'stock_issue_target', 'stock_invalid_cost'] as const;
 
 /** The translation key for an error from these functions (fnb.errors.<code>). */
-export function fnbErrorKey(error: unknown): string {
-  const message = typeof (error as { message?: unknown })?.message === 'string' ? (error as { message: string }).message : String(error ?? '');
-  const code = CODES.find((c) => message.includes(c));
-  return code ? `fnb.errors.${code}` : 'fnb.errors.failed';
-}
+export const fnbErrorKey = (error: unknown): string => errorTextKey(error, CODES, 'fnb.errors');
 
 /** The same for the stock's screens: "menu_forbidden" there means this part of the stock. */
 export function stockErrorKey(error: unknown): string {

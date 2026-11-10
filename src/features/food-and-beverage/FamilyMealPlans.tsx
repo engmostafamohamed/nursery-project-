@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { formatMoneyAmount } from '@/lib/money';
 
 import { MealIcons } from './MealIcons';
-import { localName } from './menu';
+import { localName } from '@/lib/bilingualName';
 import { useFamilyMealPlans } from './useMealPlansAndKitchen';
 
 /** For a parent: each child's meal plan, the meals it covers and what it costs a month. */

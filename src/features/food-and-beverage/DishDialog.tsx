@@ -10,7 +10,9 @@ import { cn } from '@/lib/utils';
 
 import { AllergenPicker } from './AllergenChips';
 import { dayLabel, MEAL_LOOK } from './mealLook';
-import { DISH_NAME_MAX, dishIssue, dishWarnings, localName, severityTone, type DraftDish, type FoodAllergen } from './menu';
+import { DISH_NAME_MAX, dishIssue, dishWarnings, type DraftDish } from './menuDrafts';
+import { localName } from '@/lib/bilingualName';
+import { severityTone, type FoodAllergen } from './menu';
 import type { AllergyIndex } from './menuApi';
 
 /**

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
@@ -7,15 +7,42 @@ import { cn } from '@/lib/utils';
 
 import { dayLabel, MEAL_LOOK } from './mealLook';
 import { MEALS, type Meal } from './menu';
+import { weeksOf } from './menuPeriod';
 
 /**
- * The week's menu laid out like a menu board: on a wide screen the days are columns and the meals
- * rows, today's column tinted; on a phone, one day at a time picked from a row of day tabs. The
- * caller fills each day-and-meal cell (dishes to read, or to edit).
+ * The menu laid out like a menu board: on a wide screen the days are columns and the meals rows,
+ * today's column tinted, and a month is one such board per week under its dates; on a phone, one
+ * day at a time picked from a row of day tabs. The caller fills each day-and-meal cell (dishes to
+ * read, or to edit).
  */
 export function MenuBoard({ days, today, renderCell }: { days: string[]; today: string; renderCell: (day: string, meal: Meal) => ReactNode }) {
   const wide = useMediaQuery('(min-width: 1024px)');
-  return wide ? <WeekGrid days={days} today={today} renderCell={renderCell} /> : <DayPager days={days} today={today} renderCell={renderCell} />;
+  if (!wide) return <DayPager days={days} today={today} renderCell={renderCell} />;
+  const weeks = weeksOf(days);
+  if (weeks.length <= 1) return <WeekGrid days={days} today={today} renderCell={renderCell} />;
+  return <MonthWeeks weeks={weeks} today={today} renderCell={renderCell} />;
+}
+
+function MonthWeeks({ weeks, today, renderCell }: { weeks: Array<{ weekStart: string; days: string[] }>; today: string; renderCell: (day: string, meal: Meal) => ReactNode }) {
+  const { i18n } = useTranslation();
+  const locale = i18n.language.startsWith('ar') ? 'ar-EG' : 'en-GB';
+  return (
+    <div className="space-y-5">
+      {weeks.map((week) => {
+        const first = week.days[0];
+        const last = week.days[week.days.length - 1];
+        return (
+          <section key={week.weekStart} aria-label={`${dayLabel(first, locale, { day: 'numeric', month: 'short' })} – ${dayLabel(last, locale, { day: 'numeric', month: 'short' })}`} data-testid="menu-month-week">
+            <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-on-surface">
+              <MaterialSymbol name="date_range" size="text-base" className="text-primary" />
+              {dayLabel(first, locale, { day: 'numeric', month: 'short' })} – {dayLabel(last, locale, { day: 'numeric', month: 'short' })}
+            </h3>
+            <WeekGrid days={week.days} today={today} renderCell={renderCell} />
+          </section>
+        );
+      })}
+    </div>
+  );
 }
 
 function MealLabel({ meal, compact = false }: { meal: Meal; compact?: boolean }) {
@@ -74,6 +101,11 @@ function DayPager({ days, today, renderCell }: { days: string[]; today: string; 
   const locale = i18n.language.startsWith('ar') ? 'ar-EG' : 'en-GB';
   const [picked, setPicked] = useState<string | null>(null);
   const day = picked && days.includes(picked) ? picked : days.includes(today) ? today : days[0];
+  // A month's row of days is wider than a phone: keep the chosen day in sight.
+  const selectedRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    selectedRef.current?.scrollIntoView({ block: 'nearest', inline: 'center' });
+  }, [day]);
   if (!day) return null;
   return (
     <div className="space-y-3">
@@ -83,6 +115,7 @@ function DayPager({ days, today, renderCell }: { days: string[]; today: string; 
           return (
             <button
               key={d}
+              ref={selected ? selectedRef : undefined}
               type="button"
               role="tab"
               aria-selected={selected}

@@ -4,6 +4,7 @@
  * makes the same checks (save_child_health_overview, the allergy foods trigger).
  */
 import { isFoodAllergen, type FoodAllergen } from '@/features/food-and-beverage/menu';
+import { addDays } from '@/lib/calendarDay';
 import { isValidInternationalMobile, normalizeInternationalMobile } from '@/lib/phoneValidation';
 
 /** Where a link into the profile came from, so its back link returns there (e.g. the food alerts). */
@@ -169,11 +170,7 @@ export type ChildHealthProfile = {
 // Dates
 
 /** `date` plus `days`, as YYYY-MM-DD (calendar days, no time zone). */
-export function addDays(date: string, days: number): string {
-  const d = new Date(`${date}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
-}
+export { addDays };
 
 /** A child's age in whole years and months on `today`, or null without a birth date. */
 export function ageOn(dob: string | null, today: string): { years: number; months: number } | null {

@@ -15,7 +15,7 @@ import { ChildMealPlanDialog } from '@/features/food-and-beverage/ChildMealPlanD
 import { MealIcons } from '@/features/food-and-beverage/MealIcons';
 import { MealPlanDialog } from '@/features/food-and-beverage/MealPlanDialog';
 import { childMatches, isNotBilled, mealPlanTotals, type ChildPlanFilter, type MealPlan, type MealPlanChild } from '@/features/food-and-beverage/mealPlans';
-import { localName } from '@/features/food-and-beverage/menu';
+import { localName } from '@/lib/bilingualName';
 import { useMealPlansData } from '@/features/food-and-beverage/useMealPlansAndKitchen';
 import { usePagination } from '@/hooks/usePagination';
 import { formatDate } from '@/lib/datetime';

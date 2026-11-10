@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
-import { localName } from '@/features/food-and-beverage/menu';
+import { localName } from '@/lib/bilingualName';
 import { MEDICATION_CONSENT_OPTIONS } from '@/lib/admissions/medicationConsentOptions';
 import { allergyLabel } from '@/lib/allergies';
 import { cn } from '@/lib/utils';

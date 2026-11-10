@@ -1,6 +1,7 @@
 import type { TFunction } from 'i18next';
 import { toast } from 'sonner';
 
+import { edgeFunctionErrorBody } from '@/lib/edgeFunctionError';
 import { supabase } from '@/lib/supabase';
 
 import { buildStaffOnboardingCompletePayload } from './staffOnboardingCompletePayload';
@@ -30,22 +31,10 @@ export async function submitStaffOnboarding(
     body: payload,
   });
   if (error) {
-    // The Edge Function returns 4xx/5xx with a JSON body containing
-    // { error, error_message } for known failure modes (e.g. duplicate
-    // mobile/email). supabase-js doesn't surface the body on FunctionsHttpError,
-    // so we re-fetch it from the embedded response and throw a clearer Error.
-    const response = (error as { context?: { response?: Response } }).context?.response;
-    if (response) {
-      try {
-        const cloned = response.clone();
-        const body = (await cloned.json()) as { error?: string; error_message?: string };
-        const friendly = body.error_message ?? body.error;
-        if (friendly) throw new Error(friendly);
-      } catch (parseErr) {
-        if (parseErr instanceof Error && parseErr.message !== 'JSON.parse') throw parseErr;
-      }
-    }
-    throw error;
+    // Known failures (e.g. a duplicate mobile or email) come back as { error, error_message }.
+    const body = await edgeFunctionErrorBody(error);
+    const friendly = body?.errorMessage ?? body?.error;
+    throw friendly ? new Error(friendly) : error;
   }
   const result = data as EdgeSuccess & { error?: string };
   if (result?.error) throw new Error(result.error);

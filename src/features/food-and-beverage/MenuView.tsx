@@ -4,18 +4,20 @@ import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 
 import { DishTile, DishWarning } from './DishTile';
 import { MenuBoard } from './MenuBoard';
-import { dishesOf, localName, openDays, severityTone, type MenuDish } from './menu';
-import type { MenuWeek } from './menuApi';
+import { dishesOf, severityTone, type MenuDish } from './menu';
+import { localName } from '@/lib/bilingualName';
+import { openDaysBetween } from './menuPeriod';
+import type { Menu } from './menuApi';
 
 /**
- * A week's menu to read, on the menu board. A dish a child here must not eat is red and names the
+ * A week's or a month's menu to read, on the menu board. A dish a child here must not eat is red and names the
  * child and why (a parent sees only their own children). Today is marked.
  */
-export function MenuWeekView({ menu, today, audience }: { menu: MenuWeek; today: string; audience: 'parent' | 'staff' }) {
+export function MenuView({ menu, today, audience }: { menu: Menu; today: string; audience: 'parent' | 'staff' }) {
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language.startsWith('ar');
 
-  if (!menu.week || (!menu.dishes.length && !menu.week.file)) {
+  if (!menu.info || (!menu.dishes.length && !menu.info.file)) {
     return (
       <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-outline-variant bg-surface p-10 text-center" data-testid="menu-empty">
         <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -39,14 +41,14 @@ export function MenuWeekView({ menu, today, audience }: { menu: MenuWeek; today:
 
   return (
     <div className="space-y-3">
-      {menu.week.notes ? (
+      {menu.info.notes ? (
         <p className="flex items-start gap-2 rounded-2xl border border-primary/20 bg-primary/5 p-3 text-sm text-on-surface">
           <MaterialSymbol name="sticky_note_2" size="text-base" className="mt-0.5 text-primary" />
-          {menu.week.notes}
+          {menu.info.notes}
         </p>
       ) : null}
       <MenuBoard
-        days={openDays(menu.weekStart, menu.workingDays)}
+        days={openDaysBetween(menu.startsOn, menu.endsOn, menu.workingDays)}
         today={today}
         renderCell={(day, meal) => {
           const dishes = dishesOf(menu.dishes, day, meal);

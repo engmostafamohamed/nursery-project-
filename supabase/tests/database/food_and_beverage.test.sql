@@ -1,8 +1,11 @@
--- Database test · F&B: typed allergies read as food allergens; only menu editors save a week, and
--- every dish is checked; a parent sees a week only once published, and only their own child's
+-- Database test · F&B: typed allergies read as food allergens; only menu editors save a menu, and
+-- every dish is checked; a parent sees a menu only once published, and only their own child's
 -- alerts; the first publish tells the parents once; staff alerts follow what they may see (a teacher
 -- their classes), with the allergies the menu is not checked against; copying a week; the menu
--- file's path and the previous file to delete. Dates are relative to today. Rolled back.
+-- file's path and the previous file to delete. Then the nursery plans by month: weekly menus are
+-- hidden (and not checked for allergies), a month holds its own dates, its first publish has its own
+-- notification, a month copies weekday for weekday, and switching back brings the weekly menu back.
+-- Dates are relative to today, except one fixed month. Rolled back.
 --
 -- Run against the local database:   supabase test db
 begin;
@@ -10,7 +13,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(20);
+select plan(33);
 
 select is(
   (select string_agg(format('%s=%s', x.t, public.food_allergens_for(x.t)), ' | ' order by x.n)
@@ -100,31 +103,31 @@ $$;
 -- ---------------------------------------------------------------------------------------------
 select pg_temp.act_as('00000000-0000-4000-9300-000000000a02');
 select throws_ok(
-  format($$ select public.save_menu_week('00000000-0000-4000-9300-00000000000a', %L, null, '[]') $$, pg_temp.week()),
+  format($$ select public.save_menu_period('00000000-0000-4000-9300-00000000000a', %L, null, '[]') $$, pg_temp.week()),
   '42501', 'menu_forbidden', 'a teacher without the meals permission cannot change the menu'
 );
 select pg_temp.act_as('00000000-0000-4000-9300-000000000a04');
 select throws_ok(
-  format($$ select public.save_menu_week('00000000-0000-4000-9300-00000000000a', %L, null, '[]') $$, pg_temp.week()),
+  format($$ select public.save_menu_period('00000000-0000-4000-9300-00000000000a', %L, null, '[]') $$, pg_temp.week()),
   '42501', 'menu_forbidden', 'nor a parent'
 );
 
 select pg_temp.act_as('00000000-0000-4000-9300-000000000a01');
 select throws_ok(
-  format($$ select public.save_menu_week('00000000-0000-4000-9300-00000000000a', %L, null,
+  format($$ select public.save_menu_period('00000000-0000-4000-9300-00000000000a', %L, null,
             jsonb_build_array(jsonb_build_object('day', %L::date + 9, 'meal', 'lunch', 'name', 'Soup'))) $$, pg_temp.week(), pg_temp.week()),
   '22023', 'menu_invalid_dish', 'a dish outside the week is refused'
 );
 select throws_ok(
-  format($$ select public.save_menu_week('00000000-0000-4000-9300-00000000000a', %L, null,
+  format($$ select public.save_menu_period('00000000-0000-4000-9300-00000000000a', %L, null,
             jsonb_build_array(jsonb_build_object('day', %L, 'meal', 'lunch', 'name', 'Soup', 'allergens', jsonb_build_array('chocolate')))) $$, pg_temp.week(), pg_temp.week()),
   '22023', 'menu_invalid_allergen', 'an allergen that is not in the list is refused'
 );
-select set_config('fnb.saved', public.save_menu_week('00000000-0000-4000-9300-00000000000a', pg_temp.week() + 3, ' Fresh fruit daily ', pg_temp.dishes())::text, true);
+select set_config('fnb.saved', public.save_menu_period('00000000-0000-4000-9300-00000000000a', pg_temp.week() + 3, ' Fresh fruit daily ', pg_temp.dishes())::text, true);
 
 select is(
-  pg_temp.conflicts(current_setting('fnb.saved')::jsonb) || ' / ' || (current_setting('fnb.saved')::jsonb -> 'week' ->> 'status')
-    || ' / ' || (current_setting('fnb.saved')::jsonb -> 'week' ->> 'notes') || ' / ' || (current_setting('fnb.saved')::jsonb ->> 'week_start'),
+  pg_temp.conflicts(current_setting('fnb.saved')::jsonb) || ' / ' || (current_setting('fnb.saved')::jsonb -> 'menu' ->> 'status')
+    || ' / ' || (current_setting('fnb.saved')::jsonb -> 'menu' ->> 'notes') || ' / ' || (current_setting('fnb.saved')::jsonb ->> 'starts_on'),
   format('Rice pudding: Laila | Peanut cookies: Adam | Omelette: Nour (own food) / draft / Fresh fruit daily / %s', pg_temp.week()),
   'the admin saves the week (any day of it): each dish lists the active children allergic to it'
 );
@@ -134,33 +137,33 @@ select is(
                  (select string_agg(c ->> 'child_name_en', ',') from jsonb_array_elements(j -> 'allergy_index' -> 'milk') c),
                  (select string_agg(format('%s/%s', c ->> 'child_name_en', c ->> 'eats_nursery_meals'), ',') from jsonb_array_elements(j -> 'allergy_index' -> 'eggs') c),
                  (select string_agg(c ->> 'child_name_en', ',') from jsonb_array_elements(j -> 'allergy_index' -> 'peanuts') c))
-     from (select public.get_menu_week('00000000-0000-4000-9300-00000000000a', pg_temp.week()) j) x),
+     from (select public.get_menu_period('00000000-0000-4000-9300-00000000000a', pg_temp.week()) j) x),
   'milk=Laila eggs=Nour/false peanuts=Adam',
   'staff get which active children have each food allergy, to warn while tagging a dish'
 );
 
 select pg_temp.act_as('00000000-0000-4000-9300-000000000a04');
 select is(
-  (public.get_menu_week('00000000-0000-4000-9300-00000000000a', pg_temp.week()) -> 'allergy_index')::text,
+  (public.get_menu_period('00000000-0000-4000-9300-00000000000a', pg_temp.week()) -> 'allergy_index')::text,
   '{}',
   'a parent never gets the other children''s allergies'
 );
 select is(
-  (select format('week=%s dishes=%s', j -> 'week', jsonb_array_length(j -> 'dishes'))
-     from (select public.get_menu_week('00000000-0000-4000-9300-00000000000a', pg_temp.week()) j) x),
-  'week=null dishes=0',
+  (select format('menu=%s dishes=%s', j -> 'menu', jsonb_array_length(j -> 'dishes'))
+     from (select public.get_menu_period('00000000-0000-4000-9300-00000000000a', pg_temp.week()) j) x),
+  'menu=null dishes=0',
   'a parent does not see a draft'
 );
 
 select pg_temp.act_as('00000000-0000-4000-9300-000000000a01');
 select throws_ok(
-  format($$ select public.set_menu_week_published('00000000-0000-4000-9300-00000000000a', %L::date + 14, true) $$, pg_temp.week()),
-  'P0001', 'menu_week_empty', 'an empty week cannot be published'
+  format($$ select public.set_menu_period_published('00000000-0000-4000-9300-00000000000a', %L::date + 14, true) $$, pg_temp.week()),
+  'P0001', 'menu_empty', 'an empty week cannot be published'
 );
 -- Published, back to draft, published again (set_config keeps each call out of the test output).
-select set_config('fnb.p1', public.set_menu_week_published('00000000-0000-4000-9300-00000000000a', pg_temp.week(), true)::text, true);
-select set_config('fnb.p2', public.set_menu_week_published('00000000-0000-4000-9300-00000000000a', pg_temp.week(), false)::text, true);
-select set_config('fnb.p3', public.set_menu_week_published('00000000-0000-4000-9300-00000000000a', pg_temp.week(), true)::text, true);
+select set_config('fnb.p1', public.set_menu_period_published('00000000-0000-4000-9300-00000000000a', pg_temp.week(), true)::text, true);
+select set_config('fnb.p2', public.set_menu_period_published('00000000-0000-4000-9300-00000000000a', pg_temp.week(), false)::text, true);
+select set_config('fnb.p3', public.set_menu_period_published('00000000-0000-4000-9300-00000000000a', pg_temp.week(), true)::text, true);
 reset role;
 
 select is(
@@ -173,7 +176,7 @@ select is(
 
 select pg_temp.act_as('00000000-0000-4000-9300-000000000a04');
 select is(
-  pg_temp.conflicts(public.get_menu_week('00000000-0000-4000-9300-00000000000a', pg_temp.week())),
+  pg_temp.conflicts(public.get_menu_period('00000000-0000-4000-9300-00000000000a', pg_temp.week())),
   'Rice pudding: Laila | Peanut cookies: - | Omelette: -',
   'once published, a parent sees the menu with only their own child''s alerts'
 );
@@ -196,35 +199,129 @@ select is(
 
 select pg_temp.act_as('00000000-0000-4000-9300-000000000a01');
 select is(
-  (select format('%s %s', j -> 'week' ->> 'status', (select string_agg(d ->> 'day', ',') from jsonb_array_elements(j -> 'dishes') d))
-     from (select public.copy_menu_week('00000000-0000-4000-9300-00000000000a', pg_temp.week(), pg_temp.week() + 7) j) x),
+  (select format('%s %s', j -> 'menu' ->> 'status', (select string_agg(d ->> 'day', ',') from jsonb_array_elements(j -> 'dishes') d))
+     from (select public.copy_menu_period('00000000-0000-4000-9300-00000000000a', pg_temp.week(), pg_temp.week() + 7) j) x),
   format('draft %s,%s,%s', pg_temp.week() + 8, pg_temp.week() + 8, pg_temp.week() + 9),
   'a week copies into the next one, on the same weekdays, as a draft'
 );
 select throws_ok(
-  format($$ select public.copy_menu_week('00000000-0000-4000-9300-00000000000a', %L, %L::date + 7) $$, pg_temp.week(), pg_temp.week()),
-  'P0001', 'menu_week_not_empty', 'a week that has dishes is not overwritten'
+  format($$ select public.copy_menu_period('00000000-0000-4000-9300-00000000000a', %L, %L::date + 7) $$, pg_temp.week(), pg_temp.week()),
+  'P0001', 'menu_not_empty', 'a week that has dishes is not overwritten'
 );
 
 select throws_ok(
-  format($$ select public.set_menu_week_file('00000000-0000-4000-9300-00000000000a', %L, 'another-nursery/menu.pdf', 'menu.pdf', 'application/pdf', 1000) $$, pg_temp.week()),
+  format($$ select public.set_menu_period_file('00000000-0000-4000-9300-00000000000a', %L, 'another-nursery/menu.pdf', 'menu.pdf', 'application/pdf', 1000) $$, pg_temp.week()),
   '22023', 'menu_invalid_file', 'a file outside the nursery''s folder is refused'
 );
-select set_config('fnb.f1', public.set_menu_week_file('00000000-0000-4000-9300-00000000000a', pg_temp.week(),
+select set_config('fnb.f1', public.set_menu_period_file('00000000-0000-4000-9300-00000000000a', pg_temp.week(),
   '00000000-0000-4000-9300-00000000000a/first.pdf', 'menu.pdf', 'application/pdf', 1000)::text, true);
 select is(
-  (public.set_menu_week_file('00000000-0000-4000-9300-00000000000a', pg_temp.week(),
+  (public.set_menu_period_file('00000000-0000-4000-9300-00000000000a', pg_temp.week(),
      '00000000-0000-4000-9300-00000000000a/second.jpg', 'menu.jpg', 'image/jpeg', 2000) ->> 'previous_path'),
   '00000000-0000-4000-9300-00000000000a/first.pdf',
   'replacing the menu file names the previous one, to delete'
 );
 
+-- ---------------------------------------------------------------------------------------------
+-- The nursery plans by month from now on.
+create function pg_temp.month() returns date language sql as $$ select date_trunc('month', (now() at time zone 'Africa/Cairo')::date)::date $$;
+-- The second Monday of the month that starts on p_month_start.
+create function pg_temp.second_monday(p_month_start date) returns date language sql as $$
+  select p_month_start + ((1 - extract(dow from p_month_start)::int + 7) % 7) + 7
+$$;
+
+select pg_temp.act_as('00000000-0000-4000-9300-000000000a02');
+select throws_ok(
+  $$ select public.set_menu_period_kind('00000000-0000-4000-9300-00000000000a', 'month') $$,
+  '42501', 'menu_forbidden', 'a teacher without the meals permission cannot change how the menu is planned'
+);
+select pg_temp.act_as('00000000-0000-4000-9300-000000000a01');
+select throws_ok(
+  $$ select public.set_menu_period_kind('00000000-0000-4000-9300-00000000000a', 'year') $$,
+  '22023', 'menu_invalid_period', 'only a week or a month'
+);
+select is(public.set_menu_period_kind('00000000-0000-4000-9300-00000000000a', 'month'), 'month', 'the admin plans the menu by month');
+
+select is(
+  (select format('%s %s..%s menu=%s dishes=%s', j ->> 'period', j ->> 'starts_on', j ->> 'ends_on', j -> 'menu', jsonb_array_length(j -> 'dishes'))
+     from (select public.get_menu_period('00000000-0000-4000-9300-00000000000a', pg_temp.week() + 3) j) x),
+  format('month %s..%s menu=null dishes=0', pg_temp.month(), (pg_temp.month() + interval '1 month - 1 day')::date),
+  'any day opens its calendar month; the weekly menus are kept but not shown'
+);
+select is(
+  jsonb_array_length(public.get_food_allergy_alerts('00000000-0000-4000-9300-00000000000a', pg_temp.week(), pg_temp.week() + 6) -> 'conflicts'),
+  0,
+  'and they are not checked for allergies any more'
+);
+
+select throws_ok(
+  format($$ select public.save_menu_period('00000000-0000-4000-9300-00000000000a', %L, null,
+            jsonb_build_array(jsonb_build_object('day', %L::date + interval '1 month', 'meal', 'lunch', 'name', 'Soup'))) $$, pg_temp.month(), pg_temp.month()),
+  '22023', 'menu_invalid_dish', 'a dish outside the month is refused'
+);
+select set_config('fnb.month', public.save_menu_period('00000000-0000-4000-9300-00000000000a', pg_temp.month() + 20, null,
+  jsonb_build_array(
+    jsonb_build_object('day', pg_temp.second_monday(pg_temp.month()), 'meal', 'lunch', 'name', 'Cheese pie', 'allergens', jsonb_build_array('milk', 'gluten')),
+    jsonb_build_object('day', pg_temp.month(), 'meal', 'snacks', 'name', 'Fruit', 'allergens', '[]'::jsonb)
+  ))::text, true);
+select is(
+  pg_temp.conflicts(current_setting('fnb.month')::jsonb) || ' / ' || (current_setting('fnb.month')::jsonb ->> 'starts_on'),
+  format('Fruit: - | Cheese pie: Laila / %s', pg_temp.month()),
+  'the month holds dishes on any of its days, checked for allergies'
+);
+
+select set_config('fnb.mp', public.set_menu_period_published('00000000-0000-4000-9300-00000000000a', pg_temp.month(), true)::text, true);
+reset role;
+select is(
+  (select string_agg(format('%s:%s', u.name_en, n.template_params ->> 'month'), ',' order by u.name_en)
+     from public.notifications n join public.users u on u.id = n.user_id
+    where n.template_key = 'menu_published_month' and n.nursery_id = '00000000-0000-4000-9300-00000000000a'),
+  format('Karim:%s,Mona:%s', to_char(pg_temp.month(), 'YYYY-MM'), to_char(pg_temp.month(), 'YYYY-MM')),
+  'the first publish of a month tells each parent, naming the month'
+);
+
+select pg_temp.act_as('00000000-0000-4000-9300-000000000a04');
+select is(
+  pg_temp.conflicts(public.get_menu_period('00000000-0000-4000-9300-00000000000a', pg_temp.month())),
+  'Fruit: - | Cheese pie: Laila',
+  'a parent sees the published month with their own child''s alerts'
+);
+
+select pg_temp.act_as('00000000-0000-4000-9300-000000000a01');
+select is(
+  (select format('%s %s', j ->> 'starts_on', (select string_agg(format('%s %s', d ->> 'day', d ->> 'name'), ',') from jsonb_array_elements(j -> 'dishes') d))
+     from (select public.copy_menu_period('00000000-0000-4000-9300-00000000000a', pg_temp.month(), (pg_temp.month() + interval '1 month')::date) j) x),
+  format('%s %s Fruit,%s Cheese pie', (pg_temp.month() + interval '1 month')::date,
+         -- The 1st's weekday, first found in the next month; the 2nd Monday on the 2nd Monday.
+         (pg_temp.month() + interval '1 month')::date + ((extract(dow from pg_temp.month())::int - extract(dow from pg_temp.month() + interval '1 month')::int + 7) % 7),
+         pg_temp.second_monday((pg_temp.month() + interval '1 month')::date)),
+  'a month copies into the next one weekday for weekday, as a draft'
+);
+-- 31 March 2026 is the 5th Tuesday of its month; April 2026 has no 5th Tuesday.
+select set_config('fnb.march', public.save_menu_period('00000000-0000-4000-9300-00000000000a', '2026-03-15', null,
+  jsonb_build_array(jsonb_build_object('day', '2026-03-31', 'meal', 'lunch', 'name', 'Cake', 'allergens', '[]'::jsonb)))::text, true);
+select is(
+  jsonb_array_length(public.copy_menu_period('00000000-0000-4000-9300-00000000000a', '2026-03-01', '2026-04-01') -> 'dishes'),
+  0,
+  'a dish on a weekday the next month does not have a 5th of is left out'
+);
+
+select is(public.set_menu_period_kind('00000000-0000-4000-9300-00000000000a', 'week'), 'week', 'back to weekly');
+select is(
+  (select format('%s %s dishes=%s', j ->> 'period', j -> 'menu' ->> 'status', jsonb_array_length(j -> 'dishes'))
+     from (select public.get_menu_period('00000000-0000-4000-9300-00000000000a', pg_temp.week()) j) x),
+  'week published dishes=3',
+  'switching back brings the weekly menu back as it was'
+);
+
 reset role;
 select ok(
-  not has_function_privilege('anon', 'public.get_menu_week(uuid, date)', 'execute')
-  and not has_function_privilege('anon', 'public.save_menu_week(uuid, date, text, jsonb)', 'execute')
-  and not has_function_privilege('authenticated', 'public.menu_allergy_conflicts(uuid, date, date)', 'execute'),
-  'signed-out visitors cannot read or change menus, and the inner conflicts list is not callable'
+  not has_function_privilege('anon', 'public.get_menu_period(uuid, date)', 'execute')
+  and not has_function_privilege('anon', 'public.save_menu_period(uuid, date, text, jsonb)', 'execute')
+  and not has_function_privilege('authenticated', 'public.menu_allergy_conflicts(uuid, date, date)', 'execute')
+  and not has_function_privilege('authenticated', 'public.menu_period_of(uuid, date)', 'execute')
+  and to_regprocedure('public.get_menu_week(uuid, date)') is null,
+  'signed-out visitors cannot read or change menus, the inner functions are not callable, and the week-only functions are gone'
 );
 
 select * from finish();

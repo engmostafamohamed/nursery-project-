@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 
 import { HISTORY_KINDS, sectionOf, type HistoryKind, type StockScope, type StockSection } from './kitchen';
 import { stockErrorKey } from './mealPlansApi';
-import { localName } from './menu';
+import { localName } from '@/lib/bilingualName';
 import { KIND_LOOK, useMovementDetails } from './stockLook';
 import { useStockHistory } from './useMealPlansAndKitchen';
 

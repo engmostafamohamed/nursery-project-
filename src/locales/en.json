@@ -4505,26 +4505,66 @@
       "published": "Published"
     },
     "ownFood": "Brings own food",
-    "week": {
-      "this": "This week",
-      "next": "Next week",
-      "last": "Last week",
-      "previous": "Previous week",
-      "following": "Next week",
-      "backToThis": "This week"
+    "period": {
+      "label": "Menu covers",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "switchTitle": "Change how the menu is planned?",
+      "switchToMonth": "The menu will be planned a month at a time. Weekly menus are kept but hidden; families and allergy alerts follow the monthly menu from now on.",
+      "switchToWeek": "The menu will be planned a week at a time. Monthly menus are kept but hidden; families and allergy alerts follow the weekly menu from now on.",
+      "switch": "Change",
+      "saveFirst": "Save or discard your changes before changing how the menu is planned.",
+      "nowMonthly": "The menu is now planned by month.",
+      "nowWeekly": "The menu is now planned by week.",
+      "week": {
+        "this": "This week",
+        "next": "Next week",
+        "last": "Last week",
+        "previous": "Previous week",
+        "following": "Next week",
+        "backToThis": "This week",
+        "copyLast": "Copy last week"
+      },
+      "month": {
+        "this": "This month",
+        "next": "Next month",
+        "last": "Last month",
+        "previous": "Previous month",
+        "following": "Next month",
+        "backToThis": "This month",
+        "copyLast": "Copy last month"
+      }
+    },
+    "extract": {
+      "title": "Fill the menu from its file",
+      "hint": "The app’s AI reads the photo or PDF and writes each day’s dishes with what they contain. Nothing is saved until you check it and save.",
+      "reading": "Reading the menu file… a monthly menu can take a minute.",
+      "running": "Reading…",
+      "button": "Fill from file",
+      "nothingFound": "No dishes could be read for the days the nursery is open.",
+      "replaceTitle": "Replace the dishes in the editor?",
+      "replaceBody_one": "1 dish was read from the file. It will replace the dishes in the editor (nothing is saved yet).",
+      "replaceBody_other": "{{count}} dishes were read from the file. They will replace the dishes in the editor (nothing is saved yet).",
+      "replace": "Replace",
+      "done_one": "1 dish added from the file. Check it, then save.",
+      "done_other": "{{count}} dishes added from the file. Check them, then save.",
+      "review_one": "1 dish added. Check its name and allergens, then save.",
+      "review_other": "{{count}} dishes added. Check their names and allergens, then save.",
+      "dropped_one": "1 item was left out: on a closed day, without a name, or repeated.",
+      "dropped_other": "{{count}} items were left out: on a closed day, without a name, or repeated.",
+      "unclear": "Could not be read or placed:"
     },
     "menu": {
-      "title": "Weekly menu",
+      "title": "Menu",
       "subtitle": "Plan each day’s meals, mark what each dish contains, and publish the menu to families.",
       "alertsLink": "Allergy alerts",
-      "draftHint": "Families do not see this week yet.",
-      "publishedHint": "Families can see this week.",
+      "draftHint": "Families do not see this menu yet.",
+      "publishedHint": "Families can see this menu.",
       "publish": "Publish to families",
       "unpublish": "Hide from families",
       "published": "The menu was published. Families were told.",
       "unpublished": "The menu is hidden from families.",
-      "copyLast": "Copy last week",
-      "copied": "Last week’s dishes were copied.",
+      "copied": "The last menu’s dishes were copied.",
       "saveFirst": "Save your changes before publishing."
     },
     "editor": {
@@ -4545,7 +4585,7 @@
         "name_too_long": "Keep the name under {{max}} characters."
       },
       "discardTitle": "Leave without saving?",
-      "discardBody": "Your changes to this week will be lost.",
+      "discardBody": "Your changes to this menu will be lost.",
       "discard": "Leave",
       "add": "Add",
       "newDish": "Add a dish",
@@ -4569,7 +4609,7 @@
       "saved": "The menu file was saved.",
       "openFailed": "The file could not be opened. Try again.",
       "removeTitle": "Remove the menu file?",
-      "removeBody": "Families will no longer see it for this week.",
+      "removeBody": "Families will no longer see it with this menu.",
       "errors": {
         "invalid_type": "Choose a photo (JPG, PNG, WebP) or a PDF.",
         "too_large": "The file is larger than {{max}} MB."
@@ -4577,8 +4617,8 @@
     },
     "view": {
       "today": "Today",
-      "emptyParent": "The nursery has not published the menu for this week yet.",
-      "emptyStaff": "There is no menu for this week yet.",
+      "emptyParent": "The nursery has not published this menu yet.",
+      "emptyStaff": "There is no menu for this period yet.",
       "dayEmpty": "No dishes for this day.",
       "allergicLine": "{{name}} is allergic ({{allergens}})",
       "pickDay": "Choose a day"
@@ -4586,7 +4626,7 @@
     "alerts": {
       "title": "Food allergy alerts",
       "subtitle": "Children who must not eat a dish on the menu, and what to do if they react.",
-      "menuLink": "Weekly menu",
+      "menuLink": "Menu",
       "period": "Period",
       "periods": {
         "today": "Today",
@@ -4608,12 +4648,12 @@
     },
     "teacher": {
       "title": "Meals",
-      "subtitle": "Today’s allergy alerts and extras for the children you look after, the week’s menu, and your own food and drinks.",
+      "subtitle": "Today’s allergy alerts and extras for the children you look after, the menu, and your own food and drinks.",
       "todayAlerts": "Today’s allergy alerts",
-      "weekMenu": "The week’s menu"
+      "menu": "The menu"
     },
     "parent": {
-      "subtitle": "The nursery’s meals for the week. Dishes your child must not eat are marked.",
+      "subtitle": "The nursery’s meals. Dishes your child must not eat are marked.",
       "plansTitle": "Your children’s meal plans"
     },
     "plans": {
@@ -4820,10 +4860,22 @@
       "menu_invalid_dish": "A dish is missing its name or is on the wrong day.",
       "menu_invalid_allergen": "A dish has an allergen we do not know.",
       "menu_notes_too_long": "The note is too long.",
-      "menu_week_empty": "Add dishes or a menu file before publishing.",
-      "menu_week_not_empty": "This week already has dishes, so last week was not copied over it.",
-      "menu_copy_source_empty": "Last week has no dishes to copy.",
+      "menu_invalid_day": "That day could not be read. Open the menu again.",
+      "menu_invalid_period": "Choose weekly or monthly.",
+      "menu_empty": "Add dishes or a menu file before publishing.",
+      "menu_not_empty": "This menu already has dishes, so the last one was not copied over them.",
+      "menu_copy_source_empty": "The last menu has no dishes to copy.",
       "menu_invalid_file": "The file could not be saved. Choose a photo or PDF up to 5 MB.",
+      "menu_file_missing": "Add the menu’s photo or PDF first.",
+      "menu_extract_unavailable": "Reading menu files is not set up yet. Ask the app’s administrator.",
+      "menu_extract_refused": "The file could not be read as a menu. Try a clearer photo, or type the dishes.",
+      "menu_extract_too_long": "The menu is too long to read in one go. Try a file with fewer weeks.",
+      "menu_extract_unreadable": "The file was read, but the answer could not be used. Try again.",
+      "menu_extract_no_days": "The nursery is not open on any day of this period.",
+      "menu_extract_busy": "The AI is busy right now. Try again in a minute.",
+      "menu_extract_network": "Could not reach the AI. Check the connection and try again.",
+      "menu_extract_failed": "The menu file could not be read. Try again.",
+      "network": "We can’t reach the server. Check your internet connection and try again.",
       "meal_plan_invalid": "Check the plan’s names, meals and price.",
       "meal_plan_not_found": "That meal plan is no longer offered.",
       "kitchen_item_invalid": "Check the item’s name, category and unit.",
@@ -7000,7 +7052,7 @@
     }
   },
   "meals": {
-    "parentTitle": "This Week's Menu"
+    "parentTitle": "The nursery’s menu"
   },
   "community": {
     "adminTitle": "Community Board",
@@ -8552,6 +8604,10 @@
     "menu_published": {
       "title": "This week’s menu is ready",
       "body": "The nursery published the menu for the week of {{week_start}}."
+    },
+    "menu_published_month": {
+      "title": "The monthly menu is ready",
+      "body": "The nursery published the menu for {{month}}."
     },
     "invoice_paid": {
       "title": "Payment confirmed",

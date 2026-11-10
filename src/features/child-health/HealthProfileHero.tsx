@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
-import { localName } from '@/features/food-and-beverage/menu';
+import { localName } from '@/lib/bilingualName';
 import { cn, getUserInitials } from '@/lib/utils';
 
 import { ageOn, medicationState, vaccinationState, worstSeverity, type ChildHealthProfile } from './childHealth';

@@ -5,7 +5,7 @@ import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { cn } from '@/lib/utils';
 
 import { MEALS, severityRank, severityTone } from './menu';
-import { useFoodAlerts } from './useMenuWeek';
+import { useFoodAlerts } from './useMenu';
 
 /**
  * In a child's daily report: today's dishes this child must not eat, so the teacher answering the

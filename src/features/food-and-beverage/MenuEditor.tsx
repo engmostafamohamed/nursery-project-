@@ -11,9 +11,14 @@ import { cn } from '@/lib/utils';
 import { DishDialog } from './DishDialog';
 import { DishTile, DishWarning } from './DishTile';
 import { MenuBoard } from './MenuBoard';
-import { dishesOf, dishWarnings, localName, MAX_DISHES, openDays, severityTone, toDrafts, toSavePayload, type DraftDish, type Meal } from './menu';
-import { menuErrorKey, saveMenuWeek, type MenuWeek } from './menuApi';
-import { useMenuChange } from './useMenuWeek';
+import { MenuFileImport } from './MenuFileImport';
+import { dishesOf, severityTone, type Meal } from './menu';
+import { dishWarnings, toDrafts, toSavePayload, type DraftDish } from './menuDrafts';
+import { localName } from '@/lib/bilingualName';
+import { maxDishes, openDaysBetween } from './menuPeriod';
+import { menuErrorKey } from './menuErrors';
+import { saveMenu, type Menu } from './menuApi';
+import { useMenuChange } from './useMenu';
 
 let draftCounter = 0;
 const newKey = () => `new-${Date.now()}-${(draftCounter += 1)}`;
@@ -21,19 +26,21 @@ const newKey = () => `new-${Date.now()}-${(draftCounter += 1)}`;
 type Editing = { dish: DraftDish; isNew: boolean } | null;
 
 /**
- * Writing a week's menu on the menu board: each dish is a card (tap to edit), each cell has its
- * own "add", and the card turns red when a child here must not eat it. Changes stay on the page
- * until "Save menu", which stores the week in one go. Mount it with a key per saved version.
+ * Writing a week's or a month's menu on the menu board: each dish is a card (tap to edit), each
+ * cell has its own "add", and the card turns red when a child here must not eat it. The dishes can
+ * also be filled from the menu file by the app's AI. Changes stay on the page until "Save menu",
+ * which stores the period in one go. Mount it with a key per saved version.
  */
-export function MenuWeekEditor({ nurseryId, menu, today, onDirtyChange }: { nurseryId: string; menu: MenuWeek; today: string; onDirtyChange: (dirty: boolean) => void }) {
+export function MenuEditor({ nurseryId, menu, today, onDirtyChange }: { nurseryId: string; menu: Menu; today: string; onDirtyChange: (dirty: boolean) => void }) {
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language.startsWith('ar');
   const [drafts, setDrafts] = useState<DraftDish[]>(() => toDrafts(menu.dishes));
-  const [notes, setNotes] = useState(menu.week?.notes ?? '');
+  const [notes, setNotes] = useState(menu.info?.notes ?? '');
   const [editing, setEditing] = useState<Editing>(null);
-  const save = useMenuChange(nurseryId, () => saveMenuWeek({ nurseryId, weekStart: menu.weekStart, notes, dishes: toSavePayload(drafts) }));
+  const save = useMenuChange(nurseryId, () => saveMenu({ nurseryId, day: menu.startsOn, notes, dishes: toSavePayload(drafts) }));
+  const limit = maxDishes(menu.period);
 
-  const saved = useMemo(() => JSON.stringify([toSavePayload(toDrafts(menu.dishes)), menu.week?.notes ?? '']), [menu]);
+  const saved = useMemo(() => JSON.stringify([toSavePayload(toDrafts(menu.dishes)), menu.info?.notes ?? '']), [menu]);
   const dirty = JSON.stringify([toSavePayload(drafts), notes.trim()]) !== saved;
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
   useEffect(() => {
@@ -72,8 +79,9 @@ export function MenuWeekEditor({ nurseryId, menu, today, onDirtyChange }: { nurs
 
   return (
     <div className="space-y-4">
+      <MenuFileImport nurseryId={nurseryId} menu={menu} hasDishes={drafts.length > 0} onImport={setDrafts} />
       <MenuBoard
-        days={openDays(menu.weekStart, menu.workingDays)}
+        days={openDaysBetween(menu.startsOn, menu.endsOn, menu.workingDays)}
         today={today}
         renderCell={(day, meal) => (
           <>
@@ -93,7 +101,7 @@ export function MenuWeekEditor({ nurseryId, menu, today, onDirtyChange }: { nurs
             <button
               type="button"
               aria-label={t('fnb.editor.addDish', { meal: t(`fnb.meals.${meal}`) })}
-              disabled={drafts.length >= MAX_DISHES}
+              disabled={drafts.length >= limit}
               onClick={() => add(day, meal)}
               className={cn(
                 'flex w-full items-center justify-center gap-1 rounded-xl border border-dashed border-outline-variant py-2 text-xs font-medium text-on-surface-variant outline-none transition-colors',

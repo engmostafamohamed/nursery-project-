@@ -8,26 +8,28 @@ import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { compressImageForUpload } from '@/lib/imageCompression';
 import { cn } from '@/lib/utils';
 
-import { MENU_FILE_MAX_BYTES, MENU_IMAGE_TARGET_MB, menuFilePath, menuFileProblem } from './menu';
-import { menuErrorKey, menuFileUrl, removeMenuFile, replaceMenuFile, type MenuWeek } from './menuApi';
-import { useMenuChange } from './useMenuWeek';
+import { MENU_FILE_MAX_BYTES, MENU_IMAGE_TARGET_MB, menuFilePath, menuFileProblem } from './menuFile';
+import { menuErrorKey } from './menuErrors';
+import { menuFileUrl, removeMenuFile, replaceMenuFile } from './menuFileApi';
+import type { Menu } from './menuApi';
+import { useMenuChange } from './useMenu';
 
 const mb = (bytes: number) => (bytes / (1024 * 1024)).toFixed(1);
 
 /**
- * The week's menu as a photo or PDF: open it, and for editors add, replace or remove it. A problem
+ * The menu as a photo or PDF (for its week or month): open it, and for editors add, replace or remove it. A problem
  * with the chosen file shows under the field at once; a photo is made smaller before upload.
  */
-export function MenuFileCard({ nurseryId, menu }: { nurseryId: string; menu: MenuWeek }) {
+export function MenuFileCard({ nurseryId, menu }: { nurseryId: string; menu: Menu }) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [opening, setOpening] = useState(false);
-  const file = menu.week?.file ?? null;
+  const file = menu.info?.file ?? null;
   const replace = useMenuChange(nurseryId, (picked: File) =>
-    replaceMenuFile({ nurseryId, weekStart: menu.weekStart, path: menuFilePath(nurseryId, menu.weekStart, picked.type), file: picked }),
+    replaceMenuFile({ nurseryId, day: menu.startsOn, path: menuFilePath(nurseryId, menu.startsOn, picked.type), file: picked }),
   );
-  const remove = useMenuChange(nurseryId, () => removeMenuFile(nurseryId, menu.weekStart));
+  const remove = useMenuChange(nurseryId, () => removeMenuFile(nurseryId, menu.startsOn));
   const busy = replace.isPending || remove.isPending;
 
   if (!file && !menu.canEdit) return null;

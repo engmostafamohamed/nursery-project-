@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { fnbKeys } from '@/features/food-and-beverage/useMenuWeek';
+import { fnbKeys } from '@/features/food-and-beverage/useMenu';
 
 import { fetchClassExtras, fetchFamilyExtras, fetchKitchenSales, fetchMyKitchenAccount } from './kitchenSalesApi';
 

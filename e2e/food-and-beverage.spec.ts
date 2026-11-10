@@ -26,7 +26,7 @@ async function addChild(key: string, name: string, classId: string | null, aller
 
 async function openMenu(page: Page) {
   await page.goto('/admin/meals');
-  await expect(page.getByRole('heading', { level: 1, name: 'Weekly menu' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Menu' })).toBeVisible();
   await expect(page.getByTestId(`menu-cell-${today}-lunch`)).toBeVisible();
 }
 
@@ -99,7 +99,7 @@ test.describe.serial('F&B: the menu and its allergy alerts', () => {
   test('a parent sees nothing before it is published', async ({ page }) => {
     await signIn(page, n!.parent);
     await page.goto('/parent/meals');
-    await expect(page.getByTestId('menu-empty')).toContainText('The nursery has not published the menu for this week yet.');
+    await expect(page.getByTestId('menu-empty')).toContainText('The nursery has not published this menu yet.');
   });
 
   test('the menu file is checked when chosen, then stored', async ({ page }) => {
@@ -132,7 +132,7 @@ test.describe.serial('F&B: the menu and its allergy alerts', () => {
 
   test('the parent then sees the menu with their own child marked, and no one else', async ({ page }) => {
     await signIn(page, n!.parent);
-    await page.goto(`/parent/meals?week=${weekStart}`);
+    await page.goto(`/parent/meals?day=${weekStart}`);
     const lunch = page.getByTestId(`menu-cell-${today}-lunch`);
     await expect(lunch).toContainText('Rice pudding');
     await expect(lunch.getByTestId('dish-warning')).toContainText('UI Laila is allergic (Milk)');
@@ -174,9 +174,9 @@ test.describe.serial('F&B: the menu and its allergy alerts', () => {
   test('a week copies into the next one as a draft', async ({ page }) => {
     await signIn(page, n!.admin);
     const [next] = await sql<{ d: string }>(`select ('${weekStart}'::date + 7)::text as d`);
-    await page.goto(`/admin/meals?week=${next.d}`);
+    await page.goto(`/admin/meals?day=${next.d}`);
     await page.getByRole('button', { name: 'Copy last week' }).click();
-    await expect(page.getByText('Last week’s dishes were copied.')).toBeVisible();
+    await expect(page.getByText('The last menu’s dishes were copied.')).toBeVisible();
     const copied = await sql<{ status: string; days: string }>(`
       select w.status, string_agg(distinct (d.day - w.week_start)::text, ',') as days
         from public.menu_weeks w join public.menu_dishes d on d.week_id = w.id

@@ -19,6 +19,13 @@ export function nameLines(ar: string | null | undefined, en: string | null | und
   return arabicFirst ? { primary: a, secondary: e } : { primary: e, secondary: a };
 }
 
+/** One name in the reader's language, falling back to the other; '' when there is neither. */
+export function localName(ar: string | null | undefined, en: string | null | undefined, isArabic: boolean): string {
+  const a = ar?.trim() ?? '';
+  const e = en?.trim() ?? '';
+  return (isArabic ? a || e : e || a) || '';
+}
+
 /** One line, for sorting, searching and titles: "عربي / English" when the nursery shows both. */
 export function nameText(ar: string | null | undefined, en: string | null | undefined, pref: LanguagePref): string {
   const a = (ar ?? '').trim();

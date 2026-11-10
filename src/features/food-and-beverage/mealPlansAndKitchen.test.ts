@@ -11,7 +11,6 @@ import {
 } from './kitchen';
 import { childMatches, isNotBilled, mealPlanIssues, mealPlanTotals, orderedMeals, type MealPlanChild } from './mealPlans';
 import { fnbErrorKey, stockErrorKey, toKitchenData, toMealPlansData, toStockHistory } from './mealPlansApi';
-import { groupUnmatched } from './menu';
 
 const child = (patch: Partial<MealPlanChild>): MealPlanChild => ({
   childId: 'c', nameAr: 'ليلى', nameEn: 'Laila', classId: null, classNameAr: null, classNameEn: null,
@@ -177,22 +176,6 @@ describe('the warehouse', () => {
     }
   });
 });
-
-describe('allergies the menu is not checked against', () => {
-  it('group by allergy, the largest first, each child once, worst reaction first', () => {
-    const groups = groupUnmatched([
-      { childId: 'a', childNameAr: '', childNameEn: 'Ayman', allergyName: 'Dust mites', severity: 'mild' },
-      { childId: 'b', childNameAr: '', childNameEn: 'Azza', allergyName: 'Penicillin', severity: 'mild' },
-      { childId: 'c', childNameAr: '', childNameEn: 'Bassem', allergyName: 'penicillin ', severity: 'severe' },
-      { childId: 'c', childNameAr: '', childNameEn: 'Bassem', allergyName: 'Penicillin', severity: 'severe' },
-    ]);
-    expect(groups.map((g) => [g.name, g.children.map((c) => c.childNameEn).join(',')])).toEqual([
-      ['Penicillin', 'Bassem,Azza'],
-      ['Dust mites', 'Ayman'],
-    ]);
-  });
-});
-
 describe('health alerts', () => {
   const alert = (patch: Partial<HealthAlertItem>): HealthAlertItem => ({
     fingerprint: 'f', type: 'severe_allergy', urgency: 'high', childId: 'c', childNameAr: 'ليلى', childNameEn: 'Laila',

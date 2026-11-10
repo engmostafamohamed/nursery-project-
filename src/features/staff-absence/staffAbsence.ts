@@ -3,6 +3,7 @@
  * (report_staff_absence, class_duty_teachers) makes the same checks; these give the forms the same
  * answers first.
  */
+import { addDays } from '@/lib/calendarDay';
 
 export const ABSENCE_REASONS = ['sick', 'personal', 'vacation', 'training', 'other'] as const;
 export type AbsenceReason = (typeof ABSENCE_REASONS)[number];
@@ -45,11 +46,7 @@ export function daysBetween(from: string, to: string): number {
   return Math.round(ms / 86_400_000) + 1;
 }
 
-export function addDays(date: string, days: number): string {
-  const d = new Date(`${date}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
-}
+export { addDays };
 
 /** Current and coming absences first (soonest first), then the past (latest first). */
 export function sortAbsences<T extends Pick<Absence, 'startsOn' | 'endsOn' | 'cancelled'>>(items: T[], today: string): T[] {

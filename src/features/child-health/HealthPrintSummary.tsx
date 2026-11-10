@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { localName } from '@/features/food-and-beverage/menu';
+import { localName } from '@/lib/bilingualName';
 
 import { ageOn, carePeople, medicationState, vaccinationState, type ChildHealthProfile } from './childHealth';
 import { formatDay } from './healthFormat';

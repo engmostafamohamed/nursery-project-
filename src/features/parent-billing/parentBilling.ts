@@ -4,6 +4,8 @@
  * which apply the same rules as the payment functions on the server.
  */
 
+import { localName as nameIn } from '@/lib/bilingualName';
+
 export type InvoiceType = 'monthly' | 'event' | 'extra_hours' | 'other' | 'food_extras';
 export type InvoiceStatus = 'pending' | 'overdue' | 'paid' | 'cancelled';
 
@@ -137,9 +139,6 @@ export function payFlowSteps(canUsePoints: boolean): PayStep[] {
   return canUsePoints ? ['amount', 'points', 'method', 'confirm'] : ['amount', 'method', 'confirm'];
 }
 
-/** A child's name in the reader's language, falling back to the other one. */
-export function localName(names: { name_ar?: string | null; name_en?: string | null }, isArabic: boolean): string {
-  const ar = names.name_ar?.trim() ?? '';
-  const en = names.name_en?.trim() ?? '';
-  return (isArabic ? ar || en : en || ar) || '';
-}
+/** A row's name (name_ar / name_en) in the reader's language, falling back to the other one. */
+export const localName = (names: { name_ar?: string | null; name_en?: string | null }, isArabic: boolean): string =>
+  nameIn(names.name_ar, names.name_en, isArabic);

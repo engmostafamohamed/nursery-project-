@@ -10,7 +10,7 @@ import { formatMoneyAmount } from '@/lib/money';
 import { cn } from '@/lib/utils';
 
 import { MealIcons } from './MealIcons';
-import { localName } from './menu';
+import { localName } from '@/lib/bilingualName';
 import type { MealPlan, MealPlanChild } from './mealPlans';
 import { fnbErrorKey, setChildMealPlan } from './mealPlansApi';
 import { useMealPlanChange } from './useMealPlansAndKitchen';

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useMoney } from '@/features/kitchen-sales/kitchenLook';
 
 import type { HistoryKind, StockMovement } from './kitchen';
-import { localName } from './menu';
+import { localName } from '@/lib/bilingualName';
 
 /** How each kind of stock movement looks in the lists. */
 export const KIND_LOOK: Record<HistoryKind, { icon: string; tone: string }> = {
