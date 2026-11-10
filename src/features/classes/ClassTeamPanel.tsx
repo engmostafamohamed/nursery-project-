@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
@@ -8,22 +9,25 @@ import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { NameStack } from '@/components/ui/NameStack';
 import { COVER_LOOK, REASON_ICON } from '@/features/staff-absence/absenceLook';
 import { coverStatus } from '@/features/staff-absence/staffAbsence';
+import { RecordStaffTimeDialog } from '@/features/staff-clock/RecordStaffTimeDialog';
 import type { BilingualNames } from '@/hooks/useBilingualNames';
 import { cn, getUserInitials } from '@/lib/utils';
 
-import { DUTY_LOOK } from './classLook';
-import { classCover, dutyState, type ClassProfile, type TeamChange, type TeamMember } from './classProfile';
+import { CLOCK_LOOK, DUTY_LOOK } from './classLook';
+import { classCover, clockState, dutyState, type ClassProfile, type TeamChange, type TeamMember } from './classProfile';
 import type { ClassFormat } from './useClassFormat';
 
 /**
- * Who teaches the class and who is with it today: the lead, the backup and the assistants, each
- * with their state today (in, covering for the lead, away and until when) and how to reach them;
- * then the team's last changes. The team itself is set on the Team & classes page.
+ * Who teaches and looks after the class and who is with it today: the lead, the backup, the
+ * assistants and the nannies, each with their state today (on duty, covering for the lead, away and
+ * until when), their clocking in and out (recorded by hand when someone forgot), and how to reach
+ * them; then the team's last changes. The team itself is set on the Team & classes page.
  */
 export function ClassTeamPanel({ profile, names, format, base }: { profile: ClassProfile; names: BilingualNames; format: ClassFormat; base: string }) {
   const { t } = useTranslation();
   const cover = coverStatus(classCover(profile));
   const coverLook = COVER_LOOK[cover];
+  const [recording, setRecording] = useState<TeamMember | null>(null);
 
   return (
     <div className="space-y-5">
@@ -66,13 +70,24 @@ export function ClassTeamPanel({ profile, names, format, base }: { profile: Clas
         {profile.team.length ? (
           <ul className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-3" data-testid="class-team">
             {profile.team.map((member) => (
-              <MemberCard key={member.id} member={member} names={names} format={format} />
+              <MemberCard key={member.id} member={member} names={names} format={format} schoolDay={profile.schoolDay} dayOpen={profile.dayOpen} onRecord={() => setRecording(member)} />
             ))}
           </ul>
         ) : (
           <TableEmpty icon="group_off" title={t('classProfile.team.emptyTitle')} description={t('classProfile.team.emptyDescription')} />
         )}
       </TableCard>
+
+      {recording ? (
+        <RecordStaffTimeDialog
+          person={{ id: recording.id, name: names.lines(recording.nameAr, recording.nameEn).primary }}
+          day={profile.today}
+          isToday
+          timezone={profile.info.timezone ?? 'Africa/Cairo'}
+          current={recording.clockIn ? { checkIn: recording.clockIn, checkOut: recording.clockOut } : null}
+          onClose={() => setRecording(null)}
+        />
+      ) : null}
 
       <TableCard title={t('classProfile.team.historyTitle')} description={t('classProfile.team.historyDescription')}>
         {profile.teamChanges.length ? (
@@ -89,11 +104,21 @@ export function ClassTeamPanel({ profile, names, format, base }: { profile: Clas
   );
 }
 
-function MemberCard({ member, names, format }: { member: TeamMember; names: BilingualNames; format: ClassFormat }) {
+function MemberCard({ member, names, format, schoolDay, dayOpen, onRecord }: {
+  member: TeamMember;
+  names: BilingualNames;
+  format: ClassFormat;
+  schoolDay: boolean;
+  dayOpen: boolean;
+  onRecord: () => void;
+}) {
   const { t } = useTranslation();
   const state = dutyState(member);
   const look = DUTY_LOOK[state];
   const name = names.lines(member.nameAr, member.nameEn);
+  const clock = clockState(member);
+  const clockLook = CLOCK_LOOK[clock];
+  const late = (member.lateMinutes ?? 0) > 5;
 
   return (
     <li className={cn('flex flex-col gap-3 rounded-xl border bg-surface p-4', state === 'away' ? 'border-warning/40' : 'border-outline-variant')} data-testid="class-team-member">
@@ -116,6 +141,26 @@ function MemberCard({ member, names, format }: { member: TeamMember; names: Bili
             {t(`staffAbsence.reasons.${member.absence.reason}`)} · {t('classProfile.duty.until', { date: format.day(member.absence.endsOn) })}
           </p>
         ) : null}
+      </div>
+      <div className="flex items-center justify-between gap-2 rounded-lg bg-surface-container-lowest px-3 py-2" data-testid="member-clock">
+        <span className="min-w-0 text-sm">
+          <span className="flex items-center gap-1.5 font-medium text-on-surface">
+            <MaterialSymbol name={clockLook.icon} size="text-base" className={clock === 'in' ? 'text-success' : clock === 'not_in' && schoolDay ? 'text-warning' : 'text-on-surface-variant'} />
+            {clock === 'in'
+              ? t('classProfile.teamToday.inSince', { time: format.time(member.clockIn) })
+              : clock === 'left'
+                ? t('classProfile.teamToday.leftAt', { from: format.time(member.clockIn), to: format.time(member.clockOut) })
+                : clock === 'away' ? t('classProfile.teamToday.away') : dayOpen ? t('classProfile.teamToday.notInYet') : t('classProfile.teamToday.didNotClock')}
+          </span>
+          <span className="block text-xs text-on-surface-variant">
+            {late ? <span className="text-warning">{t('classProfile.teamToday.lateBy', { count: member.lateMinutes ?? 0 })}</span> : clock === 'in' || clock === 'left' ? t('classProfile.teamToday.onTime') : t('classProfile.teamToday.clockHint')}
+            {member.clockSource === 'admin' ? ` · ${t('classProfile.teamToday.byAdmin')}` : ''}
+          </span>
+        </span>
+        <Button type="button" variant="ghost" size="sm" className="shrink-0 gap-1" onClick={onRecord} data-testid="record-time">
+          <MaterialSymbol name="edit_calendar" size="text-base" />
+          {clock === 'not_in' || clock === 'away' ? t('classProfile.teamToday.record') : t('classProfile.teamToday.correct')}
+        </Button>
       </div>
       <div className="space-y-1.5 border-t border-outline-variant pt-3 text-sm">
         {member.phone ? (

@@ -127,7 +127,7 @@ export interface StaffNationalIdsRow {
 }
 
 /** lead = the class's main teacher; substitute = its backup teacher; assistant = a co-teacher or aide. */
-export type ClassStaffRole = 'lead' | 'substitute' | 'assistant';
+export type ClassStaffRole = 'lead' | 'substitute' | 'assistant' | 'nanny';
 
 export interface ClassStaffRow {
   id: string;

@@ -1,4 +1,59 @@
 {
+  "staffClock": {
+    "titleNotIn": "لم تسجّل حضورك اليوم",
+    "titleIn": "سجّلت حضورك الساعة {{time}}",
+    "titleLeft": "سجّلت انصرافك لليوم",
+    "opensAt": "الحضانة تفتح الساعة {{time}}. سجّل حضورك عند وصولك.",
+    "notInHint": "سجّل حضورك عند وصولك.",
+    "lateBy_zero": "في موعد الفتح",
+    "lateBy_one": "بعد موعد الفتح بدقيقة",
+    "lateBy_two": "بعد موعد الفتح بدقيقتين",
+    "lateBy_few": "بعد موعد الفتح بـ{{count}} دقائق",
+    "lateBy_many": "بعد موعد الفتح بـ{{count}} دقيقة",
+    "lateBy_other": "بعد موعد الفتح بـ{{count}} دقيقة",
+    "onTime": "في الموعد",
+    "leftLine": "{{from}} – {{to}}",
+    "hours": "{{h}} س {{m}} د",
+    "recordedByAdmin": "سجّلته الإدارة.",
+    "absentToday": "أنت مسجَّل غائبًا اليوم ({{reason}}). إذا حضرت، سجّل حضورك.",
+    "closedToday": "الحضانة مغلقة اليوم.",
+    "clockIn": "تسجيل الحضور",
+    "clockOut": "تسجيل الانصراف",
+    "confirmOutTitle": "تسجيل الانصراف الآن؟",
+    "confirmOutBody": "سينتهي يومك الآن، ولا يمكن تغييره بعد ذلك إلا من الإدارة.",
+    "errors": {
+      "forbidden": "حسابك لا يمكنه تسجيل الحضور هنا.",
+      "already_in": "سجّلت حضورك اليوم بالفعل.",
+      "already_out": "سجّلت انصرافك اليوم بالفعل.",
+      "not_in": "سجّل حضورك أولًا.",
+      "invalid": "راجع الأوقات.",
+      "person": "هذا الشخص ليس من الموظفين.",
+      "network": "تعذّر الوصول إلى الخادم. تأكد من اتصالك بالإنترنت وحاول مرة أخرى.",
+      "failed": "حدث خطأ. حاول مرة أخرى."
+    },
+    "record": {
+      "title": "يوم {{name}}",
+      "description": "الأوقات بتوقيت الحضانة. استخدمه إذا نسي أحدهم تسجيل حضوره أو انصرافه.",
+      "in": "وقت الحضور",
+      "out": "وقت الانصراف",
+      "outHint": "اتركه فارغًا إذا كان ما زال في الحضانة.",
+      "note": "ملاحظة",
+      "notePlaceholder": "مثلًا: نسيت هاتفها",
+      "save": "حفظ",
+      "saved": "تم حفظ يوم {{name}}.",
+      "clear": "مسح اليوم",
+      "clearTitle": "مسح هذا اليوم؟",
+      "clearBody": "سيُحذف تسجيل حضور {{name}} لهذا اليوم.",
+      "cleared": "تم مسح اليوم.",
+      "issues": {
+        "in_required": "اكتب وقت الحضور.",
+        "out_before_in": "وقت الانصراف يجب أن يكون بعد الحضور.",
+        "in_future": "هذا الوقت لم يأتِ بعد.",
+        "out_future": "هذا الوقت لم يأتِ بعد.",
+        "note_too_long": "اجعل الملاحظة أقل من {{max}} حرفًا."
+      }
+    }
+  },
   "stock": {
     "page": {
       "eyebrow": "التشغيل",
@@ -1163,6 +1218,92 @@
     "loginSubtitle": "إدارة عمليات الحضانة من مكان واحد",
     "email": "البريد الإلكتروني",
     "password": "كلمة المرور",
+    "page": {
+      "welcome": "أهلًا بعودتك",
+      "welcomeHint": "سجّل الدخول لتكمل إلى حضانتك.",
+      "passwordPlaceholder": "كلمة المرور",
+      "capsLock": "زر الحروف الكبيرة (Caps Lock) مفعّل.",
+      "signingIn": "جارٍ تسجيل الدخول…",
+      "or": "أو",
+      "newParent": "ولي أمر جديد في الحضانة؟",
+      "heroBadge": "مصمَّم للحضانات في مصر",
+      "heroBody": "الحضور والتقارير اليومية والوجبات والصحة والمدفوعات، للحضانة ولكل أسرة، في مكان واحد.",
+      "problems": {
+        "identifier": {
+          "required": "اكتب اسم المستخدم أو البريد الإلكتروني."
+        },
+        "password": {
+          "required": "اكتب كلمة المرور.",
+          "tooShort": "كلمة المرور 8 أحرف على الأقل."
+        }
+      },
+      "errors": {
+        "wrongCredentials": "اسم المستخدم أو البريد أو كلمة المرور غير صحيحة. راجعها وحاول مرة أخرى.",
+        "notConfirmed": "أكّد بريدك أولًا من الرابط الذي أرسلناه إليه.",
+        "tooManyRequests": "محاولات كثيرة. انتظر دقيقة وحاول مرة أخرى.",
+        "blocked": "هذا الحساب موقوف. تواصل مع الحضانة.",
+        "network": "تعذّر الوصول إلى الخادم. تأكد من اتصالك بالإنترنت وحاول مرة أخرى.",
+        "failed": "تعذّر تسجيل الدخول. حاول مرة أخرى."
+      },
+      "magic": {
+        "button": "أرسل لي رابط دخول على البريد",
+        "sending": "جارٍ إرسال الرابط…",
+        "problems": {
+          "required": "اكتب بريدك الإلكتروني ليصلك رابط الدخول.",
+          "username": "رابط الدخول يُرسَل إلى بريد إلكتروني. اكتب بريدك، أو ادخل بكلمة المرور.",
+          "invalid": "هذا البريد غير مكتمل (مثلًا: name@example.com).",
+          "noMailbox": "عنوان الدخول هذا لا يستقبل بريدًا. ادخل بكلمة المرور."
+        },
+        "errors": {
+          "tooManyRequests": "طلبت روابط كثيرة. انتظر بضع دقائق وحاول مرة أخرى.",
+          "network": "تعذّر الوصول إلى الخادم. تأكد من اتصالك بالإنترنت وحاول مرة أخرى.",
+          "failed": "تعذّر إرسال الرابط. حاول مرة أخرى."
+        },
+        "sentTitle": "افتح بريدك",
+        "sentBody": "إذا كان هناك حساب بهذا البريد، فرابط الدخول في طريقه إلى",
+        "sentHint": "الرابط يعمل مرة واحدة. لم يصلك؟ ابحث في الرسائل غير المرغوبة، أو انتظر دقيقة واطلبه مرة أخرى.",
+        "otherEmail": "استخدم بريدًا آخر"
+      },
+      "demo": {
+        "count_zero": "لا حسابات",
+        "count_one": "حساب واحد",
+        "count_two": "حسابان",
+        "count_few": "{{count}} حسابات",
+        "count_many": "{{count}} حسابًا",
+        "count_other": "{{count}} حساب",
+        "password": "كلمة المرور لكل الحسابات التجريبية:",
+        "accounts": {
+          "xoAdmin": {
+            "name": "مدير منصة XO",
+            "access": "المنصة كلها"
+          },
+          "branchAdmin": {
+            "name": "مدير الفرع",
+            "access": "يدير حضانة واحدة"
+          },
+          "financeManager": {
+            "name": "مدير الحسابات",
+            "access": "التشغيل والحسابات"
+          },
+          "hrManager": {
+            "name": "مدير الموارد البشرية",
+            "access": "التشغيل وشؤون الموظفين"
+          },
+          "teacher": {
+            "name": "معلمة",
+            "access": "فصولها"
+          },
+          "managerTeacher": {
+            "name": "رئيسة المعلمات",
+            "access": "تدرّس وتدير المعلمات"
+          },
+          "parent": {
+            "name": "ولي أمر",
+            "access": "أطفاله"
+          }
+        }
+      }
+    },
     "showPassword": "إظهار كلمة المرور",
     "hidePassword": "إخفاء كلمة المرور",
     "passwordRecoveryContact": "جهة إعادة تعيين كلمة المرور",
@@ -1181,18 +1322,20 @@
     "loginError": "تعذر تسجيل الدخول. تحقق من البيانات وحاول مرة أخرى.",
     "sessionNotPersisted": "تعذر حفظ الجلسة. اسمح بالتخزين لهذا الموقع أو جرّب متصفحًا آخر.",
     "magicLinkError": "تعذر إرسال الرابط السحري. حاول مرة أخرى.",
-    "demoAccountsHeader": "DEMO ACCOUNTS",
-    "demoAccountsHint": "اضغط أي صف لتعبئة الحقول وتسجيل الدخول فورًا.",
+    "demoAccountsHeader": "حسابات تجريبية",
+    "demoAccountsHint": "اختر حسابًا لتدخل به مباشرة.",
     "demoAccountsEmpty": "لم يتم العثور على حسابات تجريبية.",
     "demoRoleBranchAdmin": "مسؤول فرع",
     "demoRoleTeacher": "معلم",
     "demoRoleParent": "ولي أمر",
     "demoRoleXoSuperAdmin": "مدير XO الأعلى",
-    "rightHeadline": "ارتق بتميز رعاية الأطفال.",
-    "featureOneTitle": "حضور لحظي",
-    "featureOneDescription": "تابع تسجيل الدخول والخروج بتحديثات فورية.",
-    "featureTwoTitle": "تواصل موحد مع أولياء الأمور",
-    "featureTwoDescription": "شارك التحديثات اليومية والفعاليات والتنبيهات من لوحة واحدة.",
+    "rightHeadline": "كل ما تحتاجه حضانتك، في مكان واحد.",
+    "featureOneTitle": "الحضور لحظة بلحظة",
+    "featureOneDescription": "تابع وصول الأطفال وانصرافهم أولًا بأول.",
+    "featureTwoTitle": "الأسر دائمًا على اطلاع",
+    "featureTwoDescription": "التقارير اليومية والفعاليات والتنبيهات تصل لكل ولي أمر.",
+    "featureThreeTitle": "فواتير بلا أوراق",
+    "featureThreeDescription": "الفواتير والمدفوعات والإضافات واضحة لكل أسرة.",
     "emailOrUsername": "اسم المستخدم أو البريد",
     "emailOrUsernamePlaceholder": "اسم المستخدم أو you@example.com",
     "reset": {
@@ -5701,6 +5844,7 @@
       "announcementsCta": "الإعلانات",
       "leadBadge": "رئيسي",
       "backupBadge": "بديل",
+      "nannyBadge": "مربية",
       "assistantBadge": "مساعد",
       "leadLabel": "المعلم الرئيسي",
       "backupLabel": "المعلم البديل",
@@ -7426,6 +7570,36 @@
       "waitlist": "قائمة الانتظار",
       "details": "التفاصيل"
     },
+    "teamToday": {
+      "title": "فريق اليوم",
+      "inCount": "حضر {{in}} من {{expected}}",
+      "late_zero": "لا تأخير",
+      "late_one": "متأخر واحد",
+      "late_two": "متأخران",
+      "late_few": "{{count}} متأخرين",
+      "late_many": "{{count}} متأخرًا",
+      "late_other": "{{count}} متأخر",
+      "details": "تفاصيل الفريق",
+      "empty": "لم يُعيَّن معلم أو مربية لهذا الفصل بعد.",
+      "closed": "الحضانة مغلقة اليوم",
+      "inSince": "حاضر منذ {{time}}",
+      "leftAt": "{{from}} – {{to}}",
+      "notInYet": "لم يسجّل حضوره بعد",
+      "didNotClock": "لم يسجّل حضوره",
+      "covering": "يغطي مكان المعلم اليوم",
+      "lateBy_zero": "متأخر 0 دقيقة",
+      "lateBy_one": "متأخر دقيقة",
+      "lateBy_two": "متأخر دقيقتين",
+      "lateBy_few": "متأخر {{count}} دقائق",
+      "lateBy_many": "متأخر {{count}} دقيقة",
+      "lateBy_other": "متأخر {{count}} دقيقة",
+      "away": "غائب اليوم",
+      "onTime": "في الموعد",
+      "clockHint": "يسجّل حضوره من هاتفه",
+      "byAdmin": "سجّلته الإدارة",
+      "record": "تسجيل الوقت",
+      "correct": "تصحيح"
+    },
     "today": {
       "here": "موجودون الآن",
       "ofExpected_zero": "لا أحد متوقع اليوم",
@@ -7435,6 +7609,14 @@
       "ofExpected_many": "من {{count}} طفلًا متوقعًا اليوم",
       "ofExpected_other": "من {{count}} طفل متوقع اليوم",
       "wentHome": "انصرفوا",
+      "notArrived": "لم يصلوا بعد",
+      "notArrivedHint": "الحضانة ما زالت مفتوحة",
+      "absentAlso_zero": "لا غياب",
+      "absentAlso_one": "غائب واحد",
+      "absentAlso_two": "غائبان",
+      "absentAlso_few": "{{count}} غائبين",
+      "absentAlso_many": "{{count}} غائبًا",
+      "absentAlso_other": "{{count}} غائب",
       "absent": "غائبون",
       "excused_zero": "لا غياب بإخطار",
       "excused_one": "طفل واحد بإخطار من ولي الأمر",
@@ -7462,6 +7644,7 @@
       "all": "الكل",
       "here": "موجودون الآن",
       "went_home": "انصرفوا",
+      "not_arrived": "لم يصلوا بعد",
       "absent": "غائبون",
       "reports_due": "تقرير لم يُرسل",
       "health": "احتياجات صحية"
@@ -7469,6 +7652,7 @@
     "attendance": {
       "partial": "موجود",
       "present": "انصرف",
+      "expected": "لم يصل بعد",
       "absent": "لم يحضر",
       "excused": "غائب بإخطار",
       "off": "يوم إجازة",
@@ -7519,13 +7703,13 @@
     },
     "team": {
       "title": "الفريق",
-      "count_zero": "لا معلمين",
-      "count_one": "معلم واحد",
-      "count_two": "معلمان",
-      "count_few": "{{count}} معلمين",
-      "count_many": "{{count}} معلمًا",
-      "count_other": "{{count}} معلم",
-      "description": "من يدرّس هذا الفصل ومن معه اليوم.",
+      "count_zero": "لا أحد",
+      "count_one": "فرد واحد",
+      "count_two": "فردان",
+      "count_few": "{{count}} أفراد",
+      "count_many": "{{count}} فردًا",
+      "count_other": "{{count}} فرد",
+      "description": "من يدرّس هذا الفصل ويرعاه، ومن معه اليوم.",
       "manage": "الفريق والفصول",
       "absences": "الغيابات",
       "since": "في الفريق منذ {{date}}",
@@ -7690,7 +7874,7 @@
   },
   "classTeam": {
     "title": "فريق العمل والفصول",
-    "description": "اختر المعلم الرئيسي والمساعدين والمعلم البديل لكل فصل.",
+    "description": "اختر المعلم الرئيسي والمساعدين والمربيات والمعلم البديل لكل فصل.",
     "readOnly": "يمكنك عرض الفرق، وتعديلها يحتاج صلاحية فريق الفصول.",
     "saved": "تم الحفظ",
     "removed": "تمت الإزالة من الفصل",
@@ -7698,6 +7882,7 @@
       "classes": "الفصول",
       "withoutLead": "بدون معلم رئيسي",
       "withoutAssistant": "بدون مساعد",
+      "withoutNanny": "بدون مربية",
       "teachers": "المعلمون",
       "teachersWithoutClass": "معلمون بدون فصل"
     },
@@ -7719,11 +7904,14 @@
       "noClass": "بدون فصل",
       "leads": "المعلمون الرئيسيون",
       "assistants": "المساعدون",
+      "noNanny": "بدون مربية",
+      "nannies": "المربيات",
       "substitutes": "المعلمون البدلاء"
     },
     "roles": {
       "lead": "المعلم الرئيسي",
       "assistant": "مساعد",
+      "nanny": "مربية",
       "substitute": "المعلم البديل"
     },
     "departments": {
@@ -7739,6 +7927,8 @@
       "choose": "اختر معلمًا",
       "none": "غير محدد",
       "noAssistants": "لا يوجد مساعدون بعد",
+      "noNannies": "لا توجد مربية بعد.",
+      "addNanny": "إضافة مربية",
       "addAssistant": "إضافة مساعد",
       "remove": "إزالة {{name}}"
     },

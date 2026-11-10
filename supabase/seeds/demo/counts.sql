@@ -13,6 +13,8 @@ select
   (select count(*) from public.child_packages) as extra_hour_packages,
   (select count(*) from public.attendance_records) as attendance_records,
   (select count(*) from public.attendance_absence_reports) as absence_reports,
+  (select count(*) from public.staff_attendance) as staff_attendance_days,
+  (select count(*) from public.class_staff where role = 'nanny') as nannies,
   (select count(*) from public.daily_reports where status = 'published') as sent_daily_reports,
   (select count(*) from public.invoices) as invoices,
   (select count(*) from public.payment_attempts) as payments,

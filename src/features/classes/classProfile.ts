@@ -6,15 +6,20 @@
  */
 import { ALLERGY_SEVERITIES, worstSeverity, type AllergySeverity } from '@/features/child-health/childHealth';
 import { ABSENCE_REASONS, type AbsenceReason, type ClassCover } from '@/features/staff-absence/staffAbsence';
-import { came, type DayAttendance, type ReportStage, type ReportStatus } from '@/lib/dailyReport';
+import type { DayAttendance, ReportStage, ReportStatus } from '@/lib/dailyReport';
 import { count, day, list, numberOrNull, obj, oneOf, text, textOrNull, type JsonRecord } from '@/lib/jsonRead';
 import type { ClassStaffRole } from '@/types/tables';
 
 // -----------------------------------------------------------------------------------------------
 // The profile
 
-const STAFF_ROLES: readonly ClassStaffRole[] = ['lead', 'substitute', 'assistant'];
-const DAY_ATTENDANCE: readonly DayAttendance[] = ['present', 'partial', 'absent', 'excused', 'off', 'not_enrolled'];
+const STAFF_ROLES: readonly ClassStaffRole[] = ['lead', 'substitute', 'assistant', 'nanny'];
+/**
+ * A child's day as the class page sees it: the daily reports' states, and "expected" for a child who
+ * has not come yet while the nursery is still open (absent only once it has closed).
+ */
+export type ClassDayAttendance = DayAttendance | 'expected';
+const DAY_ATTENDANCE: readonly ClassDayAttendance[] = ['present', 'partial', 'expected', 'absent', 'excused', 'off', 'not_enrolled'];
 const REPORT_STATUSES: readonly ReportStatus[] = ['none', 'draft', 'published'];
 export const CHILD_ABSENCE_REASONS = ['sick', 'travel', 'family', 'other'] as const;
 export type ChildAbsenceReason = (typeof CHILD_ABSENCE_REASONS)[number];
@@ -51,6 +56,11 @@ export type TeamMember = {
   /** A backup who looks after the class today because its lead is away. */
   covering: boolean;
   absence: { reason: AbsenceReason; startsOn: string; endsOn: string } | null;
+  /** Today's clocking in and out (null: not yet), minutes late, and who recorded it. */
+  clockIn: string | null;
+  clockOut: string | null;
+  lateMinutes: number | null;
+  clockSource: 'self' | 'admin' | null;
 };
 
 export type ChildAllergy = { name: string; severity: AllergySeverity };
@@ -64,7 +74,7 @@ export type ClassChild = {
   dob: string | null;
   gender: 'male' | 'female' | null;
   enrolledOn: string;
-  attendance: DayAttendance;
+  attendance: ClassDayAttendance;
   checkIn: string | null;
   checkOut: string | null;
   absenceReason: ChildAbsenceReason | null;
@@ -119,6 +129,8 @@ export type ClassProfile = {
   today: string;
   /** The nursery is open today (a working day that is not a holiday). */
   schoolDay: boolean;
+  /** It is a school day and the nursery has not closed yet: children may still come. */
+  dayOpen: boolean;
   info: ClassInfo;
   team: TeamMember[];
   children: ClassChild[];
@@ -147,6 +159,10 @@ function toMember(m: JsonRecord): TeamMember {
     absence: absence.starts_on
       ? { reason: oneOf(absence.reason, ABSENCE_REASONS, 'other'), startsOn: day(absence.starts_on), endsOn: day(absence.ends_on) }
       : null,
+    clockIn: textOrNull(m.clock_in),
+    clockOut: textOrNull(m.clock_out),
+    lateMinutes: numberOrNull(m.late_minutes),
+    clockSource: m.clock_source === 'self' || m.clock_source === 'admin' ? m.clock_source : null,
   };
 }
 
@@ -180,6 +196,7 @@ export function toClassProfile(raw: unknown): ClassProfile {
   return {
     today: day(r.today) || new Date().toISOString().slice(0, 10),
     schoolDay: r.school_day !== false,
+    dayOpen: r.day_open === true,
     info: {
       id: text(info.id),
       nurseryId: text(info.nursery_id),
@@ -254,12 +271,16 @@ export function tabFrom(value: string | null): ClassProfileTab {
 
 const SERIOUS: readonly AllergySeverity[] = ['severe', 'life_threatening'];
 
+/** Came today (here now, or came and went home). */
+export const cameToday = (c: Pick<ClassChild, 'attendance'>) => c.attendance === 'partial' || c.attendance === 'present';
 export const isHere = (c: Pick<ClassChild, 'attendance'>) => c.attendance === 'partial';
+/** Has not come yet, while the nursery is still open. */
+export const notArrived = (c: Pick<ClassChild, 'attendance'>) => c.attendance === 'expected';
 export const wentHome = (c: Pick<ClassChild, 'attendance'>) => c.attendance === 'present';
 /** Did not come on a school day: with a parent's notice ('excused') or without. */
 export const isAbsent = (c: Pick<ClassChild, 'attendance'>) => c.attendance === 'absent' || c.attendance === 'excused';
 /** Came today and the day's report has not gone to the parents yet. */
-export const reportDue = (c: Pick<ClassChild, 'attendance' | 'report'>) => came(c) && c.report !== 'published';
+export const reportDue = (c: Pick<ClassChild, 'attendance' | 'report'>) => cameToday(c) && c.report !== 'published';
 export const hasHealthNeeds = (c: Pick<ClassChild, 'allergies' | 'conditions' | 'medications'>) =>
   c.allergies.length > 0 || c.conditions > 0 || c.medications > 0;
 export const hasSeriousAllergy = (c: Pick<ClassChild, 'allergies'>) => {
@@ -271,7 +292,7 @@ export const hasSeriousAllergy = (c: Pick<ClassChild, 'allergies'>) => {
 export function reportStageOf(c: Pick<ClassChild, 'attendance' | 'report'>): ReportStage {
   if (c.report === 'published') return 'sent';
   if (c.report === 'draft') return 'in_progress';
-  return came(c) ? 'not_started' : 'not_expected';
+  return cameToday(c) ? 'not_started' : 'not_expected';
 }
 
 export type TodaySummary = {
@@ -280,6 +301,8 @@ export type TodaySummary = {
   expected: number;
   here: number;
   wentHome: number;
+  /** Not come yet, while the nursery is open. */
+  notArrived: number;
   /** Absent without a word from the parents. */
   absent: number;
   /** Absent with a parent's notice. */
@@ -297,6 +320,7 @@ export function todaySummary(children: ClassChild[]): TodaySummary {
     expected: tally((c) => c.attendance !== 'off' && c.attendance !== 'not_enrolled'),
     here: tally(isHere),
     wentHome: tally(wentHome),
+    notArrived: tally(notArrived),
     absent: tally((c) => c.attendance === 'absent'),
     excused: tally((c) => c.attendance === 'excused'),
     reportsSent: tally((c) => c.report === 'published'),
@@ -306,13 +330,14 @@ export function todaySummary(children: ClassChild[]): TodaySummary {
   };
 }
 
-export const CHILD_FILTERS = ['all', 'here', 'went_home', 'absent', 'reports_due', 'health'] as const;
+export const CHILD_FILTERS = ['all', 'here', 'went_home', 'not_arrived', 'absent', 'reports_due', 'health'] as const;
 export type ChildFilter = (typeof CHILD_FILTERS)[number];
 
 const FILTER_TEST: Record<ChildFilter, (c: ClassChild) => boolean> = {
   all: () => true,
   here: isHere,
   went_home: wentHome,
+  not_arrived: notArrived,
   absent: isAbsent,
   reports_due: reportDue,
   health: hasHealthNeeds,
@@ -338,12 +363,36 @@ export function filterChildren(children: ClassChild[], filter: ChildFilter, sear
 
 export type DutyState = 'on_duty' | 'covering' | 'away' | 'standby' | 'inactive';
 
-/** A team member today: in, covering for the lead, away, a backup not needed today, or unable to sign in. */
-export function dutyState(m: Pick<TeamMember, 'active' | 'absence' | 'covering' | 'onDuty'>): DutyState {
+/** Where someone on the team stands with clocking today. */
+export type ClockState = 'in' | 'left' | 'not_in' | 'away';
+
+export function clockState(m: Pick<TeamMember, 'clockIn' | 'clockOut' | 'absence'>): ClockState {
+  if (m.clockIn && m.clockOut) return 'left';
+  if (m.clockIn) return 'in';
+  return m.absence ? 'away' : 'not_in';
+}
+
+/** The team's clocking today: how many of those expected (not away) are in, and who is late. */
+export function teamClockSummary(team: TeamMember[]): { expected: number; in: number; left: number; late: number } {
+  const working = team.filter((m) => m.active && !m.absence && m.role !== 'substitute');
+  return {
+    expected: working.length,
+    in: working.filter((m) => m.clockIn && !m.clockOut).length,
+    left: working.filter((m) => m.clockIn && m.clockOut).length,
+    late: working.filter((m) => (m.lateMinutes ?? 0) > 5).length,
+  };
+}
+
+/**
+ * A team member today: in, covering for the lead, away, a backup not needed today, or unable to sign
+ * in. A nanny is not a teacher on duty (no reports, no medicine round), but works with the class
+ * every day she is not away.
+ */
+export function dutyState(m: Pick<TeamMember, 'active' | 'absence' | 'covering' | 'onDuty' | 'role'>): DutyState {
   if (!m.active) return 'inactive';
   if (m.absence) return 'away';
   if (m.covering) return 'covering';
-  if (m.onDuty) return 'on_duty';
+  if (m.onDuty || m.role === 'nanny') return 'on_duty';
   return 'standby';
 }
 

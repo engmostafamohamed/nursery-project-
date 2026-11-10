@@ -158,7 +158,7 @@ export function ResetPasswordPage() {
             </Button>
             <FieldError message={saveError} className="text-sm" />
 
-            <button type="button" className="text-sm text-secondary hover:underline" onClick={() => void signOut()}>
+            <button type="button" className="text-sm font-medium text-primary hover:underline" onClick={() => void signOut()}>
               {t('auth.reset.signOutInstead')}
             </button>
           </form>

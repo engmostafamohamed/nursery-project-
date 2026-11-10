@@ -15,6 +15,8 @@ select plan(17);
 insert into public.nurseries (id, name_ar, name_en, working_days) values
   ('00000000-0000-4000-9700-00000000000a', 'حضانة الفصل', 'Class Nursery', '["sun", "mon", "tue", "wed", "thu", "fri", "sat"]'),
   ('00000000-0000-4000-9700-00000000000b', 'حضانة أخرى', 'Other Nursery', '["sun", "mon", "tue", "wed", "thu", "fri", "sat"]');
+-- The day is over (it closed a second after midnight): a child who did not come is absent, not expected.
+update public.nurseries set closes_at = '00:00:01' where id = '00000000-0000-4000-9700-00000000000a';
 update public.nursery_settings set timezone = 'Asia/Dubai'
  where nursery_id = '00000000-0000-4000-9700-00000000000a';
 
@@ -67,8 +69,11 @@ insert into public.attendance_records (child_id, attendance_date, check_in, chec
   ('00000000-0000-4000-9700-0000000000c2', pg_temp.today(), now() - interval '5 hours', now() - interval '1 hour');
 insert into public.attendance_absence_reports (nursery_id, child_id, absence_date, reason, reported_by) values
   ('00000000-0000-4000-9700-00000000000a', '00000000-0000-4000-9700-0000000000c3', pg_temp.today(), 'sick', '00000000-0000-4000-9700-000000000a05');
+-- A sent report as a fixture: its content is not what this test is about.
+alter table public.daily_reports disable trigger trg_daily_reports_check_complete;
 insert into public.daily_reports (child_id, nursery_id, class_id, report_date, status, published_at) values
   ('00000000-0000-4000-9700-0000000000c2', '00000000-0000-4000-9700-00000000000a', '00000000-0000-4000-9700-0000000000b1', pg_temp.today(), 'published', now());
+alter table public.daily_reports enable trigger trg_daily_reports_check_complete;
 insert into public.child_allergies (child_id, nursery_id, allergen_name, severity) values
   ('00000000-0000-4000-9700-0000000000c1', '00000000-0000-4000-9700-00000000000a', 'Dust', 'mild'),
   ('00000000-0000-4000-9700-0000000000c1', '00000000-0000-4000-9700-00000000000a', 'Peanut', 'severe');

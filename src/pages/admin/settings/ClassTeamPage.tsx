@@ -23,6 +23,7 @@ import {
   filterClasses,
   filterTeachers,
   lead,
+  nannies,
   pickName,
   substitute,
   teamSummary,
@@ -40,6 +41,7 @@ type T = ReturnType<typeof useTranslation>['t'];
 function roleName(t: T, role: ClassTeamRole): string {
   if (role === 'lead') return t('classTeam.roles.lead');
   if (role === 'assistant') return t('classTeam.roles.assistant');
+  if (role === 'nanny') return t('classTeam.roles.nanny');
   return t('classTeam.roles.substitute');
 }
 
@@ -51,7 +53,7 @@ function departmentName(t: T, department: string | null): string | null {
 }
 
 /**
- * Team & classes: who leads, assists and stands in for each class. The nursery admin and staff with
+ * Team & classes: who leads, assists, cares for (the nannies) and stands in for each class. The nursery admin and staff with
  * the class team permission (a head of teachers) change it; others with view access only see it.
  * Shared by the admin settings and the head of teachers' own sidebar.
  */
@@ -129,7 +131,7 @@ export function ClassTeamPage() {
   return (
     <div className="space-y-5 pb-8">
       <PageHeader icon="groups" title={t('classTeam.title')} description={t('classTeam.description')}>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
           <StatTile icon="school" label={t('classTeam.tiles.classes')} value={summary.classes} onClick={() => pickClassFilter('all')} active={view === 'classes' && classFilter === 'all'} />
           <StatTile
             icon="person_off"
@@ -146,6 +148,14 @@ export function ClassTeamPage() {
             tone={summary.withoutAssistant > 0 ? 'warning' : 'success'}
             onClick={() => pickClassFilter('no_assistant')}
             active={view === 'classes' && classFilter === 'no_assistant'}
+          />
+          <StatTile
+            icon="diversity_1"
+            label={t('classTeam.tiles.withoutNanny')}
+            value={summary.withoutNanny}
+            tone={summary.withoutNanny > 0 ? 'warning' : 'success'}
+            onClick={() => pickClassFilter('no_nanny')}
+            active={view === 'classes' && classFilter === 'no_nanny'}
           />
           <StatTile
             icon="badge"
@@ -216,6 +226,7 @@ export function ClassTeamPage() {
                 <option value="all">{t('classTeam.filters.allClasses')}</option>
                 <option value="no_lead">{t('classTeam.filters.noLead')}</option>
                 <option value="no_assistant">{t('classTeam.filters.noAssistant')}</option>
+                <option value="no_nanny">{t('classTeam.filters.noNanny')}</option>
               </Select>
             </FilterField>
           </FilterBar>
@@ -259,6 +270,7 @@ export function ClassTeamPage() {
                   <option value="no_class">{t('classTeam.filters.noClass')}</option>
                   <option value="lead">{t('classTeam.filters.leads')}</option>
                   <option value="assistant">{t('classTeam.filters.assistants')}</option>
+                  <option value="nanny">{t('classTeam.filters.nannies')}</option>
                   <option value="substitute">{t('classTeam.filters.substitutes')}</option>
                 </Select>
               </FilterField>
@@ -331,7 +343,7 @@ export function ClassTeamPage() {
   );
 }
 
-/** A class: its lead teacher, backup teacher and assistants, each changeable in place. */
+/** A class: its lead teacher, backup teacher, assistants and nannies, each changeable in place. */
 function ClassCard({
   cls,
   staff,
@@ -353,7 +365,6 @@ function ClassCard({
   const lang = i18n.language;
   const leadId = lead(cls);
   const substituteId = substitute(cls);
-  const assistantIds = assistants(cls);
   const teacherOption = (s: TeamTeacher) => (
     <option key={s.id} value={s.id}>
       {pickName(s, lang)}
@@ -397,8 +408,54 @@ function ClassCard({
     </div>
   );
 
-  // An assistant is any active teacher not already in this class.
-  const assistantCandidates = staff.filter((s) => s.status === 'active' && !cls.members.some((m) => m.user_id === s.id));
+  // An assistant or a nanny is any active member of staff not already in this class.
+  const freeStaff = staff.filter((s) => s.status === 'active' && !cls.members.some((m) => m.user_id === s.id));
+
+  /** The places a class has several of: assistants and nannies. */
+  const many = (role: 'assistant' | 'nanny', ids: string[]) => (
+    <div className="space-y-2" data-testid={`team-${role}s`}>
+      <p className="flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant">
+        <MaterialSymbol name={role === 'assistant' ? 'group' : 'diversity_1'} className="text-sm" />
+        {t(role === 'assistant' ? 'classTeam.roles.assistant' : 'classTeam.roles.nanny')}
+      </p>
+      {ids.length ? (
+        <ul className="flex flex-wrap gap-2">
+          {ids.map((id) => (
+            <li key={id} className="inline-flex items-center gap-1 rounded-full border border-outline-variant bg-surface-container-lowest py-1 ps-3 pe-1 text-sm">
+              {nameOf(id)}
+              {canUpdate ? (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => onRemove(id)}
+                  aria-label={t('classTeam.card.remove', { name: nameOf(id) })}
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-full text-on-surface-variant hover:bg-error/10 hover:text-error"
+                >
+                  <MaterialSymbol name="close" className="text-sm" />
+                </button>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-on-surface-variant">{t(role === 'assistant' ? 'classTeam.card.noAssistants' : 'classTeam.card.noNannies')}</p>
+      )}
+      {canUpdate && freeStaff.length ? (
+        <Select
+          className="h-10 text-sm"
+          aria-label={t(role === 'assistant' ? 'classTeam.card.addAssistant' : 'classTeam.card.addNanny')}
+          value=""
+          disabled={busy}
+          onChange={(e) => {
+            if (e.target.value) onPlace(role, e.target.value);
+          }}
+        >
+          <option value="">{t(role === 'assistant' ? 'classTeam.card.addAssistant' : 'classTeam.card.addNanny')}</option>
+          {freeStaff.map(teacherOption)}
+        </Select>
+      ) : null}
+    </div>
+  );
 
   return (
     <article className="flex flex-col gap-4 rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
@@ -423,47 +480,9 @@ function ClassCard({
         {slot('substitute', substituteId)}
       </div>
 
-      <div className="space-y-2">
-        <p className="flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant">
-          <MaterialSymbol name="group" className="text-sm" />
-          {t('classTeam.roles.assistant')}
-        </p>
-        {assistantIds.length ? (
-          <ul className="flex flex-wrap gap-2">
-            {assistantIds.map((id) => (
-              <li key={id} className="inline-flex items-center gap-1 rounded-full border border-outline-variant bg-surface-container-lowest py-1 ps-3 pe-1 text-sm">
-                {nameOf(id)}
-                {canUpdate ? (
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => onRemove(id)}
-                    aria-label={t('classTeam.card.remove', { name: nameOf(id) })}
-                    className="inline-flex h-6 w-6 items-center justify-center rounded-full text-on-surface-variant hover:bg-error/10 hover:text-error"
-                  >
-                    <MaterialSymbol name="close" className="text-sm" />
-                  </button>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-on-surface-variant">{t('classTeam.card.noAssistants')}</p>
-        )}
-        {canUpdate && assistantCandidates.length ? (
-          <Select
-            className="h-10 text-sm"
-            aria-label={t('classTeam.card.addAssistant')}
-            value=""
-            disabled={busy}
-            onChange={(e) => {
-              if (e.target.value) onPlace('assistant', e.target.value);
-            }}
-          >
-            <option value="">{t('classTeam.card.addAssistant')}</option>
-            {assistantCandidates.map(teacherOption)}
-          </Select>
-        ) : null}
+      <div className="grid gap-4 sm:grid-cols-2">
+        {many('assistant', assistants(cls))}
+        {many('nanny', nannies(cls))}
       </div>
     </article>
   );

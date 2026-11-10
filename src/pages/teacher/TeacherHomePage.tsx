@@ -29,6 +29,7 @@ import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatTile } from '@/components/ui/StatTile';
 import { MedicineDueBanner } from '@/features/medicine-round/MedicineDueBanner';
+import { StaffClockCard } from '@/features/staff-clock/StaffClockCard';
 import { CoverBanner } from '@/features/staff-absence/CoverBanner';
 import { useMyAbsences } from '@/features/staff-absence/useStaffAbsence';
 import { useAuthSession } from '@/hooks/useAuthSession';
@@ -155,11 +156,19 @@ export function TeacherHomePage() {
   }
 
   if (!(classes.data ?? []).length) {
-    return <EmptyState icon="school" title={t('teacher.home.noClassesTitle')} description={t('teacher.home.noClassesDescription')} />;
+    return (
+      <div className="space-y-5">
+        <StaffClockCard />
+        <EmptyState icon="school" title={t('teacher.home.noClassesTitle')} description={t('teacher.home.noClassesDescription')} />
+      </div>
+    );
   }
 
   return (
     <div className="space-y-5 pb-8">
+      {/* Clocking in and out comes first: it is the day's first thing to do */}
+      <StaffClockCard />
+
       {/* Greeting and the day's shortcuts */}
       <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
         <div className="flex flex-col gap-4 bg-surface-container-lowest px-4 py-5 sm:px-5 lg:flex-row lg:items-center lg:justify-between">

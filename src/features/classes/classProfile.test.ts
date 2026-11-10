@@ -48,6 +48,10 @@ const member = (over: Partial<TeamMember> = {}): TeamMember => ({
   onDuty: true,
   covering: false,
   absence: null,
+  clockIn: null,
+  clockOut: null,
+  lateMinutes: null,
+  clockSource: null,
   ...over,
 });
 
@@ -125,6 +129,7 @@ describe('the children today', () => {
       expected: 5,
       here: 1,
       wentHome: 2,
+      notArrived: 0,
       absent: 1,
       excused: 1,
       reportsSent: 1,
@@ -141,7 +146,7 @@ describe('the children today', () => {
     expect(ids('absent')).toEqual(['away', 'note']);
     expect(ids('reports_due')).toEqual(['here', 'home2']);
     expect(ids('health')).toEqual(['home2', 'note', 'later']);
-    expect(filterCounts(kids)).toEqual({ all: 6, here: 1, went_home: 2, absent: 2, reports_due: 2, health: 3 });
+    expect(filterCounts(kids)).toEqual({ all: 6, here: 1, went_home: 2, not_arrived: 0, absent: 2, reports_due: 2, health: 3 });
   });
 
   it('searches both names and the code, every word', () => {
@@ -168,6 +173,7 @@ describe('the team today', () => {
     expect(dutyState(member({ onDuty: false, absence: { reason: 'sick', startsOn: '2026-11-09', endsOn: '2026-11-09' } }))).toBe('away');
     expect(dutyState(member({ role: 'substitute', onDuty: false }))).toBe('standby');
     expect(dutyState(member({ active: false }))).toBe('inactive');
+    expect(dutyState(member({ role: 'nanny', onDuty: false }))).toBe('on_duty');
   });
 
   const profile = (team: TeamMember[], children = [child()]) =>

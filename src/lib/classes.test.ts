@@ -47,6 +47,7 @@ describe('groupClassStaff', () => {
     ['u2', { name: 'Mona' }],
     ['u3', { name: 'Hoda' }],
     ['u4', { name: 'Laila' }],
+    ['u5', { name: 'Samia' }],
   ]);
 
   it('splits a class into its lead, backup and assistants', () => {
@@ -56,6 +57,7 @@ describe('groupClassStaff', () => {
         { user_id: 'u1', role: 'lead' },
         { user_id: 'u2', role: 'substitute' },
         { user_id: 'u4', role: 'assistant' },
+        { user_id: 'u5', role: 'nanny' },
       ],
       people,
     );
@@ -63,6 +65,7 @@ describe('groupClassStaff', () => {
       lead: { name: 'Sara' },
       substitute: { name: 'Mona' },
       assistants: [{ name: 'Hoda' }, { name: 'Laila' }],
+      nannies: [{ name: 'Samia' }],
     });
   });
 
@@ -71,6 +74,7 @@ describe('groupClassStaff', () => {
       lead: { name: 'Sara' },
       substitute: null,
       assistants: [],
+      nannies: [],
     });
   });
 
@@ -83,7 +87,7 @@ describe('groupClassStaff', () => {
         ],
         people,
       ),
-    ).toEqual({ lead: null, substitute: null, assistants: [] });
+    ).toEqual({ lead: null, substitute: null, assistants: [], nannies: [] });
   });
 });
 

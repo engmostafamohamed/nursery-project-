@@ -1,14 +1,15 @@
-import type { DayAttendance, ReportStage } from '@/lib/dailyReport';
+import type { ReportStage } from '@/lib/dailyReport';
 import type { PillTone } from '@/lib/tones';
 
-import type { DutyState, MessageStatus } from './classProfile';
+import type { ClassDayAttendance, ClockState, DutyState, MessageStatus } from './classProfile';
 
 type Look = { tone: PillTone; icon: string };
 
 /** One look per state of a child's day, the same in the table, the cards and the tiles. */
-export const ATTENDANCE_LOOK: Record<DayAttendance, Look> = {
+export const ATTENDANCE_LOOK: Record<ClassDayAttendance, Look> = {
   partial: { tone: 'success', icon: 'how_to_reg' },
   present: { tone: 'primary', icon: 'directions_walk' },
+  expected: { tone: 'neutral', icon: 'schedule' },
   absent: { tone: 'warning', icon: 'person_off' },
   excused: { tone: 'neutral', icon: 'event_busy' },
   off: { tone: 'neutral', icon: 'weekend' },
@@ -29,6 +30,14 @@ export const DUTY_LOOK: Record<DutyState, Look> = {
   away: { tone: 'warning', icon: 'event_busy' },
   standby: { tone: 'neutral', icon: 'schedule' },
   inactive: { tone: 'error', icon: 'block' },
+};
+
+/** Clocking today: in, left for the day, not in yet, away. */
+export const CLOCK_LOOK: Record<ClockState, Look> = {
+  in: { tone: 'success', icon: 'login' },
+  left: { tone: 'neutral', icon: 'logout' },
+  not_in: { tone: 'warning', icon: 'schedule' },
+  away: { tone: 'neutral', icon: 'event_busy' },
 };
 
 export const MESSAGE_STATUS_TONE: Record<MessageStatus, PillTone> = {

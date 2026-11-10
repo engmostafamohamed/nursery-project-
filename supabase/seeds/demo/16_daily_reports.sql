@@ -5,7 +5,7 @@
 -- children sleep longer), mood, toilet visits, two to four activities, and now and then a note to the
 -- family. Each keeps the child's class and code and the sender, as send_daily_reports does. The babies'
 -- reports also have their bottles. Today's reports are left for the teachers (the morning job
--- prepares them).
+-- prepares them); a past day the job prepared but nobody touched gets its sent report.
 
 -- Each branch's last 10 school days, worked out once.
 create temp table report_days on commit drop as
@@ -96,4 +96,31 @@ cross join lateral (
            at time zone 'Africa/Cairo') as sent_at
 ) p
 where k.branch = any({{branches}})
-on conflict (child_id, report_date) do nothing;
+-- A report the morning job prepared and nobody touched is the one sent; one a teacher worked on stays.
+on conflict (child_id, report_date) do update
+   set nursery_id = excluded.nursery_id,
+       status = excluded.status,
+       teacher_id = excluded.teacher_id,
+       submitted_by = excluded.submitted_by,
+       published_at = excluded.published_at,
+       last_saved_at = excluded.last_saved_at,
+       last_saved_by = excluded.last_saved_by,
+       meals_json = excluded.meals_json,
+       nap_json = excluded.nap_json,
+       mood_json = excluded.mood_json,
+       toilet_json = excluded.toilet_json,
+       activities_json = excluded.activities_json,
+       feeding_json = excluded.feeding_json,
+       special_notes = excluded.special_notes,
+       child_code = excluded.child_code,
+       class_id = excluded.class_id,
+       class_name_ar = excluded.class_name_ar,
+       class_name_en = excluded.class_name_en,
+       sender_name_ar = excluded.sender_name_ar,
+       sender_name_en = excluded.sender_name_en,
+       sender_role = excluded.sender_role,
+       sender_role_title_ar = excluded.sender_role_title_ar,
+       sender_role_title_en = excluded.sender_role_title_en,
+       sender_department = excluded.sender_department,
+       sender_class_role = excluded.sender_class_role
+ where public.daily_report_untouched(public.daily_reports.status, public.daily_reports.prepared_at, public.daily_reports.last_saved_at);

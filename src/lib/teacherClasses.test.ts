@@ -73,7 +73,7 @@ describe('the class team page', () => {
   const staff = [teacher('nadia', 'Nadia'), teacher('sara', 'Sara'), teacher('huda', 'Huda'), teacher('old', 'Old', 'inactive')];
 
   it('the numbers at the top', () => {
-    expect(teamSummary({ classes, staff })).toEqual({ classes: 2, withoutLead: 1, withoutAssistant: 1, teachers: 3, teachersWithoutClass: 1 });
+    expect(teamSummary({ classes, staff })).toEqual({ classes: 2, withoutLead: 1, withoutAssistant: 1, withoutNanny: 2, teachers: 3, teachersWithoutClass: 1 });
   });
 
   it('finds classes by name or team member, or those missing a lead; teachers by name or place', () => {

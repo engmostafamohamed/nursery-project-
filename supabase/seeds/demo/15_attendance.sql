@@ -4,7 +4,8 @@
 -- children come, around their usual time, and go home before closing (half-day children around
 -- noon); a few are picked up late. About one day in fourteen a child stays home, and the family
 -- reports most of those absences (ill, travelling, a family matter). Today counts too once the
--- branch has opened. The QR-hours guard and the absence notifications are paused while the history
+-- branch has opened. The staff clock in and out on the same days: most a little before opening, a
+-- few late; nobody on a recorded absence; a few days recorded by the admin (a forgotten phone). The QR-hours guard and the absence notifications are paused while the history
 -- is written, so nobody is notified about the past.
 
 alter table public.attendance_records disable trigger attendance_qr_working_hours_guard;
@@ -84,6 +85,41 @@ cross join lateral (
 ) r
 where not a.came and seed.chance(65, 'reported:' || a.child_id || a.day)
 on conflict (child_id, absence_date) do nothing;
+
+-- The staff: everyone working at the branch (teachers, nannies, managers, its admins).
+insert into public.staff_attendance (
+  user_id, nursery_id, work_date, clock_in, check_in_at, clock_out, check_out_at, status, late_minutes, work_hours,
+  source, check_in_by, check_out_by, notes, staff_id
+)
+select
+  u.id, n.id, d.day, t.check_in, t.check_in,
+  case when t.check_out <= now() then t.check_out end, case when t.check_out <= now() then t.check_out end,
+  case when t.late > 5 then 'late' else 'present' end, t.late,
+  case when t.check_out <= now() then round((extract(epoch from (t.check_out - t.check_in)) / 3600.0)::numeric, 2) end,
+  case when t.by_admin then 'admin' else 'self' end,
+  case when t.by_admin then adm.id else u.id end,
+  case when t.check_out <= now() then case when t.by_admin then adm.id else u.id end end,
+  case when t.by_admin then 'نسي تسجيل الحضور من الهاتف' end,
+  (select sp.id from public.staff_profiles sp where sp.user_id = u.id order by sp.created_at limit 1)
+from branch_days d
+join public.nurseries n on n.id = seed.branch_id(d.branch)
+join public.users u on u.nursery_id = n.id and u.role in ('teacher', 'manager', 'branch_admin') and coalesce(u.status, 'active') = 'active'
+left join lateral (select a.id from public.users a where a.nursery_id = n.id and a.role = 'branch_admin' order by a.created_at limit 1) adm on true
+cross join lateral (
+  select
+    ((d.day + n.opens_at + make_interval(mins => case when seed.chance(9, 'staff-late:' || u.id || d.day)
+                                                       then seed.int_between(6, 35, 'staff-late-by:' || u.id || d.day)
+                                                       else seed.int_between(-40, 3, 'staff-in:' || u.id || d.day) end)) at time zone 'Africa/Cairo') as check_in,
+    ((d.day + n.closes_at + make_interval(mins => seed.int_between(-10, 45, 'staff-out:' || u.id || d.day))) at time zone 'Africa/Cairo') as check_out,
+    seed.chance(4, 'staff-admin:' || u.id || d.day) as by_admin
+) t0
+cross join lateral (
+  select t0.*, greatest(0, floor(extract(epoch from (t0.check_in - ((d.day + n.opens_at) at time zone 'Africa/Cairo'))) / 60)::integer) as late
+) t
+where d.branch = any({{branches}})
+  and t.check_in <= now()
+  and not public.staff_is_absent(u.id, d.day)
+on conflict (user_id, work_date) do nothing;
 
 alter table public.attendance_records enable trigger attendance_qr_working_hours_guard;
 alter table public.attendance_absence_reports enable trigger trg_absence_reports_before_insert;

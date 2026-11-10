@@ -54,7 +54,7 @@ export function ForgotPasswordPanel({ initialEmail, onBack }: { initialEmail: st
         <span className="material-symbols-outlined text-4xl text-primary" aria-hidden>
           mark_email_read
         </span>
-        <h2 className="font-headline text-xl font-bold text-on-surface">{t('auth.reset.sentTitle')}</h2>
+        <h1 className="font-headline text-2xl font-bold text-on-surface">{t('auth.reset.sentTitle')}</h1>
         <p className="text-sm text-on-surface-variant">
           {t('auth.reset.sentBody', { email: sentTo })}
         </p>
@@ -69,7 +69,7 @@ export function ForgotPasswordPanel({ initialEmail, onBack }: { initialEmail: st
   return (
     <form className="space-y-4" onSubmit={(event) => void onSubmit(event)} noValidate data-testid="forgot-password-form">
       <div>
-        <h2 className="font-headline text-xl font-bold text-on-surface">{t('auth.reset.requestTitle')}</h2>
+        <h1 className="font-headline text-2xl font-bold text-on-surface">{t('auth.reset.requestTitle')}</h1>
         <p className="mt-1 text-sm text-on-surface-variant">{t('auth.reset.requestBody')}</p>
       </div>
       <div className="space-y-2">
@@ -101,7 +101,7 @@ export function ForgotPasswordPanel({ initialEmail, onBack }: { initialEmail: st
         {sending ? t('common.loading') : t('auth.reset.send')}
       </Button>
       <FieldError message={requestError} className="text-sm" />
-      <button type="button" className="text-sm text-secondary hover:underline" onClick={onBack}>
+      <button type="button" className="text-sm font-medium text-primary hover:underline" onClick={onBack}>
         {t('auth.reset.backToSignIn')}
       </button>
     </form>

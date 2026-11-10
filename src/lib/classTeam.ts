@@ -1,8 +1,9 @@
-// The class teams page: each class's lead teacher, assistants and backup teacher, every teacher with
-// their role and classes, and the numbers at the top. Plain functions over what get_class_teams returns.
+// The class teams page: each class's lead teacher, assistants, nannies and backup teacher, every
+// teacher with their role and classes, and the numbers at the top. Plain functions over what
+// get_class_teams returns.
 
-export type ClassTeamRole = 'lead' | 'assistant' | 'substitute';
-export const CLASS_TEAM_ROLES: ClassTeamRole[] = ['lead', 'assistant', 'substitute'];
+export type ClassTeamRole = 'lead' | 'assistant' | 'nanny' | 'substitute';
+export const CLASS_TEAM_ROLES: ClassTeamRole[] = ['lead', 'assistant', 'nanny', 'substitute'];
 
 export type TeamClass = {
   id: string;
@@ -58,11 +59,15 @@ export function substitute(cls: TeamClass): string | null {
 export function assistants(cls: TeamClass): string[] {
   return cls.members.filter((m) => m.role === 'assistant').map((m) => m.user_id);
 }
+export function nannies(cls: TeamClass): string[] {
+  return cls.members.filter((m) => m.role === 'nanny').map((m) => m.user_id);
+}
 
 export type TeamSummary = {
   classes: number;
   withoutLead: number;
   withoutAssistant: number;
+  withoutNanny: number;
   teachers: number;
   teachersWithoutClass: number;
 };
@@ -73,27 +78,29 @@ export function teamSummary(data: Pick<ClassTeams, 'classes' | 'staff'>): TeamSu
     classes: data.classes.length,
     withoutLead: data.classes.filter((c) => !lead(c)).length,
     withoutAssistant: data.classes.filter((c) => assistants(c).length === 0).length,
+    withoutNanny: data.classes.filter((c) => nannies(c).length === 0).length,
     teachers: active.length,
     teachersWithoutClass: active.filter((s) => s.classes.length === 0).length,
   };
 }
 
-export type ClassFilter = 'all' | 'no_lead' | 'no_assistant';
+export type ClassFilter = 'all' | 'no_lead' | 'no_assistant' | 'no_nanny';
 
-/** Classes whose name, or a team member's name, holds the search; optionally only those missing a lead or an assistant. */
+/** Classes whose name, or a team member's name, holds the search; optionally only those missing a lead, an assistant or a nanny. */
 export function filterClasses(classes: TeamClass[], staff: TeamTeacher[], search: string, filter: ClassFilter): TeamClass[] {
   const q = search.trim().toLowerCase();
   const names = new Map(staff.map((s) => [s.id, `${s.name_ar ?? ''} ${s.name_en ?? ''}`.toLowerCase()]));
   return classes.filter((cls) => {
     if (filter === 'no_lead' && lead(cls)) return false;
     if (filter === 'no_assistant' && assistants(cls).length > 0) return false;
+    if (filter === 'no_nanny' && nannies(cls).length > 0) return false;
     if (!q) return true;
     if (`${cls.name_ar ?? ''} ${cls.name_en ?? ''}`.toLowerCase().includes(q)) return true;
     return cls.members.some((m) => names.get(m.user_id)?.includes(q));
   });
 }
 
-export type TeacherFilter = 'all' | 'no_class' | 'lead' | 'assistant' | 'substitute';
+export type TeacherFilter = 'all' | 'no_class' | 'lead' | 'assistant' | 'nanny' | 'substitute';
 
 export function filterTeachers(staff: TeamTeacher[], search: string, filter: TeacherFilter): TeamTeacher[] {
   const q = search.trim().toLowerCase();

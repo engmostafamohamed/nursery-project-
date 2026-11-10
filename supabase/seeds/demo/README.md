@@ -8,6 +8,10 @@ npm run seed:demo-data -- --yes          # everything (deletes the current child
 npm run seed:demo-data -- --yes 15       # up to a file, without the reset: adds only what is missing
 ```
 
+The data ages with every day that passes: attendance, staff clocking and daily reports stop at the day
+the seed last ran. `npm run seed:demo-data -- --yes 16` brings them up to today (and today so far) without
+touching anything else.
+
 It needs `SUPABASE_DB_PASSWORD` in `.env` and the linked dev project (`npx supabase link`). It **refuses
 any project but dev** (`hlhlpjecinkqqsqrjpcj`), and asks for `--yes` because the reset files delete data.
 Every run gives the same data: names, amounts and ids come from fixed keys, not from chance.
@@ -28,7 +32,7 @@ Every run gives the same data: names, amounts and ids come from fixed keys, not 
 | `06_classes.sql` | 10 classes per branch, from Little Lambs (6–12 months) to Moons (5–6 years), 25 places each. |
 | `07_teacher_managers.sql` | A head of teachers per branch (`head.b<branch>`), who manages the class teams. |
 | `08_teachers.sql` | A lead teacher per class (`lead<class>.b<branch>`), who sends its daily reports. The main branch's classes keep their leads (`demo-teacher`, `demo-manager-teacher`). |
-| `09_assistant_teachers.sql` | An assistant teacher per class (`asst<class>.b<branch>`). |
+| `09_assistant_teachers.sql` | An assistant teacher per class (`asst<class>.b<branch>`) and a nanny (`nanny<class>.b<branch>`), who looks after the children beside the teachers. |
 | **Families** | |
 | `10_packages.sql` | Half day, full day and extended day tuition (monthly, quarterly, half-year and annual prices, by area), and extra-hours packs. |
 | `11_parents.sql` | 200 families per branch: both parents' accounts (some mothers raising their children alone), with a job and a national id. `demo-parent` is the main branch's 4th family's mother. |
@@ -36,8 +40,8 @@ Every run gives the same data: names, amounts and ids come from fixed keys, not 
 | **Nursery life** | |
 | `13_health.sql` | Allergies (about 1 child in 10), long-term conditions (asthma, eczema, favism…) and the inhalers kept at the nursery. |
 | `14_subscriptions.sql` | Every child's tuition subscription (mostly monthly) and some extra-hours packs. |
-| `15_attendance.sql` | The last 20 school days: check-in and pick-up times, a few late pick-ups, absences and most of them reported by the family. |
-| `16_daily_reports.sql` | A sent daily report for every child who came on each of the last 10 school days, from the class's lead teacher. |
+| `15_attendance.sql` | The last 20 school days and today so far: the children's check-in and pick-up times, a few late pick-ups, absences and most of them reported by the family; and the staff clocking in and out (a few late, a few days recorded by the admin, nobody on a recorded absence). |
+| `16_daily_reports.sql` | A sent daily report for every child who came on each of the last 10 school days, from the class's lead teacher (replacing a draft the morning job prepared that nobody touched). |
 | `17_invoices_and_payments.sql` | Tuition invoices since August and their payments: paid, part-paid, waiting for confirmation, overdue. |
 | `18_events.sql` | Six events per branch (past and coming) and the families' permission answers. |
 | `19_courses.sql` | Four after-school courses per new branch and their enrolments. |

@@ -1,4 +1,55 @@
 {
+  "staffClock": {
+    "titleNotIn": "You haven’t clocked in today",
+    "titleIn": "Clocked in at {{time}}",
+    "titleLeft": "You’ve clocked out for today",
+    "opensAt": "The nursery opens at {{time}}. Clock in when you arrive.",
+    "notInHint": "Clock in when you arrive.",
+    "lateBy_one": "{{count}} minute after opening",
+    "lateBy_other": "{{count}} minutes after opening",
+    "onTime": "On time",
+    "leftLine": "{{from}} – {{to}}",
+    "hours": "{{h}} h {{m}} min",
+    "recordedByAdmin": "Recorded by the admin.",
+    "absentToday": "You’re marked away today ({{reason}}). If you came in, clock in.",
+    "closedToday": "The nursery is closed today.",
+    "clockIn": "Clock in",
+    "clockOut": "Clock out",
+    "confirmOutTitle": "Clock out now?",
+    "confirmOutBody": "Your day ends now. Only the admin can change it after this.",
+    "errors": {
+      "forbidden": "Your account can’t clock in here.",
+      "already_in": "You’ve already clocked in today.",
+      "already_out": "You’ve already clocked out today.",
+      "not_in": "Clock in first.",
+      "invalid": "Check the times.",
+      "person": "This person isn’t on the staff.",
+      "network": "We can’t reach the server. Check your internet connection and try again.",
+      "failed": "Something went wrong. Try again."
+    },
+    "record": {
+      "title": "{{name}}’s day",
+      "description": "Times in the nursery’s clock. Use this when someone forgot to clock in or out.",
+      "in": "Arrived",
+      "out": "Left",
+      "outHint": "Leave it empty if they’re still here.",
+      "note": "Note",
+      "notePlaceholder": "e.g. Forgot her phone",
+      "save": "Save",
+      "saved": "{{name}}’s day was saved.",
+      "clear": "Clear the day",
+      "clearTitle": "Clear this day?",
+      "clearBody": "{{name}}’s clocking for today will be removed.",
+      "cleared": "The day was cleared.",
+      "issues": {
+        "in_required": "Enter when they arrived.",
+        "out_before_in": "Leaving must be after arriving.",
+        "in_future": "That time hasn’t come yet.",
+        "out_future": "That time hasn’t come yet.",
+        "note_too_long": "Keep the note under {{max}} characters."
+      }
+    }
+  },
   "stock": {
     "page": {
       "eyebrow": "Operations",
@@ -1092,6 +1143,88 @@
   },
   "auth": {
 
+    "page": {
+      "welcome": "Welcome back",
+      "welcomeHint": "Sign in to continue to your nursery.",
+      "passwordPlaceholder": "Your password",
+      "capsLock": "Caps Lock is on.",
+      "signingIn": "Signing in…",
+      "or": "or",
+      "newParent": "New parent at the nursery?",
+      "heroBadge": "Made for nurseries in Egypt",
+      "heroBody": "Attendance, daily reports, meals, health and payments, for the nursery and every family, in one place.",
+      "problems": {
+        "identifier": {
+          "required": "Enter your username or email."
+        },
+        "password": {
+          "required": "Enter your password.",
+          "tooShort": "Passwords are at least 8 characters."
+        }
+      },
+      "errors": {
+        "wrongCredentials": "The username, email or password is not right. Check them and try again.",
+        "notConfirmed": "Confirm your email first: open the link we sent to it.",
+        "tooManyRequests": "Too many tries. Wait a minute and try again.",
+        "blocked": "This account is stopped. Contact your nursery.",
+        "network": "We can’t reach the server. Check your internet connection and try again.",
+        "failed": "We couldn’t sign you in. Try again."
+      },
+      "magic": {
+        "button": "Email me a sign-in link",
+        "sending": "Sending the link…",
+        "problems": {
+          "required": "Enter your email to get a sign-in link.",
+          "username": "Sign-in links go to an email address. Enter your email, or sign in with your password.",
+          "invalid": "This email address is not complete (for example: name@example.com).",
+          "noMailbox": "This sign-in address can’t receive email. Sign in with your password."
+        },
+        "errors": {
+          "tooManyRequests": "Too many links asked for. Wait a few minutes and try again.",
+          "network": "We can’t reach the server. Check your internet connection and try again.",
+          "failed": "The link could not be sent. Try again."
+        },
+        "sentTitle": "Check your inbox",
+        "sentBody": "If an account uses this email, a sign-in link is on its way to",
+        "sentHint": "The link works once. Not there? Look in spam, or wait a minute and ask again.",
+        "otherEmail": "Use another email"
+      },
+      "demo": {
+        "count_one": "{{count}} account",
+        "count_other": "{{count}} accounts",
+        "password": "Password for every demo account:",
+        "accounts": {
+          "xoAdmin": {
+            "name": "XO platform admin",
+            "access": "The whole platform"
+          },
+          "branchAdmin": {
+            "name": "Branch admin",
+            "access": "Runs one nursery"
+          },
+          "financeManager": {
+            "name": "Finance manager",
+            "access": "Operations and finance"
+          },
+          "hrManager": {
+            "name": "HR manager",
+            "access": "Operations and HR"
+          },
+          "teacher": {
+            "name": "Teacher",
+            "access": "Their classes"
+          },
+          "managerTeacher": {
+            "name": "Head of teachers",
+            "access": "Teaches and manages the teachers"
+          },
+          "parent": {
+            "name": "Parent",
+            "access": "Their children"
+          }
+        }
+      }
+    },
     "showPassword": "Show password",
 
     "hidePassword": "Hide password",
@@ -1121,18 +1254,20 @@
     "loginError": "Could not sign in. Check your details and try again.",
     "sessionNotPersisted": "Session could not be saved. Allow storage for this site or try another browser.",
     "magicLinkError": "Could not send magic link. Try again.",
-    "demoAccountsHeader": "DEMO ACCOUNTS",
-    "demoAccountsHint": "Click any row to auto-fill and sign in instantly.",
+    "demoAccountsHeader": "Demo accounts",
+    "demoAccountsHint": "Choose an account to sign in as it at once.",
     "demoAccountsEmpty": "No demo accounts were found.",
     "demoRoleBranchAdmin": "Branch Admin",
     "demoRoleTeacher": "Teacher",
     "demoRoleParent": "Parent",
     "demoRoleXoSuperAdmin": "XO Super Admin",
-    "rightHeadline": "Elevate your childcare excellence.",
+    "rightHeadline": "Everything your nursery runs on, in one place.",
     "featureOneTitle": "Attendance in real time",
     "featureOneDescription": "Track check-in and check-out with instant updates.",
-    "featureTwoTitle": "Unified parent communication",
-    "featureTwoDescription": "Share daily updates, events, and alerts from one dashboard.",
+    "featureTwoTitle": "Families in the loop",
+    "featureTwoDescription": "Daily reports, events and alerts reach every parent.",
+    "featureThreeTitle": "Billing without paperwork",
+    "featureThreeDescription": "Invoices, payments and extras, clear for every family.",
     "emailOrUsername": "Username or email",
     "emailOrUsernamePlaceholder": "username or you@example.com",
     "reset": {
@@ -5486,6 +5621,7 @@
       "announcementsCta": "Announcements",
       "leadBadge": "Lead",
       "backupBadge": "Backup",
+      "nannyBadge": "Nanny",
       "assistantBadge": "Assistant",
       "leadLabel": "Lead teacher",
       "backupLabel": "Backup teacher",
@@ -7183,11 +7319,37 @@
       "waitlist": "Waiting list",
       "details": "Details"
     },
+    "teamToday": {
+      "title": "Today’s team",
+      "inCount": "{{in}} of {{expected}} in",
+      "late_one": "{{count}} late",
+      "late_other": "{{count}} late",
+      "details": "Team details",
+      "empty": "No teacher or nanny is assigned to this class yet.",
+      "closed": "The nursery is closed today",
+      "inSince": "In since {{time}}",
+      "leftAt": "{{from}} – {{to}}",
+      "notInYet": "Not clocked in yet",
+      "didNotClock": "Did not clock in",
+      "covering": "Covering for the lead today",
+      "lateBy_one": "{{count}} min late",
+      "lateBy_other": "{{count}} min late",
+      "away": "Away today",
+      "onTime": "On time",
+      "clockHint": "Clocks in from their phone",
+      "byAdmin": "recorded by the admin",
+      "record": "Record time",
+      "correct": "Correct"
+    },
     "today": {
       "here": "Here now",
       "ofExpected_one": "of {{count}} expected today",
       "ofExpected_other": "of {{count}} expected today",
       "wentHome": "Went home",
+      "notArrived": "Not arrived yet",
+      "notArrivedHint": "The nursery is still open",
+      "absentAlso_one": "{{count}} absent",
+      "absentAlso_other": "{{count}} absent",
       "absent": "Absent",
       "excused_one": "{{count}} with a parent's notice",
       "excused_other": "{{count}} with a parent's notice",
@@ -7203,6 +7365,7 @@
       "all": "All",
       "here": "Here now",
       "went_home": "Went home",
+      "not_arrived": "Not arrived yet",
       "absent": "Absent",
       "reports_due": "Report to send",
       "health": "Health needs"
@@ -7210,6 +7373,7 @@
     "attendance": {
       "partial": "Here",
       "present": "Went home",
+      "expected": "Not arrived yet",
       "absent": "Not in",
       "excused": "Absent with notice",
       "off": "Day off",
@@ -7244,9 +7408,9 @@
     },
     "team": {
       "title": "Team",
-      "count_one": "{{count}} teacher",
-      "count_other": "{{count}} teachers",
-      "description": "Who teaches this class and who is with it today.",
+      "count_one": "{{count}} person",
+      "count_other": "{{count}} people",
+      "description": "Who teaches and looks after this class, and who is with it today.",
       "manage": "Team & classes",
       "absences": "Absences",
       "since": "On the team since {{date}}",
@@ -7403,7 +7567,7 @@
   },
   "classTeam": {
     "title": "Team & classes",
-    "description": "Choose each class's lead teacher, assistants and backup teacher.",
+    "description": "Choose each class’s lead teacher, assistants, nannies and backup teacher.",
     "readOnly": "You can see the teams. Changing them needs the Class team permission.",
     "saved": "Saved",
     "removed": "Removed from the class",
@@ -7411,6 +7575,7 @@
       "classes": "Classes",
       "withoutLead": "Without a lead teacher",
       "withoutAssistant": "Without an assistant",
+      "withoutNanny": "Without a nanny",
       "teachers": "Teachers",
       "teachersWithoutClass": "Teachers without a class"
     },
@@ -7432,11 +7597,14 @@
       "noClass": "No class",
       "leads": "Lead teachers",
       "assistants": "Assistants",
+      "noNanny": "Without a nanny",
+      "nannies": "Nannies",
       "substitutes": "Backup teachers"
     },
     "roles": {
       "lead": "Lead teacher",
       "assistant": "Assistant",
+      "nanny": "Nanny",
       "substitute": "Backup teacher"
     },
     "departments": {
@@ -7452,6 +7620,8 @@
       "choose": "Choose a teacher",
       "none": "Not set",
       "noAssistants": "No assistants yet",
+      "noNannies": "No nanny yet.",
+      "addNanny": "Add a nanny",
       "addAssistant": "Add an assistant",
       "remove": "Remove {{name}}"
     },

@@ -7,8 +7,9 @@ import type { ChildFilter, TodaySummary } from './classProfile';
 const TILE = 'xl:flex-col xl:items-start xl:gap-2';
 
 /**
- * Today in the class: who is here, who went home, who is absent, the daily reports still to send,
- * and the children with health needs. Each number opens the children it counts (pressed again, all).
+ * Today in the class: who is here, who went home, who has not come yet (while the nursery is open)
+ * or is absent, the daily reports still to send, and the children with health needs. Each number
+ * opens the children it counts (pressed again, all).
  */
 export function ClassTodayTiles({
   summary,
@@ -38,14 +39,25 @@ export function ClassTodayTiles({
         tone="success"
       />
       <StatTile {...pick('went_home')} icon="directions_walk" label={t('classProfile.today.wentHome')} value={summary.wentHome} tone="primary" />
-      <StatTile
-        {...pick('absent')}
-        icon="person_off"
-        label={t('classProfile.today.absent')}
-        value={summary.absent + summary.excused}
-        helper={summary.excused ? t('classProfile.today.excused', { count: summary.excused }) : undefined}
-        tone={summary.absent ? 'warning' : 'neutral'}
-      />
+      {summary.notArrived ? (
+        <StatTile
+          {...pick('not_arrived')}
+          icon="schedule"
+          label={t('classProfile.today.notArrived')}
+          value={summary.notArrived}
+          helper={summary.absent + summary.excused ? t('classProfile.today.absentAlso', { count: summary.absent + summary.excused }) : t('classProfile.today.notArrivedHint')}
+          tone="neutral"
+        />
+      ) : (
+        <StatTile
+          {...pick('absent')}
+          icon="person_off"
+          label={t('classProfile.today.absent')}
+          value={summary.absent + summary.excused}
+          helper={summary.excused ? t('classProfile.today.excused', { count: summary.excused }) : undefined}
+          tone={summary.absent ? 'warning' : 'neutral'}
+        />
+      )}
       <StatTile
         {...pick('reports_due')}
         icon="assignment_turned_in"

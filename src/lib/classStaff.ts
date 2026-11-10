@@ -1,12 +1,13 @@
 import type { ClassStaffRole } from '@/types/tables';
 
-/** Order staff are listed in: the lead teacher, then the backup teacher, then assistants. */
-const ROLE_ORDER: Record<ClassStaffRole, number> = { lead: 0, substitute: 1, assistant: 2 };
+/** Order staff are listed in: the lead teacher, then the backup teacher, then assistants, then the nannies. */
+const ROLE_ORDER: Record<ClassStaffRole, number> = { lead: 0, substitute: 1, assistant: 2, nanny: 3 };
 
 /** Translation key of the badge that names a teacher's role in a class. */
 export function classStaffRoleKey(role: ClassStaffRole): string {
   if (role === 'lead') return 'teacher.classesHub.leadBadge';
   if (role === 'substitute') return 'teacher.classesHub.backupBadge';
+  if (role === 'nanny') return 'teacher.classesHub.nannyBadge';
   return 'teacher.classesHub.assistantBadge';
 }
 
@@ -26,6 +27,8 @@ export type ClassStaffGroups<P> = {
   /** The backup teacher who covers when the lead is away. */
   substitute: P | null;
   assistants: P[];
+  /** The carers beside the teachers (feeding, changing, naps). */
+  nannies: P[];
 };
 
 /**
@@ -46,6 +49,10 @@ export function groupClassStaff<P>(
     substitute: find('substitute'),
     assistants: members
       .filter((m) => m.role === 'assistant')
+      .map((m) => people.get(m.user_id))
+      .filter((p): p is P => p !== undefined),
+    nannies: members
+      .filter((m) => m.role === 'nanny')
       .map((m) => people.get(m.user_id))
       .filter((p): p is P => p !== undefined),
   };
