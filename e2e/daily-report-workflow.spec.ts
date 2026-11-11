@@ -75,7 +75,7 @@ test('the daily report: filled through the day, sent when complete, read by the 
     await teacher.reload();
     await expect(teacher.getByRole('radiogroup', { name: 'Breakfast' }).getByRole('radio', { name: 'All' })).toHaveAttribute('aria-checked', 'true');
 
-    await teacher.getByRole('radiogroup', { name: 'Lunch' }).getByRole('radio', { name: 'Some' }).click();
+    await teacher.getByRole('radiogroup', { name: 'Lunch' }).getByRole('radio', { name: 'Half' }).click();
     await teacher.getByRole('radiogroup', { name: 'Snack' }).getByRole('radio', { name: 'None' }).click();
     await teacher.getByRole('radiogroup', { name: 'Did they nap?' }).getByRole('radio', { name: 'Yes, they napped' }).click();
     await expect(teacher.getByText('Enter how many minutes they slept.')).toBeVisible();
@@ -93,6 +93,9 @@ test('the daily report: filled through the day, sent when complete, read by the 
     // ---- Yousef's report, only started.
     await teacher.getByRole('button', { name: 'Next child' }).first().click();
     await teacher.waitForURL(new RegExp(`/teacher/daily-reports/${yousef.id}/${day}`));
+    // His editor, not Rana's still on screen for a moment: a click there would change her report.
+    await expect(teacher.getByRole('heading', { level: 1, name: /UI Yousef/ })).toBeVisible();
+    await expect(teacher.getByRole('radiogroup', { name: 'Mood' }).getByRole('radio', { name: /Happy/ })).toHaveAttribute('aria-checked', 'false');
     await teacher.getByRole('radiogroup', { name: 'Mood' }).getByRole('radio', { name: /Content/ }).click();
     await expect(teacher.getByText(/Saved at/)).toBeVisible();
 
@@ -117,7 +120,8 @@ test('the daily report: filled through the day, sent when complete, read by the 
       select dr.status, dr.submitted_by::text,
              (select n2.template_key from public.notifications n2 where n2.user_id = '${n.parent.id}' and n2.type = 'daily_report' limit 1) as notice
         from public.daily_reports dr where dr.child_id = '${rana.id}' and dr.report_date = '${day}'`);
-    expect(sent).toEqual({ status: 'published', submitted_by: n.teacher.id, notice: 'daily_report_sent' });
+    // The family's notice names who sent it.
+    expect(sent).toEqual({ status: 'published', submitted_by: n.teacher.id, notice: 'daily_report_sent_by' });
 
     // ---- A sent report can only be read.
     await ranaRow.getByRole('link', { name: 'View' }).click();

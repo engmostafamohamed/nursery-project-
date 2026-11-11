@@ -405,8 +405,13 @@ export async function cleanupTestNursery(n: TestNursery | undefined) {
       end loop;
     end $$;`);
   for (const id of userIds) {
-    const res = await svc.auth.admin.deleteUser(id);
-    if (res.error && !/not found/i.test(res.error.message)) throw new Error(res.error.message);
+    // The Auth admin API now and then answers a delete with an empty error: try again before failing.
+    for (let attempt = 1; ; attempt++) {
+      const res = await svc.auth.admin.deleteUser(id);
+      if (!res.error || /not found/i.test(res.error.message)) break;
+      if (attempt === 3) throw new Error(`deleting ${id}: ${res.error.message || JSON.stringify(res.error)}`);
+      await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+    }
   }
   await sql(`delete from public.users where id in (${idList(userIds)})`);
   await sql(`delete from public.nurseries where id = '${n.id}'`);
