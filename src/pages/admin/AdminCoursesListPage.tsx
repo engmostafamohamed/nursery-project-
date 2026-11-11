@@ -19,6 +19,7 @@ import {
   type CourseCategory,
   type CourseStatus,
 } from '@/hooks/useAdminCoursesList';
+import { localName } from '@/lib/bilingualName';
 import { supabase } from '@/lib/supabase';
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -52,10 +53,8 @@ function CourseCard({
   onDelete: (id: string) => void;
 }) {
   const isAr = locale.startsWith('ar');
-  const title = isAr ? course.title_ar || course.title_en : course.title_en || course.title_ar;
-  const teacher = isAr
-    ? course.teacher_name_ar || course.teacher_name_en
-    : course.teacher_name_en || course.teacher_name_ar;
+  const title = localName(course.title_ar, course.title_en, isAr);
+  const teacher = localName(course.teacher_name_ar, course.teacher_name_en, isAr);
 
   const priceFmt = new Intl.NumberFormat(locale, { style: 'currency', currency: 'EGP' });
 

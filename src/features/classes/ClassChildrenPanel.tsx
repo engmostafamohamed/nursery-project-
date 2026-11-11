@@ -14,6 +14,7 @@ import { NameStack } from '@/components/ui/NameStack';
 import { severityTone } from '@/features/child-health/childHealth';
 import type { BilingualNames } from '@/hooks/useBilingualNames';
 import { usePagination } from '@/hooks/usePagination';
+import { adminLinks } from '@/lib/adminLinks';
 import { getUserInitials } from '@/lib/utils';
 
 import { ATTENDANCE_LOOK, REPORT_LOOK } from './classLook';
@@ -91,7 +92,7 @@ export function ClassChildrenPanel({
           action={
             <ActionGate feature="classes" action="update">
               <Button asChild className="gap-2">
-                <Link to={`${base}/classes/${profile.info.id}/edit`}>
+                <Link to={adminLinks(base).classEdit(profile.info.id)}>
                   <MaterialSymbol name="person_add" size="text-base" />
                   {t('classProfile.children.addChildren')}
                 </Link>

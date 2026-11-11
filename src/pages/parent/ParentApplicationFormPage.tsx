@@ -21,6 +21,7 @@ import { useAuthSession } from '@/hooks/useAuthSession';
 import { useParentAccountProfile, type ParentAccountProfile } from '@/hooks/useParentAccountProfile';
 import { usePaymentHistory } from '@/hooks/usePaymentHistory';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { localName } from '@/lib/bilingualName';
 import { parentPackageTextsFromSettings } from '@/lib/parentPackageTexts';
 import { useSettings } from '@/lib/useSettings';
 import { NAP_DURATION_VALUES } from '@/features/parent-signup/parentSignUpValidation';
@@ -1564,9 +1565,7 @@ export function ParentApplicationFormPage() {
   const selectedExtraHoursPackage = extraHoursPackage.packages.find((pkg) => pkg.id === selectedExtraHoursPackageId) ?? null;
   const extraHoursChoice = selectedExtraHoursPackage
     ? {
-        name: i18n.language.startsWith('ar')
-          ? selectedExtraHoursPackage.nameAr || selectedExtraHoursPackage.nameEn
-          : selectedExtraHoursPackage.nameEn || selectedExtraHoursPackage.nameAr,
+        name: localName(selectedExtraHoursPackage.nameAr, selectedExtraHoursPackage.nameEn, i18n.language.startsWith('ar')),
         subtotal: selectedExtraHoursPackage.price,
         discountAmount: computeExtraHoursDisplayPrice(selectedExtraHoursPackage).discountAmount,
       }

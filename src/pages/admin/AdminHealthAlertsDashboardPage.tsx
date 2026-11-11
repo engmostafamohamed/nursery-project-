@@ -33,6 +33,7 @@ import { useAuthSession } from '@/hooks/useAuthSession';
 import { useDismissHealthAlert, useHealthAlerts } from '@/hooks/useHealthAlerts';
 import { usePagination } from '@/hooks/usePagination';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { localName } from '@/lib/bilingualName';
 import type { HealthAlertItem, HealthAlertType, HealthUrgency } from '@/lib/healthAlertsCompute';
 import { fetchParentUserIdsForChild, notifyParentUsers } from '@/lib/healthNotifications';
 import { cn, formatQueryError } from '@/lib/utils';
@@ -235,7 +236,7 @@ export function AdminHealthAlertsDashboardPage() {
               {pager.pageItems.map((alert) => {
                 const look = ALERT_LOOK[alert.type];
                 const name = readerName(alert.childNameAr, alert.childNameEn, isArabic);
-                const detail = isArabic ? alert.detailAr || alert.detailEn : alert.detailEn || alert.detailAr;
+                const detail = localName(alert.detailAr, alert.detailEn, isArabic);
                 return (
                   <Tr key={alert.fingerprint} onClick={() => navigate(`${base}/children/${alert.childId}/health`, { state: backHere })}>
                     <Td>

@@ -22,6 +22,8 @@ import { useClassTeamEditing } from '@/features/class-team/useClassTeamEditing';
 import { useActiveNurseryId } from '@/hooks/useActiveNurseryId';
 import { useAdminBasePath } from '@/hooks/useAdminBasePath';
 import { useClassTeamActions } from '@/hooks/useClassTeams';
+import { adminLinks } from '@/lib/adminLinks';
+import { localName } from '@/lib/bilingualName';
 import { pickName } from '@/lib/classTeam';
 import { cn } from '@/lib/utils';
 
@@ -61,6 +63,7 @@ export function AdminClassDetailPage() {
   const isArabic = i18n.language.startsWith('ar');
   const navigate = useNavigate();
   const base = useAdminBasePath();
+  const links = adminLinks(base);
   const { activeNurseryId } = useActiveNurseryId();
   const editorQuery = useClassEditor(isNew ? activeNurseryId : null, classId);
   const editor = editorQuery.data;
@@ -97,7 +100,7 @@ export function AdminClassDetailPage() {
   const teamClass = team.classes.find((c) => c.id === classId) ?? null;
   const activeStaff = team.staff.filter((s) => s.status === 'active');
   const staffName = (s: { name_ar: string | null; name_en: string | null }) => pickName(s, i18n.language);
-  const className = editor?.cls ? (isArabic ? editor.cls.nameAr || editor.cls.nameEn : editor.cls.nameEn || editor.cls.nameAr) : '';
+  const className = editor?.cls ? (localName(editor.cls.nameAr, editor.cls.nameEn, isArabic)) : '';
   const newPlaces = placesAfter(0, startWith.size, capacityOf(draft));
   const busy = save.isPending || moveIn.isPending || assign.isPending;
   const canSave = isNew ? Boolean(editor?.can.create) : Boolean(editor?.can.update);
@@ -135,7 +138,7 @@ export function AdminClassDetailPage() {
       }
       for (const message of troubles) toast.error(message);
       toast.success(added ? t('classEditor.create.doneWithChildren', { count: added }) : t('classEditor.create.done'));
-      navigate(`${base}/classes/${id}`, { replace: true });
+      navigate(links.classPage(id), { replace: true });
     } catch (error) {
       setProblem(t(classEditorErrorKey(error)));
     }
@@ -149,7 +152,7 @@ export function AdminClassDetailPage() {
     return <EmptyState icon="school" title={t('classEditor.noNurseryTitle')} description={t('admin.classes.validation.noActiveNursery')} />;
   }
 
-  const back = isNew ? `${base}/classes` : `${base}/classes/${classId}`;
+  const back = isNew || !classId ? links.classes : links.classPage(classId);
 
   return (
     <div className="space-y-5 pb-28" data-testid="class-editor">
@@ -166,7 +169,7 @@ export function AdminClassDetailPage() {
         actions={!isNew ? (
           <>
             <Button asChild variant="outline" className="gap-1.5">
-              <Link to={`${base}/classes/${classId}`}>
+              <Link to={back}>
                 <MaterialSymbol name="visibility" size="text-base" />
                 {t('classEditor.openClass')}
               </Link>
@@ -232,7 +235,7 @@ export function AdminClassDetailPage() {
             description={t('classEditor.teamDescription')}
             actions={
               <Button asChild variant="ghost" size="sm" className="gap-1 text-primary">
-                <Link to={`${base}/classes/teams${classId ? `?edit=${classId}` : ''}`}>
+                <Link to={links.teams(classId)}>
                   {t('classEditor.allTeams')}
                   <MaterialSymbol name="chevron_right" size="text-base" className="rtl:rotate-180" />
                 </Link>
@@ -286,7 +289,7 @@ export function AdminClassDetailPage() {
           className={className}
           childrenCount={editor.children.length}
           classes={editor.classes}
-          onDeleted={() => navigate(`${base}/classes`, { replace: true })}
+          onDeleted={() => navigate(links.classes, { replace: true })}
           onClose={() => setDeleting(false)}
         />
       ) : null}

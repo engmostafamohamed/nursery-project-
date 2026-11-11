@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 
 import { SectionTabs, type SectionTab } from '@/components/ui/SectionTabs';
-import { useAdminBasePath } from '@/hooks/useAdminBasePath';
+import { useAdminLinks } from '@/hooks/useAdminBasePath';
 import { useCan } from '@/hooks/usePermissions';
 
 /**
@@ -11,15 +11,15 @@ import { useCan } from '@/hooks/usePermissions';
  */
 export function ClassesSectionTabs() {
   const { t } = useTranslation();
-  const base = useAdminBasePath();
+  const links = useAdminLinks();
   const inAdmin = !useLocation().pathname.startsWith('/teacher');
   const canClasses = useCan('classes');
   const canTeams = useCan('class_team');
   if (!inAdmin) return null;
 
   const tabs: SectionTab[] = [
-    ...(canClasses ? [{ to: `${base}/classes`, label: t('classesSection.classes'), icon: 'school', end: true }] : []),
-    ...(canTeams ? [{ to: `${base}/classes/teams`, label: t('classesSection.teams'), icon: 'groups' }] : []),
+    ...(canClasses ? [{ to: links.classes, label: t('classesSection.classes'), icon: 'school', end: true }] : []),
+    ...(canTeams ? [{ to: links.teams(), label: t('classesSection.teams'), icon: 'groups' }] : []),
   ];
   return <SectionTabs tabs={tabs} label={t('classesSection.label')} />;
 }

@@ -8,6 +8,7 @@ import { Fact, FactList } from '@/components/ui/FactList';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { NameStack } from '@/components/ui/NameStack';
 import type { BilingualNames } from '@/hooks/useBilingualNames';
+import { adminLinks } from '@/lib/adminLinks';
 
 import { ClassCapacityMeter } from './ClassCapacityMeter';
 import type { ClassProfile } from './classProfile';
@@ -25,7 +26,7 @@ export function ClassDetailsPanel({ profile, names, format, base }: { profile: C
         actions={
           <ActionGate feature="classes" action="update">
             <Button asChild variant="outline" size="sm" className="gap-1.5">
-              <Link to={`${base}/classes/${info.id}/edit`}>
+              <Link to={adminLinks(base).classEdit(info.id)}>
                 <MaterialSymbol name="edit" size="text-base" />
                 {t('classProfile.actions.edit')}
               </Link>

@@ -2,9 +2,9 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { PeriodFilter } from '@/components/admin/PeriodFilter';
-import { Button } from '@/components/ui/button';
 import { TableCard } from '@/components/ui/DataTable';
 import { FilterChips } from '@/components/ui/FilterChips';
+import { LoadError } from '@/components/ui/LoadError';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatTile } from '@/components/ui/StatTile';
@@ -91,13 +91,7 @@ export function PackageSubscriptionsPanel({ view, basePath = '/admin' }: Props) 
           {[1, 2, 3, 4, 5].map((k) => <Skeleton key={k} className="h-24 rounded-xl" />)}
         </div>
       ) : query.isError ? (
-        <div className="m-4 flex flex-wrap items-center gap-3 rounded-xl border border-error/30 bg-error/5 p-3 text-sm text-error sm:m-5" role="alert">
-          <MaterialSymbol name="error" className="text-xl" />
-          <span className="flex-1">{t('packageSubscriptions.loadError')}</span>
-          <Button type="button" size="sm" variant="outline" onClick={() => void query.refetch()}>
-            {t('common.retry')}
-          </Button>
-        </div>
+        <LoadError inset message={t('packageSubscriptions.loadError')} onRetry={() => void query.refetch()} />
       ) : (
         <div className={cn('transition-opacity', query.isPlaceholderData && 'opacity-60')} aria-busy={query.isPlaceholderData}>
           <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 sm:p-5 xl:grid-cols-5">

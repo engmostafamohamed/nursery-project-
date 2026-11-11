@@ -30,7 +30,7 @@ import { DeleteClassDialog } from '@/features/class-editor/DeleteClassDialog';
 import { ClassCapacityMeter } from '@/features/classes/ClassCapacityMeter';
 import { ClassesSectionTabs } from '@/features/classes/ClassesSectionTabs';
 import { useActiveNurseryId } from '@/hooks/useActiveNurseryId';
-import { useAdminBasePath } from '@/hooks/useAdminBasePath';
+import { useAdminLinks } from '@/hooks/useAdminBasePath';
 import { useBilingualNames } from '@/hooks/useBilingualNames';
 import { useNurseryClasses, type NurseryClassRow } from '@/hooks/useClassStaff';
 import { usePagination } from '@/hooks/usePagination';
@@ -45,7 +45,7 @@ const isOverCapacity = (c: NurseryClassRow) => capacityFill(c.child_count, c.cap
 export function AdminClassesListPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const base = useAdminBasePath();
+  const links = useAdminLinks();
   const { activeNurseryId } = useActiveNurseryId();
   const names = useBilingualNames(activeNurseryId);
   const classesQuery = useNurseryClasses(activeNurseryId);
@@ -105,7 +105,7 @@ export function AdminClassesListPage() {
         actions={
           <ActionGate feature="classes" action="create">
             <Button asChild className="gap-1">
-              <Link to={`${base}/classes/new`}>
+              <Link to={links.newClass}>
                 <MaterialSymbol name="add" size="text-base" />
                 {t('admin.classes.actions.new')}
               </Link>
@@ -186,7 +186,7 @@ export function AdminClassesListPage() {
               {pager.pageItems.map((c) => {
                 const name = names.lines(c.name_ar, c.name_en);
                 return (
-                  <Tr key={c.id} onClick={() => navigate(`${base}/classes/${c.id}`)} className="group" data-testid="class-row">
+                  <Tr key={c.id} onClick={() => navigate(links.classPage(c.id))} className="group" data-testid="class-row">
                     <Td className="max-w-[220px]">
                       <div className="flex items-center gap-2">
                         <NameStack name={name} strong />
@@ -230,7 +230,7 @@ export function AdminClassesListPage() {
                     <Td align="end">
                       <div className="flex items-center justify-end gap-1">
                         <ActionGate feature="classes" action="update">
-                          <IconAction icon="edit" label={`${t('common.edit')}: ${name.primary}`} to={`${base}/classes/${c.id}/edit`} />
+                          <IconAction icon="edit" label={`${t('common.edit')}: ${name.primary}`} to={links.classEdit(c.id)} />
                         </ActionGate>
                         <ActionGate feature="classes" action="delete">
                           <IconAction

@@ -8,6 +8,7 @@ import { AttendanceClassBars } from '@/components/admin/AttendanceClassBars';
 import { AttendanceDailyBars } from '@/components/admin/AttendanceDailyBars';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { LoadError } from '@/components/ui/LoadError';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -123,13 +124,7 @@ export function AdminAttendanceDashboardPage() {
       {!datesChosen ? (
         <p className="text-sm text-on-surface-variant">{t('admin.attendanceAnalytics.customHint')}</p>
       ) : analytics.rangeError ? null : analytics.isError ? (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-error/30 bg-error/5 p-3 text-sm text-error" role="alert">
-          <MaterialSymbol name="error" size="text-xl" />
-          <span className="flex-1">{t('attendance.loadErrorTitle')}</span>
-          <Button type="button" size="sm" variant="outline" onClick={() => void analytics.refetch()}>
-            {t('common.retry')}
-          </Button>
-        </div>
+        <LoadError message={t('attendance.loadErrorTitle')} onRetry={() => void analytics.refetch()} />
       ) : (
         <p className="text-sm text-on-surface-variant">
           {t('admin.attendanceAnalytics.rangeLabel', { from: range.from, to: range.to })}

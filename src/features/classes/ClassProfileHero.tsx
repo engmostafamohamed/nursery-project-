@@ -10,6 +10,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { COVER_LOOK } from '@/features/staff-absence/absenceLook';
 import { coverStatus } from '@/features/staff-absence/staffAbsence';
 import type { BilingualNames } from '@/hooks/useBilingualNames';
+import { adminLinks } from '@/lib/adminLinks';
 
 import { ClassCapacityMeter } from './ClassCapacityMeter';
 import { classCover, type ClassProfile } from './classProfile';
@@ -63,14 +64,14 @@ export function ClassProfileHero({
             <ClassCapacityMeter count={profile.children.length} capacity={info.capacity} />
           </div>
           <Button asChild variant="outline" className="gap-2">
-            <Link to={`${base}/classes/${info.id}/announcements`}>
+            <Link to={adminLinks(base).classAnnouncements(info.id)}>
               <MaterialSymbol name="campaign" size="text-base" />
               {t('classProfile.actions.announce')}
             </Link>
           </Button>
           <ActionGate feature="classes" action="update">
             <Button asChild className="gap-2">
-              <Link to={`${base}/classes/${info.id}/edit`}>
+              <Link to={adminLinks(base).classEdit(info.id)}>
                 <MaterialSymbol name="edit" size="text-base" />
                 {t('classProfile.actions.edit')}
               </Link>

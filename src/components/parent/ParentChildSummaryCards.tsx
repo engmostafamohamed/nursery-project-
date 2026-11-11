@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { StatusPill, type PillTone } from '@/components/ui/DataTable';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { ParentDashboardChildCard } from '@/hooks/useParentDashboardChildren';
+import { localName } from '@/lib/bilingualName';
 import { MEALS } from '@/lib/dailyReport';
 import { formatMoodLabel, moodKey } from '@/lib/dailyReportDisplay';
 import { mealAmountName, questionName } from '@/lib/dailyReportLabels';
@@ -116,7 +117,7 @@ export function ParentChildSummaryCards({
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {rows.map((child) => {
-          const name = (locale === 'ar' ? child.nameAr || child.nameEn : child.nameEn || child.nameAr) || '-';
+          const name = (localName(child.nameAr, child.nameEn, locale === 'ar')) || '-';
           const initials = getUserInitials(name, '');
           const insight = childInsights[child.id];
           const hasOutstanding = (insight?.outstanding ?? 0) > 0;

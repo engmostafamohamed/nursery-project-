@@ -17,6 +17,7 @@ import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useMyClassChildren, useMyClasses, useSendFamilyMessage, useSentFamilyMessages } from '@/hooks/useFamilyMessages';
+import { localName } from '@/lib/bilingualName';
 import { childrenOf, FAMILY_MESSAGE_MAX, familyMessageErrorKey } from '@/lib/familyMessages';
 import { audienceChildren, familiesOf, filterClassChildren, NO_CHILDREN_FILTERS, type FamilyAudience, type MyClassChild } from '@/lib/teacherClasses';
 import { cn } from '@/lib/utils';
@@ -120,7 +121,7 @@ function Compose({ initialChild, initialClass, onSent }: { initialChild: string 
   const bodyLength = body.trim().length;
   const bodyError = !bodyLength ? t('familyMessages.compose.errors.bodyRequired') : bodyLength > FAMILY_MESSAGE_MAX ? t('familyMessages.compose.errors.bodyTooLong', { max: FAMILY_MESSAGE_MAX }) : null;
   const childrenError = selected.length === 0 ? t('familyMessages.compose.errors.noChildren') : families === 0 ? t('familyMessages.compose.errors.noParents') : null;
-  const name = (c: MyClassChild) => (lang.startsWith('ar') ? c.full_name_ar || c.full_name_en : c.full_name_en || c.full_name_ar) || '—';
+  const name = (c: MyClassChild) => (localName(c.full_name_ar, c.full_name_en, lang.startsWith('ar'))) || '—';
 
   const choosePick = (next: Pick) => {
     setPick(next);
@@ -187,7 +188,7 @@ function Compose({ initialChild, initialClass, onSent }: { initialChild: string 
                   <option value="all">{t('familyMessages.compose.allMyClasses')}</option>
                   {(classes.data ?? []).map((c) => (
                     <option key={c.class_id} value={c.class_id}>
-                      {(lang.startsWith('ar') ? c.name_ar || c.name_en : c.name_en || c.name_ar) ?? '—'}
+                      {localName(c.name_ar, c.name_en, lang.startsWith('ar')) || '—'}
                     </option>
                   ))}
                 </Select>
@@ -221,7 +222,7 @@ function Compose({ initialChild, initialClass, onSent }: { initialChild: string 
           <ul className="max-h-[32rem] divide-y divide-outline-variant overflow-y-auto">
             {shown.map((child) => {
               const checked = selectedIds.has(child.child_id);
-              const parents = child.parents.map((p) => (lang.startsWith('ar') ? p.name_ar || p.name_en : p.name_en || p.name_ar)).filter(Boolean).join(lang.startsWith('ar') ? '، ' : ', ');
+              const parents = child.parents.map((p) => (localName(p.name_ar, p.name_en, lang.startsWith('ar')))).filter(Boolean).join(lang.startsWith('ar') ? '، ' : ', ');
               return (
                 <li key={child.child_id}>
                   <label className={cn('flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-container-lowest sm:px-5', checked && 'bg-primary/5')}>
@@ -324,7 +325,7 @@ function Sent() {
                     {new Date(m.created_at).toLocaleString(locale, { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true })}
                   </time>
                   <StatusPill tone="primary">{audienceLabel(t, m.audience)}</StatusPill>
-                  {lang.startsWith('ar') ? m.sender_class_names_ar || m.sender_class_names_en : m.sender_class_names_en || m.sender_class_names_ar}
+                  {localName(m.sender_class_names_ar, m.sender_class_names_en, lang.startsWith('ar'))}
                 </div>
                 <p className="whitespace-pre-line text-sm text-on-surface">{m.body}</p>
                 <p className="line-clamp-1 text-xs text-on-surface-variant">{t('familyMessages.sent.to', { children: childrenOf(m, lang) })}</p>

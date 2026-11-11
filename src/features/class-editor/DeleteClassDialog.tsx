@@ -8,6 +8,7 @@ import { invalidFieldClass } from '@/components/ui/FieldError';
 import { FormField, FormProblem } from '@/components/ui/FormField';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Select } from '@/components/ui/select';
+import { localName } from '@/lib/bilingualName';
 import { cn } from '@/lib/utils';
 
 import { classEditorErrorKey, type OtherClass } from './classEditor';
@@ -63,7 +64,7 @@ export function DeleteClassDialog({ classId, className, childrenCount, classes, 
                 <option value="">{t('classEditor.move.choose')}</option>
                 {classes.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {isArabic ? c.nameAr || c.nameEn : c.nameEn || c.nameAr} · {c.capacity != null ? t('classEditor.move.fill', { count: c.children, capacity: c.capacity }) : t('classEditor.move.fillNoLimit', { count: c.children })}
+                    {localName(c.nameAr, c.nameEn, isArabic)} · {c.capacity != null ? t('classEditor.move.fill', { count: c.children, capacity: c.capacity }) : t('classEditor.move.fillNoLimit', { count: c.children })}
                   </option>
                 ))}
               </Select>

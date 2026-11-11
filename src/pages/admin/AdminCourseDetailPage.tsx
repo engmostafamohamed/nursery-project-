@@ -24,6 +24,7 @@ import {
 } from '@/hooks/useAdminCourseDetail';
 import { CourseSessionsPanel } from '@/features/course-sessions/CourseSessionsPanel';
 import { useNurseryChildrenPicker } from '@/hooks/useNurseryChildrenPicker';
+import { localName } from '@/lib/bilingualName';
 import { supabase } from '@/lib/supabase';
 
 const INVOICE_STATUS_COLORS: Record<string, string> = {
@@ -45,8 +46,8 @@ function EnrollmentRow({
   onUnenroll: (id: string) => void;
 }) {
   const isAr = locale.startsWith('ar');
-  const childName = isAr ? enrollment.child_name_ar || enrollment.child_name_en : enrollment.child_name_en || enrollment.child_name_ar;
-  const parentName = isAr ? enrollment.parent_name_ar || enrollment.parent_name_en : enrollment.parent_name_en || enrollment.parent_name_ar;
+  const childName = localName(enrollment.child_name_ar, enrollment.child_name_en, isAr);
+  const parentName = localName(enrollment.parent_name_ar, enrollment.parent_name_en, isAr);
   const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' });
 
   return (
@@ -90,7 +91,7 @@ function InvoiceRow({
   onMarkWaived: (id: string) => void;
 }) {
   const isAr = locale.startsWith('ar');
-  const childName = isAr ? invoice.child_name_ar || invoice.child_name_en : invoice.child_name_en || invoice.child_name_ar;
+  const childName = localName(invoice.child_name_ar, invoice.child_name_en, isAr);
   const priceFmt = new Intl.NumberFormat(locale, { style: 'currency', currency: invoice.currency });
   const monthFmt = new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'long' });
   const billingDate = new Date(invoice.billing_month + 'T00:00:00');
@@ -277,10 +278,8 @@ export function AdminCourseDetailPage() {
     );
   }
 
-  const title = isAr ? course.title_ar || course.title_en : course.title_en || course.title_ar;
-  const teacher = isAr
-    ? course.teacher_name_ar || course.teacher_name_en
-    : course.teacher_name_en || course.teacher_name_ar;
+  const title = localName(course.title_ar, course.title_en, isAr);
+  const teacher = localName(course.teacher_name_ar, course.teacher_name_en, isAr);
   const priceFmt = new Intl.NumberFormat(locale, { style: 'currency', currency: 'EGP' });
 
   const dayLabels = (course.schedule_days ?? [])
@@ -410,7 +409,7 @@ export function AdminCourseDetailPage() {
                   <option value="">{t('admin.courses.detail.selectChild')}</option>
                   {availableChildren.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {isAr ? c.full_name_ar || c.full_name_en : c.full_name_en || c.full_name_ar}
+                      {localName(c.full_name_ar, c.full_name_en, isAr)}
                     </option>
                   ))}
                 </Select>

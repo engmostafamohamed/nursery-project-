@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Select } from '@/components/ui/select';
 import type { KitchenItem } from '@/features/food-and-beverage/kitchen';
+import { localName } from '@/lib/bilingualName';
 import { cn } from '@/lib/utils';
 
 import { ChildSearch } from './ChildSearch';
@@ -116,7 +117,7 @@ export function DiscountDialog({
             <FormField id="discount-staff" label={t('kitchenSales.charge.whichStaff')} error={err('personId')}>
               <Select id="discount-staff" value={draft.personId} onChange={(e) => set({ personId: e.target.value })} onBlur={blur('personId')} className={cn(err('personId') && invalidFieldClass)}>
                 <option value="">{t('kitchenSales.charge.chooseStaff')}</option>
-                {staff.map((s) => <option key={s.id} value={s.id}>{(isArabic ? s.nameAr || s.nameEn : s.nameEn || s.nameAr) || '—'}</option>)}
+                {staff.map((s) => <option key={s.id} value={s.id}>{(localName(s.nameAr, s.nameEn, isArabic)) || '—'}</option>)}
               </Select>
             </FormField>
           ) : draft.audience === 'child' ? (

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { TableEmpty } from '@/components/ui/DataTable';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { DashboardFeedItem } from '@/hooks/useAdminDashboardActivityFeed';
+import { localName } from '@/lib/bilingualName';
 import { dayHeading, groupByDay } from '@/lib/dayGroups';
 import { formatMoneyAmount } from '@/lib/money';
 import { cn } from '@/lib/utils';
@@ -57,17 +58,17 @@ export function AdminDashboardActivityFeed({ items, isLoading }: Props) {
       case 'payment':
         return {
           primary: t('admin.dashboard.feed.payment', { amount: t('invoice.egpAmount', { amount: formatMoneyAmount(item.amount) }) }),
-          secondary: isAr ? item.parentNameAr || item.parentNameEn : item.parentNameEn || item.parentNameAr,
+          secondary: localName(item.parentNameAr, item.parentNameEn, isAr),
         };
       case 'media':
         return {
           primary: t('admin.dashboard.feed.media'),
-          secondary: isAr ? item.uploaderNameAr || item.uploaderNameEn : item.uploaderNameEn || item.uploaderNameAr,
+          secondary: localName(item.uploaderNameAr, item.uploaderNameEn, isAr),
         };
       case 'daily_report':
         return {
           primary: t('admin.dashboard.feed.dailyReport', { child: isAr ? item.childNameAr : item.childNameEn }),
-          secondary: isAr ? item.teacherNameAr || item.teacherNameEn : item.teacherNameEn || item.teacherNameAr,
+          secondary: localName(item.teacherNameAr, item.teacherNameEn, isAr),
         };
       case 'child_check_in':
         return { primary: t('admin.dashboard.feed.checkIn', { name: isAr ? item.childNameAr : item.childNameEn }), secondary: '' };

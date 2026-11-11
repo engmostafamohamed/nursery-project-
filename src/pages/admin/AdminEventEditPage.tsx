@@ -14,6 +14,7 @@ import { useAuthSession } from '@/hooks/useAuthSession';
 import { useNurseryChildrenPicker } from '@/hooks/useNurseryChildrenPicker';
 import { useNurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { localName } from '@/lib/bilingualName';
 import { createPermissionsForEventScope, fetchPermissionChildIdsForEvent, syncIndividualEventPermissions } from '@/lib/eventPermissionOps';
 import { notifyParentsEventPublished } from '@/lib/eventPublishNotifications';
 import { issueEventQrCodes } from '@/lib/eventQrOps';
@@ -133,9 +134,7 @@ export function AdminEventEditPage() {
   const showEn = languagePref === 'en' || languagePref === 'both';
 
   const headerTitle =
-    (i18n.language.startsWith('ar')
-      ? eventQuery.data?.title_ar || eventQuery.data?.title_en
-      : eventQuery.data?.title_en || eventQuery.data?.title_ar) ?? '';
+    localName(eventQuery.data?.title_ar, eventQuery.data?.title_en, i18n.language.startsWith('ar')) || '';
 
   const onSubmit = form.handleSubmit(async (values) => {
     const parsed: EventEditFormValues = eventEditFormSchema.parse(values);

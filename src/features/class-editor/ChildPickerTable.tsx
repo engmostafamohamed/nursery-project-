@@ -6,6 +6,7 @@ import { DataTable, StatusPill, TableEmpty, TablePagination, TBody, Td, Th, THea
 import { FilterChips } from '@/components/ui/FilterChips';
 import { SearchInput } from '@/components/ui/FilterBar';
 import { usePagination } from '@/hooks/usePagination';
+import { localName } from '@/lib/bilingualName';
 import { getUserInitials } from '@/lib/utils';
 
 import { ageOf, candidatesIn, childName, type Candidate, type CandidateScope } from './classEditor';
@@ -111,7 +112,7 @@ export function ChildPickerTable({
                       <Td className="whitespace-nowrap text-on-surface-variant">{ageText(ageOf(c.dob, today))}</Td>
                       <Td>
                         {c.classId ? (
-                          <StatusPill tone="neutral" icon="school">{isArabic ? c.classAr || c.classEn : c.classEn || c.classAr}</StatusPill>
+                          <StatusPill tone="neutral" icon="school">{localName(c.classAr, c.classEn, isArabic)}</StatusPill>
                         ) : (
                           <StatusPill tone="warning" icon="person_off">{t('classEditor.picker.noClass')}</StatusPill>
                         )}

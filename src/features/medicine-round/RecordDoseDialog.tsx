@@ -8,6 +8,7 @@ import { invalidFieldClass } from '@/components/ui/FieldError';
 import { FormField, FormProblem } from '@/components/ui/FormField';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Textarea } from '@/components/ui/textarea';
+import { localName } from '@/lib/bilingualName';
 import { cn } from '@/lib/utils';
 
 import { NOTE_MAX, SKIP_REASONS, skipIssue, type RoundSlot, type SkipReason } from './medicineRound';
@@ -24,7 +25,7 @@ export function RecordDoseDialog({ slot, mode, onClose }: { slot: RoundSlot; mod
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language.startsWith('ar');
   const m = slot.medicine;
-  const child = (isArabic ? m.nameAr || m.nameEn : m.nameEn || m.nameAr) || '—';
+  const child = (localName(m.nameAr, m.nameEn, isArabic)) || '—';
   const [reason, setReason] = useState<SkipReason | ''>('');
   const [note, setNote] = useState('');
   const [tried, setTried] = useState(false);

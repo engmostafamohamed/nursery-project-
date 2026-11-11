@@ -1,6 +1,7 @@
 // The details behind each number of the dashboard's attendance card: which numbers the card shows
 // for today and for a period, which rows each one lists (the same rule the number counts), and
 // where a child's row leads.
+import { localName } from '@/lib/bilingualName';
 import { addCalendarDaysYmd } from '@/lib/nurseryDay';
 
 import { daysInRange, type DateRange } from './attendancePeriods';
@@ -220,7 +221,7 @@ export function classOptions(
   const seen = new Map<string, string | null>();
   for (const row of rows) {
     const id = row.class_id ?? 'none';
-    if (!seen.has(id)) seen.set(id, row.class_id ? (ar ? row.class_name_ar || row.class_name_en : row.class_name_en || row.class_name_ar) : null);
+    if (!seen.has(id)) seen.set(id, row.class_id ? (localName(row.class_name_ar, row.class_name_en, ar)) : null);
   }
   return [...seen]
     .map(([id, name]) => ({ id, name }))

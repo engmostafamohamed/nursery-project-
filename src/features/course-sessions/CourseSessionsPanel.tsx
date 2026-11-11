@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 
 import { confirm } from '@/components/ui/confirm';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { LoadError } from '@/components/ui/LoadError';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDay } from '@/lib/datetime';
@@ -29,7 +30,7 @@ export function CourseSessionsPanel({ courseId }: { courseId: string }) {
 
   if (query.isPending) return <Skeleton className="h-48 rounded-xl" />;
   if (query.isError || !query.data) {
-    return <p role="alert" className="rounded-xl border border-error/40 bg-error/5 p-4 text-sm">{t(courseSessionErrorKey(query.error))}</p>;
+    return <LoadError message={t(courseSessionErrorKey(query.error))} onRetry={() => void query.refetch()} />;
   }
 
   const data = query.data;

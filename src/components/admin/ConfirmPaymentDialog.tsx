@@ -12,6 +12,7 @@ import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Select } from '@/components/ui/select';
 import { useNurseryClasses, type NurseryClassRow } from '@/hooks/useClassStaff';
 import type { PaymentAttemptItem } from '@/hooks/usePaymentAttempts';
+import { localName } from '@/lib/bilingualName';
 import { formatDateTime } from '@/lib/datetime';
 import { confirmPaymentAttempt, paymentError } from '@/lib/paymentApi';
 import { cn } from '@/lib/utils';
@@ -88,7 +89,7 @@ function ConfirmPaymentBody({
 
   const isAr = i18n.language?.startsWith('ar');
   const className = (c: Pick<NurseryClassRow, 'name_ar' | 'name_en'>) =>
-    (isAr ? c.name_ar || c.name_en : c.name_en || c.name_ar) || '—';
+    (localName(c.name_ar, c.name_en, isAr)) || '—';
   const amountText = t('invoice.egpAmount', { amount: money(attempt.amount) });
   const testPayment = isTestPayment(attempt);
 

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
+import { LoadError } from '@/components/ui/LoadError';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { PageHeader } from '@/components/ui/PageHeader';
 import type { StockScope } from '@/features/food-and-beverage/kitchen';
@@ -87,7 +88,7 @@ export function AdminInventoryPage() {
       </PageHeader>
 
       {query.isError ? (
-        <p role="alert" className="rounded-xl border border-error/40 bg-error/5 p-4 text-sm text-error">{t('stock.page.loadFailed')}</p>
+        <LoadError message={t('stock.page.loadFailed')} onRetry={() => void query.refetch()} />
       ) : null}
 
       {!nurseryId ? null : tab === 'history' ? (

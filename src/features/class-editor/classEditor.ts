@@ -4,6 +4,7 @@
  * save_class), the children lists' searches, and what adding children does to the places.
  */
 import { ageOn } from '@/features/child-health/childHealth';
+import { localName } from '@/lib/bilingualName';
 import { errorTextKey } from '@/lib/errorCode';
 import { count, day, list, numberOrNull, obj, text, textOrNull } from '@/lib/jsonRead';
 
@@ -132,7 +133,7 @@ export function placesAfter(current: number, adding: number, capacity: number | 
 // The lists
 
 export const childName = (c: Pick<EditorChild, 'nameAr' | 'nameEn'>, isArabic: boolean) =>
-  (isArabic ? c.nameAr || c.nameEn : c.nameEn || c.nameAr) || '—';
+  (localName(c.nameAr, c.nameEn, isArabic)) || '—';
 
 /** Children whose name (either language) or code holds every word searched for. */
 export function searchChildren<T extends EditorChild>(children: T[], search: string): T[] {

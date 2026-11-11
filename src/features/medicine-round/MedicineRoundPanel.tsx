@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { confirm } from '@/components/ui/confirm';
 import { StatusPill } from '@/components/ui/DataTable';
+import { LoadError } from '@/components/ui/LoadError';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatTile } from '@/components/ui/StatTile';
@@ -67,7 +68,7 @@ export function MedicineRoundPanel({ nurseryId = null }: { nurseryId?: string | 
   };
 
   if (query.isPending) return <Skeleton className="h-72 rounded-2xl" />;
-  if (query.isError) return <p role="alert" className="rounded-xl border border-error/40 bg-error/5 p-4 text-sm text-error">{t(roundErrorKey(query.error))}</p>;
+  if (query.isError) return <LoadError message={t(roundErrorKey(query.error))} onRetry={() => void query.refetch()} />;
 
   return (
     <div className="space-y-5" data-testid="medicine-round">

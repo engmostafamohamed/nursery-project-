@@ -6,6 +6,8 @@ import { StatusPill, TableCard, TableEmpty } from '@/components/ui/DataTable';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { StatTile } from '@/components/ui/StatTile';
 import type { BilingualNames } from '@/hooks/useBilingualNames';
+import { adminLinks } from '@/lib/adminLinks';
+import { localName } from '@/lib/bilingualName';
 
 import { MESSAGE_STATUS_TONE } from './classLook';
 import type { ClassMessage, ClassProfile } from './classProfile';
@@ -45,7 +47,7 @@ export function ClassActivityPanel({ profile, names, format, base }: { profile: 
         description={t('classProfile.activity.messagesDescription')}
         actions={
           <Button asChild size="sm" className="gap-1.5">
-            <Link to={`${base}/classes/${profile.info.id}/announcements`}>
+            <Link to={adminLinks(base).classAnnouncements(profile.info.id)}>
               <MaterialSymbol name="campaign" size="text-base" />
               {t('classProfile.activity.announce')}
             </Link>
@@ -69,7 +71,7 @@ export function ClassActivityPanel({ profile, names, format, base }: { profile: 
 function MessageRow({ message, names, format }: { message: ClassMessage; names: BilingualNames; format: ClassFormat }) {
   const { t, i18n } = useTranslation();
   const arabic = i18n.language.startsWith('ar');
-  const body = (arabic ? message.bodyAr || message.bodyEn : message.bodyEn || message.bodyAr).trim();
+  const body = (localName(message.bodyAr, message.bodyEn, arabic)).trim();
   const announcement = message.kind === 'announcement';
   return (
     <li className="flex items-start gap-3 px-4 py-3 sm:px-5">

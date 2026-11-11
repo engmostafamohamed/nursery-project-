@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useDailyReportCard, useDailyReportHistory } from '@/hooks/useDailyReportWorkflow';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { localName } from '@/lib/bilingualName';
 import { dailyReportErrorKey, parseMood } from '@/lib/dailyReport';
 import { MOOD_EMOJI, moodName } from '@/lib/dailyReportLabels';
 import {
@@ -36,7 +37,7 @@ function SentReportDialog({ row, onClose }: { row: DailyReportHistoryRow | null;
   const { t, i18n } = useTranslation();
   const { user } = useAuthSession();
   const card = useDailyReportCard(user?.id, row?.child_id ?? null, row?.report_date ?? null);
-  const name = row ? (i18n.language.startsWith('ar') ? row.full_name_ar || row.full_name_en : row.full_name_en || row.full_name_ar) : '';
+  const name = row ? (localName(row.full_name_ar, row.full_name_en, i18n.language.startsWith('ar'))) : '';
   return (
     <Dialog open={Boolean(row)} onOpenChange={(open) => (!open ? onClose() : undefined)}>
       <DialogContent className="max-h-[92vh] max-w-3xl overflow-y-auto p-0 sm:p-0">

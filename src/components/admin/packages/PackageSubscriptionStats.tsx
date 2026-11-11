@@ -5,6 +5,7 @@ import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useMoney } from '@/hooks/useMoney';
 import type { PackageSubscriptionsView } from '@/hooks/usePackageSubscriptionsView';
+import { localName } from '@/lib/bilingualName';
 import { rowsForTile } from '@/lib/packageSubscriptions';
 import { cn } from '@/lib/utils';
 
@@ -74,7 +75,7 @@ export function PackageSubscriptionsDialog({ view, basePath }: { view: PackageSu
   const { i18n } = useTranslation();
   const packageId = view.openPackageId;
   const summary = packageId ? view.summaries.get(packageId) : undefined;
-  const name = summary ? (i18n.language.startsWith('ar') ? summary.nameAr || summary.nameEn : summary.nameEn || summary.nameAr) || '—' : '';
+  const name = summary ? (localName(summary.nameAr, summary.nameEn, i18n.language.startsWith('ar'))) || '—' : '';
 
   return (
     <Dialog open={Boolean(packageId && summary)} onOpenChange={(open) => !open && view.closePackage()}>

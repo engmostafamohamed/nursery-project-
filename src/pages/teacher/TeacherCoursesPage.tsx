@@ -9,6 +9,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { useNurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
 import { useTeacherCourses, useTeacherCourseEnrollees } from '@/hooks/useTeacherCourses';
 import { CourseSessionsPanel } from '@/features/course-sessions/CourseSessionsPanel';
+import { localName } from '@/lib/bilingualName';
 
 const CATEGORY_COLORS: Record<string, string> = {
   sport: 'bg-blue-100 text-blue-900',
@@ -34,7 +35,7 @@ function RosterPanel({ courseId }: { courseId: string }) {
   return (
     <div className="space-y-2">
       {enrollees.map((e) => {
-        const name = isAr ? e.child_name_ar || e.child_name_en : e.child_name_en || e.child_name_ar;
+        const name = localName(e.child_name_ar, e.child_name_en, isAr);
         return (
           <div key={e.id} className="flex items-center gap-3 rounded-xl border border-outline-variant bg-surface-container-lowest p-3">
             <span className="material-symbols-outlined text-lg text-primary" aria-hidden>child_care</span>
@@ -97,7 +98,7 @@ export function TeacherCoursesPage() {
       ) : (
         <div className="space-y-3">
           {courses.map((course) => {
-            const title = isAr ? course.title_ar || course.title_en : course.title_en || course.title_ar;
+            const title = localName(course.title_ar, course.title_en, isAr);
             const isExpanded = expandedId === course.id;
             const dayLabels = (course.schedule_days ?? [])
               .map((d) => t(`admin.courses.days.${d}`))

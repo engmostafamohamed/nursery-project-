@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
+import { localName } from '@/lib/bilingualName';
 import {
   buildMonthGrid,
   localDateKeyFromIso,
@@ -172,7 +173,7 @@ export function EventsCalendar<T extends CalendarEvent>({
               {/* Event entries */}
               <div className="mt-0.5 flex flex-col gap-0.5">
                 {dayEvents.slice(0, MAX_CHIPS).map((ev) => {
-                  const title = isAr ? ev.title_ar || ev.title_en : ev.title_en || ev.title_ar;
+                  const title = localName(ev.title_ar, ev.title_en, isAr);
                   return (
                     <button
                       key={ev.id}

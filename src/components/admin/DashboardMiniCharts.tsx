@@ -4,6 +4,7 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Too
 import { TableCard } from '@/components/ui/DataTable';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { AdminDashboardCharts } from '@/hooks/useAdminDashboardCharts';
+import { localName } from '@/lib/bilingualName';
 import { CHART_CURSOR, CHART_GRID_STROKE, CHART_TOOLTIP_STYLE, chartColor, chartDirection } from '@/lib/chartTheme';
 import { formatMoneyAmount } from '@/lib/money';
 
@@ -119,7 +120,7 @@ export function DashboardMiniCharts({ data, isLoading }: Props) {
             {classes.map((row) => (
               <li key={row.classId}>
                 <div className="mb-1 flex items-center justify-between gap-2 text-sm">
-                  <span className="truncate text-on-surface">{isAr ? row.labelAr || row.labelEn : row.labelEn || row.labelAr}</span>
+                  <span className="truncate text-on-surface">{localName(row.labelAr, row.labelEn, isAr)}</span>
                   <span className="shrink-0 font-semibold tabular-nums text-on-surface">{row.count}</span>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-surface-high">

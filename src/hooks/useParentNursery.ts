@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
+import { localName } from '@/lib/bilingualName';
 import { supabase } from '@/lib/supabase';
 
 export type ParentNursery = {
@@ -30,7 +31,7 @@ function toParentNursery(row: NurseryNameRow): ParentNursery {
 /** Display name in the current language, e.g. "Cherries — Cairo". */
 export function parentNurseryLabel(nursery: ParentNursery | null | undefined, language: string): string {
   if (!nursery) return '';
-  const name = language.startsWith('ar') ? nursery.nameAr || nursery.nameEn : nursery.nameEn || nursery.nameAr;
+  const name = localName(nursery.nameAr, nursery.nameEn, language.startsWith('ar'));
   if (!name) return '';
   return nursery.city ? `${name} — ${nursery.city}` : name;
 }

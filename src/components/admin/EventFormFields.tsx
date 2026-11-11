@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { localName } from '@/lib/bilingualName';
 import {
   formatUrgentHour,
   sortUniqueNumbers,
@@ -52,11 +53,9 @@ export function EventFormFields({
   const urgentDays = sortUniqueNumbers(watch('urgentDaysOfWeek') as number[] | undefined);
   const urgentHours = sortUniqueNumbers(watch('urgentHoursOfDay') as number[] | undefined);
 
-  const classLabel = (row: EventClassRow) =>
-    i18n.language.startsWith('ar') ? row.name_ar || row.name_en : row.name_en || row.name_ar;
+  const classLabel = (row: EventClassRow) => localName(row.name_ar, row.name_en, i18n.language.startsWith('ar'));
 
-  const childLabel = (row: EventChildPickerRow) =>
-    i18n.language.startsWith('ar') ? row.full_name_ar || row.full_name_en : row.full_name_en || row.full_name_ar;
+  const childLabel = (row: EventChildPickerRow) => localName(row.full_name_ar, row.full_name_en, i18n.language.startsWith('ar'));
 
   const toggleChild = (id: string) => {
     const set = new Set(targetChildIds);

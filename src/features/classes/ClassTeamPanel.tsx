@@ -11,6 +11,7 @@ import { COVER_LOOK, REASON_ICON } from '@/features/staff-absence/absenceLook';
 import { coverStatus } from '@/features/staff-absence/staffAbsence';
 import { RecordStaffTimeDialog } from '@/features/staff-clock/RecordStaffTimeDialog';
 import type { BilingualNames } from '@/hooks/useBilingualNames';
+import { adminLinks } from '@/lib/adminLinks';
 import { STAFF_LATE_AFTER_MINUTES } from '@/lib/staffMonth';
 import { cn, getUserInitials } from '@/lib/utils';
 
@@ -39,7 +40,8 @@ export function ClassTeamPanel({ profile, names, format, base }: { profile: Clas
   const coverLook = COVER_LOOK[cover];
   const [recording, setRecording] = useState<TeamMember | null>(null);
   const className = names.lines(profile.info.nameAr, profile.info.nameEn).primary;
-  const personHref = (id: string) => `${base}/staff/${id}`;
+  const links = adminLinks(base);
+  const personHref = (id: string) => links.staffPage(id);
 
   const changes: TeamChangeRow[] = profile.teamChanges.map((c) => ({
     id: c.id,
@@ -61,13 +63,13 @@ export function ClassTeamPanel({ profile, names, format, base }: { profile: Clas
         actions={
           <>
             <Button asChild variant="outline" size="sm" className="gap-1.5">
-              <Link to={`${base}/staff/absences`}>
+              <Link to={links.staffAbsences}>
                 <MaterialSymbol name="event_busy" size="text-base" />
                 {t('classProfile.team.absences')}
               </Link>
             </Button>
             <Button asChild size="sm" className="gap-1.5">
-              <Link to={`${base}/classes/teams?edit=${profile.info.id}`}>
+              <Link to={links.teams(profile.info.id)}>
                 <MaterialSymbol name="groups" size="text-base" />
                 {t('classProfile.team.manage')}
               </Link>

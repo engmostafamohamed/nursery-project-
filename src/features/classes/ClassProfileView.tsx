@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useBilingualNames } from '@/hooks/useBilingualNames';
+import { useSearchParam } from '@/hooks/useSearchParam';
+import { adminLinks } from '@/lib/adminLinks';
 
 import { ClassActivityPanel } from './ClassActivityPanel';
 import { ClassChildrenPanel } from './ClassChildrenPanel';
@@ -25,21 +27,12 @@ export function ClassProfileView({ profile, base }: { profile: ClassProfile; bas
   const { t } = useTranslation();
   const names = useBilingualNames(profile.info.nurseryId);
   const format = useClassFormat(profile);
-  const [params, setParams] = useSearchParams();
-  const tab = tabFrom(params.get('tab'));
+  const [tabParam, setTabParam] = useSearchParam('tab', 'children');
+  const tab = tabFrom(tabParam);
   const [childFilter, setChildFilter] = useState<ChildFilter>('all');
   const summary = useMemo(() => todaySummary(profile.children), [profile.children]);
 
-  const openTab = (next: ClassProfileTab) =>
-    setParams(
-      (current) => {
-        const updated = new URLSearchParams(current);
-        if (next === 'children') updated.delete('tab');
-        else updated.set('tab', next);
-        return updated;
-      },
-      { replace: true },
-    );
+  const openTab = (next: ClassProfileTab) => setTabParam(next);
   // A number in the header opens the children it counts.
   const showChildren = (filter: ChildFilter) => {
     setChildFilter(filter);
@@ -58,7 +51,7 @@ export function ClassProfileView({ profile, base }: { profile: ClassProfile; bas
   return (
     <div className="space-y-5 pb-8" data-testid="class-profile">
       <Link
-        to={`${base}/classes`}
+        to={adminLinks(base).classes}
         className="inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
       >
         <MaterialSymbol name="arrow_back" size="text-lg" className="rtl:rotate-180" />

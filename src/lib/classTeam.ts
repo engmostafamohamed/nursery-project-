@@ -1,3 +1,4 @@
+import { localName } from '@/lib/bilingualName';
 // The Teams page (in the Classes section): each class's lead teacher, assistants, nannies and backup
 // teacher, what each team is missing, every teacher with their role and classes, and the numbers at
 // the top. Plain functions over what get_class_teams returns.
@@ -45,9 +46,7 @@ export type ClassTeams = { classes: TeamClass[]; staff: TeamTeacher[]; changes: 
 
 /** A name in the reader's language, falling back to the other one. */
 export function pickName(row: { name_ar: string | null; name_en: string | null }, lang: string): string {
-  const ar = row.name_ar?.trim() || '';
-  const en = row.name_en?.trim() || '';
-  return (lang.startsWith('ar') ? ar || en : en || ar) || '—';
+  return localName(row.name_ar, row.name_en, lang.startsWith('ar')) || '—';
 }
 
 export function lead(cls: TeamClass): string | null {

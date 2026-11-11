@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
+import { LoadError } from '@/components/ui/LoadError';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -36,7 +37,7 @@ export function TeacherAbsencesPage() {
       {query.isPending ? (
         <Skeleton className="h-48 rounded-2xl" />
       ) : query.isError ? (
-        <p role="alert" className="rounded-xl border border-error/40 bg-error/5 p-4 text-sm text-error">{t(absenceErrorKey(query.error))}</p>
+        <LoadError message={t(absenceErrorKey(query.error))} onRetry={() => void query.refetch()} />
       ) : (
         <>
           <CoverBanner covering={query.data.covering} />

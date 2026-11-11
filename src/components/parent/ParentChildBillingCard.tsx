@@ -6,6 +6,7 @@ import { StatusPill } from '@/components/ui/DataTable';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { useParentInvoices } from '@/hooks/useParentInvoices';
 import type { ParentChildBilling } from '@/hooks/useParentChildBilling';
+import { localName } from '@/lib/bilingualName';
 import { formatDate } from '@/lib/datetime';
 import { formatMoneyAmount } from '@/lib/money';
 import { cn } from '@/lib/utils';
@@ -54,7 +55,7 @@ export function ParentChildBillingCard({
           {subscription ? (
             <>
               <p className="mt-1 text-sm font-semibold text-on-surface">
-                {(isAr ? subscription.packageNameAr || subscription.packageNameEn : subscription.packageNameEn || subscription.packageNameAr) || '—'}
+                {(localName(subscription.packageNameAr, subscription.packageNameEn, isAr)) || '—'}
               </p>
               <p className="mt-0.5 text-xs text-on-surface-variant">
                 {t(`tuitionPackages.periods.${subscription.billingPeriod}`)} · {money(subscription.lockedPrice)}
@@ -76,7 +77,7 @@ export function ParentChildBillingCard({
           {extraHours ? (
             <>
               <p className="mt-1 text-sm font-semibold text-on-surface">
-                {(isAr ? extraHours.packageNameAr || extraHours.packageNameEn : extraHours.packageNameEn || extraHours.packageNameAr) || '—'}
+                {(localName(extraHours.packageNameAr, extraHours.packageNameEn, isAr)) || '—'}
               </p>
               {usedPct != null ? (
                 <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-high">

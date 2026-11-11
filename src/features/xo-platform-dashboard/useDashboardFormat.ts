@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { localName } from '@/lib/bilingualName';
 import { formatMoneyAmount } from '@/lib/money';
 
 import { monthStart } from './platformDashboard';
@@ -29,7 +30,7 @@ export function useDashboardFormat() {
       monthLong: (month: string) => monthStart(month).toLocaleDateString(locale, { month: 'long', year: 'numeric' }),
       day: (date: string, options: Intl.DateTimeFormatOptions) => new Date(`${date}T12:00:00`).toLocaleDateString(locale, options),
       nurseryName: (row: { name_ar: string; name_en: string }) =>
-        (isAr ? row.name_ar || row.name_en : row.name_en || row.name_ar) || '—',
+        (localName(row.name_ar, row.name_en, isAr)) || '—',
     };
   }, [isAr, rtl, t]);
 }

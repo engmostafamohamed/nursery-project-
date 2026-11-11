@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Input } from '@/components/ui/input';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { localName } from '@/lib/bilingualName';
 import { cn } from '@/lib/utils';
 
 import { searchKitchenChildren, type KitchenChild } from './kitchenSalesApi';
@@ -39,8 +40,8 @@ export function ChildSearch({
     enabled: term.length >= 2 && !value,
     staleTime: 30_000,
   });
-  const name = (c: KitchenChild) => (isArabic ? c.nameAr || c.nameEn : c.nameEn || c.nameAr);
-  const cls = (c: KitchenChild) => (isArabic ? c.classAr || c.classEn : c.classEn || c.classAr);
+  const name = (c: KitchenChild) => (localName(c.nameAr, c.nameEn, isArabic));
+  const cls = (c: KitchenChild) => (localName(c.classAr, c.classEn, isArabic));
 
   if (value) {
     return (

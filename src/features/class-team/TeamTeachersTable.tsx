@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { DataTable, StatusPill, TableCard, TableEmpty, TablePagination, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
 import { usePagination } from '@/hooks/usePagination';
 import { useTableSort } from '@/hooks/useTableSort';
+import { localName } from '@/lib/bilingualName';
 import { pickName, type TeamClass, type TeamTeacher } from '@/lib/classTeam';
 
 import { roleName } from './useClassTeamEditing';
@@ -53,7 +54,7 @@ export function TeamTeachersTable({ staff, classById, filters, total, resetKey }
           </THead>
           <TBody>
             {pager.pageItems.map((teacher) => {
-              const title = lang.startsWith('ar') ? teacher.role_title_ar || teacher.role_title_en : teacher.role_title_en || teacher.role_title_ar;
+              const title = localName(teacher.role_title_ar, teacher.role_title_en, lang.startsWith('ar'));
               const department = departmentName(t, teacher.department);
               return (
                 <Tr key={teacher.id} data-testid="team-teacher-row">

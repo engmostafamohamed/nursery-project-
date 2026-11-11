@@ -4,8 +4,8 @@ import { Link } from 'react-router-dom';
 
 import { AttendanceKpiDetails } from '@/components/admin/attendance/AttendanceKpiDetails';
 import { PeriodFilter } from '@/components/admin/PeriodFilter';
-import { Button } from '@/components/ui/button';
 import { StatusPill, TableCard } from '@/components/ui/DataTable';
+import { LoadError } from '@/components/ui/LoadError';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatTile } from '@/components/ui/StatTile';
 import { useAttendanceKpis, useAttendancePeriodKpis, type Kpis, type PeriodKpis, type TopLateRow } from '@/hooks/useAttendanceKpis';
@@ -14,6 +14,7 @@ import { usePeriodState } from '@/hooks/usePeriodState';
 import { toLocalDateString } from '@/lib/attendanceAnalytics';
 import { childRecordLink, keepTile, PERIOD_TILES, TODAY_TILES, type KpiTile, type PeriodTile, type TodayTile } from '@/lib/attendanceKpiDetails';
 import { KPI_PERIODS, rangeLabel } from '@/lib/attendancePeriods';
+import { localName } from '@/lib/bilingualName';
 import { formatMoneyAmount } from '@/lib/money';
 import { cn } from '@/lib/utils';
 
@@ -160,17 +161,9 @@ function TileSkeletons() {
   );
 }
 
-function LoadError({ onRetry }: { onRetry: () => void }) {
+function LoadFailed({ onRetry }: { onRetry: () => void }) {
   const { t } = useTranslation();
-  return (
-    <div className="m-4 flex flex-wrap items-center gap-3 rounded-xl border border-error/30 bg-error/5 p-3 text-sm text-error sm:m-5" role="alert">
-      <span className="material-symbols-outlined text-xl" aria-hidden>error</span>
-      <span className="flex-1">{t('attendance.loadErrorTitle')}</span>
-      <Button type="button" size="sm" variant="outline" onClick={onRetry}>
-        {t('common.retry')}
-      </Button>
-    </div>
-  );
+  return <LoadError inset message={t('attendance.loadErrorTitle')} onRetry={onRetry} />;
 }
 
 /**
@@ -186,7 +179,7 @@ function TodayTiles({
   const { t } = useTranslation();
   const money = useMoney();
   if (live.isPending) return <TileSkeletons />;
-  if (!live.data) return live.isError ? <LoadError onRetry={() => void live.refetch()} /> : null;
+  if (!live.data) return live.isError ? <LoadFailed onRetry={() => void live.refetch()} /> : null;
   const today = live.data.today;
   const pick = (tile: TodayTile) => ({ className: TILE, onClick: () => onSelect(tile), active: selected === tile });
   return (
@@ -236,7 +229,7 @@ function PeriodTiles({
   const { t } = useTranslation();
   const money = useMoney();
   if (stats.isPending) return <TileSkeletons />;
-  if (!stats.data) return stats.isError ? <LoadError onRetry={() => void stats.refetch()} /> : null;
+  if (!stats.data) return stats.isError ? <LoadFailed onRetry={() => void stats.refetch()} /> : null;
   const s = stats.data;
   const pick = (tile: PeriodTile) => ({ className: TILE, onClick: () => onSelect(tile), active: selected === tile });
   return (
@@ -305,7 +298,7 @@ function TopLate({ rows, title, linkTo }: { rows: TopLateRow[]; title: string; l
                 {index + 1}
               </span>
               <span className="min-w-0 flex-1 truncate font-medium text-on-surface">
-                {i18n.language === 'ar' ? row.full_name_ar || row.full_name_en : row.full_name_en || row.full_name_ar}
+                {localName(row.full_name_ar, row.full_name_en, i18n.language === 'ar')}
               </span>
               <span className="shrink-0 text-xs text-on-surface-variant">
                 {row.extra_fee == null

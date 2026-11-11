@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { localName } from '@/lib/bilingualName';
 import { formatTimeIn } from '@/lib/datetime';
 import { cn } from '@/lib/utils';
 
@@ -322,7 +323,7 @@ function DoseSchedule({ medication: m, tz }: { medication: Medication; tz: strin
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language.startsWith('ar');
   const clock = (iso: string) => formatTimeIn(iso, tz);
-  const by = (d: DoseRecord) => (isArabic ? d.byAr || d.byEn : d.byEn || d.byAr);
+  const by = (d: DoseRecord) => (localName(d.byAr, d.byEn, isArabic));
   const doseFor = (time: string) => m.dosesToday.find((d) => d.scheduledTime === time);
   const extra = m.dosesToday.filter((d) => !d.scheduledTime);
 

@@ -14,6 +14,7 @@ import { useAuthSession } from '@/hooks/useAuthSession';
 import { useExtraHoursLedger } from '@/hooks/useExtraHoursLedger';
 import { useParentChildren } from '@/hooks/useParentChildren';
 import { useParentInvoices, type ParentInvoiceItem } from '@/hooks/useParentInvoices';
+import { localName } from '@/lib/bilingualName';
 import { formatDate } from '@/lib/datetime';
 import {
   FAMILY_BUCKET,
@@ -67,7 +68,7 @@ export function ParentPaymentRecordPage() {
   const children = useMemo(() => childrenQuery.data ?? [], [childrenQuery.data]);
   const childName = (id: string) => {
     const child = children.find((c) => c.id === id);
-    return child ? (isAr ? child.nameAr || child.nameEn : child.nameEn || child.nameAr) : null;
+    return child ? (localName(child.nameAr, child.nameEn, isAr)) : null;
   };
 
   const invoicesQuery = useParentInvoices({ parentId: user?.id, childId: selectedChildId || undefined, status: 'all', sort: 'newest' });

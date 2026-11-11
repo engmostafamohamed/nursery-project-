@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { DataTable, TableCard, TableEmpty, TableLoading, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
 import { FilterBar, SearchInput } from '@/components/ui/FilterBar';
 import { FilterField } from '@/components/ui/FilterField';
+import { LoadError } from '@/components/ui/LoadError';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Select } from '@/components/ui/select';
 import { StatTile } from '@/components/ui/StatTile';
@@ -60,7 +61,7 @@ export function StockHistoryPanel({ nurseryId, scope, thisMonth }: { nurseryId: 
       </div>
 
       {query.isError ? (
-        <p role="alert" className="rounded-xl border border-error/40 bg-error/5 p-4 text-sm text-error">{t(stockErrorKey(query.error))}</p>
+        <LoadError message={t(stockErrorKey(query.error))} onRetry={() => void query.refetch()} />
       ) : null}
 
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">

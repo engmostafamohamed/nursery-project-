@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { FormField, FormProblem } from '@/components/ui/FormField';
 import { Input } from '@/components/ui/input';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { localName } from '@/lib/bilingualName';
 import { formatDay } from '@/lib/datetime';
 import { cn } from '@/lib/utils';
 
@@ -34,7 +35,7 @@ export function OrderExtraDialog({ child, item, onClose }: { child: FamilyChildE
   const days = child.openDays.slice(0, DAYS_SHOWN);
   const quantity = Number(draft.quantity) || 0;
   const total = Math.round(item.finalPrice * quantity * draft.dates.length * 100) / 100;
-  const childName = (isArabic ? child.nameAr || child.nameEn : child.nameEn || child.nameAr) || '—';
+  const childName = (localName(child.nameAr, child.nameEn, isArabic)) || '—';
 
   const toggleDay = (day: string) =>
     setDraft((d) => ({ ...d, dates: d.dates.includes(day) ? d.dates.filter((x) => x !== day) : [...d.dates, day].sort() }));

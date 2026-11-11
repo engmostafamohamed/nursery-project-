@@ -53,6 +53,7 @@ import {
   type DealInput,
   type DealRow,
 } from '@/hooks/useAdminDeals';
+import { localName } from '@/lib/bilingualName';
 import { formatDateTime } from '@/lib/datetime';
 import { dealFormIssues, hasIssues } from '@/lib/packageForms';
 import { cn, formatQueryError } from '@/lib/utils';
@@ -320,7 +321,7 @@ export function AdminDealsPage() {
               {pager.pageItems.map((deal) => {
                 const live = isDealCurrentlyActive(deal);
                 const expanded = expandedIds.has(deal.id);
-                const description = isAr ? deal.description_ar || deal.description_en : deal.description_en || deal.description_ar;
+                const description = localName(deal.description_ar, deal.description_en, isAr);
                 return (
                   <Fragment key={deal.id}>
                     <Tr>
@@ -354,7 +355,7 @@ export function AdminDealsPage() {
                                 className="inline-flex items-center gap-1 rounded-full border border-outline-variant bg-surface-container-lowest px-2 py-0.5 text-xs text-on-surface hover:border-primary hover:text-primary"
                               >
                                 <MaterialSymbol name={p.kind === 'tuition' ? 'payments' : 'schedule'} size="text-xs" />
-                                {isAr ? p.nameAr || p.nameEn : p.nameEn || p.nameAr}
+                                {localName(p.nameAr, p.nameEn, isAr)}
                               </Link>
                             ))}
                           </div>
@@ -399,8 +400,8 @@ export function AdminDealsPage() {
                                   key={`${p.id}-${c.id}`}
                                   className="inline-flex items-center gap-1 rounded-full border border-outline-variant bg-surface px-2 py-0.5 text-xs text-on-surface"
                                 >
-                                  {isAr ? c.nameAr || c.nameEn : c.nameEn || c.nameAr}
-                                  <span className="text-on-surface-variant">· {isAr ? p.nameAr || p.nameEn : p.nameEn || p.nameAr}</span>
+                                  {localName(c.nameAr, c.nameEn, isAr)}
+                                  <span className="text-on-surface-variant">· {localName(p.nameAr, p.nameEn, isAr)}</span>
                                 </span>
                               )),
                             )}

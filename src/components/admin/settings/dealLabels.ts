@@ -1,5 +1,6 @@
 import type { TFunction } from 'i18next';
 
+import { localName } from '@/lib/bilingualName';
 import { formatMoneyAmount } from '@/lib/money';
 
 /** "10% off" / "EGP 55.00 off" in the current language. */
@@ -14,5 +15,5 @@ export function dealDiscountLabel(
 
 /** The row's name in the current language, falling back to the other one. */
 export function localizedName(row: { name_ar: string | null; name_en: string | null }, isAr: boolean): string {
-  return (isAr ? row.name_ar || row.name_en : row.name_en || row.name_ar) ?? '';
+  return localName(row.name_ar, row.name_en, isAr) || '';
 }

@@ -24,6 +24,7 @@ import {
   useSendDailyReports,
 } from '@/hooks/useDailyReportWorkflow';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { localName } from '@/lib/bilingualName';
 import { completion, dailyReportErrorKey, fromRow, nextChild, toPayload, type DailyReportAnswers, type SaveResult } from '@/lib/dailyReport';
 import type { DailyReportCard } from '@/lib/dailyReportCard';
 import { ATTENDANCE_TONE, attendanceName, questionList, questionName } from '@/lib/dailyReportLabels';
@@ -116,8 +117,8 @@ function ReportEditor({ childId, day }: { childId: string; day: string }) {
   const done = answers ? completion(answers) : null;
   const previous = nextChild(rows, childId, -1);
   const next = nextChild(rows, childId, 1);
-  const name = me ? (lang.startsWith('ar') ? me.full_name_ar || me.full_name_en : me.full_name_en || me.full_name_ar) || '—' : '';
-  const className = me ? (lang.startsWith('ar') ? me.class_name_ar || me.class_name_en : me.class_name_en || me.class_name_ar) : '';
+  const name = me ? (localName(me.full_name_ar, me.full_name_en, lang.startsWith('ar'))) || '—' : '';
+  const className = me ? (localName(me.class_name_ar, me.class_name_en, lang.startsWith('ar'))) : '';
   const time = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit', hour12: true }) : '');
   const listLink = `/teacher/daily-reports${day === today ? '' : `?date=${day}`}`;
 

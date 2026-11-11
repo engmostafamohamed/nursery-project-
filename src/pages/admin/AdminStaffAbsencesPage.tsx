@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { FilterBar, SearchInput } from '@/components/ui/FilterBar';
 import { FilterChips } from '@/components/ui/FilterChips';
 import { FilterField } from '@/components/ui/FilterField';
+import { LoadError } from '@/components/ui/LoadError';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/select';
@@ -17,6 +18,7 @@ import { ABSENCE_REASONS, absenceState, addDays, coverStatus, type AbsenceReason
 import { absenceErrorKey } from '@/features/staff-absence/staffAbsenceApi';
 import { useStaffAbsences } from '@/features/staff-absence/useStaffAbsence';
 import { useAdminBasePath } from '@/hooks/useAdminBasePath';
+import { adminLinks } from '@/lib/adminLinks';
 import { getNurseryCalendarDateString } from '@/lib/nurseryDay';
 import { useSettings } from '@/lib/useSettings';
 
@@ -40,7 +42,8 @@ export function AdminStaffAbsencesPage() {
   const data = query.data;
   const day = data?.today ?? today;
   // A member of staff's page, on their absences.
-  const personHref = (userId: string) => `${base}/staff/${userId}?tab=absences`;
+  const links = adminLinks(base);
+  const personHref = (userId: string) => links.staffPage(userId, 'absences');
 
   const inView = useMemo(() => {
     const all = data?.absences ?? [];
@@ -74,7 +77,7 @@ export function AdminStaffAbsencesPage() {
       {query.isPending ? (
         <Skeleton className="h-64 rounded-2xl" />
       ) : query.isError ? (
-        <p role="alert" className="rounded-xl border border-error/40 bg-error/5 p-4 text-sm text-error">{t(absenceErrorKey(query.error))}</p>
+        <LoadError message={t(absenceErrorKey(query.error))} onRetry={() => void query.refetch()} />
       ) : data ? (
         <>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -116,8 +119,8 @@ export function AdminStaffAbsencesPage() {
 
           <ClassCoverTable
             classes={data.classes}
-            classHref={(id) => `${base}/classes/${id}`}
-            teamHref={(id) => `${base}/classes/teams?edit=${id}`}
+            classHref={(id) => links.classPage(id)}
+            teamHref={(id) => links.teams(id)}
             personHref={personHref}
           />
 

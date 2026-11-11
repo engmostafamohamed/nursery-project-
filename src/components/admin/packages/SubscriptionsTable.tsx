@@ -21,6 +21,7 @@ import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Select } from '@/components/ui/select';
 import { useMoney } from '@/hooks/useMoney';
 import { usePagination } from '@/hooks/usePagination';
+import { localName } from '@/lib/bilingualName';
 import {
   BILLING_PERIODS,
   filterSubscriptions,
@@ -111,7 +112,7 @@ export function SubscriptionsTable({
     const ar = lang.startsWith('ar');
     const seen = new Map<string, string>();
     for (const row of rows) {
-      if (!seen.has(row.package_id)) seen.set(row.package_id, (ar ? row.package_name_ar || row.package_name_en : row.package_name_en || row.package_name_ar) || '—');
+      if (!seen.has(row.package_id)) seen.set(row.package_id, (localName(row.package_name_ar, row.package_name_en, ar)) || '—');
     }
     return [...seen];
   }, [rows, lang]);

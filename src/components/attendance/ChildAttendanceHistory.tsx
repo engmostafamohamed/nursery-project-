@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@/components/ui/button';
+import { LoadError } from '@/components/ui/LoadError';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useChildAttendanceHistory } from '@/hooks/useChildAttendanceHistory';
@@ -112,15 +112,7 @@ export function ChildAttendanceHistory({ childId, nurseryId, audience, initialRa
           <Skeleton className="h-80 rounded-xl" />
         </div>
       ) : report.isError ? (
-        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-error/30 bg-error/5 p-4 text-sm text-on-surface">
-          <span className="flex items-center gap-2">
-            <MaterialSymbol name="error" className="text-error" />
-            {t('attendanceHistory.loadError')}
-          </span>
-          <Button type="button" variant="outline" size="sm" onClick={() => void report.refetch()}>
-            {t('common.retry', { defaultValue: 'Retry' })}
-          </Button>
-        </div>
+        <LoadError message={t('attendanceHistory.loadError')} onRetry={() => void report.refetch()} />
       ) : !report.child ? (
         <p className="rounded-xl border border-outline-variant bg-surface p-4 text-sm text-on-surface-variant">{t('attendanceHistory.unavailable')}</p>
       ) : (

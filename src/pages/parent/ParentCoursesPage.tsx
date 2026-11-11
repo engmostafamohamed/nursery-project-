@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useParentCourses, type ParentCourseInvoiceRow } from '@/hooks/useParentCourses';
+import { localName } from '@/lib/bilingualName';
 
 const CATEGORY_COLORS: Record<string, string> = {
   sport: 'bg-blue-100 text-blue-900',
@@ -29,8 +30,8 @@ function InvoiceCard({ invoice, locale, t }: {
   t: ReturnType<typeof useTranslation>['t'];
 }) {
   const isAr = locale.startsWith('ar');
-  const courseTitle = isAr ? invoice.course_title_ar || invoice.course_title_en : invoice.course_title_en || invoice.course_title_ar;
-  const childName = isAr ? invoice.child_name_ar || invoice.child_name_en : invoice.child_name_en || invoice.child_name_ar;
+  const courseTitle = localName(invoice.course_title_ar, invoice.course_title_en, isAr);
+  const childName = localName(invoice.child_name_ar, invoice.child_name_en, isAr);
   const priceFmt = new Intl.NumberFormat(locale, { style: 'currency', currency: invoice.currency });
   const monthFmt = new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'long' });
 
@@ -146,9 +147,9 @@ export function ParentCoursesPage() {
         ) : (
           <div className="space-y-3">
             {enrollments.map((e) => {
-              const courseTitle = isAr ? e.course_title_ar || e.course_title_en : e.course_title_en || e.course_title_ar;
-              const childName = isAr ? e.child_name_ar || e.child_name_en : e.child_name_en || e.child_name_ar;
-              const teacher = isAr ? e.teacher_name_ar || e.teacher_name_en : e.teacher_name_en || e.teacher_name_ar;
+              const courseTitle = localName(e.course_title_ar, e.course_title_en, isAr);
+              const childName = localName(e.child_name_ar, e.child_name_en, isAr);
+              const teacher = localName(e.teacher_name_ar, e.teacher_name_en, isAr);
               const dayLabels = (e.schedule_days ?? []).map((d) => t(`admin.courses.days.${d}`)).join(' · ');
 
               return (

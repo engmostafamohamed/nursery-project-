@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
@@ -30,17 +30,20 @@ import { usePersonAbsences } from '@/features/staff-absence/usePersonAbsences';
 import { useAdminBasePath } from '@/hooks/useAdminBasePath';
 import { useBilingualNames } from '@/hooks/useBilingualNames';
 import { useClassTeams } from '@/hooks/useClassTeams';
+import { useSearchParam } from '@/hooks/useSearchParam';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useStaff } from '@/hooks/useStaff';
 import { useStaffAttendanceMonth } from '@/hooks/useStaffAttendanceMonth';
 import { useStaffPayrollRecords } from '@/hooks/useStaffPayrollRecords';
 import { useStaffSchedules } from '@/hooks/useStaffSchedules';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { adminLinks, STAFF_TABS, type StaffTab } from '@/lib/adminLinks';
+import { localName } from '@/lib/bilingualName';
 import { formatDay } from '@/lib/datetime';
 import { getNurseryCalendarDateString } from '@/lib/nurseryDay';
 
-const TABS = ['personal', 'classes', 'schedule', 'attendance', 'absences', 'documents', 'payroll'] as const;
-type Tab = (typeof TABS)[number];
+const TABS = STAFF_TABS;
+type Tab = StaffTab;
 const TAB_ICON: Record<Tab, string> = {
   personal: 'person',
   classes: 'school',
@@ -67,18 +70,8 @@ export function AdminStaffProfilePage() {
     () => staff.staff.find((s) => String(s.id) === staffId || String(s.user_id) === staffId),
     [staff.staff, staffId],
   );
-  const [params, setParams] = useSearchParams();
-  const tab = tabFrom(params.get('tab'));
-  const setTab = (next: Tab) =>
-    setParams(
-      (current) => {
-        const updated = new URLSearchParams(current);
-        if (next === 'personal') updated.delete('tab');
-        else updated.set('tab', next);
-        return updated;
-      },
-      { replace: true },
-    );
+  const [tabParam, setTab] = useSearchParam('tab', 'personal');
+  const tab = tabFrom(tabParam);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deactivateOpen, setDeactivateOpen] = useState(false);
@@ -113,7 +106,7 @@ export function AdminStaffProfilePage() {
   const name = nameLines.primary || t('staff.profile.fallbackName');
   const roleData = u.role_data as { name_ar?: string | null; name_en?: string | null } | null;
   const roleLabel =
-    (isArabic ? roleData?.name_ar || roleData?.name_en : roleData?.name_en || roleData?.name_ar) ||
+    (localName(roleData?.name_ar, roleData?.name_en, isArabic)) ||
     t(`staff.departments.${String(selected.department ?? 'teaching')}`);
   const position = selected.position && selected.position !== '—' && selected.position !== roleLabel ? selected.position : null;
   // Their place in each class shows in the header already, in the reader's language.
@@ -123,7 +116,8 @@ export function AdminStaffProfilePage() {
     return cls ? [{ cls, role: c.role }] : [];
   });
   const todayClock = (todayAttendance.data?.days ?? []).find((r) => r.work_date === (todayAttendance.data?.today || today)) ?? null;
-  const classHref = (classId: string) => `${base}/classes/${classId}?tab=team`;
+  const links = adminLinks(base);
+  const classHref = (classId: string) => links.classPage(classId, 'team');
 
   const nf = new Intl.NumberFormat(isArabic ? 'ar-EG' : 'en-GB', {
     minimumFractionDigits: 2,
@@ -191,7 +185,7 @@ export function AdminStaffProfilePage() {
       </Tabs>
 
       {tab === 'classes' ? (
-        <StaffClassesTable personName={name} teamClasses={teamClasses} staff={teams.data?.staff ?? []} classHref={classHref} teamsHref={`${base}/classes/teams`} />
+        <StaffClassesTable personName={name} teamClasses={teamClasses} staff={teams.data?.staff ?? []} classHref={classHref} teamsHref={links.teams()} />
       ) : null}
 
       {tab === 'personal' ? (

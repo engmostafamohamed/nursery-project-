@@ -23,6 +23,7 @@ import { useAuthSession } from '@/hooks/useAuthSession';
 import { useMyDailyReports, useSendDailyReports } from '@/hooks/useDailyReportWorkflow';
 import { usePagination } from '@/hooks/usePagination';
 import { useCan } from '@/hooks/usePermissions';
+import { localName } from '@/lib/bilingualName';
 import {
   canSend,
   dailyReportErrorKey,
@@ -82,7 +83,7 @@ export function TeacherDailyReportPage() {
   const pager = usePagination(rows, 20, `${day}|${JSON.stringify(filters)}`);
   const classes = useMemo(() => {
     const seen = new Map<string, string>();
-    for (const r of all) seen.set(r.class_id, (lang.startsWith('ar') ? r.class_name_ar || r.class_name_en : r.class_name_en || r.class_name_ar) || '—');
+    for (const r of all) seen.set(r.class_id, (localName(r.class_name_ar, r.class_name_en, lang.startsWith('ar'))) || '—');
     return [...seen].map(([id, label]) => ({ id, label }));
   }, [all, lang]);
 
@@ -94,7 +95,7 @@ export function TeacherDailyReportPage() {
   const allShownPicked = shownSendable.length > 0 && shownSendable.every((id) => picked.has(id));
   const someShownPicked = shownSendable.some((id) => picked.has(id));
 
-  const name = (r: MyDailyReport) => (lang.startsWith('ar') ? r.full_name_ar || r.full_name_en : r.full_name_en || r.full_name_ar) || '—';
+  const name = (r: MyDailyReport) => (localName(r.full_name_ar, r.full_name_en, lang.startsWith('ar'))) || '—';
   const time = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit', hour12: true }) : '—');
   const nameOf = (childId: string) => {
     const r = all.find((x) => x.child_id === childId);
@@ -328,7 +329,7 @@ export function TeacherDailyReportPage() {
                           <p className="font-semibold text-on-surface">{name(r)}</p>
                           {r.child_code ? <p className="text-xs tabular-nums text-on-surface-variant">{r.child_code}</p> : null}
                         </Td>
-                        <Td className="text-on-surface-variant">{(lang.startsWith('ar') ? r.class_name_ar || r.class_name_en : r.class_name_en || r.class_name_ar) || '—'}</Td>
+                        <Td className="text-on-surface-variant">{(localName(r.class_name_ar, r.class_name_en, lang.startsWith('ar'))) || '—'}</Td>
                         <Td>
                           <StatusPill tone={ATTENDANCE_TONE[r.attendance]}>{attendanceName(t, r.attendance)}</StatusPill>
                           {r.check_in ? (

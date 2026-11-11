@@ -41,6 +41,7 @@ import { usePackageSubscriptionsView } from '@/hooks/usePackageSubscriptionsView
 import { usePagination } from '@/hooks/usePagination';
 import { useTouchedFields } from '@/hooks/useTouchedFields';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { localName } from '@/lib/bilingualName';
 import { extraHoursAssignErrorKey } from '@/lib/extraHoursPackage';
 import { formatMoneyAmount } from '@/lib/money';
 import { extraHoursPackageFormIssues, hasIssues } from '@/lib/packageForms';
@@ -98,7 +99,7 @@ function ManageChildrenDialog({
         <DialogHeader>
           <DialogTitle>
             {t('packages.manageChildrenTitle', {
-              name: isAr ? pkg.name_ar || pkg.name_en : pkg.name_en || pkg.name_ar,
+              name: localName(pkg.name_ar, pkg.name_en, isAr),
             })}
           </DialogTitle>
           <DialogDescription>
@@ -112,7 +113,7 @@ function ManageChildrenDialog({
             <option value="">{t('packages.selectChild')}</option>
             {available.map((c) => (
               <option key={c.id} value={c.id}>
-                {isAr ? c.full_name_ar || c.full_name_en : c.full_name_en || c.full_name_ar}
+                {localName(c.full_name_ar, c.full_name_en, isAr)}
               </option>
             ))}
           </Select>
@@ -148,7 +149,7 @@ function ManageChildrenDialog({
           ) : (
             <ul className="divide-y divide-outline-variant">
               {assigned.map((a) => {
-                const childName = (isAr ? a.childNameAr || a.childNameEn : a.childNameEn || a.childNameAr) || '-';
+                const childName = (localName(a.childNameAr, a.childNameEn, isAr)) || '-';
                 const total = pkg.included_hours ?? 0;
                 const usedPct = total > 0 ? Math.min(100, Math.round((a.hours_used / total) * 100)) : 0;
                 return (
@@ -283,7 +284,7 @@ export function AdminPackagesPage() {
   const busy = create.isPending || update.isPending;
 
   const name = useMemo(
-    () => (p: PackageRow) => (isAr ? p.name_ar || p.name_en : p.name_en || p.name_ar),
+    () => (p: PackageRow) => (localName(p.name_ar, p.name_en, isAr)),
     [isAr],
   );
 
@@ -525,7 +526,7 @@ export function AdminPackagesPage() {
                       price={money(p.price)}
                       discountedPrice={deal && live ? money(applyDealToPrice(p.price, deal)) : null}
                       deal={deal ? { label: live ? dealLabel : t('deals.inactiveSuffix', { label: dealLabel }), live } : null}
-                      description={isAr ? p.description_ar || p.description_en : p.description_en || p.description_ar}
+                      description={localName(p.description_ar, p.description_en, isAr)}
                       emptyHint={t('packageCard.noDescription')}
                       subscriptions={<PackageSubscriptionStats view={subscriptions} packageId={p.id} />}
                       facts={[

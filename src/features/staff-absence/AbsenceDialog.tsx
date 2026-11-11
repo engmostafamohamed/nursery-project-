@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { localName } from '@/lib/bilingualName';
 import { formatDay } from '@/lib/datetime';
 import { cn } from '@/lib/utils';
 
@@ -103,7 +104,7 @@ export function AbsenceDialog({
                 <option value="">{t('staffAbsence.fields.choosePerson')}</option>
                 {staff.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {(isArabic ? s.nameAr || s.nameEn : s.nameEn || s.nameAr) || '—'} · {t(`staffAbsence.roles.${s.role}`, { defaultValue: s.role })}
+                    {(localName(s.nameAr, s.nameEn, isArabic)) || '—'} · {t(`staffAbsence.roles.${s.role}`, { defaultValue: s.role })}
                   </option>
                 ))}
               </Select>

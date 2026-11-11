@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Select } from '@/components/ui/select';
 import type { KitchenItem } from '@/features/food-and-beverage/kitchen';
+import { localName } from '@/lib/bilingualName';
 import { cn } from '@/lib/utils';
 
 import { ChildSearch } from './ChildSearch';
@@ -99,7 +100,7 @@ export function ChargeDialog({
     }
   };
 
-  const staffName = (s: StaffPerson) => (isArabic ? s.nameAr || s.nameEn : s.nameEn || s.nameAr) || '—';
+  const staffName = (s: StaffPerson) => (localName(s.nameAr, s.nameEn, isArabic)) || '—';
 
   return (
     <Dialog open onOpenChange={(open) => !open && !run.isPending && onClose()}>

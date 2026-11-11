@@ -7,13 +7,12 @@ import {
   useParentQuarterlyReports,
   type ParentQuarterlyReport,
 } from '@/hooks/useQuarterlyReports';
+import { localName } from '@/lib/bilingualName';
 
 function ReportCard({ data, isAr }: { data: ParentQuarterlyReport; isAr: boolean }) {
   const { t } = useTranslation();
   const { report, template, grades } = data;
-  const childName = isAr
-    ? report.childNameAr || report.childNameEn
-    : report.childNameEn || report.childNameAr;
+  const childName = localName(report.childNameAr, report.childNameEn, isAr);
 
   return (
     <article className="overflow-hidden rounded-2xl border border-outline-variant bg-surface">
@@ -38,13 +37,13 @@ function ReportCard({ data, isAr }: { data: ParentQuarterlyReport; isAr: boolean
         {template.sections.map((s) => (
           <section key={s.id} className="overflow-hidden rounded-xl border border-outline-variant">
             <div className="bg-success/15 px-4 py-2 text-sm font-semibold text-on-surface">
-              {isAr ? s.title_ar || s.title_en : s.title_en || s.title_ar}
+              {localName(s.title_ar, s.title_en, isAr)}
             </div>
             <div className="divide-y divide-outline-variant">
               {s.items.map((it) => (
                 <div key={it.id} className="flex items-center gap-3 px-4 py-2">
                   <span className="flex-1 text-sm text-on-surface">
-                    {isAr ? it.label_ar || it.label_en : it.label_en || it.label_ar}
+                    {localName(it.label_ar, it.label_en, isAr)}
                   </span>
                   <span className="w-8 rounded bg-primary/10 py-0.5 text-center text-sm font-bold text-primary">
                     {grades[it.id] ?? '—'}
@@ -69,7 +68,7 @@ function ReportCard({ data, isAr }: { data: ParentQuarterlyReport; isAr: boolean
               {template.gradeLevels.map((g) => (
                 <li key={g.id}>
                   <span className="font-bold text-primary">{g.code}</span> ·{' '}
-                  {isAr ? g.label_ar || g.label_en : g.label_en || g.label_ar}
+                  {localName(g.label_ar, g.label_en, isAr)}
                 </li>
               ))}
             </ul>

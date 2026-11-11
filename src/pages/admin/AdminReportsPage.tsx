@@ -15,6 +15,7 @@ import {
   useQuarterlyTemplate,
   type QuarterlyReportRow,
 } from '@/hooks/useQuarterlyReports';
+import { localName } from '@/lib/bilingualName';
 
 type View = 'home' | 'template' | 'editor';
 
@@ -103,7 +104,7 @@ export function AdminReportsPage() {
                   >
                     <div>
                       <p className="text-sm font-medium text-on-surface">
-                        {isAr ? r.childNameAr || r.childNameEn : r.childNameEn || r.childNameAr} ·{' '}
+                        {localName(r.childNameAr, r.childNameEn, isAr)} ·{' '}
                         {r.term_label}
                       </p>
                       <span
@@ -265,7 +266,7 @@ function TemplateBuilder({
               >
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="text-sm font-semibold text-on-surface">
-                    {isAr ? s.title_ar || s.title_en : s.title_en || s.title_ar}
+                    {localName(s.title_ar, s.title_en, isAr)}
                   </h3>
                   <Button
                     type="button"
@@ -280,7 +281,7 @@ function TemplateBuilder({
                   {s.items.map((it) => (
                     <li key={it.id} className="flex items-center gap-2 text-sm">
                       <span className="flex-1 text-on-surface-variant">
-                        {isAr ? it.label_ar || it.label_en : it.label_en || it.label_ar}
+                        {localName(it.label_ar, it.label_en, isAr)}
                       </span>
                       <Button
                         type="button"
@@ -516,7 +517,7 @@ function ReportEditor({
             <option value="">{t('reports.selectChild')}</option>
             {children.map((c) => (
               <option key={c.id} value={c.id}>
-                {isAr ? c.full_name_ar || c.full_name_en : c.full_name_en || c.full_name_ar}
+                {localName(c.full_name_ar, c.full_name_en, isAr)}
               </option>
             ))}
           </Select>
@@ -577,13 +578,13 @@ function ReportEditor({
           className="overflow-hidden rounded-2xl border border-outline-variant"
         >
           <div className="bg-success/15 px-4 py-2 text-sm font-semibold text-on-surface">
-            {isAr ? s.title_ar || s.title_en : s.title_en || s.title_ar}
+            {localName(s.title_ar, s.title_en, isAr)}
           </div>
           <div className="divide-y divide-outline-variant">
             {s.items.map((it) => (
               <div key={it.id} className="flex items-center gap-3 px-4 py-2">
                 <span className="flex-1 text-sm text-on-surface">
-                  {isAr ? it.label_ar || it.label_en : it.label_en || it.label_ar}
+                  {localName(it.label_ar, it.label_en, isAr)}
                 </span>
                 <Select
                   value={grades[it.id] ?? ''}

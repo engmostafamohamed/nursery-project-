@@ -15,6 +15,7 @@ import {
   type ApplicationPaymentPackage,
   type ApplicationPackageInvoice,
 } from '@/hooks/useApplicationPackagePayment';
+import { localName } from '@/lib/bilingualName';
 import { formatMoneyAmount } from '@/lib/money';
 import { EMPTY_PARENT_PACKAGE_TEXTS, textFor, type ParentPackageTexts } from '@/lib/parentPackageTexts';
 import { payableNow as payableNowFor } from '@/lib/paymentMethods';
@@ -55,11 +56,11 @@ const billingPeriodOptions: Array<{
 ];
 
 function packageName(pkg: ApplicationPaymentPackage, isAr: boolean): string {
-  return isAr ? pkg.nameAr || pkg.nameEn : pkg.nameEn || pkg.nameAr;
+  return localName(pkg.nameAr, pkg.nameEn, isAr);
 }
 
 function packageDescription(pkg: ApplicationPaymentPackage, isAr: boolean): string | null {
-  return isAr ? pkg.descriptionAr || pkg.descriptionEn : pkg.descriptionEn || pkg.descriptionAr;
+  return localName(pkg.descriptionAr, pkg.descriptionEn, isAr);
 }
 
 function statusVariant(status: ApplicationPackageInvoice['status'] | 'not_selected') {
@@ -560,7 +561,7 @@ export function ApplicationPackagePaymentCard({
                     {extraHoursLines(
                       invoice.extraHours
                         ? {
-                            name: (isAr ? invoice.extraHours.nameAr || invoice.extraHours.nameEn : invoice.extraHours.nameEn || invoice.extraHours.nameAr),
+                            name: (localName(invoice.extraHours.nameAr, invoice.extraHours.nameEn, isAr)),
                             subtotal: invoice.extraHours.subtotal,
                             discountAmount: invoice.extraHours.discountAmount,
                           }

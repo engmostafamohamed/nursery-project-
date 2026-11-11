@@ -5,13 +5,11 @@ import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { billingPeriodName, type SignupOrder } from '@/features/parent-signup/signupOrder';
 import type { ApplicationPackageBillingPeriod } from '@/hooks/useApplicationPackagePayment';
 import { formatMoneyAmount } from '@/lib/money';
+import { localName } from '@/lib/bilingualName';
 import { cn } from '@/lib/utils';
 
 import { AnimatedAmount } from './AnimatedAmount';
 
-function localName(item: { nameAr: string; nameEn: string }, isArabic: boolean) {
-  return isArabic ? item.nameAr || item.nameEn : item.nameEn || item.nameAr;
-}
 
 type Props = {
   order: SignupOrder;
@@ -58,7 +56,7 @@ export function SignupOrderSummary({ order, billingPeriod, hourlyRate, live = fa
         <dl className="space-y-3 text-sm">
           <div className="flex items-start justify-between gap-3">
             <dt className="min-w-0 text-on-surface-variant">
-              <span className="block font-medium text-on-surface">{localName(tuitionPackage, isArabic)}</span>
+              <span className="block font-medium text-on-surface">{localName(tuitionPackage.nameAr, tuitionPackage.nameEn, isArabic)}</span>
               <span className="mt-0.5 block text-xs">{billingPeriodName(t, billingPeriod)}</span>
             </dt>
             <dd className="shrink-0 text-end font-medium tabular-nums text-on-surface">{money(tuition.subtotal)}</dd>
@@ -74,7 +72,7 @@ export function SignupOrderSummary({ order, billingPeriod, hourlyRate, live = fa
             <>
               <div className="flex items-start justify-between gap-3">
                 <dt className="min-w-0 text-on-surface-variant">
-                  <span className="block font-medium text-on-surface">{localName(extraHoursPackage, isArabic)}</span>
+                  <span className="block font-medium text-on-surface">{localName(extraHoursPackage.nameAr, extraHoursPackage.nameEn, isArabic)}</span>
                   <span className="mt-0.5 block text-xs">{t('applications.extraHoursPackage.title')}</span>
                 </dt>
                 <dd className="shrink-0 text-end font-medium tabular-nums text-on-surface">{money(extraHours.price)}</dd>

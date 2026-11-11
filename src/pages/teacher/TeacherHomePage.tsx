@@ -37,6 +37,7 @@ import { useMyDailyReports } from '@/hooks/useDailyReportWorkflow';
 import { useMyClassChildren, useMyClasses } from '@/hooks/useFamilyMessages';
 import { usePagination } from '@/hooks/usePagination';
 import { useCan } from '@/hooks/usePermissions';
+import { localName } from '@/lib/bilingualName';
 import { reportDay, stageOf } from '@/lib/dailyReport';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { getNurseryCalendarDateString } from '@/lib/nurseryDay';
@@ -143,7 +144,7 @@ export function TeacherHomePage() {
     if (parent) navigate(`/teacher/chat?with=${parent.id}`);
   };
 
-  const teacherName = (lang.startsWith('ar') ? profile?.name_ar || profile?.name_en : profile?.name_en || profile?.name_ar) || t('teacher.home.fallbackName');
+  const teacherName = (localName(profile?.name_ar, profile?.name_en, lang.startsWith('ar'))) || t('teacher.home.fallbackName');
 
   if (classes.isPending || childrenQuery.isPending) {
     return (
@@ -428,7 +429,7 @@ export function TeacherHomePage() {
                         </div>
                       </Td>
                       <Td>
-                        <p>{lang.startsWith('ar') ? child.class_name_ar || child.class_name_en : child.class_name_en || child.class_name_ar}</p>
+                        <p>{localName(child.class_name_ar, child.class_name_en, lang.startsWith('ar'))}</p>
                         <p className="text-xs text-on-surface-variant">{placeName(t, child.my_role)}</p>
                       </Td>
                       <Td>

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { attendanceErrorKey } from '@/lib/attendanceApi';
+import { localName } from '@/lib/bilingualName';
 import { supabase } from '@/lib/supabase';
 
 type EventRow = {
@@ -65,7 +66,7 @@ export function AttendanceEventsTimeline({ attendanceId, childId, date }: { atte
     <ol className="space-y-2 border-s border-outline-variant ps-4">
       {query.data.map((event) => {
         const actor = event.actor
-          ? (i18n.language === 'ar' ? event.actor.name_ar || event.actor.name_en : event.actor.name_en || event.actor.name_ar)
+          ? (localName(event.actor.name_ar, event.actor.name_en, i18n.language === 'ar'))
           : null;
         const detail = describe(event);
         return (

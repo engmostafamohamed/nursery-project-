@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { localName } from '@/lib/bilingualName';
 
 import type { MyAbsences } from './staffAbsence';
 
@@ -19,12 +20,12 @@ export function CoverBanner({ covering }: { covering: MyAbsences['covering'] }) 
         <h2 className="font-semibold text-on-surface">{t('staffAbsence.banner.title', { count: covering.length })}</h2>
         <ul className="mt-1 space-y-0.5 text-sm text-on-surface">
           {covering.map((c) => {
-            const lead = isArabic ? c.leadAr || c.leadEn : c.leadEn || c.leadAr;
+            const lead = localName(c.leadAr, c.leadEn, isArabic);
             return (
               <li key={c.classId}>
                 {lead
-                  ? t('staffAbsence.banner.classFor', { class: isArabic ? c.nameAr || c.nameEn : c.nameEn || c.nameAr, lead })
-                  : t('staffAbsence.banner.class', { class: isArabic ? c.nameAr || c.nameEn : c.nameEn || c.nameAr })}
+                  ? t('staffAbsence.banner.classFor', { class: localName(c.nameAr, c.nameEn, isArabic), lead })
+                  : t('staffAbsence.banner.class', { class: localName(c.nameAr, c.nameEn, isArabic) })}
               </li>
             );
           })}

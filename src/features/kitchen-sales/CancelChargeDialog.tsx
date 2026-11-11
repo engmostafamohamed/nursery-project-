@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { invalidFieldClass } from '@/components/ui/FieldError';
 import { FormField, FormProblem } from '@/components/ui/FormField';
 import { Textarea } from '@/components/ui/textarea';
+import { localName } from '@/lib/bilingualName';
 import { cn } from '@/lib/utils';
 
 import { useMoney } from './kitchenLook';
@@ -50,7 +51,7 @@ export function CancelChargeDialog({ charge, onClose }: { charge: KitchenCharge;
                 item: charge.itemName,
                 quantity: charge.quantity,
                 unit: charge.unit,
-                name: (isArabic ? charge.nameAr || charge.nameEn : charge.nameEn || charge.nameAr) || '—',
+                name: (localName(charge.nameAr, charge.nameEn, isArabic)) || '—',
                 amount: money(charge.net),
               })}
             </DialogDescription>

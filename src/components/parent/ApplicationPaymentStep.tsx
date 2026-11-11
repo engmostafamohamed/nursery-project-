@@ -12,6 +12,7 @@ import { useAuthSession } from '@/hooks/useAuthSession';
 import type { ApplicationOnlineAttempt, ApplicationPackageInvoice } from '@/hooks/useApplicationPackagePayment';
 import { useNurseryContact } from '@/hooks/useNurseryContact';
 import { invalidatePaymentQueries } from '@/hooks/useSubmitInvoicePayment';
+import { localName } from '@/lib/bilingualName';
 import { formatMoneyAmount } from '@/lib/money';
 import { cancelUnfinishedOnlinePayment, paymentError, walletDestinationsFrom, type ParentPaymentMethodCode } from '@/lib/paymentApi';
 import { availableParentPaymentMethods, payableNow } from '@/lib/paymentMethods';
@@ -408,7 +409,7 @@ export function ApplicationPaymentStep({
             <SummaryRow
               label={
                 invoice.extraHours
-                  ? `${t('applications.extraHoursPackage.title')} · ${isAr ? invoice.extraHours.nameAr || invoice.extraHours.nameEn : invoice.extraHours.nameEn || invoice.extraHours.nameAr}`
+                  ? `${t('applications.extraHoursPackage.title')} · ${localName(invoice.extraHours.nameAr, invoice.extraHours.nameEn, isAr)}`
                   : t('applications.extraHoursPackage.title')
               }
               value={invoice.extraHours ? money(invoice.extraHours.subtotal) : t('applications.extraHoursPackage.payPerHourBilledLater')}

@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { FormField, FormProblem } from '@/components/ui/FormField';
 import { Input } from '@/components/ui/input';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { localName } from '@/lib/bilingualName';
 import { cn } from '@/lib/utils';
 
 import { EXTRA_ICON, newTakingKey, useMoney } from './kitchenLook';
@@ -30,7 +31,7 @@ export function GiveExtraDialog({ child, items, onClose }: { child: ClassChildEx
   const [problem, setProblem] = useState<string | null>(null);
   const key = useRef(newTakingKey());
   const item = items.find((i) => i.id === itemId) ?? null;
-  const childName = (isArabic ? child.nameAr || child.nameEn : child.nameEn || child.nameAr) || '—';
+  const childName = (localName(child.nameAr, child.nameEn, isArabic)) || '—';
   const run = useKitchenSale(() => giveChildExtra({ childId: child.childId, itemId, quantity, note, key: key.current }));
 
   const submit = async (e: FormEvent) => {

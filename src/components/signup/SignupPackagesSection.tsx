@@ -11,18 +11,15 @@ import {
   offeredBillingPeriods,
   periodsOfferedByAny,
   type ApplicationPackageBillingPeriod,
-  type ApplicationPaymentPackage,
 } from '@/hooks/useApplicationPackagePayment';
 import { formatMoneyAmount } from '@/lib/money';
 import { EMPTY_PARENT_PACKAGE_TEXTS, textFor } from '@/lib/parentPackageTexts';
+import { localName } from '@/lib/bilingualName';
 import { cn } from '@/lib/utils';
 
 import { SignupOrderSummary, SignupTotalBar } from './SignupOrderSummary';
 import { SignupOptionsStatus } from './SignupOptionsStatus';
 
-function localName(pkg: ApplicationPaymentPackage, isArabic: boolean) {
-  return isArabic ? pkg.nameAr || pkg.nameEn : pkg.nameEn || pkg.nameAr;
-}
 
 function SectionTitle({ index, title, hint }: { index: number; title: string; hint: string }) {
   return (
@@ -161,7 +158,7 @@ export function SignupPackagesSection({
                 const offered = offeredBillingPeriods(pkg).includes(activePeriod);
                 const quote = computePackageBillingQuote(pkg, activePeriod);
                 const active = packageId === pkg.id && offered;
-                const description = isArabic ? pkg.descriptionAr || pkg.descriptionEn : pkg.descriptionEn || pkg.descriptionAr;
+                const description = localName(pkg.descriptionAr, pkg.descriptionEn, isArabic);
                 return (
                   <button
                     key={pkg.id}
@@ -178,7 +175,7 @@ export function SignupPackagesSection({
                     )}
                   >
                     <span className="flex w-full items-start justify-between gap-3">
-                      <span className="min-w-0 font-semibold text-on-surface">{localName(pkg, isArabic)}</span>
+                      <span className="min-w-0 font-semibold text-on-surface">{localName(pkg.nameAr, pkg.nameEn, isArabic)}</span>
                       <span
                         className={cn(
                           'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border',

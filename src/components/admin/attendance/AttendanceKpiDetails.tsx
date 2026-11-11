@@ -21,6 +21,7 @@ import { FilterBar, SearchInput } from '@/components/ui/FilterBar';
 import { FilterChips } from '@/components/ui/FilterChips';
 import { FilterField } from '@/components/ui/FilterField';
 import { Input } from '@/components/ui/input';
+import { LoadError } from '@/components/ui/LoadError';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Select } from '@/components/ui/select';
 import {
@@ -240,15 +241,7 @@ function useListFilters<T extends ListRow>(all: T[]) {
 
 function LoadFailed({ onRetry }: { onRetry: () => void }) {
   const { t } = useTranslation();
-  return (
-    <div className="m-4 flex flex-wrap items-center gap-3 rounded-xl border border-error/30 bg-error/5 p-3 text-sm text-error sm:m-5" role="alert">
-      <MaterialSymbol name="error" className="text-xl" />
-      <span className="flex-1">{t('attendance.loadErrorTitle')}</span>
-      <Button type="button" size="sm" variant="outline" onClick={onRetry}>
-        {t('common.retry')}
-      </Button>
-    </div>
-  );
+  return <LoadError inset message={t('attendance.loadErrorTitle')} onRetry={onRetry} />;
 }
 
 /** The child's name, with their code and class under it. */

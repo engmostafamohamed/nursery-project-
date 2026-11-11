@@ -11,6 +11,7 @@ import { useAuthSession } from '@/hooks/useAuthSession';
 import { useTeacherEventsList, type TeacherEventsListRow } from '@/hooks/useTeacherEventsList';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useNurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
+import { localName } from '@/lib/bilingualName';
 
 type CategoryFilter = 'all' | 'trip' | 'activity' | 'service' | 'doctor_visit';
 
@@ -40,7 +41,7 @@ function EventDetailDialog({
 }) {
   if (!event) return null;
   const isAr = locale.startsWith('ar');
-  const title = isAr ? event.title_ar || event.title_en : event.title_en || event.title_ar;
+  const title = localName(event.title_ar, event.title_en, isAr);
   const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'full', timeStyle: 'short', hour12: true });
 
   return (
@@ -128,7 +129,7 @@ export function TeacherEventsPage() {
     nurseryId: profile?.nursery_id,
   });
 
-  const allEvents = data ?? [];
+  const allEvents = useMemo(() => data ?? [], [data]);
 
   const calendarEvents = useMemo(() => {
     if (categoryFilter === 'all') return allEvents;
@@ -313,7 +314,7 @@ function EventListRow({
   onSelect: (e: TeacherEventsListRow) => void;
 }) {
   const isAr = locale.startsWith('ar');
-  const title = isAr ? event.title_ar || event.title_en : event.title_en || event.title_ar;
+  const title = localName(event.title_ar, event.title_en, isAr);
   const [nowMs] = useState(() => Date.now());
   const isPast = new Date(event.starts_at).getTime() < nowMs;
   const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short', hour12: true });

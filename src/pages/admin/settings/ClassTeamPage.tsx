@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useLocation, useSearchParams } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 
-import { Button } from '@/components/ui/button';
 import { TableLoading } from '@/components/ui/DataTable';
 import { FilterBar, SearchInput } from '@/components/ui/FilterBar';
 import { FilterChips } from '@/components/ui/FilterChips';
 import { FilterField } from '@/components/ui/FilterField';
+import { LoadError } from '@/components/ui/LoadError';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/select';
@@ -20,6 +20,7 @@ import { ClassesSectionTabs } from '@/features/classes/ClassesSectionTabs';
 import { useActiveNurseryId } from '@/hooks/useActiveNurseryId';
 import { useAdminBasePath } from '@/hooks/useAdminBasePath';
 import { useAuthSession } from '@/hooks/useAuthSession';
+import { useSearchParam } from '@/hooks/useSearchParam';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import {
   CLASS_FILTERS,
@@ -31,6 +32,7 @@ import {
   type ClassFilter,
   type TeacherFilter,
 } from '@/lib/classTeam';
+import { adminLinks } from '@/lib/adminLinks';
 
 type View = 'classes' | 'teachers' | 'changes';
 
@@ -60,20 +62,10 @@ export function ClassTeamPage() {
   const { query, data, staff, classes, canUpdate, nameOf } = editing;
   const base = useAdminBasePath();
   const inAdmin = !useLocation().pathname.startsWith('/teacher');
-  const classHref = inAdmin ? (id: string) => `${base}/classes/${id}` : undefined;
-  const [params, setParams] = useSearchParams();
-  const editId = params.get('edit');
+  const classHref = inAdmin ? (id: string) => adminLinks(base).classPage(id) : undefined;
+  // The team being changed is kept in the address (?edit=<class>): a link opens it straight away.
+  const [editId, openTeam] = useSearchParam('edit');
   const editingClass = classes.find((c) => c.id === editId) ?? null;
-  const openTeam = (id: string | null) =>
-    setParams(
-      (current) => {
-        const next = new URLSearchParams(current);
-        if (id) next.set('edit', id);
-        else next.delete('edit');
-        return next;
-      },
-      { replace: true },
-    );
 
   const [view, setView] = useState<View>('classes');
   const [classSearch, setClassSearch] = useState('');
@@ -160,13 +152,7 @@ export function ClassTeamPage() {
       {query.isPending ? (
         <TableLoading rows={6} />
       ) : query.isError ? (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-error/30 bg-error/5 p-4 text-sm text-error" role="alert">
-          <MaterialSymbol name="error" className="text-xl" />
-          <span className="flex-1">{t(`classTeam.errors.${classTeamErrorKey(query.error)}`)}</span>
-          <Button type="button" size="sm" variant="outline" onClick={() => void query.refetch()}>
-            {t('common.retry')}
-          </Button>
-        </div>
+        <LoadError message={t(`classTeam.errors.${classTeamErrorKey(query.error)}`)} onRetry={() => void query.refetch()} />
       ) : view === 'classes' ? (
         <TeamsTable
           classes={shownClasses}

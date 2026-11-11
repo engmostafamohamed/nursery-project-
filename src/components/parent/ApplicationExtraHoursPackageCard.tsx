@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { DiscountCountdown } from '@/components/parent/DiscountCountdown';
 import { computeExtraHoursDisplayPrice, type ApplicationExtraHoursPackage } from '@/hooks/useApplicationExtraHoursPackage';
+import { localName } from '@/lib/bilingualName';
 import { formatMoneyAmount } from '@/lib/money';
 import { cn } from '@/lib/utils';
 
@@ -31,11 +32,11 @@ type Props = {
 };
 
 function packageName(pkg: ApplicationExtraHoursPackage, isAr: boolean): string {
-  return isAr ? pkg.nameAr || pkg.nameEn : pkg.nameEn || pkg.nameAr;
+  return localName(pkg.nameAr, pkg.nameEn, isAr);
 }
 
 function packageDescription(pkg: ApplicationExtraHoursPackage, isAr: boolean): string | null {
-  return (isAr ? pkg.descriptionAr || pkg.descriptionEn : pkg.descriptionEn || pkg.descriptionAr)?.trim() || null;
+  return (localName(pkg.descriptionAr, pkg.descriptionEn, isAr))?.trim() || null;
 }
 
 function validityLabel(pkg: ApplicationExtraHoursPackage, t: (key: string, opts?: Record<string, unknown>) => string) {

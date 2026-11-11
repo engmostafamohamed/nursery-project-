@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { confirm } from '@/components/ui/confirm';
 import { DataTable, IconAction, StatusPill, TableCard, TableEmpty, TablePagination, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
 import { usePagination } from '@/hooks/usePagination';
+import { localName } from '@/lib/bilingualName';
 import { formatDay } from '@/lib/datetime';
 import { cn, getUserInitials } from '@/lib/utils';
 
@@ -93,8 +94,8 @@ export function AbsenceTable({
           <TBody>
             {pager.pageItems.map((a) => {
               const state = absenceState(a, today);
-              const name = (isArabic ? a.nameAr || a.nameEn : a.nameEn || a.nameAr) || '—';
-              const by = isArabic ? a.byAr || a.byEn : a.byEn || a.byAr;
+              const name = (localName(a.nameAr, a.nameEn, isArabic)) || '—';
+              const by = localName(a.byAr, a.byEn, isArabic);
               const open = state === 'today' || state === 'upcoming';
               return (
                 <Tr

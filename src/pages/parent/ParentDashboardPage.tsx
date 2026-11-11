@@ -50,6 +50,7 @@ import { parentNurseryLabel, useParentNursery } from '@/hooks/useParentNursery';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { STEP_DATE_TIME } from '@/lib/admissionTimeline';
 import { applicationStatusUi } from '@/lib/applicationStatus';
+import { localName } from '@/lib/bilingualName';
 import { CHART_CURSOR, CHART_GRID_STROKE, CHART_TOOLTIP_STYLE, chartColor, chartDirection } from '@/lib/chartTheme';
 import { formatDate, formatDateTime } from '@/lib/datetime';
 import { formatMoneyAmount } from '@/lib/money';
@@ -149,7 +150,7 @@ function ParentDashboardAnalyticsPanel({
     const rate = total > 0 ? Math.round((present / total) * 100) : 0;
     return {
       id: child.id,
-      name: locale === 'ar' ? child.nameAr || child.nameEn : child.nameEn || child.nameAr,
+      name: localName(child.nameAr, child.nameEn, locale === 'ar'),
       present,
       absent,
       rate,
@@ -805,7 +806,7 @@ export function ParentDashboardPage() {
               <ParentChildBillingCard
                 key={child.id}
                 childId={child.id}
-                childName={i18n.language === 'ar' ? child.nameAr || child.nameEn : child.nameEn || child.nameAr}
+                childName={localName(child.nameAr, child.nameEn, i18n.language === 'ar')}
                 parentId={user?.id}
                 billing={childBillingQuery.data?.[child.id]}
               />

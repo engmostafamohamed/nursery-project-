@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { TableLoading } from '@/components/ui/DataTable';
+import { LoadError } from '@/components/ui/LoadError';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { StatTile } from '@/components/ui/StatTile';
 
@@ -24,7 +25,7 @@ export function StaffAbsencesPanel({ userId, name }: { userId: string; name: str
 
   if (query.isPending) return <TableLoading rows={4} />;
   if (query.isError) {
-    return <p role="alert" className="rounded-xl border border-error/40 bg-error/5 p-4 text-sm text-error">{t(absenceErrorKey(query.error))}</p>;
+    return <LoadError message={t(absenceErrorKey(query.error))} onRetry={() => void query.refetch()} />;
   }
 
   return (

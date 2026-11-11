@@ -41,6 +41,7 @@ import { applyDealToPrice, isDealCurrentlyActive, useAdminDeals, useInlineDealCl
 import { useNurserySettings } from '@/hooks/useNurserySettings';
 import { usePagination } from '@/hooks/usePagination';
 import { useTouchedFields } from '@/hooks/useTouchedFields';
+import { localName } from '@/lib/bilingualName';
 import { formatTime } from '@/lib/datetime';
 import { formatMoneyAmount } from '@/lib/money';
 import { hasIssues, tuitionPackageFormIssues } from '@/lib/packageForms';
@@ -391,7 +392,7 @@ export function TuitionPackagesEditor({
                   discountedPrice={deal && live ? money(applyDealToPrice(pkg.price, deal)) : null}
                   priceSuffix={t('applications.paymentPackage.perMonth')}
                   deal={deal ? { label: live ? dealLabel : t('deals.inactiveSuffix', { label: dealLabel }), live } : null}
-                  description={isAr ? pkg.description_ar || pkg.description_en : pkg.description_en || pkg.description_ar}
+                  description={localName(pkg.description_ar, pkg.description_en, isAr)}
                   features={pkg.features_json.map((feature) => (isAr ? feature.ar || feature.en : feature.en || feature.ar)).filter(Boolean)}
                   emptyHint={t('packageCard.noDetails')}
                   subscriptions={subscriptions ? <PackageSubscriptionStats view={subscriptions} packageId={pkg.id} /> : undefined}

@@ -8,6 +8,7 @@ import { confirm } from '@/components/ui/confirm';
 import { StatusPill } from '@/components/ui/DataTable';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Skeleton } from '@/components/ui/skeleton';
+import { localName } from '@/lib/bilingualName';
 import { formatDay } from '@/lib/datetime';
 import { cn } from '@/lib/utils';
 
@@ -67,7 +68,7 @@ function ChildExtras({ child, showName, onOrder }: { child: FamilyChildExtras; s
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language.startsWith('ar');
   const money = useMoney();
-  const name = (isArabic ? child.nameAr || child.nameEn : child.nameEn || child.nameAr) || '—';
+  const name = (localName(child.nameAr, child.nameEn, isArabic)) || '—';
   const waiting = child.requests.filter((r) => r.status === 'waiting_parent' && r.forDate >= child.today);
   const others = sortRequests(child.requests.filter((r) => !(r.status === 'waiting_parent' && r.forDate >= child.today)));
 
@@ -131,7 +132,7 @@ function WaitingRequest({ request, childName }: { request: ExtraRequest; childNa
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language.startsWith('ar');
   const decide = useKitchenSale((approve: boolean) => decideChildExtra(request.id, approve));
-  const by = (isArabic ? request.byAr || request.byEn : request.byEn || request.byAr) || t('kitchenSales.parent.theTeacher');
+  const by = (localName(request.byAr, request.byEn, isArabic)) || t('kitchenSales.parent.theTeacher');
   const answer = async (approve: boolean) => {
     try {
       await decide.mutateAsync(approve);

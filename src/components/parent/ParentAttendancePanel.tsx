@@ -8,6 +8,7 @@ import { DataTable, StatusPill, TableCard, TableEmpty, TablePagination, TBody, T
 import { FilterBar, SearchInput } from '@/components/ui/FilterBar';
 import { FilterField } from '@/components/ui/FilterField';
 import { Input } from '@/components/ui/input';
+import { LoadError } from '@/components/ui/LoadError';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -20,6 +21,7 @@ import { averageMinutesToTimeLabel } from '@/lib/attendanceAnalytics';
 import { staffName, type AttendanceDay } from '@/lib/attendanceApi';
 import { minutesAtNursery, WEEKDAYS, weekdayName } from '@/lib/attendanceKpiDetails';
 import { KPI_PERIODS, rangeLabel } from '@/lib/attendancePeriods';
+import { localName } from '@/lib/bilingualName';
 import { isAttended } from '@/lib/childAttendanceHistory';
 import { formatMoneyAmount } from '@/lib/money';
 import { getNurseryCalendarDateString } from '@/lib/nurseryDay';
@@ -123,13 +125,7 @@ export function ParentAttendancePanel({ children }: { children: Child[] }) {
           {[1, 2, 3, 4, 5, 6].map((k) => <Skeleton key={k} className="h-24 rounded-xl" />)}
         </div>
       ) : (isToday ? live.isError : daysQuery.isError) ? (
-        <div className="m-4 flex flex-wrap items-center gap-3 rounded-xl border border-error/30 bg-error/5 p-3 text-sm text-error sm:m-5" role="alert">
-          <MaterialSymbol name="error" className="text-xl" />
-          <span className="flex-1">{t('attendanceHistory.loadError')}</span>
-          <Button type="button" size="sm" variant="outline" onClick={() => void (isToday ? live.refetch() : daysQuery.refetch())}>
-            {t('common.retry')}
-          </Button>
-        </div>
+        <LoadError inset message={t('attendanceHistory.loadError')} onRetry={() => void (isToday ? live.refetch() : daysQuery.refetch())} />
       ) : isToday ? (
         <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 sm:p-5 xl:grid-cols-6">
           <StatTile {...pick('attended')} icon="how_to_reg" label={tileTitle('attended')} value={now.attended} helper={t('parent.attendanceCard.ofChildren', { count: now.children })} />
@@ -244,7 +240,7 @@ function FamilyDaysTable({
 
   const name = (childId: string) => {
     const child = byId.get(childId);
-    return (lang.startsWith('ar') ? child?.nameAr || child?.nameEn : child?.nameEn || child?.nameAr) || '—';
+    return (localName(child?.nameAr, child?.nameEn, lang.startsWith('ar'))) || '—';
   };
   const time = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit', hour12: true }) : '—');
   const date = (ymd: string) => new Date(`${ymd}T12:00:00`).toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });

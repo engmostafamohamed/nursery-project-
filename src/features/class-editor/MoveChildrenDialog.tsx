@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { invalidFieldClass } from '@/components/ui/FieldError';
 import { FormField, FormProblem } from '@/components/ui/FormField';
 import { Select } from '@/components/ui/select';
+import { localName } from '@/lib/bilingualName';
 import { cn } from '@/lib/utils';
 
 import { classEditorErrorKey, placesAfter, type OtherClass } from './classEditor';
@@ -33,7 +34,7 @@ export function MoveChildrenDialog({ childIds, names, classes, onClose }: {
   const move = useMoveChildren();
   const cls = classes.find((c) => c.id === target) ?? null;
   const places = cls ? placesAfter(cls.children, childIds.length, cls.capacity) : null;
-  const className = (c: OtherClass) => (isArabic ? c.nameAr || c.nameEn : c.nameEn || c.nameAr);
+  const className = (c: OtherClass) => (localName(c.nameAr, c.nameEn, isArabic));
 
   const submit = async () => {
     setTried(true);
