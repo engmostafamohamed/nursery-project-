@@ -2,7 +2,7 @@
 --
 -- A sent report for every child who came on each of the last 10 school days, written and sent by
 -- the class's lead teacher near closing time: meals in quarters of the plate, the nap (younger
--- children sleep longer), mood, toilet visits, two to four activities, and now and then a note to the
+-- children sleep longer), mood, toilet visits (each urine or stool), two to four activities, and now and then a note to the
 -- family. Each keeps the child's class and code and the sender, as send_daily_reports does. The babies'
 -- reports also have their bottles. Today's reports are left for the teachers (the morning job
 -- prepares them); a past day the job prepared but nobody touched gets its sent report.
@@ -43,7 +43,12 @@ select
        else jsonb_build_object('napped', false, 'duration_minutes', null, 'quality', null, 'notes', null) end,
   jsonb_build_object('mood', seed.pick_weighted(array['happy', 'content', 'fussy', 'cranky'], array[52, 30, 12, 6], 'mood:' || p.rkey),
                      'notes', case when seed.chance(10, 'mood-note:' || p.rkey) then seed.pick(array['كان مبسوط جدًا في وقت اللعب', 'افتقد ماما شوية الصبح', 'لعب كتير مع أصحابه'], 'mood-text:' || p.rkey) end),
-  jsonb_build_object('change_count', seed.int_between(case when k.class_slot <= 5 then 3 else 1 end, case when k.class_slot <= 5 then 6 else 4 end, 'toilet:' || p.rkey), 'notes', null),
+  -- Each visit with its type: about one in three a stool.
+  (select jsonb_build_object(
+            'visits', jsonb_agg(jsonb_build_object('type', case when seed.chance(30, 'toilet-type:' || p.rkey || ':' || g) then 'stool' else 'urine' end) order by g),
+            'change_count', count(*),
+            'notes', null)
+     from generate_series(1, seed.int_between(case when k.class_slot <= 5 then 3 else 1 end, case when k.class_slot <= 5 then 6 else 4 end, 'toilet:' || p.rkey)) g),
   jsonb_build_object(
     'tags', (select jsonb_agg(tag) from (
                select tag from unnest(array['art', 'outdoor', 'reading', 'music', 'circle_time', 'story_time', 'sensory_play', 'free_play']) tag

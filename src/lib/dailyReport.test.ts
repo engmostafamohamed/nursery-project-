@@ -4,6 +4,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  addToiletVisit,
   canSend,
   completion,
   dailyReportErrorKey,
@@ -18,13 +19,19 @@ import {
   nextChild,
   NO_DAY_FILTERS,
   parseMealAmount,
+  parseToiletType,
+  removeToiletVisit,
   reportDay,
+  setToiletVisitType,
   splitMinutes,
   stageOf,
+  TOILET_MAX,
+  toiletSummary,
   toPayload,
   type DailyReportAnswers,
   type MealAmount,
   type MyDailyReport,
+  type ToiletVisit,
 } from './dailyReport';
 import { rateTone, searchRows } from './dailyReportStats';
 
@@ -35,7 +42,7 @@ function filled(): DailyReportAnswers {
   a.meals.snacks.amount = 'none';
   a.nap = { napped: true, durationMinutes: 60, quality: 'good', notes: '' };
   a.mood.mood = 'happy';
-  a.toilet.changeCount = 0;
+  a.toilet.visits = [];
   a.activities.tags = ['art'];
   return a;
 }
@@ -46,8 +53,18 @@ describe('the required questions', () => {
     expect(completion(emptyAnswers())).toMatchObject({ answered: 0, required: 7, percent: 0 });
   });
 
-  it('a filled report misses none; no toilet visit (0) is an answer', () => {
+  it('a filled report misses none; "none today" is a toilet answer', () => {
     expect(completion(filled())).toEqual({ answered: 7, required: 7, percent: 100, missing: [] });
+  });
+
+  it('each toilet visit needs its type, urine or stool', () => {
+    const a = filled();
+    a.toilet.visits = [{ type: 'urine' }, { type: null }];
+    expect(missingQuestions(a)).toEqual(['toilet']);
+    a.toilet.visits = [{ type: 'urine' }, { type: 'stool' }];
+    expect(missingQuestions(a)).toEqual([]);
+    a.toilet.visits = null;
+    expect(missingQuestions(a)).toEqual(['toilet']);
   });
 
   it('a nap needs how long and how well; "no nap" answers it', () => {
@@ -84,8 +101,15 @@ describe('saving and reading back', () => {
     const payload = toPayload(emptyAnswers());
     expect(payload.meals).toEqual({ breakfast: { amount: null, notes: null }, lunch: { amount: null, notes: null }, snacks: { amount: null, notes: null } });
     expect(payload.nap).toEqual({ napped: null, duration_minutes: null, quality: null, notes: null });
-    expect(payload.toilet).toEqual({ change_count: null, notes: null });
+    expect(payload.toilet).toEqual({ visits: null, change_count: null, notes: null });
     expect(payload.special_notes).toBeNull();
+  });
+
+  it('sends each toilet visit with its type, and how many there were', () => {
+    const a = filled();
+    a.toilet = { visits: [{ type: 'urine' }, { type: 'stool' }, { type: 'urine' }], notes: ' soft ' };
+    expect(toPayload(a).toilet).toEqual({ visits: [{ type: 'urine' }, { type: 'stool' }, { type: 'urine' }], change_count: 3, notes: 'soft' });
+    expect(toPayload(filled()).toilet).toEqual({ visits: [], change_count: 0, notes: null });
   });
 
   it('drops how long and how well when there was no nap', () => {
@@ -97,6 +121,7 @@ describe('saving and reading back', () => {
   it('reads back exactly what was saved', () => {
     const a = filled();
     a.meals.lunch.notes = 'Rice';
+    a.toilet.visits = [{ type: 'stool' }, { type: 'urine' }];
     a.feeding.bottleSessions = [{ time: '10:00', amountMl: 120 }];
     a.specialNotes = 'Bring a jacket';
     const p = toPayload(a);
@@ -125,8 +150,34 @@ describe('saving and reading back', () => {
     expect(a.meals.snacks.amount).toBeNull();
     expect(a.nap.quality).toBe('good');
     expect(a.mood.mood).toBe('fussy');
-    expect(a.toilet.changeCount).toBe(3);
+    // Counted before the type was asked: three visits whose type is not known.
+    expect(a.toilet.visits).toEqual([{ type: null }, { type: null }, { type: null }]);
+    expect(fromRow({ toilet_json: { change_count: 0 } }).toilet.visits).toEqual([]);
+    expect(fromRow({ toilet_json: { visits: [{ type: 'stool' }, { type: 'both' }, 'x'] } }).toilet.visits).toEqual([{ type: 'stool' }, { type: null }, { type: null }]);
     expect(a.activities).toMatchObject({ tags: ['music'], freeText: 'Dance' });
+  });
+});
+
+describe('toilet visits', () => {
+  it('are added one at a time with the type still to choose, at most 30', () => {
+    expect(addToiletVisit(null)).toEqual([{ type: null }]);
+    expect(addToiletVisit([{ type: 'urine' }])).toEqual([{ type: 'urine' }, { type: null }]);
+    const full: ToiletVisit[] = Array.from({ length: TOILET_MAX }, () => ({ type: 'urine' }));
+    expect(addToiletVisit(full)).toHaveLength(TOILET_MAX);
+  });
+
+  it('get their type, and removing the last one leaves the question unanswered', () => {
+    expect(setToiletVisitType([{ type: null }, { type: null }], 1, 'stool')).toEqual([{ type: null }, { type: 'stool' }]);
+    expect(removeToiletVisit([{ type: 'urine' }, { type: 'stool' }], 0)).toEqual([{ type: 'stool' }]);
+    expect(removeToiletVisit([{ type: 'urine' }], 0)).toBeNull();
+    expect(parseToiletType('urine')).toBe('urine');
+    expect(parseToiletType('both')).toBeNull();
+  });
+
+  it('are counted by type for the family', () => {
+    expect(toiletSummary([{ type: 'urine' }, { type: 'stool' }, { type: 'urine' }])).toEqual({ total: 3, urine: 2, stool: 1, untyped: 0 });
+    expect(toiletSummary([{ type: null }, { type: null }])).toEqual({ total: 2, urine: 0, stool: 0, untyped: 2 });
+    expect(toiletSummary([])).toEqual({ total: 0, urine: 0, stool: 0, untyped: 0 });
   });
 });
 

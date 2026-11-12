@@ -1,6 +1,7 @@
 // The daily report a teacher fills in for each child during the day and sends at its end: the seven
 // required questions (the same rules as daily_report_missing in the database), how far a report is,
 // what the server is sent and read back, and the teacher's day (get_my_daily_reports).
+import { errorCodeIn } from '@/lib/errorCode';
 
 /** How much of the plate the child ate, in quarters. */
 export type MealAmount = 'none' | 'quarter' | 'half' | 'three_quarters' | 'all';
@@ -25,12 +26,21 @@ export const QUESTIONS: Question[] = ['breakfast', 'lunch', 'snacks', 'nap', 'mo
 
 export type BottleSession = { time: string; amountMl: number };
 
+/** What a toilet visit (or diaper change) was. */
+export type ToiletType = 'urine' | 'stool';
+export const TOILET_TYPES: ToiletType[] = ['urine', 'stool'];
+/** The most visits one report records. */
+export const TOILET_MAX = 30;
+/** One visit of the day; its type is chosen for each (null until it is). */
+export type ToiletVisit = { type: ToiletType | null };
+
 /** A report's answers. A question nobody answered yet is null (or empty), never a default. */
 export type DailyReportAnswers = {
   meals: Record<Meal, { amount: MealAmount | null; notes: string }>;
   nap: { napped: boolean | null; durationMinutes: number | null; quality: NapQuality | null; notes: string };
   mood: { mood: Mood | null; notes: string };
-  toilet: { changeCount: number | null; notes: string };
+  /** null: not answered yet; []: no visits today. */
+  toilet: { visits: ToiletVisit[] | null; notes: string };
   activities: { tags: string[]; freeText: string; notes: string };
   /** Optional, for the youngest children. */
   feeding: { bottleSessions: BottleSession[]; nursingCount: number; nursingDurationMinutes: number; solidFoods: boolean; notes: string };
@@ -42,7 +52,7 @@ export function emptyAnswers(): DailyReportAnswers {
     meals: { breakfast: { amount: null, notes: '' }, lunch: { amount: null, notes: '' }, snacks: { amount: null, notes: '' } },
     nap: { napped: null, durationMinutes: null, quality: null, notes: '' },
     mood: { mood: null, notes: '' },
-    toilet: { changeCount: null, notes: '' },
+    toilet: { visits: null, notes: '' },
     activities: { tags: [], freeText: '', notes: '' },
     feeding: { bottleSessions: [], nursingCount: 0, nursingDurationMinutes: 0, solidFoods: false, notes: '' },
     specialNotes: '',
@@ -51,7 +61,10 @@ export function emptyAnswers(): DailyReportAnswers {
 
 const isNumber = (value: number | null): value is number => value != null && Number.isFinite(value);
 
-/** The questions still to answer: a nap is "no nap", or how long and how well; 0 toilet visits is an answer. */
+/**
+ * The questions still to answer: a nap is "no nap", or how long and how well; the toilet is "none
+ * today", or each visit with its type (urine or stool).
+ */
 export function missingQuestions(a: DailyReportAnswers): Question[] {
   const answered: Record<Question, boolean> = {
     breakfast: a.meals.breakfast.amount != null,
@@ -59,7 +72,7 @@ export function missingQuestions(a: DailyReportAnswers): Question[] {
     snacks: a.meals.snacks.amount != null,
     nap: a.nap.napped === false || (a.nap.napped === true && isNumber(a.nap.durationMinutes) && a.nap.durationMinutes > 0 && a.nap.quality != null),
     mood: a.mood.mood != null,
-    toilet: isNumber(a.toilet.changeCount) && a.toilet.changeCount >= 0,
+    toilet: a.toilet.visits !== null && a.toilet.visits.every((v) => v.type !== null),
     activities: a.activities.tags.length > 0 || a.activities.freeText.trim() !== '',
   };
   return QUESTIONS.filter((q) => !answered[q]);
@@ -90,7 +103,8 @@ export function toPayload(a: DailyReportAnswers): Record<string, unknown> {
       notes: text(a.nap.notes),
     },
     mood: { mood: a.mood.mood, notes: text(a.mood.notes) },
-    toilet: { change_count: a.toilet.changeCount, notes: text(a.toilet.notes) },
+    // change_count stays the number of visits, for anything that reads only that.
+    toilet: { visits: a.toilet.visits?.map((v) => ({ type: v.type })) ?? null, change_count: a.toilet.visits?.length ?? null, notes: text(a.toilet.notes) },
     activities: { tags: a.activities.tags, free_text: text(a.activities.freeText), notes: text(a.activities.notes) },
     feeding: {
       bottle_sessions: sessions.map((s) => ({ time: s.time, amount_ml: s.amountMl })),
@@ -139,6 +153,40 @@ export function parseMood(v: unknown): Mood | null {
   return null;
 }
 
+export const parseToiletType = (v: unknown): ToiletType | null => (v === 'urine' || v === 'stool' ? v : null);
+
+/**
+ * A saved report's toilet visits: each with its type, or (reports from before the type was asked)
+ * as many visits as were counted, without a type. Null when the question was not answered.
+ */
+function toiletVisits(toilet: Json): ToiletVisit[] | null {
+  if (Array.isArray(toilet.visits)) return toilet.visits.slice(0, TOILET_MAX).map((v) => ({ type: parseToiletType(obj(v).type) }));
+  const counted = num(toilet.change_count) ?? num(toilet.diaper_changes);
+  if (counted == null) return null;
+  return Array.from({ length: Math.min(Math.max(0, Math.round(counted)), TOILET_MAX) }, () => ({ type: null }));
+}
+
+/** How many visits of each type; `untyped` are visits of reports from before the type was asked. */
+export function toiletSummary(visits: ToiletVisit[]): { total: number; urine: number; stool: number; untyped: number } {
+  const of = (type: ToiletType | null) => visits.filter((v) => v.type === type).length;
+  return { total: visits.length, urine: of('urine'), stool: of('stool'), untyped: of(null) };
+}
+
+/** One more visit, its type still to choose (at most TOILET_MAX). */
+export function addToiletVisit(visits: ToiletVisit[] | null): ToiletVisit[] {
+  const list = visits ?? [];
+  return list.length >= TOILET_MAX ? list : [...list, { type: null }];
+}
+
+export const setToiletVisitType = (visits: ToiletVisit[], index: number, type: ToiletType | null): ToiletVisit[] =>
+  visits.map((v, i) => (i === index ? { type } : v));
+
+/** Without one visit; removing the last leaves the question unanswered ("None today" is chosen, never assumed). */
+export function removeToiletVisit(visits: ToiletVisit[], index: number): ToiletVisit[] | null {
+  const rest = visits.filter((_, i) => i !== index);
+  return rest.length ? rest : null;
+}
+
 const NAP_SEGMENTS_MAX = 8;
 
 /**
@@ -178,7 +226,7 @@ export function fromRow(row: Json | null | undefined): DailyReportAnswers {
     notes: str(nap.notes),
   };
   a.mood = { mood: parseMood(moodJson.mood), notes: str(moodJson.notes) };
-  a.toilet = { changeCount: num(toilet.change_count) ?? num(toilet.diaper_changes), notes: str(toilet.notes) };
+  a.toilet = { visits: toiletVisits(toilet), notes: str(toilet.notes) };
   const tags = Array.isArray(activities.tags) ? activities.tags : Array.isArray(activities.participated_in) ? activities.participated_in : [];
   a.activities = { tags: [...new Set(tags.map(String))], freeText: str(activities.free_text ?? activities.other_activity), notes: str(activities.notes) };
   const sessions = Array.isArray(feeding.bottle_sessions) ? feeding.bottle_sessions : [];
@@ -310,20 +358,20 @@ export function nextChild(rows: MyDailyReport[], childId: string, step: 1 | -1):
 }
 
 /** The server's refusal as a locale key under dailyReport.errors (unknown ones fall back to `failed`). */
+const DAILY_REPORT_ERROR_CODES = [
+  'daily_report_child_not_in_your_class',
+  'daily_report_already_sent',
+  'daily_report_date_invalid',
+  'daily_report_incomplete',
+  'daily_report_none_selected',
+  'daily_report_forbidden',
+  'daily_report_child_not_found',
+  'daily_report_search_invalid',
+] as const;
+
 export function dailyReportErrorKey(error: unknown): string {
-  const message = String((error as { message?: unknown })?.message ?? error ?? '');
-  const known = [
-    'daily_report_child_not_in_your_class',
-    'daily_report_already_sent',
-    'daily_report_date_invalid',
-    'daily_report_incomplete',
-    'daily_report_none_selected',
-    'daily_report_forbidden',
-    'daily_report_child_not_found',
-    'daily_report_search_invalid',
-  ];
-  const hit = known.find((code) => message.includes(code));
-  return hit ? hit.replace('daily_report_', '') : 'failed';
+  const code = errorCodeIn(error, DAILY_REPORT_ERROR_CODES);
+  return code ? code.replace('daily_report_', '') : 'failed';
 }
 
 /** What send_daily_reports answered. */

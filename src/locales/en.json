@@ -8147,6 +8147,7 @@
       "toiletNone": "No visits",
       "toiletCount_one": "Once",
       "toiletCount_other": "{{count}} times",
+      "toiletOfType": "{{type}}: {{count}}",
       "bottleMl": "{{ml}} ml",
       "nursing_one": "Nursed once",
       "nursing_other": "Nursed {{count}} times",
@@ -8284,6 +8285,10 @@
       "empty": "No children in your classes yet.",
       "emptyHint": "Once the admin or the head of teachers puts you in a class, its children appear here."
     },
+    "toiletTypes": {
+      "urine": "Urine",
+      "stool": "Stool"
+    },
     "editor": {
       "mealSwipe": "Swipe to choose",
       "preview": "How the family sees it",
@@ -8312,10 +8317,14 @@
       "napMinutesNeeded": "Enter how many minutes they slept.",
       "napQualityNeeded": "Choose how well they slept.",
       "moodHint": "Their mood for most of the day.",
-      "toiletHint": "How many times — none is an answer too.",
-      "toiletCount": "Times (toilet / diaper)",
-      "less": "One less",
-      "more": "One more",
+      "toiletHint": "Add each visit (or diaper change) and choose urine or stool — “None today” is an answer too.",
+      "toiletVisits": "Toilet visits",
+      "toiletVisit": "Visit {{n}}",
+      "toiletTypeLabel": "Visit {{n}}: urine or stool",
+      "toiletChooseType": "Choose…",
+      "toiletRemoveVisit": "Remove visit {{n}}",
+      "toiletTypeNeeded": "Choose urine or stool for each visit.",
+      "toiletAddVisit": "Add a visit",
       "toiletNone": "None today",
       "activitiesHint": "Pick what they did, or write it.",
       "activitiesText": "Or write what they did",

@@ -1,6 +1,6 @@
 import type { TFunction } from 'i18next';
 
-import { splitMinutes, type DayAttendance, type MealAmount, type Mood, type NapQuality, type Question, type ReportStage } from './dailyReport';
+import { splitMinutes, type DayAttendance, type MealAmount, type Mood, type NapQuality, type Question, type ReportStage, type ToiletType } from './dailyReport';
 import type { PillTone } from './tones';
 
 // The words (and emoji and icons) for a daily report's answers and questions, where a report stands
@@ -62,6 +62,13 @@ export const NAP_EMOJI = { slept: '😴', awake: '☀️', night: '🌙' } as co
 
 /** The toilet question's ball. */
 export const TOILET_EMOJI = '🚼';
+
+export function toiletTypeName(t: TFunction, type: ToiletType): string {
+  return type === 'urine' ? t('dailyReport.toiletTypes.urine') : t('dailyReport.toiletTypes.stool');
+}
+
+/** A visit's drop and chip colour by its type (a visit from before types were asked stays the plain drop). */
+export const TOILET_TONE: Record<ToiletType, PillTone> = { urine: 'primary', stool: 'warning' };
 
 /** "2 h 30 min", "45 min", "1 h" — in the reader's language. */
 export function napDurationText(t: TFunction, minutes: number): string {

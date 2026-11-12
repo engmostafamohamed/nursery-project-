@@ -6,7 +6,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { MEAL_AMOUNTS, QUESTIONS } from '@/lib/dailyReport';
+import { MEAL_AMOUNTS, QUESTIONS, TOILET_TYPES } from '@/lib/dailyReport';
 
 import ar from './ar.json';
 import en from './en.json';
@@ -16,6 +16,7 @@ const files = [
   '../pages/teacher/TeacherDailyReportEditorPage.tsx',
   '../pages/admin/DailyReportRatesPage.tsx',
   '../components/daily-reports/DailyReportQuestions.tsx',
+  '../components/daily-reports/ToiletVisits.tsx',
   '../components/daily-reports/ReportDueBanner.tsx',
   '../components/daily-reports/ReportRateCard.tsx',
   '../components/daily-reports/CompletionBar.tsx',
@@ -50,6 +51,7 @@ describe('daily reports', () => {
         expect(typeof lookup(dict, `dailyReport.errors.${code}`), code).toBe('string');
       }
       for (const q of QUESTIONS) expect(typeof lookup(dict, `dailyReport.questions.${q}`), q).toBe('string');
+      for (const type of TOILET_TYPES) expect(typeof lookup(dict, `dailyReport.toiletTypes.${type}`), type).toBe('string');
       for (const tag of ['art', 'outdoor', 'reading', 'music', 'circle_time', 'story_time', 'sensory_play', 'free_play', 'other']) {
         expect(typeof lookup(dict, `reports.daily.options.activities.${tag}`), tag).toBe('string');
       }

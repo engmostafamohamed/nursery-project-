@@ -187,6 +187,9 @@ export interface DailyReportsRow {
     notes?: string | null;
   } | null;
   toilet_json: {
+    /** Each visit with its type (urine or stool); reports from before types only have change_count. */
+    visits?: Array<{ type: 'urine' | 'stool' | null }> | null;
+    change_count?: number | null;
     diaper_changes?: number | null;
     potty_training?: boolean;
     successes?: number | null;

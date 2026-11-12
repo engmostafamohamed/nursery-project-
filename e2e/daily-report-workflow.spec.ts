@@ -83,7 +83,11 @@ test('the daily report: filled through the day, sent when complete, read by the 
     await teacher.getByRole('radiogroup', { name: 'Nap quality' }).getByRole('radio', { name: 'Good' }).click();
     await expect(teacher.getByText('Enter how many minutes they slept.')).toBeHidden();
     await teacher.getByRole('radiogroup', { name: 'Mood' }).getByRole('radio', { name: /Happy/ }).click();
-    await teacher.getByRole('button', { name: 'None today' }).click();
+    // Toilet: each visit counts once its type (urine or stool) is chosen.
+    await teacher.getByRole('button', { name: 'Add a visit' }).click();
+    await expect(teacher.getByText('Choose urine or stool for each visit.')).toBeVisible();
+    await teacher.getByLabel('Visit 1: urine or stool').selectOption('urine');
+    await expect(teacher.getByText('Choose urine or stool for each visit.')).toBeHidden();
     await teacher.getByRole('group', { name: 'Activities' }).getByRole('button', { name: 'Art' }).click();
     await expect(teacher.getByText('7 of 7')).toBeVisible();
     await teacher.getByRole('button', { name: 'Save changes' }).click();

@@ -9,7 +9,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(28);
+select plan(31);
 
 insert into public.nurseries (id, name_ar, name_en, working_days) values
   ('00000000-0000-4000-6000-00000000000a', 'حضانة أ', 'Nursery A', '["sun","mon","tue","wed","thu","fri","sat"]'),
@@ -95,6 +95,28 @@ select is(array_to_string(public.daily_report_missing(pg_temp.complete()->'meals
   'nap', 'a nap needs how long and how well; activities can be written instead of picked');
 select is(cardinality(public.daily_report_missing(pg_temp.complete()->'meals', '{"napped":false}', pg_temp.complete()->'mood', pg_temp.complete()->'toilet', pg_temp.complete()->'activities')),
   0, '"no nap" answers the nap question');
+
+-- The toilet: each visit with its type, urine or stool.
+create function pg_temp.toilet_missing(p_toilet jsonb) returns text language sql as $$
+  select coalesce(array_to_string(public.daily_report_missing(pg_temp.complete()->'meals', pg_temp.complete()->'nap', pg_temp.complete()->'mood', p_toilet, pg_temp.complete()->'activities'), ','), '')
+$$;
+select is(
+  pg_temp.toilet_missing('{"visits":[{"type":"urine"},{"type":"stool"}],"change_count":2}') || '|' ||
+  pg_temp.toilet_missing('{"visits":[],"change_count":0}') || '|' ||
+  pg_temp.toilet_missing('{"visits":[{"type":"urine"},{"type":null}],"change_count":2}') || '|' ||
+  pg_temp.toilet_missing('{"visits":[{"type":"both"}],"change_count":1}') || '|' ||
+  pg_temp.toilet_missing('{"visits":null,"change_count":null}'),
+  '||toilet|toilet|toilet',
+  'every visit with urine or stool, or none today, answers the toilet; a visit without a type (or another type) does not'
+);
+select is(pg_temp.toilet_missing('{"change_count":3}'), '',
+  'a report from before the type was asked (only how many times) still counts as answered, so sent reports and statistics stay');
+select throws_ok(
+  $$ insert into public.daily_reports (child_id, report_date, nursery_id, status, published_at, meals_json, nap_json, mood_json, toilet_json, activities_json)
+     values ('00000000-0000-4000-6000-0000000000c1', '2026-08-30', '00000000-0000-4000-6000-00000000000a', 'published', now(),
+             pg_temp.complete()->'meals', pg_temp.complete()->'nap', pg_temp.complete()->'mood', '{"visits":[{"type":null}],"change_count":1}', pg_temp.complete()->'activities') $$,
+  '22023', 'daily_report_incomplete', 'a report with a visit whose type is not chosen cannot be sent'
+);
 
 -- ---------------------------------------------------------------------------------------------
 -- Through the day

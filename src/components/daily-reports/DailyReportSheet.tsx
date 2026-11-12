@@ -7,7 +7,7 @@ import { Drop3D, Orb3D, Tile3D } from '@/components/daily-reports/Shapes3D';
 import { FamilyMessageSender } from '@/components/family-messages/FamilyMessageView';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { StatusPill } from '@/components/ui/DataTable';
-import { MEALS } from '@/lib/dailyReport';
+import { MEALS, TOILET_TYPES, toiletSummary } from '@/lib/dailyReport';
 import { childNameOf, classNameOf, type DailyReportCard } from '@/lib/dailyReportCard';
 import { formatActivityTag } from '@/lib/dailyReportDisplay';
 import {
@@ -21,6 +21,8 @@ import {
   napQualityName,
   questionName,
   TOILET_EMOJI,
+  TOILET_TONE,
+  toiletTypeName,
 } from '@/lib/dailyReportLabels';
 import { cn, getUserInitials } from '@/lib/utils';
 
@@ -53,7 +55,7 @@ function Note({ text }: { text: string }) {
 /**
  * A daily report as the family receives it: the child (photo, name, code, class of that day) and the
  * day, who sent it, then the day in 3D — plates that fill with food to what the child ate, a glass
- * bar per hour slept, the mood as a ball, a drop per toilet visit, a raised tile per activity, and
+ * bar per hour slept, the mood as a ball, a drop per toilet visit (urine or stool), a raised tile per activity, and
  * the teacher's note. The same sheet is the parent's report, the teacher's sent report, and the
  * editor's preview (`preview`).
  */
@@ -70,7 +72,8 @@ export function DailyReportSheet({ card, preview = false, className }: { card: D
   const sentTime = card.publishedAt ? new Date(card.publishedAt).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit', hour12: true }) : null;
   const napMinutes = a.nap.napped && a.nap.durationMinutes ? a.nap.durationMinutes : null;
   const napText = napMinutes ? napDurationText(t, napMinutes) : '';
-  const toilet = a.toilet.changeCount;
+  const toiletVisits = a.toilet.visits;
+  const toilet = toiletVisits ? toiletSummary(toiletVisits) : null;
   const tags = a.activities.tags;
   const bottles = a.feeding.bottleSessions.filter((s) => s.amountMl > 0 || s.time);
   const hasFeeding = bottles.length > 0 || a.feeding.nursingCount > 0 || a.feeding.solidFoods;
@@ -189,21 +192,30 @@ export function DailyReportSheet({ card, preview = false, className }: { card: D
           <Note text={a.mood.notes} />
         </Section>
 
-        {/* Toilet / diaper: a drop per visit */}
+        {/* Toilet / diaper: how many times, of each type, and a drop per visit in its type's colour */}
         <Section icon="baby_changing_station" title={questionName(t, 'toilet')} step={4}>
-          {toilet == null ? (
+          {toilet == null || toiletVisits == null ? (
             <p className="text-sm text-on-surface-variant">{t('dailyReport.sheet.noAnswer')}</p>
           ) : (
             <div className="flex flex-wrap items-center gap-4">
               <Orb3D tone="primary" size={64} delayMs={450}>{TOILET_EMOJI}</Orb3D>
               <div className="space-y-2">
                 <p className="text-xl font-extrabold text-on-surface">
-                  {toilet === 0 ? t('dailyReport.sheet.toiletNone') : t('dailyReport.sheet.toiletCount', { count: toilet })}
+                  {toilet.total === 0 ? t('dailyReport.sheet.toiletNone') : t('dailyReport.sheet.toiletCount', { count: toilet.total })}
                 </p>
-                {toilet > 0 ? (
+                {toilet.urine || toilet.stool ? (
+                  <p className="flex flex-wrap gap-2">
+                    {TOILET_TYPES.filter((type) => toilet[type] > 0).map((type) => (
+                      <StatusPill key={type} tone={TOILET_TONE[type]} icon="water_drop">
+                        {t('dailyReport.sheet.toiletOfType', { type: toiletTypeName(t, type), count: toilet[type] })}
+                      </StatusPill>
+                    ))}
+                  </p>
+                ) : null}
+                {toilet.total > 0 ? (
                   <span aria-hidden="true" className="flex flex-wrap items-end gap-1.5">
-                    {Array.from({ length: Math.min(toilet, 8) }, (_, i) => (
-                      <Drop3D key={i} size={32} delayMs={600 + i * 140} />
+                    {toiletVisits.slice(0, 8).map((visit, i) => (
+                      <Drop3D key={i} size={32} delayMs={600 + i * 140} tone={visit.type ? TOILET_TONE[visit.type] : 'primary'} />
                     ))}
                   </span>
                 ) : null}

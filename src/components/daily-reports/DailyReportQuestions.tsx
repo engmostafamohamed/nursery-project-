@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { MealAmountSlider } from '@/components/daily-reports/MealAmountSlider';
 import { MealPlate } from '@/components/daily-reports/MealPlate';
 import { NapHours } from '@/components/daily-reports/NapHours';
-import { Drop3D, Orb3D, Tile3D } from '@/components/daily-reports/Shapes3D';
+import { Orb3D, Tile3D } from '@/components/daily-reports/Shapes3D';
+import { ToiletVisits } from '@/components/daily-reports/ToiletVisits';
 import { Button } from '@/components/ui/button';
 import { FieldError, invalidFieldClass } from '@/components/ui/FieldError';
 import { Input } from '@/components/ui/input';
@@ -36,7 +37,6 @@ import type { PillTone } from '@/lib/tones';
 import { cn } from '@/lib/utils';
 
 const NAP_MAX_MINUTES = 300;
-const TOILET_MAX = 30;
 
 /** A whole number from an input, kept between min and max; empty is "not answered". */
 function wholeNumber(raw: string, min: number, max: number): number | null {
@@ -304,56 +304,7 @@ export function DailyReportQuestions({
       </QuestionCard>
 
       <QuestionCard id="q-toilet" icon="baby_changing_station" title={questionName(t, 'toilet')} hint={t('dailyReport.editor.toiletHint')} status={<Required answered={!isMissing('toilet')} />}>
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="space-y-1">
-            <Label htmlFor="toilet-count">{t('dailyReport.editor.toiletCount')}</Label>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                aria-label={t('dailyReport.editor.less')}
-                onClick={() => onChange({ ...value, toilet: { ...value.toilet, changeCount: Math.max(0, (value.toilet.changeCount ?? 0) - 1) } })}
-              >
-                <MaterialSymbol name="remove" />
-              </Button>
-              <Input
-                id="toilet-count"
-                type="number"
-                inputMode="numeric"
-                min={0}
-                max={TOILET_MAX}
-                className="w-20 text-center"
-                value={value.toilet.changeCount ?? ''}
-                onChange={(e) => onChange({ ...value, toilet: { ...value.toilet, changeCount: wholeNumber(e.target.value, 0, TOILET_MAX) } })}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                aria-label={t('dailyReport.editor.more')}
-                onClick={() => onChange({ ...value, toilet: { ...value.toilet, changeCount: Math.min(TOILET_MAX, (value.toilet.changeCount ?? 0) + 1) } })}
-              >
-                <MaterialSymbol name="add" />
-              </Button>
-            </div>
-          </div>
-          <Button
-            type="button"
-            variant={value.toilet.changeCount === 0 ? 'default' : 'outline'}
-            onClick={() => onChange({ ...value, toilet: { ...value.toilet, changeCount: 0 } })}
-          >
-            {t('dailyReport.editor.toiletNone')}
-          </Button>
-        </div>
-        {value.toilet.changeCount ? (
-          // A drop per visit, as the family will see it; a new visit drops in.
-          <span aria-hidden="true" className="flex flex-wrap items-end gap-1.5 rounded-lg bg-surface-container-lowest px-3 py-2">
-            {Array.from({ length: Math.min(value.toilet.changeCount, 12) }, (_, i) => (
-              <Drop3D key={i} size={30} />
-            ))}
-          </span>
-        ) : null}
+        <ToiletVisits value={value.toilet} readOnly={readOnly} onChange={(toilet) => onChange({ ...value, toilet })} />
         <NoteInput id="toilet-note" value={value.toilet.notes} onChange={(notes) => onChange({ ...value, toilet: { ...value.toilet, notes } })} />
       </QuestionCard>
 

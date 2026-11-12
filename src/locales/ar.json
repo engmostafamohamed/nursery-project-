@@ -8550,6 +8550,7 @@
       "toiletCount_few": "{{count}} مرات",
       "toiletCount_many": "{{count}} مرة",
       "toiletCount_other": "{{count}} مرة",
+      "toiletOfType": "{{type}}: {{count}}",
       "bottleMl": "{{ml}} مل",
       "nursing_zero": "لم يرضع",
       "nursing_one": "رضع مرة واحدة",
@@ -8695,6 +8696,10 @@
       "empty": "لا يوجد أطفال في فصولك بعد.",
       "emptyHint": "عندما يضيفك المدير أو رئيس المعلمين إلى فصل، يظهر أطفاله هنا."
     },
+    "toiletTypes": {
+      "urine": "بول",
+      "stool": "براز"
+    },
     "editor": {
       "mealSwipe": "اسحب للاختيار",
       "preview": "كما تراه الأسرة",
@@ -8723,10 +8728,14 @@
       "napMinutesNeeded": "اكتب كم دقيقة نام.",
       "napQualityNeeded": "اختر كيف كان نومه.",
       "moodHint": "مزاج الطفل معظم اليوم.",
-      "toiletHint": "عدد المرات — «لا شيء» إجابة أيضًا.",
-      "toiletCount": "عدد المرات (حمام / حفاض)",
-      "less": "مرة أقل",
-      "more": "مرة أكثر",
+      "toiletHint": "أضف كل مرة (أو تغيير حفاض) واختر بول أو براز — «لا شيء اليوم» إجابة أيضًا.",
+      "toiletVisits": "مرات الحمام",
+      "toiletVisit": "المرة {{n}}",
+      "toiletTypeLabel": "المرة {{n}}: بول أو براز",
+      "toiletChooseType": "اختر…",
+      "toiletRemoveVisit": "حذف المرة {{n}}",
+      "toiletTypeNeeded": "اختر بول أو براز لكل مرة.",
+      "toiletAddVisit": "إضافة مرة",
       "toiletNone": "لا شيء اليوم",
       "activitiesHint": "اختر ما فعله الطفل، أو اكتبه.",
       "activitiesText": "أو اكتب ما فعله",

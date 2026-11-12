@@ -61,16 +61,17 @@ export function Orb3D({
 }
 
 /** A water drop, lit from the top left: one per toilet visit. */
-export function Drop3D({ size = 36, delayMs = 0, className }: { size?: number; delayMs?: number; className?: string }) {
+export function Drop3D({ size = 36, delayMs = 0, tone = 'primary', className }: { size?: number; delayMs?: number; tone?: PillTone; className?: string }) {
   const id = useId().replace(/:/g, '');
   const motion = popIn(delayMs);
+  const c = `var(${TONE_VAR[tone]})`;
   return (
     <svg viewBox="0 0 24 30" width={size} height={size * 1.25} aria-hidden="true" className={cn('shrink-0 overflow-visible', motion.className, className)} style={motion.style}>
       <defs>
         <radialGradient id={`${id}-drop`} cx="35%" cy="55%" r="70%">
           <stop offset="0%" style={{ stopColor: 'rgb(255 255 255)', stopOpacity: 0.95 }} />
-          <stop offset="35%" style={{ stopColor: 'rgb(var(--primary))', stopOpacity: 0.55 }} />
-          <stop offset="100%" style={{ stopColor: 'rgb(var(--primary))' }} />
+          <stop offset="35%" style={{ stopColor: `rgb(${c})`, stopOpacity: 0.55 }} />
+          <stop offset="100%" style={{ stopColor: `rgb(${c})` }} />
         </radialGradient>
       </defs>
       <ellipse cx="12" cy="28.5" rx="7" ry="1.5" fill="rgb(0 0 0 / 0.18)" />
