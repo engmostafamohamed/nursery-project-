@@ -5,15 +5,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { classProfileKeys } from '@/features/classes/useClassProfile';
-import { supabase } from '@/lib/supabase';
+import { callRpc } from '@/lib/rpc';
 
 import { capacityOf, toClassEditor, type ClassDraft, type ClassEditor } from './classEditor';
 
-const rpc = async (name: string, args: Record<string, unknown>): Promise<unknown> => {
-  const { data, error } = await supabase.rpc(name as never, args as never);
-  if (error) throw error;
-  return data;
-};
 
 export const classEditorKeys = {
   all: ['class-editor'] as const,
@@ -24,7 +19,7 @@ export const classEditorKeys = {
 export function useClassEditor(nurseryId: string | null | undefined, classId: string | null | undefined) {
   return useQuery({
     queryKey: classEditorKeys.one(nurseryId, classId),
-    queryFn: async (): Promise<ClassEditor> => toClassEditor(await rpc('get_class_editor', { p_nursery_id: nurseryId ?? null, p_class_id: classId ?? null })),
+    queryFn: async (): Promise<ClassEditor> => toClassEditor(await callRpc('get_class_editor', { p_nursery_id: nurseryId ?? null, p_class_id: classId ?? null })),
     enabled: Boolean(classId || nurseryId),
   });
 }
@@ -45,7 +40,7 @@ export function useSaveClass() {
   return useMutation({
     mutationFn: async (input: { nurseryId: string | null; id: string | null; draft: ClassDraft }): Promise<string> => {
       const d = input.draft;
-      return String(await rpc('save_class', {
+      return String(await callRpc('save_class', {
         p_nursery_id: input.nurseryId,
         p_id: input.id,
         p_name_ar: d.nameAr.trim() || null,
@@ -64,7 +59,7 @@ export function useMoveChildren() {
   const refresh = useRefreshClasses();
   return useMutation({
     mutationFn: async (input: { childIds: string[]; classId: string | null; overCapacityOk?: boolean }) =>
-      (await rpc('move_children_to_class', { p_child_ids: input.childIds, p_class_id: input.classId, p_over_capacity_ok: input.overCapacityOk ?? false })) as { moved: number },
+      (await callRpc('move_children_to_class', { p_child_ids: input.childIds, p_class_id: input.classId, p_over_capacity_ok: input.overCapacityOk ?? false })) as { moved: number },
     onSuccess: refresh,
   });
 }
@@ -73,7 +68,7 @@ export function useDeleteClassSafely() {
   const refresh = useRefreshClasses();
   return useMutation({
     mutationFn: async (input: { classId: string; moveTo: string | null }) =>
-      (await rpc('delete_class', { p_class_id: input.classId, p_move_to: input.moveTo })) as { moved: number },
+      (await callRpc('delete_class', { p_class_id: input.classId, p_move_to: input.moveTo })) as { moved: number },
     onSuccess: refresh,
   });
 }

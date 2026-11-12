@@ -144,6 +144,12 @@ export const AdminPackagesPage = lazy(() =>
 export const AdminDealsPage = lazy(() =>
   import('@/pages/admin/AdminDealsPage').then((m) => ({ default: m.AdminDealsPage })),
 );
+export const AdminPartnershipsPage = lazy(() =>
+  import('@/pages/admin/AdminPartnershipsPage').then((m) => ({ default: m.AdminPartnershipsPage })),
+);
+export const AdminPartnerPage = lazy(() =>
+  import('@/pages/admin/AdminPartnerPage').then((m) => ({ default: m.AdminPartnerPage })),
+);
 export const AdminReportsPage = lazy(() =>
   import('@/pages/admin/AdminReportsPage').then((m) => ({ default: m.AdminReportsPage })),
 );

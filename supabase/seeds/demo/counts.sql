@@ -30,4 +30,7 @@ select
   (select count(*) from public.child_extra_requests) as children_extras,
   (select count(*) from public.child_meal_plans) as children_meal_plans,
   (select count(*) from public.menu_dishes) as menu_dishes,
+  (select count(*) from public.discount_partners) as discount_partners,
+  (select count(*) from public.partner_beneficiaries where status = 'active') as families_with_partner_discount,
+  (select count(*) from public.partner_beneficiaries where status = 'pending') as partner_discount_requests,
   pg_size_pretty(pg_database_size(current_database())) as database_size;

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { TableCard, TableEmpty, TableLoading, TablePagination } from '@/components/ui/DataTable';
@@ -8,12 +8,15 @@ import { FilterBar, SearchInput } from '@/components/ui/FilterBar';
 import { FilterField } from '@/components/ui/FilterField';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { FamilyDiscountsCard } from '@/features/discounts/FamilyDiscountsCard';
 import { BalanceHero } from '@/features/parent-billing/BalanceHero';
 import { InvoiceListItem } from '@/features/parent-billing/InvoiceListItem';
 import { billingSummary, isPayable, localName, type BillingInvoice } from '@/features/parent-billing/parentBilling';
 import { useParentBilling } from '@/features/parent-billing/useParentBilling';
+import { useAuthSession } from '@/hooks/useAuthSession';
 import { usePagination } from '@/hooks/usePagination';
 import { useParentChildren } from '@/hooks/useParentChildren';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { invoiceItemDescription, invoiceRawItems } from '@/lib/invoiceItems';
 import { cn } from '@/lib/utils';
 
@@ -34,6 +37,16 @@ export function ParentInvoicesPage() {
   const [search, setSearch] = useState('');
 
   const billing = useParentBilling();
+  const { user } = useAuthSession();
+  const { data: profile } = useUserProfile(user?.id);
+  // A discount notification opens the page at the family's discounts.
+  const { hash } = useLocation();
+  const discountsShown = useRef(false);
+  useEffect(() => {
+    if (hash !== '#discounts' || !profile?.nursery_id || discountsShown.current) return;
+    discountsShown.current = true;
+    document.getElementById('discounts')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [hash, profile?.nursery_id]);
   const all = useMemo(() => billing.data ?? [], [billing.data]);
   const childrenQuery = useParentChildren();
   const children = useMemo(() => childrenQuery.data ?? [], [childrenQuery.data]);
@@ -182,6 +195,18 @@ export function ParentInvoicesPage() {
           </div>
         )}
       </TableCard>
+
+      {/* The family's discounts: a partner's (asked for here, with its proof) and the sibling discount. */}
+      {profile?.nursery_id ? (
+        <div id="discounts" className="scroll-mt-24">
+          <FamilyDiscountsCard
+          nurseryId={profile.nursery_id}
+          audience="family"
+          family={{ parentId: profile.id, nameAr: profile.name_ar ?? '', nameEn: profile.name_en ?? '', phone: null, email: null, children: [] }}
+          jobs={[profile.occupation]}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-// The addresses of the admin's class and staff pages, written once: the tabs they open (?tab=…) and
+// The addresses of the admin's class, staff and discount pages, written once: the tabs they open (?tab=…) and
 // the team a link opens on the Teams page (?edit=…). `base` is /admin, or /xo-admin/nursery when
 // XO staff open a nursery (useAdminBasePath).
 
@@ -23,6 +23,10 @@ export function adminLinks(base: string) {
     /** A member of staff's page (by their account or HR record), on one of its tabs. */
     staffPage: (staffId: string, tab?: StaffTab) => withTab(`${base}/staff/${staffId}`, tab, 'personal'),
     staffAbsences: `${base}/staff/absences`,
+    deals: `${base}/deals`,
+    partnerships: `${base}/deals/partners`,
+    /** A partner's page: its offer and the families who have it. */
+    partnerPage: (partnerId: string) => `${base}/deals/partners/${partnerId}`,
   };
 }
 

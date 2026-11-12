@@ -3,11 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { ChoiceCards } from '@/components/ui/ChoiceCards';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { invalidFieldClass } from '@/components/ui/FieldError';
 import { FormField, FormProblem } from '@/components/ui/FormField';
 import { Input } from '@/components/ui/input';
-import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Select } from '@/components/ui/select';
 import type { KitchenItem } from '@/features/food-and-beverage/kitchen';
 import { localName } from '@/lib/bilingualName';
@@ -111,33 +111,21 @@ export function ChargeDialog({
             <DialogDescription>{t('fnb.kitchen.inStock', { quantity: item.quantity, unit: item.unit })}</DialogDescription>
           </DialogHeader>
 
-          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('kitchenSales.charge.for')}>
-            {(['staff', 'child'] as const).map((c) => {
+          <ChoiceCards
+            label={t('kitchenSales.charge.for')}
+            value={consumer}
+            onChange={(c) => { setConsumer(c); setProblem(null); }}
+            options={(['staff', 'child'] as const).map((c) => {
               const allowed = c === 'staff' ? forStaff : forChildren;
-              return (
-                <button
-                  key={c}
-                  type="button"
-                  role="radio"
-                  aria-checked={consumer === c}
-                  disabled={!allowed}
-                  onClick={() => { setConsumer(c); setProblem(null); }}
-                  className={cn(
-                    'flex items-center gap-2 rounded-xl border p-3 text-start text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50',
-                    consumer === c ? 'border-primary bg-primary/10 text-primary' : 'border-outline-variant text-on-surface hover:border-primary/60',
-                  )}
-                >
-                  <MaterialSymbol name={c === 'staff' ? 'badge' : 'child_care'} size="text-xl" />
-                  <span>
-                    <span className="block">{t(`kitchenSales.charge.${c}`)}</span>
-                    <span className="block text-xs font-normal text-on-surface-variant">
-                      {allowed ? money(c === 'staff' ? item.staffPrice ?? item.childPrice ?? 0 : item.childPrice ?? 0) : t(c === 'child' && store ? 'kitchenSales.charge.storeChildNotSold' : `kitchenSales.charge.${c}NotSold`)}
-                    </span>
-                  </span>
-                </button>
-              );
+              return {
+                value: c,
+                label: t(`kitchenSales.charge.${c}`),
+                icon: c === 'staff' ? 'badge' : 'child_care',
+                disabled: !allowed,
+                hint: allowed ? money(c === 'staff' ? item.staffPrice ?? item.childPrice ?? 0 : item.childPrice ?? 0) : t(c === 'child' && store ? 'kitchenSales.charge.storeChildNotSold' : `kitchenSales.charge.${c}NotSold`),
+              };
             })}
-          </div>
+          />
 
           {consumer === 'staff' ? (
             <FormField id="charge-staff" label={t('kitchenSales.charge.whichStaff')} error={tried && personIssue ? t('kitchenSales.issues.person_required') : null}>

@@ -17,6 +17,8 @@ export type ChildTuitionSubscription = {
   lockedPrice: number;
   nextInvoiceDate: string;
   startedAt: string;
+  /** The parent the tuition is billed to (whose discounts it gets). */
+  billedParentId: string | null;
 };
 
 export type ChildExtraHoursAssignment = {
@@ -107,7 +109,7 @@ export function useAdminChildBilling(childId: string | null | undefined, nursery
       const [subRes, pkgRes, invRes, appInvRes] = await Promise.all([
         supabase
           .from('child_tuition_subscriptions')
-          .select('id, tuition_package_id, tuition_package_name_ar, tuition_package_name_en, billing_period, duration_months, locked_price, next_invoice_date, started_at')
+          .select('id, tuition_package_id, tuition_package_name_ar, tuition_package_name_en, billing_period, duration_months, locked_price, next_invoice_date, started_at, billed_parent_id')
           .eq('child_id', childId)
           .eq('status', 'active')
           .maybeSingle(),
@@ -151,6 +153,7 @@ export function useAdminChildBilling(childId: string | null | undefined, nursery
         locked_price: string | number;
         next_invoice_date: string;
         started_at: string;
+        billed_parent_id: string | null;
       } | null;
 
       const pkgRow = pkgRes.data as {
@@ -174,6 +177,7 @@ export function useAdminChildBilling(childId: string | null | undefined, nursery
               lockedPrice: money(subRow.locked_price),
               nextInvoiceDate: subRow.next_invoice_date,
               startedAt: subRow.started_at,
+              billedParentId: subRow.billed_parent_id,
             }
           : null,
         extraHours:

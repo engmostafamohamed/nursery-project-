@@ -10,6 +10,7 @@ export function adminNotificationMaterialIcon(type: string): string {
     return 'monitoring';
   }
   if (t.startsWith('payment')) return 'payments';
+  if (t.includes('discount') || t.startsWith('partner')) return 'handshake';
   if (t.startsWith('event')) return 'calendar_month';
   if (t.startsWith('invoice')) return 'receipt';
   if (t === 'attendance_checkin' || t === 'attendance_checkout' || t.startsWith('attendance')) {
@@ -32,6 +33,7 @@ export function adminNotificationFallbackPath(type: string): string {
   if (t.startsWith('staff_')) return '/admin/staff';
   if (t.startsWith('report_') || t.includes('daily_report')) return '/admin/reports/financial';
   if (t.includes('message') || t.includes('chat')) return '/admin/messages';
+  if (t.includes('discount') || t.startsWith('partner')) return '/admin/deals/partners';
   if (t.includes('event')) return '/admin/calendar';
   if (t.includes('invoice') || t.includes('payment') || t.includes('financial')) return '/admin/invoices';
   if (t.includes('media')) return '/admin/media/approval';

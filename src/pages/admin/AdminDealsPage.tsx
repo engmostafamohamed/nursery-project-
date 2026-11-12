@@ -8,6 +8,7 @@ import { dealDiscountLabel, localizedName } from '@/components/admin/settings/de
 import { FormSection } from '@/components/admin/settings/FormSection';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { ChoiceCards } from '@/components/ui/ChoiceCards';
 import {
   DataTable,
   IconAction,
@@ -34,6 +35,7 @@ import { FieldError, invalidFieldClass } from '@/components/ui/FieldError';
 import { FilterBar, SearchInput } from '@/components/ui/FilterBar';
 import { FilterField } from '@/components/ui/FilterField';
 import { FilterMenu } from '@/components/ui/FilterMenu';
+import { FormProblem } from '@/components/ui/FormField';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
@@ -42,7 +44,9 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/select';
 import { StatTile } from '@/components/ui/StatTile';
 import { Textarea } from '@/components/ui/textarea';
+import { DiscountsSectionTabs } from '@/features/discounts/DiscountsSectionTabs';
 import { useAuthSession } from '@/hooks/useAuthSession';
+import { useMoney } from '@/hooks/useMoney';
 import { usePagination } from '@/hooks/usePagination';
 import { useTouchedFields } from '@/hooks/useTouchedFields';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -55,7 +59,7 @@ import {
 } from '@/hooks/useAdminDeals';
 import { localName } from '@/lib/bilingualName';
 import { formatDateTime } from '@/lib/datetime';
-import { dealFormIssues, hasIssues } from '@/lib/packageForms';
+import { DEAL_APPLIES_FOR, DEAL_INVOICES_MAX, DEAL_INVOICES_MIN, dealFormIssues, hasIssues, type DealAppliesFor } from '@/lib/packageForms';
 import { cn, formatQueryError } from '@/lib/utils';
 
 const EMPTY_FORM: DealInput = {
@@ -68,7 +72,16 @@ const EMPTY_FORM: DealInput = {
   starts_at: null,
   ends_at: null,
   active: true,
+  applies_for: 'first_invoice',
+  applies_invoices: null,
 };
+
+/** "First invoice only" / "First 3 invoices" / "Every invoice". */
+function appliesForLabel(t: TFunction, deal: Pick<DealRow, 'applies_for' | 'applies_invoices'>): string {
+  return deal.applies_for === 'first_invoices'
+    ? t('deals.appliesFor.firstInvoicesCount', { count: deal.applies_invoices ?? DEAL_INVOICES_MIN })
+    : t(`deals.appliesFor.${deal.applies_for === 'every_invoice' ? 'everyInvoice' : 'firstInvoice'}`);
+}
 
 /** <input type="datetime-local"> needs 'YYYY-MM-DDTHH:mm' in LOCAL time, not the ISO UTC string
  * the DB returns — this converts each direction. */
@@ -98,7 +111,7 @@ function dealStateLabel(t: TFunction, deal: Pick<DealRow, 'active' | 'starts_at'
 
 type StatusFilter = 'all' | 'live' | 'inactive';
 type TypeFilter = 'all' | DealDiscountType;
-type DealField = 'name' | 'discountValue' | 'endsAt';
+type DealField = 'name' | 'discountValue' | 'endsAt' | 'appliesInvoices';
 
 export function AdminDealsPage() {
   const { t, i18n } = useTranslation();
@@ -118,6 +131,9 @@ export function AdminDealsPage() {
   const [endsFrom, setEndsFrom] = useState('');
   const [endsTo, setEndsTo] = useState('');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [saveProblem, setSaveProblem] = useState<string | null>(null);
+  const [pageProblem, setPageProblem] = useState<string | null>(null);
+  const money = useMoney();
 
   const rows = useMemo(() => query.data ?? [], [query.data]);
   const busy = create.isPending || update.isPending;
@@ -167,6 +183,7 @@ export function AdminDealsPage() {
     setEditingId(null);
     setForm(EMPTY_FORM);
     fields.reset();
+    setSaveProblem(null);
     setDialogOpen(true);
   };
 
@@ -182,8 +199,11 @@ export function AdminDealsPage() {
       starts_at: deal.starts_at,
       ends_at: deal.ends_at,
       active: deal.active,
+      applies_for: deal.applies_for,
+      applies_invoices: deal.applies_invoices,
     });
     fields.reset();
+    setSaveProblem(null);
     setDialogOpen(true);
   };
 
@@ -192,22 +212,26 @@ export function AdminDealsPage() {
       fields.showAll();
       return;
     }
+    setSaveProblem(null);
+    // A number of invoices is kept only for "the first few".
+    const input: DealInput = { ...form, applies_invoices: form.applies_for === 'first_invoices' ? form.applies_invoices : null };
     try {
-      if (editingId) await update.mutateAsync({ id: editingId, input: form });
-      else await create.mutateAsync(form);
+      if (editingId) await update.mutateAsync({ id: editingId, input });
+      else await create.mutateAsync(input);
       toast.success(t('deals.saved'));
       setDialogOpen(false);
     } catch (error) {
-      toast.error(t('deals.saveFailed'), { description: formatQueryError(error) });
+      setSaveProblem(`${t('deals.saveFailed')} ${formatQueryError(error)}`.trim());
     }
   };
 
   const handleToggleActive = async (deal: DealRow) => {
+    setPageProblem(null);
     try {
       await toggleActive.mutateAsync({ id: deal.id, active: !deal.active });
       toast.success(deal.active ? t('deals.deactivated') : t('deals.activated'));
     } catch (error) {
-      toast.error(t('deals.updateFailed'), { description: formatQueryError(error) });
+      setPageProblem(`${t('deals.updateFailed')} ${formatQueryError(error)}`.trim());
     }
   };
 
@@ -216,13 +240,16 @@ export function AdminDealsPage() {
   const nameError = errorFor('name');
   const valueError = errorFor('discountValue');
   const endsError = errorFor('endsAt');
+  const invoicesError = errorFor('appliesInvoices');
 
   const liveCount = rows.filter((deal) => isDealCurrentlyActive(deal)).length;
-  const childrenUsing = rows.reduce((sum, deal) => sum + deal.children_count, 0);
+  const familiesReached = rows.reduce((sum, deal) => sum + deal.usage.families, 0);
+  const amountGiven = rows.reduce((sum, deal) => sum + deal.usage.amount, 0);
   const toggleStatus = (value: StatusFilter) => setStatusFilter((current) => (current === value ? 'all' : value));
 
   return (
     <div className="space-y-5 pb-8">
+      <DiscountsSectionTabs />
       <PageHeader
         icon="sell"
         title={t('deals.title')}
@@ -252,10 +279,11 @@ export function AdminDealsPage() {
             onClick={() => toggleStatus('inactive')}
             active={statusFilter === 'inactive'}
           />
-          <StatTile icon="groups" label={t('deals.columns.children')} value={childrenUsing} />
+          <StatTile icon="family_restroom" label={t('deals.familiesReached')} value={familiesReached} helper={t('deals.amountGiven', { amount: money(amountGiven) })} />
         </div>
       </PageHeader>
 
+      <FormProblem message={pageProblem} />
       <TableCard
         title={t('deals.title')}
         count={query.isLoading ? undefined : t('deals.resultsCount', { count: filteredRows.length })}
@@ -314,7 +342,7 @@ export function AdminDealsPage() {
               <Th>{t('deals.columns.status')}</Th>
               <Th>{t('deals.columns.window')}</Th>
               <Th>{t('deals.columns.packages')}</Th>
-              <Th>{t('deals.columns.children')}</Th>
+              <Th>{t('deals.columns.reached')}</Th>
               <Th align="end">{t('deals.columns.actions')}</Th>
             </THead>
             <TBody>
@@ -329,7 +357,10 @@ export function AdminDealsPage() {
                         <p className="truncate font-semibold text-on-surface">{localizedName(deal, isAr)}</p>
                         {description ? <p className="mt-0.5 truncate text-xs text-on-surface-variant">{description}</p> : null}
                       </Td>
-                      <Td className="align-top font-medium text-on-surface">{dealDiscountLabel(t, deal)}</Td>
+                      <Td className="align-top">
+                        <p className="font-medium text-on-surface">{dealDiscountLabel(t, deal)}</p>
+                        <p className="text-xs text-on-surface-variant">{appliesForLabel(t, deal)}</p>
+                      </Td>
                       <Td className="align-top">
                         <StatusPill tone={live ? 'success' : 'neutral'}>{live ? t('deals.state.live') : dealStateLabel(t, deal)}</StatusPill>
                       </Td>
@@ -362,8 +393,8 @@ export function AdminDealsPage() {
                         )}
                       </Td>
                       <Td className="align-top">
-                        {deal.children_count === 0 ? (
-                          <span className="text-xs text-on-surface-variant">0</span>
+                        {deal.usage.families === 0 ? (
+                          <span className="text-xs text-on-surface-variant">{t('deals.notUsedYet')}</span>
                         ) : (
                           <button
                             type="button"
@@ -371,8 +402,8 @@ export function AdminDealsPage() {
                             aria-expanded={expanded}
                             className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-xs font-medium text-primary hover:bg-primary/10"
                           >
-                            <MaterialSymbol name="groups" size="text-xs" />
-                            {deal.children_count}
+                            <MaterialSymbol name="family_restroom" size="text-xs" />
+                            {t('deals.reachedSummary', { count: deal.usage.families, amount: money(deal.usage.amount) })}
                             <MaterialSymbol name={expanded ? 'expand_less' : 'expand_more'} size="text-xs" />
                           </button>
                         )}
@@ -392,19 +423,18 @@ export function AdminDealsPage() {
                     {expanded ? (
                       <tr className="bg-surface-container-lowest">
                         <td colSpan={7} className="px-4 py-3">
-                          <p className="mb-1.5 text-xs font-semibold text-on-surface-variant">{t('deals.childrenUsing')}</p>
+                          <p className="mb-1.5 text-xs font-semibold text-on-surface-variant">
+                            {t('deals.familiesUsing', { invoices: deal.usage.invoices })}
+                          </p>
                           <div className="flex flex-wrap gap-1.5">
-                            {deal.assigned_packages.flatMap((p) =>
-                              p.children.map((c) => (
-                                <span
-                                  key={`${p.id}-${c.id}`}
-                                  className="inline-flex items-center gap-1 rounded-full border border-outline-variant bg-surface px-2 py-0.5 text-xs text-on-surface"
-                                >
-                                  {localName(c.nameAr, c.nameEn, isAr)}
-                                  <span className="text-on-surface-variant">· {localName(p.nameAr, p.nameEn, isAr)}</span>
-                                </span>
-                              )),
-                            )}
+                            {deal.usage.familyNames.map((f) => (
+                              <span
+                                key={f.parentId}
+                                className="inline-flex items-center gap-1 rounded-full border border-outline-variant bg-surface px-2 py-0.5 text-xs text-on-surface"
+                              >
+                                {localName(f.nameAr, f.nameEn, isAr) || '—'}
+                              </span>
+                            ))}
                           </div>
                         </td>
                       </tr>
@@ -492,6 +522,46 @@ export function AdminDealsPage() {
               </label>
             </FormSection>
 
+            <FormSection title={t('deals.sections.appliesFor')} description={t('deals.sections.appliesForHint')} icon="receipt_long">
+              <ChoiceCards<DealAppliesFor>
+                label={t('deals.sections.appliesFor')}
+                value={form.applies_for ?? 'first_invoice'}
+                onChange={(applies_for) =>
+                  setForm((f) => ({ ...f, applies_for, applies_invoices: applies_for === 'first_invoices' ? f.applies_invoices ?? 3 : f.applies_invoices }))
+                }
+                className="grid-cols-1 sm:grid-cols-3"
+                options={DEAL_APPLIES_FOR.map((value) => ({
+                  value,
+                  label: t(`deals.appliesFor.${value === 'first_invoice' ? 'firstInvoice' : value === 'first_invoices' ? 'firstInvoices' : 'everyInvoice'}`),
+                  hint: t(`deals.appliesFor.${value === 'first_invoice' ? 'firstInvoiceHint' : value === 'first_invoices' ? 'firstInvoicesHint' : 'everyInvoiceHint'}`),
+                  icon: value === 'first_invoice' ? 'looks_one' : value === 'first_invoices' ? 'filter_3' : 'all_inclusive',
+                }))}
+              />
+              {form.applies_for === 'first_invoices' ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="deal-invoices">{t('deals.fields.invoicesCount')}</Label>
+                  <Input
+                    id="deal-invoices"
+                    type="number"
+                    inputMode="numeric"
+                    min={DEAL_INVOICES_MIN}
+                    max={DEAL_INVOICES_MAX}
+                    step={1}
+                    value={form.applies_invoices ?? ''}
+                    aria-invalid={Boolean(invoicesError)}
+                    className={cn('sm:max-w-40', invoicesError && invalidFieldClass)}
+                    onBlur={() => fields.touch('appliesInvoices')}
+                    onChange={(e) => setForm((f) => ({ ...f, applies_invoices: e.target.value === '' ? null : Number(e.target.value) }))}
+                  />
+                  {invoicesError ? (
+                    <FieldError message={invoicesError} />
+                  ) : (
+                    <p className="text-xs text-on-surface-variant">{t('deals.fields.invoicesCountHint', { min: DEAL_INVOICES_MIN, max: DEAL_INVOICES_MAX })}</p>
+                  )}
+                </div>
+              ) : null}
+            </FormSection>
+
             <FormSection title={t('deals.sections.window')} description={t('deals.sections.windowHint')} icon="schedule">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
@@ -544,6 +614,7 @@ export function AdminDealsPage() {
             </FormSection>
           </div>
 
+          <FormProblem message={saveProblem} />
           <DialogFooter className="mt-5">
             <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} disabled={busy}>
               {t('common.cancel')}

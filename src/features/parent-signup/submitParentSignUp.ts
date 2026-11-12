@@ -13,6 +13,12 @@ import { isWalletProvider, type ParentPaymentMethodCode } from '@/lib/paymentApi
 
 export class SignupPaymentAfterCreateError extends Error {}
 
+/** Where the partner's discount asked for at signup stands: granted, waiting for the nursery, or not sent. */
+export type PartnerClaimState = 'active' | 'pending' | 'failed';
+
+const toClaimState = (value: unknown): PartnerClaimState | undefined =>
+  value === 'active' || value === 'scheduled' ? 'active' : value === 'pending' ? 'pending' : value === 'failed' ? 'failed' : undefined;
+
 export type SignupPaymentSelection = {
   packageId: string;
   billingPeriod: ApplicationPackageBillingPeriod;
@@ -25,6 +31,8 @@ export type SignupPaymentSelection = {
   walletReceipt?: File | null;
   /** Optional wallet transaction number. */
   walletTransaction?: string | null;
+  /** The partner the family works at, and the proof it needs (if any). */
+  partnerClaim?: { partnerId: string; proof: File | null } | null;
 };
 
 // children.school_preference is CHECK-constrained to these values. The field used to be a
@@ -153,6 +161,7 @@ async function invokeParentSignupComplete(body: unknown) {
     error?: string;
     checkout_url?: string;
     payment_test_mode?: boolean;
+    partner_claim_state?: string | null;
   };
 }
 
@@ -162,7 +171,7 @@ export async function submitParentSignUp(
   registrationTemplate?: RegistrationTemplatePayload | null,
   customRegistrationAnswers: Record<string, unknown> = {},
   payment?: SignupPaymentSelection,
-): Promise<{ success: boolean; checkoutUrl?: string; paymentTestMode?: boolean }> {
+): Promise<{ success: boolean; checkoutUrl?: string; paymentTestMode?: boolean; partnerClaimState?: PartnerClaimState }> {
   // The family gets one account (username + password). A parent block is sent when
   // their name is filled — the emails on it are contact details, not credentials.
   const hasFather = v.fatherFullName.trim().length > 0;
@@ -173,11 +182,13 @@ export async function submitParentSignUp(
   const walletReceipt = payment?.walletReceipt && isWalletProvider(payment.method)
     ? await compressImageForUpload(payment.walletReceipt, SIGNUP_IMAGE_TARGET_MB)
     : null;
-  if (signupRequestTooLarge(visibleFiles, walletReceipt)) {
+  const partnerProof = payment?.partnerClaim?.proof ?? null;
+  if (signupRequestTooLarge(visibleFiles, walletReceipt, partnerProof)) {
     throw new Error('signupFilesTooLarge');
   }
   const filePayload = await filesToPayload(visibleFiles);
   const walletReceiptPayload = await fileToPayload(walletReceipt);
+  const partnerProofPayload = await fileToPayload(partnerProof);
 
   // Staff screens read food_allergies as one line, so flatten the picked list.
   const allergySummary = v.hasAllergy
@@ -349,6 +360,10 @@ export async function submitParentSignUp(
             idempotency_key: payment.idempotencyKey,
           }
         : null,
+      // The partner the family works at (and its proof): its discount is asked for with the application.
+      partner_claim: payment?.partnerClaim
+        ? { partner_id: payment.partnerClaim.partnerId, proof: partnerProofPayload }
+        : null,
   });
 
   if (payload?.error) {
@@ -360,8 +375,8 @@ export async function submitParentSignUp(
     if (checkoutUrl.origin !== 'https://accept.paymob.com' || !checkoutUrl.pathname.startsWith('/unifiedcheckout/')) {
       throw new Error('The payment provider returned an invalid checkout URL');
     }
-    return { success: true, checkoutUrl: checkoutUrl.toString() };
+    return { success: true, checkoutUrl: checkoutUrl.toString(), partnerClaimState: toClaimState(payload?.partner_claim_state) };
   }
 
-  return { success: true, paymentTestMode: payload?.payment_test_mode === true };
+  return { success: true, paymentTestMode: payload?.payment_test_mode === true, partnerClaimState: toClaimState(payload?.partner_claim_state) };
 }

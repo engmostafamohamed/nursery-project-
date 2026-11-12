@@ -11,6 +11,9 @@ export function SignupSuccessPage() {
   const [searchParams] = useSearchParams();
   const returnedFromPaymob = searchParams.get('payment') === 'processing';
   const paymentTestMode = searchParams.get('payment') === 'test';
+  // The partner's discount asked for with the application: granted, waiting, or not sent.
+  const discount = searchParams.get('discount');
+  const discountNote = discount === 'active' || discount === 'pending' || discount === 'failed' ? discount : null;
 
   useEffect(() => {
     // Best-effort confetti-adjacent nudge via document title
@@ -47,6 +50,21 @@ export function SignupSuccessPage() {
                 : 'signup.success.description',
           )}
         </p>
+
+        {discountNote ? (
+          <p
+            className={`mb-6 flex w-full items-start gap-2 rounded-2xl border px-4 py-3 text-start text-sm text-on-surface ${
+              discountNote === 'failed' ? 'border-warning/40 bg-warning/10' : 'border-success/30 bg-success/5'
+            }`}
+            data-testid="signup-discount-note"
+          >
+            <MaterialSymbol
+              name={discountNote === 'active' ? 'sell' : discountNote === 'pending' ? 'schedule' : 'info'}
+              className={discountNote === 'failed' ? 'text-warning' : 'text-success'}
+            />
+            {t(`discounts.signup.success.${discountNote}`)}
+          </p>
+        ) : null}
 
         <div className="w-full space-y-3 rounded-3xl bg-surface-container-lowest p-6 text-start shadow-sm sm:p-8">
           <h2 className="mb-4 text-center text-sm font-semibold uppercase tracking-wide text-on-surface-variant">

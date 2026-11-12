@@ -12,6 +12,7 @@ import { ChatPanel } from '@/components/chat/ChatPanel';
 import { PaymentHistoryTable } from '@/components/financial/PaymentHistoryTable';
 import { Button } from '@/components/ui/button';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { FamilyDiscountsCard } from '@/features/discounts/FamilyDiscountsCard';
 import { useActiveNurseryId } from '@/hooks/useActiveNurseryId';
 import { useApplications } from '@/hooks/useApplications';
 import { useAuthSession } from '@/hooks/useAuthSession';
@@ -276,6 +277,23 @@ export function AdminApplicationDetailPage() {
         showParent={false}
         linkBase="/admin/invoices"
       />
+
+      {/* A partner's discount the family asked for at signup is confirmed here, with its proof. */}
+      {parentId && applicationNurseryId ? (
+        <FamilyDiscountsCard
+          nurseryId={applicationNurseryId}
+          audience="staff"
+          family={{
+            parentId,
+            nameAr: readText(parentUser ?? {}, 'name_ar'),
+            nameEn: readText(parentUser ?? {}, 'name_en') || accountName,
+            phone: readText(parentUser ?? {}, 'phone') || null,
+            email: null,
+            children: [],
+          }}
+          jobs={[readText((parent.father as Record<string, unknown> | undefined) ?? {}, 'job'), readText((parent.mother as Record<string, unknown> | undefined) ?? {}, 'job')]}
+        />
+      ) : null}
 
       <section className="space-y-4 rounded-xl border border-outline-variant bg-surface p-4 shadow-sm sm:p-5">
         <div className="flex items-center gap-3">

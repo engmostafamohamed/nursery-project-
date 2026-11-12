@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
+import { toOffers, type DiscountPartner } from '@/features/discounts/discounts';
+
 import {
   isParentPaymentMethodCode,
   isWalletProvider,
@@ -26,6 +28,10 @@ export type SignupPaymentOptions = {
   instapay: { accountName: string | null; accountNumber: string | null; qrImageUrl: string | null };
   /** The nursery's own texts above the packages; empty ones show the standard text. */
   texts: ParentPackageTexts;
+  /** The companies, schools and organizations whose families get a discount here. */
+  partnerOffers: DiscountPartner[];
+  /** The most a charge's discounts take off together (%). */
+  discountCapPercent: number;
 };
 
 export class SignupPaymentOptionsError extends Error {
@@ -89,6 +95,8 @@ export function useSignupPaymentOptions(nurseryId: string | undefined, enabled: 
         wallet_destinations?: Record<string, unknown> | null;
         instapay?: { account_name?: unknown; account_number?: unknown; qr_image_url?: unknown } | null;
         parent_texts?: unknown;
+        partner_offers?: unknown;
+        discount_cap_percentage?: unknown;
       } | null;
       if (!response || !Array.isArray(response.packages) || !Array.isArray(response.extra_hours_packages)) {
         throw new Error('Could not load payment options');
@@ -120,6 +128,11 @@ export function useSignupPaymentOptions(nurseryId: string | undefined, enabled: 
           qrImageUrl: text(response.instapay?.qr_image_url),
         },
         texts: parseParentPackageTexts(response.parent_texts),
+        // Older functions sent no offers: the family just sees none.
+        partnerOffers: toOffers(response.partner_offers).filter((offer) => !offer.full),
+        discountCapPercent: Number.isFinite(Number(response.discount_cap_percentage)) && response.discount_cap_percentage !== null && response.discount_cap_percentage !== undefined
+          ? Number(response.discount_cap_percentage)
+          : 30,
       };
     },
   });

@@ -1,20 +1,28 @@
 import { useCallback, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { count, list, numberOrNull, obj, oneOf, text, textOrNull } from '@/lib/jsonRead';
+import { DEAL_APPLIES_FOR, type DealAppliesFor } from '@/lib/packageForms';
+import { callRpc } from '@/lib/rpc';
 import { supabase } from '@/lib/supabase';
 
 export const adminDealsKey = (nurseryId: string | null | undefined) => ['admin-deals', nurseryId] as const;
 
 export type DealDiscountType = 'percentage' | 'fixed_amount';
 
-export type AssignedChildRef = { id: string; nameAr: string; nameEn: string };
-
 export type AssignedPackageRef = {
   id: string;
   nameAr: string;
   nameEn: string;
   kind: 'tuition' | 'hours';
-  children: AssignedChildRef[];
+};
+
+/** Who a deal has actually reached: the invoices that carry its discount, their families, the amount. */
+export type DealUsage = {
+  invoices: number;
+  families: number;
+  amount: number;
+  familyNames: { parentId: string; nameAr: string; nameEn: string }[];
 };
 
 export type DealRow = {
@@ -30,11 +38,11 @@ export type DealRow = {
   ends_at: string | null;
   active: boolean;
   created_at: string;
-  /** Packages (tuition + extra-hours) currently assigned to this deal. */
-  assigned_count: number;
+  applies_for: DealAppliesFor;
+  applies_invoices: number | null;
+  /** Packages (tuition + extra-hours) this deal is on. */
   assigned_packages: AssignedPackageRef[];
-  /** Unique children currently enrolled in any package assigned to this deal. */
-  children_count: number;
+  usage: DealUsage;
 };
 
 export type DealInput = {
@@ -47,12 +55,12 @@ export type DealInput = {
   starts_at: string | null;
   ends_at: string | null;
   active: boolean;
+  /** The first invoice when not given (the database's default). */
+  applies_for?: DealAppliesFor;
+  applies_invoices?: number | null;
 };
 
-function money(value: unknown): number {
-  const n = Number(value ?? 0);
-  return Number.isFinite(n) ? n : 0;
-}
+const NO_USAGE: DealUsage = { invoices: 0, families: 0, amount: 0, familyNames: [] };
 
 /** Whether a deal is currently claimable: active and inside its optional start/end window. */
 export function isDealCurrentlyActive(deal: Pick<DealRow, 'active' | 'starts_at' | 'ends_at'>): boolean {
@@ -70,97 +78,58 @@ export function applyDealToPrice(price: number, deal: Pick<DealRow, 'discount_ty
   return Math.max(price - discount, 0);
 }
 
+const packageRefs = (value: unknown, kind: AssignedPackageRef['kind']): AssignedPackageRef[] =>
+  list(value).map((p) => ({ id: text(p.id), nameAr: text(p.name_ar), nameEn: text(p.name_en), kind }));
+
+/** One deal as get_deals_overview returns it (or as a write returns its row, without packages or usage). */
+export function toDealRow(raw: unknown): DealRow {
+  const d = obj(raw);
+  const usage = obj(d.usage);
+  return {
+    id: text(d.id),
+    nursery_id: text(d.nursery_id),
+    name_ar: text(d.name_ar),
+    name_en: text(d.name_en),
+    description_ar: textOrNull(d.description_ar),
+    description_en: textOrNull(d.description_en),
+    discount_type: oneOf(d.discount_type, ['percentage', 'fixed_amount'] as const, 'percentage'),
+    discount_value: numberOrNull(d.discount_value) ?? 0,
+    starts_at: textOrNull(d.starts_at),
+    ends_at: textOrNull(d.ends_at),
+    active: d.active !== false,
+    created_at: text(d.created_at),
+    applies_for: oneOf(d.applies_for, DEAL_APPLIES_FOR, 'first_invoice'),
+    applies_invoices: numberOrNull(d.applies_invoices),
+    assigned_packages: [...packageRefs(d.tuition_packages, 'tuition'), ...packageRefs(d.extra_hours_packages, 'hours')],
+    usage: {
+      invoices: count(usage.invoices),
+      families: count(usage.families),
+      amount: numberOrNull(usage.amount) ?? 0,
+      familyNames: list(usage.family_names).map((f) => ({ parentId: text(f.parent_id), nameAr: text(f.name_ar), nameEn: text(f.name_en) })),
+    },
+  };
+}
+
+const DEAL_COLUMNS =
+  'id, nursery_id, name_ar, name_en, description_ar, description_en, discount_type, discount_value, starts_at, ends_at, active, created_at, applies_for, applies_invoices';
+
+/** A deal row just written: its packages and usage stay as they were until the overview is read again. */
+function fromWritten(data: unknown, previous?: DealRow): DealRow {
+  return { ...toDealRow(data), assigned_packages: previous?.assigned_packages ?? [], usage: previous?.usage ?? NO_USAGE };
+}
+
 export function useAdminDeals(nurseryId: string | null | undefined) {
   const queryClient = useQueryClient();
   const key = adminDealsKey(nurseryId);
 
+  // Read through a function: the service worker answers table reads from its cache first, so a
+  // deal just saved would not show at once.
   const query = useQuery({
     queryKey: key,
-    queryFn: async (): Promise<DealRow[]> => {
-      if (!nurseryId) return [];
-      const { data, error } = await supabase
-        .from('deals')
-        .select('id, nursery_id, name_ar, name_en, description_ar, description_en, discount_type, discount_value, starts_at, ends_at, active, created_at')
-        .eq('nursery_id', nurseryId)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      const rows = (data ?? []) as Array<Record<string, unknown>>;
-      const ids = rows.map((row) => row.id as string);
-
-      const refMap = new Map<string, AssignedPackageRef[]>();
-      if (ids.length) {
-        const [tuitionRes, hoursRes] = await Promise.all([
-          supabase.from('tuition_packages').select('id, name_ar, name_en, deal_id').in('deal_id', ids),
-          supabase.from('packages').select('id, name_ar, name_en, deal_id').in('deal_id', ids),
-        ]);
-        type PkgRow = { id: string; name_ar: string; name_en: string; deal_id: string | null };
-        const tuitionPkgs = (tuitionRes.data ?? []) as PkgRow[];
-        const hoursPkgs = (hoursRes.data ?? []) as PkgRow[];
-
-        type ChildJoinRow = { child_id: string; children: { id?: string; full_name_ar: string; full_name_en: string } | null };
-        const [tuitionChildren, hoursChildren] = await Promise.all([
-          tuitionPkgs.length
-            ? supabase
-                .from('child_tuition_subscriptions')
-                .select('child_id, tuition_package_id, status, children (full_name_ar, full_name_en)')
-                .eq('status', 'active')
-                .in(
-                  'tuition_package_id',
-                  tuitionPkgs.map((p) => p.id),
-                )
-            : Promise.resolve({ data: [] }),
-          hoursPkgs.length
-            ? supabase
-                .from('child_packages')
-                .select('child_id, package_id, status, children (full_name_ar, full_name_en)')
-                .eq('status', 'active')
-                .in(
-                  'package_id',
-                  hoursPkgs.map((p) => p.id),
-                )
-            : Promise.resolve({ data: [] }),
-        ]);
-
-        const childrenByTuitionPkg = new Map<string, AssignedChildRef[]>();
-        for (const row of (tuitionChildren.data ?? []) as Array<ChildJoinRow & { tuition_package_id: string }>) {
-          const arr = childrenByTuitionPkg.get(row.tuition_package_id) ?? [];
-          arr.push({ id: row.child_id, nameAr: row.children?.full_name_ar ?? '', nameEn: row.children?.full_name_en ?? '' });
-          childrenByTuitionPkg.set(row.tuition_package_id, arr);
-        }
-        const childrenByHoursPkg = new Map<string, AssignedChildRef[]>();
-        for (const row of (hoursChildren.data ?? []) as Array<ChildJoinRow & { package_id: string }>) {
-          const arr = childrenByHoursPkg.get(row.package_id) ?? [];
-          arr.push({ id: row.child_id, nameAr: row.children?.full_name_ar ?? '', nameEn: row.children?.full_name_en ?? '' });
-          childrenByHoursPkg.set(row.package_id, arr);
-        }
-
-        const push = (row: PkgRow, kind: AssignedPackageRef['kind'], children: AssignedChildRef[]) => {
-          if (!row.deal_id) return;
-          const arr = refMap.get(row.deal_id) ?? [];
-          arr.push({ id: row.id, nameAr: row.name_ar, nameEn: row.name_en, kind, children });
-          refMap.set(row.deal_id, arr);
-        };
-        for (const row of tuitionPkgs) push(row, 'tuition', childrenByTuitionPkg.get(row.id) ?? []);
-        for (const row of hoursPkgs) push(row, 'hours', childrenByHoursPkg.get(row.id) ?? []);
-      }
-
-      return rows.map((row) => {
-        const assigned = refMap.get(row.id as string) ?? [];
-        const uniqueChildIds = new Set(assigned.flatMap((pkg) => pkg.children.map((c) => c.id)));
-        return {
-          ...(row as Omit<DealRow, 'discount_value' | 'assigned_count' | 'assigned_packages' | 'children_count'>),
-          discount_value: money(row.discount_value),
-          assigned_count: assigned.length,
-          assigned_packages: assigned,
-          children_count: uniqueChildIds.size,
-        };
-      }) as DealRow[];
-    },
+    queryFn: async (): Promise<DealRow[]> =>
+      nurseryId ? list(await callRpc('get_deals_overview', { p_nursery_id: nurseryId })).map(toDealRow) : [],
     enabled: Boolean(nurseryId),
   });
-
-  const DEAL_COLUMNS =
-    'id, nursery_id, name_ar, name_en, description_ar, description_en, discount_type, discount_value, starts_at, ends_at, active, created_at';
 
   const create = useMutation({
     mutationFn: async (input: DealInput): Promise<DealRow> => {
@@ -171,10 +140,7 @@ export function useAdminDeals(nurseryId: string | null | undefined) {
         .select(DEAL_COLUMNS)
         .single();
       if (error) throw error;
-      const row = data as Omit<DealRow, 'discount_value' | 'assigned_count' | 'assigned_packages' | 'children_count'> & {
-        discount_value: unknown;
-      };
-      return { ...row, discount_value: money(row.discount_value), assigned_count: 0, assigned_packages: [], children_count: 0 };
+      return fromWritten(data);
     },
     // Write the new row straight into the cache instead of only invalidating — invalidation
     // only *schedules* a background refetch, so a dialog reading `query.data` right after this
@@ -185,22 +151,13 @@ export function useAdminDeals(nurseryId: string | null | undefined) {
   });
 
   const update = useMutation({
-    mutationFn: async ({
-      id,
-      input,
-    }: {
-      id: string;
-      input: DealInput;
-    }): Promise<Omit<DealRow, 'assigned_count' | 'assigned_packages' | 'children_count'>> => {
+    mutationFn: async ({ id, input }: { id: string; input: DealInput }): Promise<DealRow> => {
       const { data, error } = await supabase.from('deals').update(input as never).eq('id', id).select(DEAL_COLUMNS).single();
       if (error) throw error;
-      const row = data as Omit<DealRow, 'discount_value' | 'assigned_count' | 'assigned_packages' | 'children_count'> & {
-        discount_value: unknown;
-      };
-      return { ...row, discount_value: money(row.discount_value) };
+      return fromWritten(data, queryClient.getQueryData<DealRow[]>(key)?.find((d) => d.id === id));
     },
     onSuccess: (updated) => {
-      queryClient.setQueryData<DealRow[]>(key, (old) => (old ?? []).map((d) => (d.id === updated.id ? { ...d, ...updated } : d)));
+      queryClient.setQueryData<DealRow[]>(key, (old) => (old ?? []).map((d) => (d.id === updated.id ? updated : d)));
     },
   });
 

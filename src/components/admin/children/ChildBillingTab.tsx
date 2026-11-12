@@ -18,6 +18,8 @@ import { Label } from '@/components/ui/label';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import type { FamilyRef } from '@/features/discounts/discounts';
+import { FamilyDiscountsCard } from '@/features/discounts/FamilyDiscountsCard';
 import { useAdminChildBilling } from '@/hooks/useAdminChildBilling';
 import type { BillingPeriodKind } from '@/hooks/useAdminTuitionBillingPeriods';
 import { useExtraHoursLedger } from '@/hooks/useExtraHoursLedger';
@@ -39,7 +41,18 @@ function fmtDate(value: string | null | undefined) {
   return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString();
 }
 
-export function ChildBillingTab({ childId, nurseryId }: { childId: string; nurseryId: string | null | undefined }) {
+/** A parent linked to the child, and what the parents wrote as their jobs (a partner they point to is suggested). */
+export type BillingFamily = { family: FamilyRef; jobs: (string | null)[] };
+
+export function ChildBillingTab({
+  childId,
+  nurseryId,
+  families = [],
+}: {
+  childId: string;
+  nurseryId: string | null | undefined;
+  families?: BillingFamily[];
+}) {
   const { query, choicesQuery, changeSubscription, assignExtraHours, unassignExtraHours } = useAdminChildBilling(
     childId,
     nurseryId,
@@ -76,6 +89,8 @@ export function ChildBillingTab({ childId, nurseryId }: { childId: string; nurse
   }
 
   const { subscription, extraHours } = query.data ?? { subscription: null, extraHours: null };
+  // Discounts follow the parent the tuition is billed to (else the first parent linked).
+  const billedFamily = families.find(({ family }) => family.parentId === subscription?.billedParentId) ?? families[0] ?? null;
   const tuitionChoices = choicesQuery.data?.tuitionPackages ?? [];
   const extraHoursChoices = choicesQuery.data?.extraHoursPackages ?? [];
   const selectedChoice = tuitionChoices.find((p) => p.id === selectedPackageId);
@@ -207,6 +222,11 @@ export function ChildBillingTab({ childId, nurseryId }: { childId: string; nurse
           </div>
         </div>
       </div>
+
+      {/* The family's discounts: partnerships (asked, confirmed, ended) and the sibling discount. */}
+      {nurseryId && billedFamily ? (
+        <FamilyDiscountsCard nurseryId={nurseryId} audience="staff" family={billedFamily.family} jobs={billedFamily.jobs} />
+      ) : null}
 
       {/* What this child was billed and paid, from the admission invoice onwards. */}
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">

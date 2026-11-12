@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ApplicationExtraHoursPackage } from '@/hooks/useApplicationExtraHoursPackage';
 import { bestPeriodSaving, periodsOfferedByAny, type ApplicationPaymentPackage } from '@/hooks/useApplicationPackagePayment';
 
+import type { DiscountPartner } from '@/features/discounts/discounts';
+
 import { computeSignupOrder } from './signupOrder';
 
 beforeEach(() => {
@@ -74,6 +76,60 @@ describe('sign-up order total', () => {
       complete: false,
       totalDue: 0,
     });
+  });
+});
+
+describe('sign-up order with a partner discount', () => {
+  const partner = (overrides: Partial<DiscountPartner> = {}): DiscountPartner => ({
+    id: 'p', scope: 'branch', kind: 'company', nameAr: 'فودافون', nameEn: 'Vodafone', aliases: [], offerDetailsAr: null, offerDetailsEn: null,
+    discountType: 'percentage', discountValue: 15, appliesTo: ['tuition'], startsOn: '2026-01-01', endsOn: null, requiresProof: false,
+    proofNoteAr: null, proofNoteEn: null, maxFamilies: null, active: true, state: 'active', contactName: null, contactPhone: null,
+    contactEmail: null, agreementRef: null, activeFamilies: 0, pendingFamilies: 0, openFamilies: 0, given: 0, canEdit: false, full: false,
+    ...overrides,
+  });
+  const withCap = (cap: number) => ({ ...options, discountCapPercent: cap });
+
+  it('takes a partner needing no proof off at once, beside the deal', () => {
+    const order = computeSignupOrder(withCap(30), { packageId: 'full', billingPeriod: 'monthly', extraHoursPackageId: null, partner: partner() });
+    // 11,000: the partner's 15% (1,650) first, then the deal's 2% (220), together under 30%.
+    expect(order.tuitionDiscounts.map((l) => [l.source, l.amount, l.capped])).toEqual([
+      ['partnership', 1650, false],
+      ['deal', 220, false],
+    ]);
+    expect(order).toMatchObject({ totalDue: 9130, totalSavings: 1870, expectedPartner: null });
+    expect(order.tuition).toMatchObject({ discountAmount: 1870, total: 9130 });
+  });
+
+  it('cuts the smaller discount at the nursery\'s cap', () => {
+    const order = computeSignupOrder(withCap(16), { packageId: 'full', billingPeriod: 'monthly', extraHoursPackageId: null, partner: partner() });
+    expect(order.tuitionDiscounts.map((l) => [l.source, l.amount, l.capped])).toEqual([
+      ['partnership', 1650, false],
+      ['deal', 110, true],
+    ]);
+    expect(order.totalDue).toBe(9240);
+  });
+
+  it('covers the extra-hours package only when the partner covers extra hours', () => {
+    const tuitionOnly = computeSignupOrder(withCap(30), { packageId: 'full', billingPeriod: 'monthly', extraHoursPackageId: 'late', partner: partner() });
+    expect(tuitionOnly.extraHoursDiscounts.map((l) => l.source)).toEqual(['deal']);
+    const both = computeSignupOrder(withCap(30), {
+      packageId: 'full', billingPeriod: 'monthly', extraHoursPackageId: 'late', partner: partner({ appliesTo: ['tuition', 'extra_hours'] }),
+    });
+    // 300: the deal's 50 first, then the partner's 15% (45), within 30% (90): 40 left for it.
+    expect(both.extraHoursDiscounts.map((l) => [l.source, l.amount, l.capped])).toEqual([
+      ['deal', 50, false],
+      ['partnership', 40, true],
+    ]);
+    expect(both.extraHours).toEqual({ price: 300, discountAmount: 90, total: 210 });
+  });
+
+  it('only expects the discount of a partner needing a proof: this payment stays as it is', () => {
+    const order = computeSignupOrder(withCap(30), {
+      packageId: 'full', billingPeriod: 'monthly', extraHoursPackageId: null, partner: partner({ requiresProof: true }),
+    });
+    expect(order.tuitionDiscounts.map((l) => l.source)).toEqual(['deal']);
+    expect(order.totalDue).toBe(10780);
+    expect(order.expectedPartner).toMatchObject({ amount: 1650 });
   });
 });
 

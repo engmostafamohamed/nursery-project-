@@ -1058,7 +1058,8 @@
     "add": "إضافة",
     "remove": "حذف",
     "search": "بحث",
-    "noResults": "لا توجد نتائج"
+    "noResults": "لا توجد نتائج",
+    "fileUnavailable": "الملف غير متاح"
   },
   "validation": {
     "pleaseComplete": "يرجى إكمال {{count}} حقول مطلوبة أدناه."
@@ -2227,7 +2228,6 @@
       "loadError": "تعذر تحميل الملف الشخصي."
     },
     "nav": {
-
       "inbox": "صندوق الوارد",
       "scanner": "ماسح QR",
       "attendanceLogs": "سجلات الحضور",
@@ -2285,7 +2285,7 @@
       "events": "الفعاليات",
       "courses": "الكورسات",
       "packages": "الباقات",
-      "deals": "العروض والخصومات",
+      "deals": "الخصومات",
       "reports": "التقارير",
       "brandSubtitle": "الإدارة",
       "collapseSidebar": "طي الشريط الجانبي",
@@ -3567,7 +3567,8 @@
       "validityRequired": "اكتب مدة صلاحية الباقة.",
       "validityUnitRequired": "اختر شهور أو سنوات.",
       "noActivePeriod": "فعّل مدة دفع واحدة على الأقل، فولي الأمر يختار منها عند التسجيل.",
-      "periodPriceInvalid": "كل مدة دفع مفعّلة تحتاج سعرًا أكبر من صفر."
+      "periodPriceInvalid": "كل مدة دفع مفعّلة تحتاج سعرًا أكبر من صفر.",
+      "invoicesRange": "أدخل عددًا صحيحًا بين 2 و60."
     }
   },
   "packageFilters": {
@@ -3613,8 +3614,8 @@
       "status": "الحالة",
       "window": "الفترة",
       "packages": "الباقات",
-      "children": "الأطفال",
-      "actions": "الإجراءات"
+      "actions": "الإجراءات",
+      "reached": "الاستفادة"
     },
     "types": {
       "percentage": "نسبة خصم",
@@ -3635,7 +3636,6 @@
     "windowUntil": "حتى {{date}}",
     "notAssigned": "غير مرتبط",
     "openPackages": "افتح الباقات لتعديلها",
-    "childrenUsing": "الأطفال المشتركون في باقة بهذا الخصم",
     "dialog": {
       "newTitle": "عرض جديد",
       "editTitle": "تعديل العرض",
@@ -3646,7 +3646,9 @@
       "discount": "الخصم",
       "window": "فترة العرض",
       "windowHint": "اختياري. اترك الحقلين فارغين لعرض بلا بداية أو انتهاء.",
-      "description": "الوصف"
+      "description": "الوصف",
+      "appliesFor": "على أي فواتير",
+      "appliesForHint": "فواتير الأسرة للباقة، تُعد من أولها (فاتورة الالتحاق)."
     },
     "fields": {
       "nameEn": "الاسم (إنجليزي)",
@@ -3660,7 +3662,9 @@
       "ends": "ينتهي (اختياري)",
       "endsHint": "يظهر لأولياء الأمور كعدّاد تنازلي. اتركه فارغًا لعرض بلا انتهاء.",
       "descEn": "الوصف (إنجليزي)",
-      "descAr": "الوصف (عربي)"
+      "descAr": "الوصف (عربي)",
+      "invoicesCount": "عدد الفواتير",
+      "invoicesCountHint": "بين {{min}} و{{max}}."
     },
     "saved": "تم حفظ العرض.",
     "saveFailed": "تعذّر حفظ العرض.",
@@ -3683,7 +3687,31 @@
       "createAndAssign": "إنشاء وربط",
       "customCreated": "تم إنشاء الخصم الخاص واختياره. احفظ الباقة لتطبيقه.",
       "createFailed": "تعذّر إنشاء الخصم."
-    }
+    },
+    "appliesFor": {
+      "firstInvoice": "الفاتورة الأولى فقط",
+      "firstInvoiceHint": "عرض ترحيبي",
+      "firstInvoices": "أول عدة فواتير",
+      "firstInvoicesHint": "مثلًا أول 3 شهور",
+      "everyInvoice": "كل الفواتير",
+      "everyInvoiceHint": "طوال مدة العرض",
+      "firstInvoicesCount_zero": "لا فواتير",
+      "firstInvoicesCount_one": "الفاتورة الأولى",
+      "firstInvoicesCount_two": "أول فاتورتين",
+      "firstInvoicesCount_few": "أول {{count}} فواتير",
+      "firstInvoicesCount_many": "أول {{count}} فاتورة",
+      "firstInvoicesCount_other": "أول {{count}} فاتورة"
+    },
+    "familiesReached": "أسر استفادت",
+    "amountGiven": "خصم {{amount}}",
+    "notUsedYet": "لم يُستخدم بعد",
+    "reachedSummary_zero": "لا أسر · {{amount}}",
+    "reachedSummary_one": "أسرة واحدة · {{amount}}",
+    "reachedSummary_two": "أسرتان · {{amount}}",
+    "reachedSummary_few": "{{count}} أسر · {{amount}}",
+    "reachedSummary_many": "{{count}} أسرة · {{amount}}",
+    "reachedSummary_other": "{{count}} أسرة · {{amount}}",
+    "familiesUsing": "الأسر التي تحمل فواتيرها هذا العرض ({{invoices}} فاتورة)"
   },
   "tuitionPackages": {
     "title": "باقات الرسوم الدراسية",
@@ -3835,7 +3863,12 @@
       "tuition": "رسوم دراسية",
       "admission_package": "باقة التسجيل",
       "discount": "خصم",
-      "event": "فعالية"
+      "event": "فعالية",
+      "discount_partnership": "خصم شراكة · {{name}} ({{value}})",
+      "discount_sibling": "خصم الإخوة · الطفل الثاني ({{value}})",
+      "discount_sibling_third": "خصم الإخوة · الطفل الثالث فأكثر ({{value}})",
+      "discount_deal": "{{name}} ({{value}})",
+      "discount_capped": "محدود بالحد الأقصى للخصومات"
     },
     "notes": {
       "applicationPackage": "تم اختيار باقة التسجيل قبل اعتماد الطلب."
@@ -4336,8 +4369,6 @@
       "date": "التاريخ",
       "parent": "ولي الأمر",
       "viewProof": "عرض صورة الإثبات",
-      "proofLoading": "جارٍ تحميل رابط الإثبات الآمن…",
-      "proofLoadFailed": "تعذر فتح إثبات الدفع.",
       "confirm": "تأكيد الدفع",
       "reject": "رفض",
       "confirmed": "تم تأكيد الدفع.",
@@ -5312,14 +5343,14 @@
       "title": "عائلتك",
       "subtitle": "الأطفال والجدول والتحديثات في مكان واحد.",
       "sectionChildren": "أطفالك",
-    "sectionSchedule": "اليوم والجدول",
-    "sectionFeed": "آخر التحديثات",
-    "sectionFinancial": "المدفوعات",
-    "sectionBilling": "الرسوم الدراسية والساعات الإضافية",
-    "sectionApplications": "طلبات التسجيل",
-    "sectionNurseryChat": "مراسلة الحضانة",
-    "noApplications": "لا توجد نماذج تقديم بعد.",
-    "adminInbox": {
+      "sectionSchedule": "اليوم والجدول",
+      "sectionFeed": "آخر التحديثات",
+      "sectionFinancial": "المدفوعات",
+      "sectionBilling": "الرسوم الدراسية والساعات الإضافية",
+      "sectionApplications": "طلبات التسجيل",
+      "sectionNurseryChat": "مراسلة الحضانة",
+      "noApplications": "لا توجد نماذج تقديم بعد.",
+      "adminInbox": {
         "title": "من الحضانة",
         "viewAll": "عرض الكل",
         "urgentBadge": "عاجل",
@@ -9200,6 +9231,26 @@
     "milestone_shared": {
       "title": "إنجاز جديد",
       "body": "إنجاز جديد لـ {{child}}: {{milestone}}"
+    },
+    "partner_claim_received": {
+      "title": "طلب خصم شريك",
+      "body": "طلبت أسرة {{family}} خصم {{partner}}. راجع الإثبات ثم أكّد الطلب أو ارفضه."
+    },
+    "partner_discount_approved": {
+      "title": "تم تأكيد خصمك",
+      "body": "أصبح خصم {{partner}} مطبّقًا على فواتيرك."
+    },
+    "partner_discount_rejected": {
+      "title": "لم يُقبل طلب الخصم",
+      "body": "لم يُقبل طلبك لخصم {{partner}}. السبب: {{reason}}"
+    },
+    "partner_discount_ended": {
+      "title": "انتهى أحد الخصومات",
+      "body": "انتهى خصم {{partner}}، والفواتير الجديدة بدونه."
+    },
+    "partner_agreement_ending": {
+      "title": "اتفاقية {{partner}} تنتهي قريبًا",
+      "body": "تنتهي اتفاقية {{partner}} في {{date}}. الأسر المستفيدة: {{families}}. جدّدها أو اتركها تنتهي."
     }
   },
   "qr": {
@@ -10304,6 +10355,14 @@
       "accent_color": {
         "label": "لون التمييز",
         "helper": "لون التمييز - تتحكم في سلوك هذه الحضانة."
+      },
+      "max_total_discount_percentage": {
+        "label": "أقصى مجموع للخصومات (%)",
+        "helper": "خصومات البند الواحد (عرض، شراكة، إخوة) معًا تتوقف عند هذه النسبة: الأكبر يُحسب كاملًا والباقي حتى هذا الحد فقط. والخصم الكبير وحده يبقى كاملًا."
+      },
+      "sibling_discount_enabled": {
+        "label": "خصم الإخوة",
+        "helper": "الطفل الثاني والثالث على نفس الأسرة يحصلان على هذين الخصمين من المصروفات."
       }
     },
     "options": {
@@ -11602,6 +11661,356 @@
     "noAccess": {
       "title": "لا تملك صلاحية",
       "body": "دورك لا يشمل \"{{feature}}\". اطلب ذلك من مدير الحضانة إن احتجت إليه."
+    }
+  },
+  "discounts": {
+    "section": {
+      "label": "الخصومات",
+      "deals": "العروض",
+      "partnerships": "الشراكات"
+    },
+    "kinds": {
+      "company": "شركة",
+      "school": "مدرسة",
+      "organization": "جهة"
+    },
+    "applies": {
+      "tuition": "المصروفات",
+      "extra_hours": "الساعات الإضافية",
+      "both": "{{first}} و{{second}}"
+    },
+    "scope": {
+      "branch": "هذا الفرع",
+      "branchHint": "لأسر هذا الفرع فقط",
+      "chain": "كل الفروع",
+      "chainHint": "لأسر كل فروع السلسلة"
+    },
+    "partnerStates": {
+      "active": "سارية",
+      "ending_soon": "تنتهي قريبًا",
+      "scheduled": "لم تبدأ",
+      "expired": "انتهت",
+      "paused": "متوقفة"
+    },
+    "beneficiaryStates": {
+      "pending": "في انتظار المراجعة",
+      "active": "مفعّل",
+      "scheduled": "يبدأ لاحقًا",
+      "ended": "انتهى",
+      "rejected": "مرفوض"
+    },
+    "validUntil": "حتى {{date}}",
+    "noEndDate": "بدون تاريخ انتهاء",
+    "offer": {
+      "suggested": "يطابق وظيفتك",
+      "proofNeeded": "يحتاج إثباتًا (كارنيه العمل أو خطاب من الموارد البشرية)",
+      "proofNeededWith": "يحتاج إثباتًا: {{note}}",
+      "noProof": "بدون إثبات: يُطبَّق فورًا",
+      "full": "لا توجد أماكن لأسر جديدة"
+    },
+    "page": {
+      "title": "الشراكات",
+      "subtitle": "الشركات والمدارس والجهات التي تحصل أسرها على خصم، والأسر المستفيدة.",
+      "newPartner": "شريك جديد",
+      "stats": {
+        "running": "اتفاقيات سارية",
+        "families": "أسر لها خصم",
+        "pending": "في انتظار المراجعة",
+        "ending": "تنتهي خلال 30 يومًا"
+      },
+      "tableTitle": "الشركاء",
+      "count_zero": "لا يوجد شركاء",
+      "count_one": "شريك واحد",
+      "count_two": "شريكان",
+      "count_few": "{{count}} شركاء",
+      "count_many": "{{count}} شريكًا",
+      "count_other": "{{count}} شريك",
+      "searchPlaceholder": "الاسم أو اسم آخر تكتبه الأسر…",
+      "kind": "النوع",
+      "allKinds": "كل الأنواع",
+      "columns": {
+        "partner": "الشريك",
+        "offer": "العرض",
+        "validity": "الصلاحية",
+        "families": "الأسر",
+        "given": "خصم حتى الآن",
+        "actions": "الإجراءات"
+      },
+      "familiesCount_zero": "لا توجد أسر",
+      "familiesCount_one": "أسرة واحدة",
+      "familiesCount_two": "أسرتان",
+      "familiesCount_few": "{{count}} أسر",
+      "familiesCount_many": "{{count}} أسرة",
+      "familiesCount_other": "{{count}} أسرة",
+      "familiesOfMax_zero": "0 من {{max}}",
+      "familiesOfMax_one": "1 من {{max}}",
+      "familiesOfMax_two": "2 من {{max}}",
+      "familiesOfMax_few": "{{count}} من {{max}}",
+      "familiesOfMax_many": "{{count}} من {{max}}",
+      "familiesOfMax_other": "{{count}} من {{max}}",
+      "pendingCount_zero": "لا طلبات",
+      "pendingCount_one": "طلب واحد ينتظر",
+      "pendingCount_two": "طلبان ينتظران",
+      "pendingCount_few": "{{count}} طلبات تنتظر",
+      "pendingCount_many": "{{count}} طلبًا ينتظر",
+      "pendingCount_other": "{{count}} طلب ينتظر",
+      "emptyTitle": "لا يوجد شركاء بعد",
+      "emptyBody": "أضف الشركات والمدارس والجهات التي بينك وبينها اتفاق، فتطلب الأسر العاملة فيها خصمها عند التسجيل.",
+      "noMatch": "لا يوجد شريك يطابق هذه التصفية.",
+      "pause": "إيقاف",
+      "resume": "تشغيل",
+      "paused": "تم إيقاف {{name}}: لا طلبات جديدة، ويتوقف خصمه في الفواتير الجديدة.",
+      "resumed": "عاد {{name}} للعمل."
+    },
+    "detail": {
+      "addFamily": "إضافة أسرة",
+      "stats": {
+        "families": "أسر لها الخصم",
+        "pending": "في انتظار المراجعة",
+        "given": "خصم حتى الآن",
+        "ends": "انتهاء الاتفاقية"
+      },
+      "families": "الأسر",
+      "filterLabel": "عرض الأسر",
+      "all": "الكل",
+      "emptyTitle": "لا توجد أسر بعد",
+      "emptyBody": "تطلب الأسر هذا الخصم عند التسجيل أو من صفحة فواتيرها، ويمكنك أيضًا إضافة أسرة بنفسك.",
+      "noMatch": "لا توجد أسرة في هذه الحالة.",
+      "columns": {
+        "family": "الأسرة",
+        "state": "الخصم",
+        "given": "خصم حتى الآن",
+        "actions": "الإجراءات"
+      },
+      "agreement": "الاتفاقية",
+      "facts": {
+        "offer": "الخصم",
+        "appliesTo": "يُطبَّق على",
+        "starts": "تبدأ",
+        "ends": "تنتهي",
+        "proof": "الإثبات",
+        "proofYes": "مطلوب",
+        "proofNo": "غير مطلوب",
+        "maxFamilies": "الأسر",
+        "openOfMax": "{{open}} من {{max}} (كل الفروع)",
+        "noLimit": "بدون حد",
+        "otherNames": "أسماء أخرى",
+        "agreementRef": "رقم الاتفاقية",
+        "contact": "مسؤول التواصل",
+        "phone": "الهاتف",
+        "email": "البريد الإلكتروني"
+      }
+    },
+    "form": {
+      "newTitle": "شريك جديد",
+      "editTitle": "تعديل الشريك",
+      "description": "شركة أو مدرسة أو جهة تحصل أسرها على خصم. ترى الأسر العرض عند التسجيل ومن صفحة فواتيرها.",
+      "sections": {
+        "who": "الشريك",
+        "offer": "العرض",
+        "validity": "مدة الاتفاقية",
+        "proof": "الإثبات",
+        "agreement": "الاتفاقية والتواصل"
+      },
+      "kind": "النوع",
+      "nameEn": "الاسم (بالإنجليزية)",
+      "nameAr": "الاسم (بالعربية)",
+      "aliases": "أسماء أخرى قد تكتبها الأسر",
+      "aliasesHint": "افصل بينها بفواصل. تُستخدم لاقتراح هذا الشريك من وظيفة ولي الأمر.",
+      "aliasesPlaceholder": "Vodafone Egypt، فودافون مصر",
+      "scope": "لمن",
+      "type": "نوع الخصم",
+      "amountHint": "يُخصم من كل فاتورة يُطبَّق عليها (ولا يزيد على بند الفاتورة).",
+      "appliesTo": "يُطبَّق على",
+      "offerEn": "تفاصيل العرض (بالإنجليزية)",
+      "offerAr": "تفاصيل العرض (بالعربية)",
+      "validityHint": "يبقى الخصم للأسر حتى نهاية الاتفاقية، والفواتير الجديدة بعدها بدونه.",
+      "startsOn": "تبدأ في",
+      "endsOn": "تنتهي في",
+      "endsOnHint": "اتركه فارغًا لاتفاقية مفتوحة. ستصلك تنبيهات قبل الانتهاء بـ30 يومًا.",
+      "active": "سارية (يمكن للأسر طلبها)",
+      "proofYes": "طلب إثبات",
+      "proofYesHint": "تؤكد الحضانة كل أسرة أولًا",
+      "proofNo": "بدون إثبات",
+      "proofNoHint": "يُطبَّق الخصم فورًا",
+      "proofNoteEn": "الإثبات المطلوب (بالإنجليزية)",
+      "proofNoteAr": "الإثبات المطلوب (بالعربية)",
+      "proofNoteHint": "مثلًا: كارنيه العمل أو خطاب موارد بشرية من هذا العام",
+      "maxFamilies": "أقصى عدد أسر",
+      "maxFamiliesHint": "يُحسب في كل الفروع التي تشملها. اتركه فارغًا بلا حد.",
+      "agreementRef": "رقم الاتفاقية",
+      "contactName": "مسؤول التواصل",
+      "contactPhone": "هاتف التواصل",
+      "contactEmail": "بريد التواصل",
+      "created": "تمت إضافة الشريك.",
+      "updated": "تم حفظ الشريك.",
+      "errors": {
+        "nameRequired": "اكتب اسمًا بالعربية أو الإنجليزية.",
+        "tooLong": "هذا النص أطول من المسموح.",
+        "tooManyAliases": "حتى 12 اسمًا آخر.",
+        "valuePositive": "أدخل خصمًا أكبر من صفر.",
+        "percentMax": "لا يمكن أن تزيد النسبة على 100%.",
+        "valueTooLarge": "هذا المبلغ كبير جدًا.",
+        "appliesToRequired": "اختر ما يُطبَّق عليه الخصم.",
+        "startRequired": "اختر يوم البداية.",
+        "endBeforeStart": "يجب أن تكون النهاية في يوم البداية أو بعده.",
+        "afterAgreementEnd": "هذا بعد انتهاء الاتفاقية.",
+        "maxFamiliesInvalid": "أدخل عددًا صحيحًا 1 أو أكثر، أو اتركه فارغًا.",
+        "emailInvalid": "أدخل بريدًا إلكترونيًا صحيحًا.",
+        "reasonRequired": "اكتب السبب (ستقرؤه الأسرة).",
+        "lastDayInvalid": "اختر اليوم أو يومًا بعده.",
+        "familyRequired": "اختر الأسرة.",
+        "partnerRequired": "اختر الشريك.",
+        "proofRequired": "أرفق الإثبات الذي يطلبه هذا الشريك.",
+        "proofType": "يجب أن يكون الإثبات صورة أو ملف PDF.",
+        "proofSize": "يجب ألا يزيد الإثبات على 5 ميجابايت."
+      }
+    },
+    "decide": {
+      "approveTitle": "تأكيد الخصم",
+      "approveBody": "ستحصل الأسرة على الخصم في فواتيرها من الآن، وسيصلها إشعار.",
+      "rejectTitle": "رفض الطلب",
+      "rejectBody": "سيصل الأسرة إشعار بالسبب.",
+      "note": "ملاحظة",
+      "notePlaceholder": "مثلًا: تمت مراجعة خطاب الموارد البشرية",
+      "reason": "السبب",
+      "reasonPlaceholder": "مثلًا: الخطاب من العام الماضي، يرجى إرسال خطاب حديث",
+      "approve": "تأكيد",
+      "reject": "رفض",
+      "approved": "تم تأكيد الخصم وإبلاغ الأسرة.",
+      "rejected": "تم رفض الطلب وإبلاغ الأسرة."
+    },
+    "end": {
+      "action": "إنهاء",
+      "title": "إنهاء هذا الخصم",
+      "body": "الفواتير الجديدة بدونه، والفواتير الصادرة تبقى كما هي.",
+      "when": "متى",
+      "now": "الآن",
+      "nowHint": "من الفاتورة القادمة",
+      "later": "بعد يوم معيّن",
+      "laterHint": "اختر آخر يوم له",
+      "lastDay": "آخر يوم بالخصم",
+      "lastDayHint": "الفواتير الصادرة بعد هذا اليوم بدون الخصم.",
+      "confirm": "إنهاء الخصم",
+      "endedNow": "انتهى الخصم وتم إبلاغ الأسرة.",
+      "endsOn": "ينتهي الخصم بعد {{date}}."
+    },
+    "grant": {
+      "titleForPartner": "منح خصم {{partner}}",
+      "titleForFamily": "إضافة خصم شراكة",
+      "body": "لأسرة يعمل أحد والديها لدى الشريك (التحقت قبل الاتفاقية، أو غيّر أحدهما عمله). يبدأ من اليوم الذي تختاره، ويصل الأسرة إشعار.",
+      "family": "الأسرة",
+      "searchFamily": "الاسم أو الهاتف أو اسم الطفل…",
+      "noFamilies": "لا توجد أسرة مطابقة.",
+      "partner": "الشريك",
+      "noPartners": "لا يوجد شريك ساري لديه مكان لأسرة.",
+      "from": "من",
+      "to": "حتى",
+      "toHint": "فارغ: حتى نهاية الاتفاقية.",
+      "note": "ملاحظة",
+      "notePlaceholder": "مثلًا: تمت رؤية خطاب العمل في المكتب",
+      "confirm": "منح الخصم",
+      "done": "أصبح لـ{{family}} خصم {{partner}}."
+    },
+    "family": {
+      "title": "خصوماتك",
+      "staffTitle": "خصومات الأسرة",
+      "capNote": "مجموع الخصومات لا يزيد على {{percent}}% من البند (والخصم الكبير وحده يبقى كاملًا).",
+      "addPartnership": "إضافة شراكة",
+      "givePartner": "منح خصم {{partner}}",
+      "askForDiscount": "طلب خصم",
+      "jobHint": "وظيفة ولي الأمر تذكر {{partner}}، وهو شريك ({{value}}).",
+      "none": "لا توجد خصومات بعد",
+      "noneFamilyHint": "إذا كنت أنت أو زوجك/زوجتك تعملان لدى إحدى الشركات أو المدارس أو الجهات الشريكة، اطلب خصمها.",
+      "noneStaffHint": "أضف شراكة إذا كان أحد الوالدين يعمل لدى أحد شركاء الحضانة.",
+      "askedOn": "طُلب في {{date}}",
+      "rejectedOn": "رُفض في {{date}}",
+      "endedOn": "انتهى بعد {{date}}",
+      "startsOn": "يبدأ في {{date}}",
+      "activeSince": "منذ {{date}}",
+      "activeUntil": "{{from}} – {{to}}",
+      "askedByFamily": "طلبته الأسرة",
+      "addedByNursery": "أضافته الحضانة",
+      "decidedBy": "بواسطة {{name}}",
+      "pendingFamilyNote": "تراجع الحضانة إثباتك، وسيصلك إشعار عند التأكيد.",
+      "rejectedReason": "السبب: {{reason}}",
+      "viewProof": "عرض الإثبات",
+      "givenSoFar": "وفّرت حتى الآن",
+      "siblingTitle": "خصم الإخوة",
+      "siblingOff": "خصم {{percent}}% من المصروفات",
+      "siblingFirst": "يدفع كاملًا (الطفل الأول)"
+    },
+    "claim": {
+      "title": "طلب خصم شريك",
+      "body": "اختر مكان عملك أو عمل زوجك/زوجتك. بعض الشركاء يطلبون إثباتًا تراجعه الحضانة أولًا.",
+      "where": "مكان العمل",
+      "noOffers": "لا توجد خصومات شركاء يمكنك طلبها الآن.",
+      "proof": "إثبات العمل",
+      "proofHint": "كارنيه العمل أو خطاب من الموارد البشرية (صورة أو PDF).",
+      "send": "إرسال الطلب",
+      "sentForReview": "تم إرسال طلب خصم {{partner}}، وستراجع الحضانة إثباتك.",
+      "granted": "أصبح خصم {{partner}} مطبّقًا على فواتيرك."
+    },
+    "signup": {
+      "title": "خصم من جهة عملك",
+      "hint": "هل تعمل أنت أو زوجك/زوجتك لدى أحد شركائنا؟ أسرهم تحصل على خصم.",
+      "suggestion": "كتبت أنك تعمل في {{partner}}: أسرها تحصل على {{value}}.",
+      "useOffer": "استخدم هذا العرض",
+      "none": "لا شيء مما سبق",
+      "appliedNow": "تم تطبيق خصم {{partner}} على هذا الطلب.",
+      "afterConfirm": "تراجع الحضانة إثباتك بعد الإرسال، وعند التأكيد يُطبَّق خصم {{partner}} على فواتيرك من حينها.",
+      "afterConfirmWithAmount": "تراجع الحضانة إثباتك بعد الإرسال. عند التأكيد يُطبَّق خصم {{partner}} (حوالي {{amount}} على باقة كهذه) على فواتيرك القادمة، ويبقى هذا الدفع الأول كما هو.",
+      "expectedLine": "بعد تأكيد الحضانة لإثباتك: {{partner}} −{{amount}} على فواتيرك القادمة.",
+      "partnerLine": "خصم {{partner}}",
+      "capped": "محدود بالحد الأقصى لمجموع الخصومات",
+      "proofToContinue": "أرفق إثبات الشريك الذي اخترته، أو اختر «لا شيء مما سبق».",
+      "success": {
+        "active": "تم تطبيق خصم الشريك.",
+        "pending": "تم إرسال طلب خصم الشريك مع طلب الالتحاق، وستراجع الحضانة إثباتك.",
+        "failed": "لم نتمكن من إرسال طلب خصم الشريك. بعد تسجيل الدخول اطلبه من صفحة الفواتير."
+      }
+    },
+    "report": {
+      "title": "الخصومات الممنوحة",
+      "subtitle": "ما خصمته الفواتير الصادرة في هذه الفترة، ولماذا.",
+      "total": "الإجمالي",
+      "reach": "{{families}} أسرة · {{invoices}} فاتورة",
+      "partnerships": "الشراكات",
+      "sibling": "خصم الإخوة",
+      "deals": "العروض",
+      "byPartner": "حسب الشريك",
+      "byDeal": "حسب العرض",
+      "byMonth": "حسب الشهر",
+      "month": "الشهر",
+      "families": "الأسر",
+      "amount": "المبلغ",
+      "empty": "لا توجد خصومات في هذه الفترة.",
+      "noneInRange": "لا شيء في هذه الفترة."
+    },
+    "errors": {
+      "not_found": "لم يتم العثور على هذا الشريك هنا.",
+      "scope_invalid": "اختر هذا الفرع أو كل الفروع.",
+      "forbidden": "ليست لديك صلاحية لهذا الإجراء.",
+      "kind_invalid": "اختر شركة أو مدرسة أو جهة.",
+      "name_required": "اكتب اسمًا بالعربية أو الإنجليزية.",
+      "text_too_long": "أحد النصوص أطول من المسموح.",
+      "value_invalid": "أدخل خصمًا أكبر من صفر (وبحد أقصى 100%).",
+      "applies_to_required": "اختر ما يُطبَّق عليه الخصم.",
+      "dates_invalid": "راجع التواريخ: النهاية في يوم البداية أو بعده، وضمن مدة الاتفاقية.",
+      "max_families_invalid": "أدخل عددًا صحيحًا 1 أو أكثر.",
+      "email_invalid": "أدخل بريدًا إلكترونيًا صحيحًا.",
+      "not_available": "خصم هذا الشريك غير متاح الآن.",
+      "already_claimed": "لهذه الأسرة هذا الخصم أو طلب له بالفعل.",
+      "full": "لا توجد أماكن لأسر جديدة لدى هذا الشريك.",
+      "proof_required": "هذا الشريك يحتاج إثباتًا.",
+      "proof_invalid": "تعذّر قبول الإثبات. أرفقه مرة أخرى.",
+      "claim_not_found": "لم يتم العثور على هذا الطلب.",
+      "claim_not_pending": "تم البت في هذا الطلب بالفعل.",
+      "claim_not_active": "هذا الخصم لم يعد ساريًا.",
+      "reason_required": "اكتب السبب (ستقرؤه الأسرة).",
+      "family_not_found": "ليس لهذه الأسرة طفل في هذا الفرع.",
+      "network": "تعذّر الاتصال بالخادم. تحقق من الاتصال وحاول مرة أخرى.",
+      "failed": "حدث خطأ. حاول مرة أخرى."
     }
   }
 }

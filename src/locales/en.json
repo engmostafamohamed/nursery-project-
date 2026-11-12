@@ -934,7 +934,8 @@
     "add": "Add",
     "remove": "Remove",
     "search": "Search",
-    "noResults": "No results"
+    "noResults": "No results",
+    "fileUnavailable": "File unavailable"
   },
   "validation": {
     "pleaseComplete": "Please complete {{count}} required fields below."
@@ -1339,7 +1340,6 @@
     "language": "Language"
   },
   "auth": {
-
     "page": {
       "welcome": "Welcome back",
       "welcomeHint": "Sign in to continue to your nursery.",
@@ -1423,19 +1423,12 @@
       }
     },
     "showPassword": "Show password",
-
     "hidePassword": "Hide password",
-
     "passwordRecoveryContact": "Password reset contact",
-
     "passwordRecoveryContactEmpty": "Add a parent's phone or email first",
-
     "recoveryFatherEmail": "Father's email",
-
     "recoveryFatherMobile": "Father's mobile",
-
     "recoveryMotherEmail": "Mother's email",
-
     "recoveryMotherMobile": "Mother's mobile",
     "loginTitle": "Sign in",
     "loginSubtitle": "Manage your nursery operations in one place",
@@ -2124,7 +2117,7 @@
       "events": "Events",
       "courses": "Courses",
       "packages": "Packages",
-      "deals": "Deals & Discounts",
+      "deals": "Discounts",
       "reports": "Reports",
       "brandSubtitle": "Admin",
       "collapseSidebar": "Collapse sidebar",
@@ -3387,7 +3380,8 @@
       "validityRequired": "Enter how long the package stays valid.",
       "validityUnitRequired": "Choose months or years.",
       "noActivePeriod": "Switch on at least one billing period. Parents choose one of these when they register.",
-      "periodPriceInvalid": "Each billing period that is on needs a price above zero."
+      "periodPriceInvalid": "Each billing period that is on needs a price above zero.",
+      "invoicesRange": "Enter a whole number between 2 and 60."
     }
   },
   "packageFilters": {
@@ -3429,8 +3423,8 @@
       "status": "Status",
       "window": "Window",
       "packages": "Packages",
-      "children": "Children",
-      "actions": "Actions"
+      "actions": "Actions",
+      "reached": "Reached"
     },
     "types": {
       "percentage": "Percentage off",
@@ -3451,7 +3445,6 @@
     "windowUntil": "Until {{date}}",
     "notAssigned": "Not assigned",
     "openPackages": "Open Packages to edit this one",
-    "childrenUsing": "Children on a package with this discount",
     "dialog": {
       "newTitle": "New deal",
       "editTitle": "Edit deal",
@@ -3462,7 +3455,9 @@
       "discount": "Discount",
       "window": "Time window",
       "windowHint": "Optional. Leave both blank for a deal with no start or end.",
-      "description": "Description"
+      "description": "Description",
+      "appliesFor": "Which invoices",
+      "appliesForHint": "A family’s invoices for a package, counted from its first (the admission invoice)."
     },
     "fields": {
       "nameEn": "Name (English)",
@@ -3476,7 +3471,9 @@
       "ends": "Ends (optional)",
       "endsHint": "Shown to parents as a live countdown. Leave blank for no end.",
       "descEn": "Description (English)",
-      "descAr": "Description (Arabic)"
+      "descAr": "Description (Arabic)",
+      "invoicesCount": "How many invoices",
+      "invoicesCountHint": "Between {{min}} and {{max}}."
     },
     "saved": "Deal saved.",
     "saveFailed": "Could not save the deal.",
@@ -3499,7 +3496,23 @@
       "createAndAssign": "Create & assign",
       "customCreated": "Custom discount created and selected. Save the package to apply it.",
       "createFailed": "Could not create the discount."
-    }
+    },
+    "appliesFor": {
+      "firstInvoice": "First invoice only",
+      "firstInvoiceHint": "A welcome offer",
+      "firstInvoices": "The first few invoices",
+      "firstInvoicesHint": "e.g. the first 3 months",
+      "everyInvoice": "Every invoice",
+      "everyInvoiceHint": "While the deal runs",
+      "firstInvoicesCount_one": "First invoice",
+      "firstInvoicesCount_other": "First {{count}} invoices"
+    },
+    "familiesReached": "Families reached",
+    "amountGiven": "{{amount}} taken off",
+    "notUsedYet": "Not used yet",
+    "reachedSummary_one": "{{count}} family · {{amount}}",
+    "reachedSummary_other": "{{count}} families · {{amount}}",
+    "familiesUsing": "Families whose invoices carry it ({{invoices}} invoices)"
   },
   "tuitionPackages": {
     "title": "Tuition packages",
@@ -3647,7 +3660,12 @@
       "tuition": "Tuition",
       "admission_package": "Admission package",
       "discount": "Discount",
-      "event": "Event"
+      "event": "Event",
+      "discount_partnership": "Partnership discount · {{name}} ({{value}})",
+      "discount_sibling": "Sibling discount · 2nd child ({{value}})",
+      "discount_sibling_third": "Sibling discount · 3rd child or later ({{value}})",
+      "discount_deal": "{{name}} ({{value}})",
+      "discount_capped": "limited by the discounts cap"
     },
     "notes": {
       "applicationPackage": "Admission package selected before approval."
@@ -4144,8 +4162,6 @@
       "date": "Date",
       "parent": "Parent",
       "viewProof": "View proof image",
-      "proofLoading": "Loading secure proof link…",
-      "proofLoadFailed": "Could not open the payment proof.",
       "confirm": "Confirm Payment",
       "reject": "Reject",
       "confirmed": "Payment confirmed.",
@@ -5056,14 +5072,14 @@
       "title": "Your family",
       "subtitle": "Children, schedule, and updates in one place.",
       "sectionChildren": "Your children",
-    "sectionSchedule": "Today & schedule",
-    "sectionFeed": "Recent updates",
-    "sectionFinancial": "Payments",
-    "sectionBilling": "Tuition & extra hours",
-    "sectionApplications": "Applications",
-    "sectionNurseryChat": "Message nursery",
-    "noApplications": "No application forms found yet.",
-    "adminInbox": {
+      "sectionSchedule": "Today & schedule",
+      "sectionFeed": "Recent updates",
+      "sectionFinancial": "Payments",
+      "sectionBilling": "Tuition & extra hours",
+      "sectionApplications": "Applications",
+      "sectionNurseryChat": "Message nursery",
+      "noApplications": "No application forms found yet.",
+      "adminInbox": {
         "title": "From the nursery",
         "viewAll": "View all",
         "urgentBadge": "Urgent",
@@ -5813,7 +5829,6 @@
       "noMediaToday": "No photos uploaded today. Tap to upload."
     },
     "nav": {
-
       "familyMessages": "Messages",
       "team": "Teams",
       "reportRates": "Report send rate",
@@ -8797,6 +8812,26 @@
     "milestone_shared": {
       "title": "New milestone",
       "body": "New milestone for {{child}}: {{milestone}}"
+    },
+    "partner_claim_received": {
+      "title": "Partner discount request",
+      "body": "{{family}} asked for the {{partner}} discount. Check the proof and confirm or reject it."
+    },
+    "partner_discount_approved": {
+      "title": "Your discount is confirmed",
+      "body": "The {{partner}} discount now applies to your invoices."
+    },
+    "partner_discount_rejected": {
+      "title": "Discount request not accepted",
+      "body": "Your request for the {{partner}} discount was not accepted. Reason: {{reason}}"
+    },
+    "partner_discount_ended": {
+      "title": "A discount has ended",
+      "body": "The {{partner}} discount has ended; new invoices go without it."
+    },
+    "partner_agreement_ending": {
+      "title": "{{partner}} agreement ends soon",
+      "body": "The {{partner}} agreement ends on {{date}}. Families with its discount: {{families}}. Renew it or let it end."
     }
   },
   "qr": {
@@ -9877,6 +9912,14 @@
       "accent_color": {
         "label": "Accent color",
         "helper": "Accent color - Controls this nursery behavior."
+      },
+      "max_total_discount_percentage": {
+        "label": "Most discounts can take off together (%)",
+        "helper": "A charge’s discounts (deal, partnership, sibling) together stop here: the largest counts in full, the others only up to this. One large discount alone is kept whole."
+      },
+      "sibling_discount_enabled": {
+        "label": "Sibling discount",
+        "helper": "The 2nd and 3rd child billed to one family get these discounts on tuition."
       }
     },
     "options": {
@@ -11128,6 +11171,340 @@
     "noAccess": {
       "title": "No access",
       "body": "Your role does not include \"{{feature}}\". Ask your nursery admin if you need it."
+    }
+  },
+  "discounts": {
+    "section": {
+      "label": "Discounts",
+      "deals": "Deals",
+      "partnerships": "Partnerships"
+    },
+    "kinds": {
+      "company": "Company",
+      "school": "School",
+      "organization": "Organization"
+    },
+    "applies": {
+      "tuition": "Tuition",
+      "extra_hours": "Extra hours",
+      "both": "{{first}} and {{second}}"
+    },
+    "scope": {
+      "branch": "This branch",
+      "branchHint": "Families of this branch only",
+      "chain": "All branches",
+      "chainHint": "Families at every branch of the chain"
+    },
+    "partnerStates": {
+      "active": "Running",
+      "ending_soon": "Ending soon",
+      "scheduled": "Not started",
+      "expired": "Ended",
+      "paused": "Paused"
+    },
+    "beneficiaryStates": {
+      "pending": "Waiting for review",
+      "active": "Active",
+      "scheduled": "Starts later",
+      "ended": "Ended",
+      "rejected": "Rejected"
+    },
+    "validUntil": "Until {{date}}",
+    "noEndDate": "No end date",
+    "offer": {
+      "suggested": "Matches your job",
+      "proofNeeded": "Needs a proof (staff ID or an HR letter)",
+      "proofNeededWith": "Needs a proof: {{note}}",
+      "noProof": "No proof needed: applies at once",
+      "full": "No places left for new families"
+    },
+    "page": {
+      "title": "Partnerships",
+      "subtitle": "Companies, schools and organizations whose families get a discount, and the families who have it.",
+      "newPartner": "New partner",
+      "stats": {
+        "running": "Running agreements",
+        "families": "Families with a discount",
+        "pending": "Waiting for review",
+        "ending": "Ending within 30 days"
+      },
+      "tableTitle": "Partners",
+      "count_one": "{{count}} partner",
+      "count_other": "{{count}} partners",
+      "searchPlaceholder": "Name or another name families use…",
+      "kind": "Kind",
+      "allKinds": "All kinds",
+      "columns": {
+        "partner": "Partner",
+        "offer": "Offer",
+        "validity": "Validity",
+        "families": "Families",
+        "given": "Given so far",
+        "actions": "Actions"
+      },
+      "familiesCount_one": "{{count}} family",
+      "familiesCount_other": "{{count}} families",
+      "familiesOfMax_one": "{{count}} of {{max}} family",
+      "familiesOfMax_other": "{{count}} of {{max}} families",
+      "pendingCount_one": "{{count}} waiting",
+      "pendingCount_other": "{{count}} waiting",
+      "emptyTitle": "No partners yet",
+      "emptyBody": "Add the companies, schools and organizations you have an agreement with. Families who work there can then ask for their discount when they sign up.",
+      "noMatch": "No partner matches these filters.",
+      "pause": "Pause",
+      "resume": "Resume",
+      "paused": "{{name}} is paused: no new requests, and its discount stops on new invoices.",
+      "resumed": "{{name}} is running again."
+    },
+    "detail": {
+      "addFamily": "Add a family",
+      "stats": {
+        "families": "Families with it",
+        "pending": "Waiting for review",
+        "given": "Given so far",
+        "ends": "Agreement ends"
+      },
+      "families": "Families",
+      "filterLabel": "Show families",
+      "all": "All",
+      "emptyTitle": "No families yet",
+      "emptyBody": "Families ask for this discount when they sign up or from their invoices. You can also add a family yourself.",
+      "noMatch": "No family is in this state.",
+      "columns": {
+        "family": "Family",
+        "state": "Discount",
+        "given": "Given so far",
+        "actions": "Actions"
+      },
+      "agreement": "The agreement",
+      "facts": {
+        "offer": "Discount",
+        "appliesTo": "Applies to",
+        "starts": "Starts",
+        "ends": "Ends",
+        "proof": "Proof",
+        "proofYes": "Required",
+        "proofNo": "Not needed",
+        "maxFamilies": "Families",
+        "openOfMax": "{{open}} of {{max}} (all branches)",
+        "noLimit": "No limit",
+        "otherNames": "Other names",
+        "agreementRef": "Agreement ref.",
+        "contact": "Contact",
+        "phone": "Phone",
+        "email": "Email"
+      }
+    },
+    "form": {
+      "newTitle": "New partner",
+      "editTitle": "Edit partner",
+      "description": "A company, school or organization whose families get a discount. Families see the offer when they sign up and from their invoices.",
+      "sections": {
+        "who": "Who",
+        "offer": "The offer",
+        "validity": "When it runs",
+        "proof": "Proof",
+        "agreement": "Agreement and contact"
+      },
+      "kind": "Kind",
+      "nameEn": "Name (English)",
+      "nameAr": "Name (Arabic)",
+      "aliases": "Other names families may write",
+      "aliasesHint": "Separate them with commas. Used to suggest this partner from a parent’s job.",
+      "aliasesPlaceholder": "Vodafone Egypt, فودافون مصر",
+      "scope": "For",
+      "type": "Discount type",
+      "amountHint": "Taken off each invoice it applies to (never more than the invoice line).",
+      "appliesTo": "Applies to",
+      "offerEn": "Offer details (English)",
+      "offerAr": "Offer details (Arabic)",
+      "validityHint": "Families keep the discount until its end; new invoices after it go without it.",
+      "startsOn": "Starts on",
+      "endsOn": "Ends on",
+      "endsOnHint": "Leave empty for an open-ended agreement. You are alerted 30 days before it ends.",
+      "active": "Running (families can ask for it)",
+      "proofYes": "Ask for a proof",
+      "proofYesHint": "The nursery confirms each family first",
+      "proofNo": "No proof",
+      "proofNoHint": "The discount applies at once",
+      "proofNoteEn": "What proof (English)",
+      "proofNoteAr": "What proof (Arabic)",
+      "proofNoteHint": "e.g. a staff ID card or an HR letter from this year",
+      "maxFamilies": "Most families",
+      "maxFamiliesHint": "Counted across every branch it covers. Empty for no limit.",
+      "agreementRef": "Agreement reference",
+      "contactName": "Contact person",
+      "contactPhone": "Contact phone",
+      "contactEmail": "Contact email",
+      "created": "Partner added.",
+      "updated": "Partner saved.",
+      "errors": {
+        "nameRequired": "Enter a name in Arabic or English.",
+        "tooLong": "This text is too long.",
+        "tooManyAliases": "Up to 12 other names.",
+        "valuePositive": "Enter a discount greater than zero.",
+        "percentMax": "A percentage cannot be more than 100%.",
+        "valueTooLarge": "This amount is too large.",
+        "appliesToRequired": "Choose what the discount applies to.",
+        "startRequired": "Choose the first day.",
+        "endBeforeStart": "The end must be on or after the start.",
+        "afterAgreementEnd": "This is after the agreement ends.",
+        "maxFamiliesInvalid": "Enter a whole number of 1 or more, or leave it empty.",
+        "emailInvalid": "Enter a valid email address.",
+        "reasonRequired": "Write the reason (the family reads it).",
+        "lastDayInvalid": "Choose today or a later day.",
+        "familyRequired": "Choose the family.",
+        "partnerRequired": "Choose the partner.",
+        "proofRequired": "Attach the proof this partner needs.",
+        "proofType": "The proof must be a photo or a PDF.",
+        "proofSize": "The proof must be 5 MB or smaller."
+      }
+    },
+    "decide": {
+      "approveTitle": "Confirm the discount",
+      "approveBody": "The family gets the discount on its invoices from now on, and is told.",
+      "rejectTitle": "Reject the request",
+      "rejectBody": "The family is told, with your reason.",
+      "note": "Note",
+      "notePlaceholder": "e.g. checked the HR letter",
+      "reason": "Reason",
+      "reasonPlaceholder": "e.g. the letter is from last year; please send a recent one",
+      "approve": "Confirm",
+      "reject": "Reject",
+      "approved": "Discount confirmed. The family was told.",
+      "rejected": "Request rejected. The family was told."
+    },
+    "end": {
+      "action": "End",
+      "title": "End this discount",
+      "body": "New invoices go without it. Invoices already issued keep it.",
+      "when": "When",
+      "now": "Now",
+      "nowHint": "From the next invoice",
+      "later": "After a day",
+      "laterHint": "Choose its last day",
+      "lastDay": "Last day with the discount",
+      "lastDayHint": "Invoices issued after this day go without it.",
+      "confirm": "End discount",
+      "endedNow": "Discount ended. The family was told.",
+      "endsOn": "The discount ends after {{date}}."
+    },
+    "grant": {
+      "titleForPartner": "Give the {{partner}} discount",
+      "titleForFamily": "Add a partnership discount",
+      "body": "For a family who works at the partner (enrolled before the agreement, or a parent who changed jobs). It applies from the day you choose, and the family is told.",
+      "family": "Family",
+      "searchFamily": "Name, phone or a child’s name…",
+      "noFamilies": "No family matches.",
+      "partner": "Partner",
+      "noPartners": "No partner is running with room for a family.",
+      "from": "From",
+      "to": "Until",
+      "toHint": "Empty: until the agreement ends.",
+      "note": "Note",
+      "notePlaceholder": "e.g. HR letter seen at the office",
+      "confirm": "Give discount",
+      "done": "{{family}} now has the {{partner}} discount."
+    },
+    "family": {
+      "title": "Your discounts",
+      "staffTitle": "Family discounts",
+      "capNote": "Together, discounts take off at most {{percent}}% of a charge (one large discount alone is kept whole).",
+      "addPartnership": "Add partnership",
+      "givePartner": "Give the {{partner}} discount",
+      "askForDiscount": "Ask for a discount",
+      "jobHint": "The parents’ job mentions {{partner}}, a partner ({{value}}).",
+      "none": "No discounts yet",
+      "noneFamilyHint": "If you or your spouse work at one of our partner companies, schools or organizations, ask for its discount.",
+      "noneStaffHint": "Add a partnership if a parent works at one of the nursery’s partners.",
+      "askedOn": "Asked on {{date}}",
+      "rejectedOn": "Rejected on {{date}}",
+      "endedOn": "Ended after {{date}}",
+      "startsOn": "Starts on {{date}}",
+      "activeSince": "Since {{date}}",
+      "activeUntil": "{{from}} – {{to}}",
+      "askedByFamily": "Asked by the family",
+      "addedByNursery": "Added by the nursery",
+      "decidedBy": "by {{name}}",
+      "pendingFamilyNote": "The nursery is checking your proof. You will be told once it is confirmed.",
+      "rejectedReason": "Reason: {{reason}}",
+      "viewProof": "View proof",
+      "givenSoFar": "Saved so far",
+      "siblingTitle": "Sibling discount",
+      "siblingOff": "{{percent}}% off tuition",
+      "siblingFirst": "Pays in full (first child)"
+    },
+    "claim": {
+      "title": "Ask for a partner discount",
+      "body": "Choose where you or your spouse work. Some partners need a proof, which the nursery checks first.",
+      "where": "Where you work",
+      "noOffers": "There are no partner discounts you can ask for right now.",
+      "proof": "Proof of work",
+      "proofHint": "A staff ID card or an HR letter (photo or PDF).",
+      "send": "Send request",
+      "sentForReview": "Your request for the {{partner}} discount was sent. The nursery will check your proof.",
+      "granted": "The {{partner}} discount now applies to your invoices."
+    },
+    "signup": {
+      "title": "Discount from your workplace",
+      "hint": "Do you or your spouse work at one of our partners? Their families get a discount.",
+      "suggestion": "You wrote that you work at {{partner}}: its families get {{value}}.",
+      "useOffer": "Use this offer",
+      "none": "None of these",
+      "appliedNow": "The {{partner}} discount is applied to this order.",
+      "afterConfirm": "The nursery checks your proof after you submit; once confirmed, the {{partner}} discount applies to your invoices from then on.",
+      "afterConfirmWithAmount": "The nursery checks your proof after you submit. Once confirmed, the {{partner}} discount (about {{amount}} on a plan like this) applies to your next invoices; this first payment stays as shown.",
+      "expectedLine": "After the nursery confirms your proof: {{partner}} −{{amount}} on your next invoices.",
+      "partnerLine": "{{partner}} discount",
+      "capped": "Limited by the cap on combined discounts",
+      "proofToContinue": "Attach the proof for the partner you chose, or choose “None of these”.",
+      "success": {
+        "active": "Your partner discount is applied.",
+        "pending": "Your partner discount request was sent with your application. The nursery will check your proof.",
+        "failed": "We could not send your partner discount request. After you sign in, ask for it from your invoices page."
+      }
+    },
+    "report": {
+      "title": "Discounts given",
+      "subtitle": "What the invoices issued in this period took off, and why.",
+      "total": "In all",
+      "reach": "{{families}} families · {{invoices}} invoices",
+      "partnerships": "Partnerships",
+      "sibling": "Sibling discount",
+      "deals": "Deals",
+      "byPartner": "By partner",
+      "byDeal": "By deal",
+      "byMonth": "By month",
+      "month": "Month",
+      "families": "Families",
+      "amount": "Amount",
+      "empty": "No discounts in this period.",
+      "noneInRange": "None in this period."
+    },
+    "errors": {
+      "not_found": "This partner was not found here.",
+      "scope_invalid": "Choose this branch or all branches.",
+      "forbidden": "You are not allowed to do this.",
+      "kind_invalid": "Choose company, school or organization.",
+      "name_required": "Enter a name in Arabic or English.",
+      "text_too_long": "One of the texts is too long.",
+      "value_invalid": "Enter a discount above zero (at most 100%).",
+      "applies_to_required": "Choose what the discount applies to.",
+      "dates_invalid": "Check the dates: the end must be on or after the start, and within the agreement.",
+      "max_families_invalid": "Enter a whole number of 1 or more.",
+      "email_invalid": "Enter a valid email address.",
+      "not_available": "This partner’s discount is not available now.",
+      "already_claimed": "This family already has this discount or a request for it.",
+      "full": "This partner has no places left for new families.",
+      "proof_required": "This partner needs a proof.",
+      "proof_invalid": "The proof could not be accepted. Attach it again.",
+      "claim_not_found": "This request was not found.",
+      "claim_not_pending": "This request was already decided.",
+      "claim_not_active": "This discount is not running any more.",
+      "reason_required": "Write the reason (the family reads it).",
+      "family_not_found": "This family has no child at this branch.",
+      "network": "Could not reach the server. Check the connection and try again.",
+      "failed": "Something went wrong. Try again."
     }
   }
 }

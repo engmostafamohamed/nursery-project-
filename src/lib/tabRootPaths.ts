@@ -80,6 +80,8 @@ const ADMIN_ROOTS = [
   '/admin/events',
   '/admin/courses',
   '/admin/packages',
+  '/admin/deals',
+  '/admin/deals/partners',
   '/admin/reports',
   '/admin/reports/financial',
   '/admin/messages',

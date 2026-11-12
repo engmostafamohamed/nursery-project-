@@ -60,6 +60,7 @@ const NAV_SECTIONS: NavSection[] = [
       { key: 'events',             to: '/xo-admin/nursery/events',                icon: 'event',                  tKey: 'admin.nav.events' },
       { key: 'courses',            to: '/xo-admin/nursery/courses',               icon: 'school',                 tKey: 'admin.nav.courses' },
       { key: 'packages',           to: '/xo-admin/nursery/packages',              icon: 'package_2',              tKey: 'admin.nav.packages' },
+      { key: 'deals',              to: '/xo-admin/nursery/deals',                 icon: 'sell',                   tKey: 'admin.nav.deals' },
       { key: 'inventory',          to: '/xo-admin/nursery/inventory',             icon: 'inventory_2',            tKey: 'admin.nav.inventory' },
       { key: 'qrCodes',            to: '/xo-admin/nursery/qr-codes',              icon: 'qr_code_2',              tKey: 'admin.nav.qrCodes' },
     ],

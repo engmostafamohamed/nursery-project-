@@ -5,6 +5,7 @@ export function parentNotificationMaterialIcon(type: string): string {
     return 'person_check';
   }
   if (t.startsWith('payment')) return 'payments';
+  if (t.includes('discount') || t.startsWith('partner')) return 'sell';
   if (t.startsWith('application')) return 'assignment';
   if (t.startsWith('event')) return 'calendar_month';
   if (t.startsWith('invoice')) return 'receipt';
@@ -19,7 +20,7 @@ export function parentNotificationFallbackPath(type: string): string {
   if (t.includes('attendance')) return '/parent';
   if (t.includes('message')) return '/parent/messages';
   if (t.includes('event')) return '/parent/events';
-  if (t.includes('invoice') || t.includes('financial') || t.includes('payment')) return '/parent/invoices';
+  if (t.includes('invoice') || t.includes('financial') || t.includes('payment') || t.includes('discount')) return '/parent/invoices';
   if (t.includes('application')) return '/parent';
   if (t.includes('media')) return '/parent/media';
   if (t.includes('report') || t.includes('daily_report')) return '/parent/daily-reports';

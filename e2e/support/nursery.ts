@@ -34,6 +34,8 @@ export const PNG = Buffer.from(
   'base64',
 );
 export const REQUIRED_DOCUMENTS = ['birth_certificate', 'vaccination_card', 'parent_id', 'proof_of_address'] as const;
+/** Buckets whose files live under the nursery's folder (<nursery>/…), removed with it. */
+const FILE_BUCKETS = ['application-documents', 'partner-proofs'] as const;
 
 async function managementApi(path: string, init: RequestInit = {}) {
   const res = await fetch(`https://api.supabase.com${path}`, {
@@ -374,8 +376,11 @@ export async function cleanupTestNursery(n: TestNursery | undefined) {
   const idList = (ids: string[]) => ids.map((id) => `'${id}'`).join(',') || "'00000000-0000-0000-0000-000000000000'";
   const quoted = (list: string) => list.replace(/'/g, "''");
 
-  const objects = await sql<{ name: string }>(`select name from storage.objects where bucket_id = 'application-documents' and name like '${n.id}/%'`);
-  if (objects.length) await svc.storage.from('application-documents').remove(objects.map((o) => o.name));
+  // The nursery's files: application documents and the families' partner proofs.
+  for (const bucket of FILE_BUCKETS) {
+    const objects = await sql<{ name: string }>(`select name from storage.objects where bucket_id = '${bucket}' and name like '${n.id}/%'`);
+    if (objects.length) await svc.storage.from(bucket).remove(objects.map((o) => o.name));
+  }
 
   await sql(`
     do $$
@@ -419,7 +424,7 @@ export async function cleanupTestNursery(n: TestNursery | undefined) {
   const [left] = await sql<{ users: number; nurseries: number; files: number; children: number }>(`
     select (select count(*) from auth.users where id in (${idList(userIds)}))::int as users,
            (select count(*) from public.nurseries where id = '${n.id}')::int as nurseries,
-           (select count(*) from storage.objects where bucket_id = 'application-documents' and name like '${n.id}/%')::int as files,
+           (select count(*) from storage.objects where bucket_id in ('application-documents', 'partner-proofs') and name like '${n.id}/%')::int as files,
            (select count(*) from public.children where id in (${idList(childIds)}))::int as children`);
   if (left.users + left.nurseries + left.files + left.children > 0) throw new Error(`cleanup left ${JSON.stringify(left)}`);
 }

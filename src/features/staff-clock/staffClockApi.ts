@@ -7,22 +7,17 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { classProfileKeys } from '@/features/classes/useClassProfile';
 import { errorTextKey } from '@/lib/errorCode';
-import { supabase } from '@/lib/supabase';
+import { callRpc } from '@/lib/rpc';
 
 import { toMyStaffDay, toStaffDay, type MyStaffDay, type StaffDay } from './staffClock';
 
-const rpc = async (name: string, args?: Record<string, unknown>): Promise<unknown> => {
-  const { data, error } = await supabase.rpc(name as never, args as never);
-  if (error) throw error;
-  return data;
-};
 
-export const fetchMyStaffDay = async (): Promise<MyStaffDay> => toMyStaffDay(await rpc('get_my_staff_day'));
-export const clockStaff = async (action: 'in' | 'out'): Promise<MyStaffDay> => toMyStaffDay(await rpc('clock_staff', { p_action: action }));
+export const fetchMyStaffDay = async (): Promise<MyStaffDay> => toMyStaffDay(await callRpc('get_my_staff_day'));
+export const clockStaff = async (action: 'in' | 'out'): Promise<MyStaffDay> => toMyStaffDay(await callRpc('clock_staff', { p_action: action }));
 
 /** Records (or with both times empty, clears) a member of staff's day; times are HH:MM in the nursery's clock. */
 export const recordStaffAttendance = async (input: { userId: string; day: string; checkIn: string | null; checkOut: string | null; note?: string }): Promise<StaffDay | null> =>
-  toStaffDay(await rpc('record_staff_attendance', {
+  toStaffDay(await callRpc('record_staff_attendance', {
     p_user_id: input.userId,
     p_day: input.day,
     p_check_in: input.checkIn || null,

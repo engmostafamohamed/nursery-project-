@@ -3,7 +3,7 @@
  * (the service worker answers table reads from its cache first, so a change would not show at once).
  */
 import { errorTextKey } from '@/lib/errorCode';
-import { supabase } from '@/lib/supabase';
+import { callRpc } from '@/lib/rpc';
 
 import {
   toClassExtras,
@@ -17,11 +17,7 @@ import {
   type MyKitchenAccount,
 } from './kitchenSales';
 
-const rpc = async <T>(name: string, args: Record<string, unknown> | undefined, map: (raw: unknown) => T): Promise<T> => {
-  const { data, error } = await supabase.rpc(name as never, args as never);
-  if (error) throw error;
-  return map(data);
-};
+const rpc = async <T>(name: string, args: Record<string, unknown> | undefined, map: (raw: unknown) => T): Promise<T> => map(await callRpc(name, args));
 
 export const fetchKitchenSales = (nurseryId: string, month: string) =>
   rpc<KitchenSales>('get_kitchen_sales', { p_nursery_id: nurseryId, p_month: `${month}-01` }, toKitchenSales);

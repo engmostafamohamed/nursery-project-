@@ -25,4 +25,10 @@ describe('the admin’s class and staff links', () => {
     expect(links.staffPage('u1', 'absences')).toBe('/admin/staff/u1?tab=absences');
     expect(links.staffAbsences).toBe('/admin/staff/absences');
   });
+
+  it('open the discounts pages and one partner', () => {
+    expect(links.deals).toBe('/admin/deals');
+    expect(links.partnerships).toBe('/admin/deals/partners');
+    expect(xo.partnerPage('p1')).toBe('/xo-admin/nursery/deals/partners/p1');
+  });
 });

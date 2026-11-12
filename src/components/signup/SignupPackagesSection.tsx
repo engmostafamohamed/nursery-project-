@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, type ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ApplicationExtraHoursPackageCard } from '@/components/parent/ApplicationExtraHoursPackageCard';
@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 
 import { SignupOrderSummary, SignupTotalBar } from './SignupOrderSummary';
 import { SignupOptionsStatus } from './SignupOptionsStatus';
+import { SignupPartnerSection } from './SignupPartnerSection';
 
 
 function SectionTitle({ index, title, hint }: { index: number; title: string; hint: string }) {
@@ -48,6 +49,8 @@ type Props = {
   onExtraHoursPackageChange: (value: string | null) => void;
   /** The total for what is picked, recalculated on every choice. */
   order: SignupOrder;
+  /** Where the parents work: the nursery's partners, the one chosen and its proof. */
+  partner: Omit<ComponentProps<typeof SignupPartnerSection>, 'offers' | 'expectedAmount'>;
 };
 
 /**
@@ -68,6 +71,7 @@ export function SignupPackagesSection({
   extraHoursPackageId,
   onExtraHoursPackageChange,
   order,
+  partner,
 }: Props) {
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language.startsWith('ar');
@@ -98,6 +102,7 @@ export function SignupPackagesSection({
   const hourlyRate = options.extraHoursHourlyPlan?.rate ?? null;
   const showExtraHours = options.extraHoursPackages.length > 0 || Boolean(options.extraHoursHourlyPlan);
   const activePeriod = periodOptions.includes(billingPeriod) ? billingPeriod : periodOptions[0];
+  const showPartners = options.partnerOffers.length > 0;
 
   const choosePeriod = (period: ApplicationPackageBillingPeriod) => {
     onBillingPeriodChange(period);
@@ -238,6 +243,13 @@ export function SignupPackagesSection({
                 canChoose
                 onSelect={onExtraHoursPackageChange}
               />
+            </fieldset>
+          ) : null}
+
+          {showPartners ? (
+            <fieldset>
+              <SectionTitle index={showExtraHours ? 4 : 3} title={t('discounts.signup.title')} hint={t('discounts.signup.hint')} />
+              <SignupPartnerSection {...partner} offers={options.partnerOffers} expectedAmount={order.expectedPartner?.amount ?? null} />
             </fieldset>
           ) : null}
         </div>

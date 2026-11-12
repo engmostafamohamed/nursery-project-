@@ -11,10 +11,12 @@ import { PaymentHistoryTable } from '@/components/financial/PaymentHistoryTable'
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import { DiscountsReport } from '@/features/discounts/DiscountsReport';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { startEndForPreset, useFinancialReports, type RangePreset } from '@/hooks/useFinancialReports';
 import { usePaymentHistory } from '@/hooks/usePaymentHistory';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { localDateInputValue } from '@/lib/datetime';
 import { downloadFinancialReportCsv, downloadFinancialReportPdf, type FinancialReportInput } from '@/lib/exports';
 import { sendInvoiceReminder } from '@/lib/invoiceActions';
 
@@ -38,6 +40,8 @@ export function AdminFinancialReportsPage() {
     limit: 50,
   });
   const d = reports.data;
+  // The discounts report counts whole days in the nursery's calendar.
+  const reportDay = (iso: string | undefined) => (iso ? localDateInputValue(new Date(iso)) : '');
 
   const buildReportInput = (): FinancialReportInput | null => {
     if (!d) return null;
@@ -143,6 +147,8 @@ export function AdminFinancialReportsPage() {
         <InvoiceStatusChart data={d?.statusData ?? []} />
         <InvoiceTypesChart data={d?.typesData ?? []} />
       </div>
+
+      <DiscountsReport nurseryId={profile?.nursery_id} from={reportDay(historyRange.from)} to={reportDay(historyRange.to)} />
 
       <PaymentHistoryTable
         title={t('financial.paymentHistory.reportTitle', { defaultValue: 'Payment history' })}

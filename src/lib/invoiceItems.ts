@@ -4,6 +4,10 @@ import i18n from '@/lib/i18n';
  * Invoice lines written by the system carry a `kind` (late_pickup, loyalty_discount, tuition,
  * admission_package, discount, event) plus names in both languages instead of words; the app
  * labels them from invoice.itemKinds.*. Lines an admin typed keep their own description.
+ *
+ * A discount line also carries its `source` (deal, partnership, sibling), its value
+ * (discount_type, discount_value) and `capped` when the nursery's limit on combined discounts
+ * cut it.
  */
 
 type RawLineItem = Record<string, unknown>;
@@ -34,6 +38,7 @@ export function invoiceItemDescription(item: RawLineItem, language: string = i18
   if (kind === 'loyalty_discount') {
     return i18n.t('invoice.itemKinds.loyalty_discount', { lng, points: Number(item.points ?? 0) });
   }
+  if (kind === 'discount' && text(item.source)) return discountLineText(item, lng);
   if (kind === 'food_extra') {
     // An extra from the kitchen: what, on which day, and the discount that explains a total below
     // quantity × price.
@@ -54,6 +59,31 @@ export function invoiceItemDescription(item: RawLineItem, language: string = i18
   if (named) return named;
   if (kind && i18n.exists(`invoice.itemKinds.${kind}`, { lng })) return i18n.t(`invoice.itemKinds.${kind}`, { lng });
   return text(item.description);
+}
+
+/** "15%" or "EGP 200": a discount line's value. */
+function discountValueText(item: RawLineItem, lng: 'ar' | 'en'): string {
+  const value = Number(item.discount_value ?? 0);
+  if (!(value > 0)) return '';
+  return text(item.discount_type) === 'percentage'
+    ? `${value}%`
+    : i18n.t('invoice.egpAmount', { lng, amount: value.toFixed(2) });
+}
+
+/** A discount line from the nursery's discounts: whose, how much, and whether the cap cut it. */
+function discountLineText(item: RawLineItem, lng: 'ar' | 'en'): string {
+  const source = text(item.source);
+  const name = lng === 'ar' ? text(item.name_ar) || text(item.name_en) : text(item.name_en) || text(item.name_ar);
+  const value = discountValueText(item, lng);
+  const label =
+    source === 'partnership'
+      ? i18n.t('invoice.itemKinds.discount_partnership', { lng, name, value })
+      : source === 'sibling'
+        ? i18n.t(Number(item.sibling_rank) >= 3 ? 'invoice.itemKinds.discount_sibling_third' : 'invoice.itemKinds.discount_sibling', { lng, value })
+        : name
+          ? i18n.t('invoice.itemKinds.discount_deal', { lng, name, value })
+          : i18n.t('invoice.itemKinds.discount', { lng });
+  return item.capped === true ? `${label} · ${i18n.t('invoice.itemKinds.discount_capped', { lng })}` : label;
 }
 
 /** The invoice-level note: what an admin wrote, or the standard note for an admission package. */

@@ -4,6 +4,13 @@
 
 export type DiscountType = 'percentage' | 'fixed_amount';
 
+/** Which of a family's invoices a deal takes off: the first, the first few, or every one. */
+export type DealAppliesFor = 'first_invoice' | 'first_invoices' | 'every_invoice';
+export const DEAL_APPLIES_FOR: readonly DealAppliesFor[] = ['first_invoice', 'first_invoices', 'every_invoice'];
+/** "The first few invoices": between 2 and 60 of them. */
+export const DEAL_INVOICES_MIN = 2;
+export const DEAL_INVOICES_MAX = 60;
+
 export type DealFormValues = {
   name_ar: string;
   name_en: string;
@@ -11,12 +18,15 @@ export type DealFormValues = {
   discount_value: number;
   starts_at: string | null;
   ends_at: string | null;
+  applies_for?: DealAppliesFor;
+  applies_invoices?: number | null;
 };
 
 export type DealFormIssues = {
   name?: 'nameRequired';
   discountValue?: 'valueRequired' | 'percentOver100';
   endsAt?: 'endsBeforeStart';
+  appliesInvoices?: 'invoicesRange';
 };
 
 export type ExtraHoursPackageFormValues = {
@@ -65,6 +75,12 @@ export function dealFormIssues(values: DealFormValues): DealFormIssues {
   if (discount) issues.discountValue = discount;
   if (values.starts_at && values.ends_at && new Date(values.ends_at).getTime() <= new Date(values.starts_at).getTime()) {
     issues.endsAt = 'endsBeforeStart';
+  }
+  if (values.applies_for === 'first_invoices') {
+    const n = values.applies_invoices;
+    if (n === null || n === undefined || !Number.isInteger(n) || n < DEAL_INVOICES_MIN || n > DEAL_INVOICES_MAX) {
+      issues.appliesInvoices = 'invoicesRange';
+    }
   }
   return issues;
 }

@@ -38,6 +38,10 @@ export interface NurserySettingsRow {
   hourly_rate: string | null;
   invoice_due_days: number | null;
   late_payment_fee_percentage: string | null;
+  /** The most a charge's discounts take off together (%): the largest counts in full, the others up to it. */
+  max_total_discount_percentage: string | null;
+  /** Brothers and sisters billed to one family get the 2nd/3rd child discount on tuition. */
+  sibling_discount_enabled: boolean | null;
   sibling_discount_2nd_child_percentage: string | null;
   sibling_discount_3rd_child_percentage: string | null;
   payment_methods_enabled: string[] | null;

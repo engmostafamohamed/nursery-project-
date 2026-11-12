@@ -47,6 +47,19 @@ describe('invoiceItemDescription', () => {
     expect(invoiceItemDescription({ kind: 'tuition', name_ar: 'رسوم أكتوبر' }, 'en')).toBe('رسوم أكتوبر');
   });
 
+  it('names a discount by where it comes from, with its value, and says when the cap cut it', () => {
+    const partnership = { kind: 'discount', source: 'partnership', name_ar: 'فودافون', name_en: 'Vodafone', discount_type: 'percentage', discount_value: 15 };
+    expect(invoiceItemDescription(partnership, 'en')).toBe('Partnership discount · Vodafone (15%)');
+    expect(invoiceItemDescription(partnership, 'ar')).toBe('خصم شراكة · فودافون (15%)');
+    const sibling = { kind: 'discount', source: 'sibling', sibling_rank: 2, discount_type: 'percentage', discount_value: 10, capped: true };
+    expect(invoiceItemDescription(sibling, 'en')).toBe('Sibling discount · 2nd child (10%) · limited by the discounts cap');
+    expect(invoiceItemDescription({ ...sibling, sibling_rank: 3, capped: false }, 'ar')).toBe('خصم الإخوة · الطفل الثالث فأكثر (10%)');
+    const deal = { kind: 'discount', source: 'deal', name_en: 'Welcome', discount_type: 'fixed_amount', discount_value: 200 };
+    expect(invoiceItemDescription(deal, 'en')).toBe('Welcome (EGP 200.00)');
+    // Lines written before discounts had a source keep their own name.
+    expect(invoiceItemDescription({ kind: 'discount', name_en: 'Summer offer' }, 'en')).toBe('Summer offer');
+  });
+
   it('falls back to the translated kind when a system line has no name', () => {
     expect(invoiceItemDescription({ kind: 'tuition' }, 'en')).toBe('Tuition');
     expect(invoiceItemDescription({ kind: 'event' }, 'ar')).toBe('فعالية');

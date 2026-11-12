@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="780" viewBox="0 0 600 780">
+  <title>Sample proof of employment (demo data)</title>
+  <rect width="600" height="780" fill="#ffffff"/>
+  <rect x="24" y="24" width="552" height="732" fill="none" stroke="#d6d3e0" stroke-width="2"/>
+  <rect x="24" y="24" width="552" height="96" fill="#f3f1fa"/>
+  <circle cx="84" cy="72" r="28" fill="#6b5bd6"/>
+  <text x="84" y="80" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#ffffff" text-anchor="middle">HR</text>
+  <text x="130" y="66" font-family="Arial, sans-serif" font-size="20" font-weight="700" fill="#2b2640">Human Resources</text>
+  <text x="130" y="92" font-family="Arial, sans-serif" font-size="14" fill="#5f5a73">Proof of employment</text>
+  <text x="300" y="190" font-family="Arial, sans-serif" font-size="26" font-weight="700" fill="#2b2640" text-anchor="middle">To whom it may concern</text>
+  <text x="300" y="220" font-family="Arial, sans-serif" font-size="22" fill="#2b2640" text-anchor="middle" direction="rtl">إلى من يهمه الأمر</text>
+  <g font-family="Arial, sans-serif" font-size="16" fill="#3d3852">
+    <text x="64" y="290">This is to certify that the holder of this letter is</text>
+    <text x="64" y="316">employed by our company in a full-time position.</text>
+    <text x="64" y="356">This letter is issued at the employee's request,</text>
+    <text x="64" y="382">for the nursery's partnership discount.</text>
+  </g>
+  <rect x="64" y="430" width="472" height="1" fill="#d6d3e0"/>
+  <g font-family="Arial, sans-serif" font-size="14" fill="#5f5a73">
+    <text x="64" y="470">Employee no.</text><text x="536" y="470" text-anchor="end" fill="#2b2640">EMP-204871</text>
+    <text x="64" y="504">Department</text><text x="536" y="504" text-anchor="end" fill="#2b2640">Customer Experience</text>
+    <text x="64" y="538">Issued</text><text x="536" y="538" text-anchor="end" fill="#2b2640">This year</text>
+  </g>
+  <circle cx="440" cy="640" r="52" fill="none" stroke="#6b5bd6" stroke-width="3" opacity="0.6"/>
+  <text x="440" y="646" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#6b5bd6" text-anchor="middle" opacity="0.8">STAMP</text>
+  <text x="64" y="700" font-family="Arial, sans-serif" font-size="12" fill="#8a8599">Sample document for demo data only.</text>
+</svg>

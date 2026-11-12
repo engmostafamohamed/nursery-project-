@@ -2,7 +2,8 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
-import { billingPeriodName, type SignupOrder } from '@/features/parent-signup/signupOrder';
+import { partnerName } from '@/features/discounts/discountLook';
+import { billingPeriodName, type OrderDiscount, type SignupOrder } from '@/features/parent-signup/signupOrder';
 import type { ApplicationPackageBillingPeriod } from '@/hooks/useApplicationPackagePayment';
 import { formatMoneyAmount } from '@/lib/money';
 import { localName } from '@/lib/bilingualName';
@@ -23,12 +24,34 @@ type Props = {
   className?: string;
 };
 
+/** One discount line: whose (the deal's or the partner's name), and "limited" when the cap cut it. */
+function DiscountLines({ lines }: { lines: OrderDiscount[] }) {
+  const { t, i18n } = useTranslation();
+  const isArabic = i18n.language.startsWith('ar');
+  const money = (amount: number) => t('invoice.egpAmount', { amount: formatMoneyAmount(amount) });
+  return (
+    <>
+      {lines.map((line) => (
+        <div key={line.source} className="flex justify-between gap-3 text-success">
+          <dt className="min-w-0">
+            {line.source === 'partnership'
+              ? t('discounts.signup.partnerLine', { partner: localName(line.nameAr, line.nameEn, isArabic) })
+              : localName(line.nameAr, line.nameEn, isArabic) || t('signup.payment.discount')}
+            {line.capped ? <span className="block text-[11px] text-on-surface-variant">{t('discounts.signup.capped')}</span> : null}
+          </dt>
+          <dd className="shrink-0 tabular-nums">−{money(line.amount)}</dd>
+        </div>
+      ))}
+    </>
+  );
+}
+
 /** What the parent is about to pay, line by line, with the total due now. */
 export function SignupOrderSummary({ order, billingPeriod, hourlyRate, live = false, onChange, className }: Props) {
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language.startsWith('ar');
   const money = (amount: number) => t('invoice.egpAmount', { amount: formatMoneyAmount(amount) });
-  const { tuition, tuitionPackage, extraHours, extraHoursPackage } = order;
+  const { tuition, tuitionPackage, extraHours, extraHoursPackage, expectedPartner } = order;
 
   return (
     <div className={cn('rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 shadow-sm sm:p-5', className)}>
@@ -61,12 +84,7 @@ export function SignupOrderSummary({ order, billingPeriod, hourlyRate, live = fa
             </dt>
             <dd className="shrink-0 text-end font-medium tabular-nums text-on-surface">{money(tuition.subtotal)}</dd>
           </div>
-          {tuition.discountAmount > 0 ? (
-            <div className="flex justify-between gap-3 text-success">
-              <dt>{t('signup.payment.discount')}</dt>
-              <dd className="tabular-nums">−{money(tuition.discountAmount)}</dd>
-            </div>
-          ) : null}
+          <DiscountLines lines={order.tuitionDiscounts} />
 
           {extraHours && extraHoursPackage ? (
             <>
@@ -77,12 +95,7 @@ export function SignupOrderSummary({ order, billingPeriod, hourlyRate, live = fa
                 </dt>
                 <dd className="shrink-0 text-end font-medium tabular-nums text-on-surface">{money(extraHours.price)}</dd>
               </div>
-              {extraHours.discountAmount > 0 ? (
-                <div className="flex justify-between gap-3 text-success">
-                  <dt>{t('signup.payment.discount')}</dt>
-                  <dd className="tabular-nums">−{money(extraHours.discountAmount)}</dd>
-                </div>
-              ) : null}
+              <DiscountLines lines={order.extraHoursDiscounts} />
             </>
           ) : (
             // No package: extra time is billed later at the hourly rate, not paid now.
@@ -111,6 +124,16 @@ export function SignupOrderSummary({ order, billingPeriod, hourlyRate, live = fa
             {order.totalSavings > 0 ? (
               <p className="mt-2 text-end text-xs font-medium text-success">
                 {t('signup.payment.totalSavings', { amount: money(order.totalSavings) })}
+              </p>
+            ) : null}
+            {expectedPartner ? (
+              <p className="mt-3 flex items-start gap-1.5 rounded-lg bg-warning/10 px-2.5 py-2 text-xs text-on-surface" data-testid="expected-partner-discount">
+                <MaterialSymbol name="schedule" size="text-sm" className="text-warning" />
+                <span>
+                  {expectedPartner.amount > 0
+                    ? t('discounts.signup.expectedLine', { partner: partnerName(expectedPartner.partner, isArabic), amount: money(expectedPartner.amount) })
+                    : t('discounts.signup.afterConfirm', { partner: partnerName(expectedPartner.partner, isArabic) })}
+                </span>
               </p>
             ) : null}
           </div>

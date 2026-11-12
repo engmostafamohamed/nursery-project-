@@ -115,7 +115,14 @@ type Body = {
     questions: unknown[];
   } | null;
   registration_answers?: Record<string, unknown> | null;
+  /** The partner (company, school, organization) a parent works at, with the proof it needs. */
+  partner_claim?: { partner_id: string; proof: SignupFilePayload | null } | null;
 };
+
+type PartnerOffer = { id: string; requires_proof: boolean; full: boolean };
+
+const PARTNER_PROOF_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+const PARTNER_PROOF_MAX_BYTES = 5 * 1024 * 1024;
 
 class SignupHttpError extends Error {
   status: number;
@@ -388,6 +395,31 @@ async function getParentPackageTexts(admin: ReturnType<typeof getAdminClient>, n
   );
 }
 
+/** The partners a family may name at signup: running now, without their contact details. */
+async function getPartnerOffers(admin: ReturnType<typeof getAdminClient>, nurseryId: string): Promise<unknown[]> {
+  const { data, error } = await admin.rpc('get_partner_offers' as never, { p_nursery_id: nurseryId } as never);
+  if (error) throw new Error(`Could not read the partner offers: ${error.message}`);
+  return Array.isArray(data) ? data : [];
+}
+
+/** A partner named at signup must be offered here and have room, and come with the proof it needs. */
+async function checkPartnerClaim(admin: ReturnType<typeof getAdminClient>, nurseryId: string, claim: NonNullable<Body['partner_claim']>) {
+  const offers = (await getPartnerOffers(admin, nurseryId)) as PartnerOffer[];
+  const offer = offers.find((row) => row.id === claim.partner_id);
+  if (!offer || offer.full) throw new SignupHttpError(400, 'partner_not_available', 'This partner discount is not available.');
+  if (!offer.requires_proof) return;
+  const proof = claim.proof;
+  if (!proof) throw new SignupHttpError(400, 'partner_proof_required', 'This partner discount needs a proof.');
+  if (
+    !PARTNER_PROOF_TYPES.includes(proof.type) ||
+    !proof.base64 ||
+    !/^[A-Za-z0-9+/]+={0,2}$/.test(proof.base64) ||
+    atob(proof.base64).length > PARTNER_PROOF_MAX_BYTES
+  ) {
+    throw new SignupHttpError(400, 'partner_proof_invalid', 'The proof must be a photo or a PDF of up to 5 MB.');
+  }
+}
+
 async function getSignupPaymentOptions(admin: ReturnType<typeof getAdminClient>, nurseryId: string) {
   const { data: nursery, error: nurseryError } = await admin
     .from('nurseries')
@@ -399,7 +431,7 @@ async function getSignupPaymentOptions(admin: ReturnType<typeof getAdminClient>,
 
   const { data: settings, error: settingsError } = await admin
     .from('nursery_settings')
-    .select('parent_registration_enabled, payment_methods_enabled, payment_instructions, late_pickup_fee_per_hour, late_pickup_grace_minutes, standard_end_time, instapay_account_name, instapay_account_number, instapay_qr_image_url')
+    .select('parent_registration_enabled, payment_methods_enabled, payment_instructions, late_pickup_fee_per_hour, late_pickup_grace_minutes, standard_end_time, instapay_account_name, instapay_account_number, instapay_qr_image_url, max_total_discount_percentage')
     .eq('nursery_id', nurseryId)
     .maybeSingle();
   if (settingsError) throw new Error(settingsError.message);
@@ -417,6 +449,7 @@ async function getSignupPaymentOptions(admin: ReturnType<typeof getAdminClient>,
     : null;
   const walletDestinations = await getWalletDestinations(admin, nurseryId);
   const parentTexts = await getParentPackageTexts(admin, nurseryId);
+  const partnerOffers = await getPartnerOffers(admin, nurseryId);
   const methods = signupPaymentMethods(settings?.payment_methods_enabled, walletDestinations);
 
   const { data, error } = await admin
@@ -570,6 +603,9 @@ async function getSignupPaymentOptions(admin: ReturnType<typeof getAdminClient>,
     ),
     payment_instructions: settings?.payment_instructions ?? null,
     parent_texts: parentTexts,
+    // The nursery's partners running now (no contact details), and its cap on combined discounts.
+    partner_offers: partnerOffers,
+    discount_cap_percentage: settings?.max_total_discount_percentage ?? 30,
     // Older pages read only this field.
     etisalat_cash_account_number: methods.includes('etisalat_cash') ? walletDestinations.etisalat_cash ?? null : null,
   });
@@ -737,6 +773,8 @@ Deno.serve(async (req) => {
         if (!extraHoursPackage) return jsonResponse({ error: 'Selected extra-hours package is not available' }, 400);
       }
     }
+
+    if (body.partner_claim?.partner_id) await checkPartnerClaim(admin, body.nursery_id, body.partner_claim);
 
     let primaryUser: AuthUserRef;
 
@@ -936,6 +974,38 @@ Deno.serve(async (req) => {
       console.error('application documents insert failed', docErr);
     }
 
+    // The partner's discount, asked for with the application: granted at once when the partner
+    // needs no proof (the package invoice below then carries it), otherwise waiting for the
+    // nursery. The application stands even if this fails; the family can ask from its invoices.
+    let partnerClaimState: string | null = null;
+    if (body.partner_claim?.partner_id) {
+      try {
+        const proof = body.partner_claim.proof;
+        const proofPath = proof
+          ? await uploadSignupFile(
+              admin,
+              'partner-proofs',
+              proof,
+              `${body.nursery_id}/${primaryAuthId}/signup-${crypto.randomUUID()}.${extFromFile(proof)}`,
+              uploadedObjects,
+            )
+          : null;
+        const { data: claim, error: claimError } = await admin.rpc('create_partner_claim' as never, {
+          p_nursery_id: body.nursery_id,
+          p_partner_id: body.partner_claim.partner_id,
+          p_parent_id: primaryAuthId,
+          p_proof_path: proofPath,
+          p_proof_name: proof?.name?.slice(0, 120) ?? null,
+          p_application_id: applicationId,
+        } as never);
+        if (claimError) throw new Error(claimError.message);
+        partnerClaimState = (claim as { state?: string } | null)?.state ?? 'pending';
+      } catch (claimErr) {
+        console.error('partner claim failed', claimErr);
+        partnerClaimState = 'failed';
+      }
+    }
+
     if (body.payment) {
       const payment = body.payment;
       const { data: documentsComplete, error: documentsCheckError } = await admin.rpc(
@@ -971,13 +1041,7 @@ Deno.serve(async (req) => {
       if (packageSelectionError) throw new Error(`Could not create the package invoice: ${packageSelectionError.message}`);
       if (typeof invoiceId !== 'string') throw new Error('Package selection did not return an invoice');
 
-      const { data: invoice, error: invoiceError } = await admin
-        .from('invoices')
-        .select('amount, line_items_json')
-        .eq('id', invoiceId)
-        .single();
-      if (invoiceError || !invoice) throw new Error(invoiceError?.message ?? 'Package invoice not found');
-
+      // Saving the extra-hours package adds it, with its discounts, to the same invoice.
       const { error: extraHoursSelectionError } = await paymentClient.rpc(
         'select_application_extra_hours_package' as never,
         {
@@ -989,102 +1053,14 @@ Deno.serve(async (req) => {
         throw new Error(`Could not save the extra-hours package: ${extraHoursSelectionError.message}`);
       }
 
-      let invoiceAmount = Number(invoice.amount);
-      const lineItems = invoice.line_items_json && typeof invoice.line_items_json === 'object' && !Array.isArray(invoice.line_items_json)
-        ? invoice.line_items_json as Record<string, unknown>
-        : {};
-      const invoiceItems = Array.isArray(lineItems.items) ? [...lineItems.items] : [];
-
-      if (payment.extra_hours_package_id) {
-        const { data: extraHoursPackage, error: extraHoursPackageError } = await admin
-          .from('packages')
-          .select(`
-            id, name_ar, name_en, price,
-            deals (id, name_ar, name_en, discount_type, discount_value, starts_at, ends_at, active)
-          `)
-          .eq('id', payment.extra_hours_package_id)
-          .eq('nursery_id', body.nursery_id)
-          .eq('active', true)
-          .single();
-        if (extraHoursPackageError || !extraHoursPackage) {
-          throw new Error(extraHoursPackageError?.message ?? 'Selected extra-hours package is not available');
-        }
-
-        type ExtraHoursDealRow = {
-          id: string;
-          name_ar: string;
-          name_en: string;
-          discount_type: 'percentage' | 'fixed_amount';
-          discount_value: string | number;
-          starts_at: string | null;
-          ends_at: string | null;
-          active: boolean;
-        };
-        const extraPackage = extraHoursPackage as {
-          id: string;
-          name_ar: string;
-          name_en: string;
-          price: string | number;
-          deals: ExtraHoursDealRow | ExtraHoursDealRow[] | null;
-        };
-        const deal = Array.isArray(extraPackage.deals) ? extraPackage.deals[0] : extraPackage.deals;
-        const extraSubtotal = Number(extraPackage.price);
-        if (!Number.isFinite(extraSubtotal) || extraSubtotal < 0) throw new Error('Invalid extra-hours package price');
-        const dealIsActive = Boolean(
-          deal?.active &&
-          (!deal.starts_at || new Date(deal.starts_at).getTime() <= Date.now()) &&
-          (!deal.ends_at || new Date(deal.ends_at).getTime() > Date.now()),
-        );
-        let extraDiscount = 0;
-        if (dealIsActive && deal) {
-          extraDiscount = deal.discount_type === 'percentage'
-            ? Math.round(extraSubtotal * Number(deal.discount_value)) / 100
-            : Number(deal.discount_value);
-          extraDiscount = Math.round(Math.min(Math.max(extraDiscount, 0), extraSubtotal) * 100) / 100;
-        }
-        const extraTotal = Math.max(extraSubtotal - extraDiscount, 0);
-        invoiceAmount = Math.round((invoiceAmount + extraTotal) * 100) / 100;
-
-        invoiceItems.push({
-          kind: 'extra_hours_package',
-          name_ar: extraPackage.name_ar,
-          name_en: extraPackage.name_en,
-          description: extraPackage.name_en || extraPackage.name_ar || 'Extra hours package',
-          quantity: 1,
-          unitPrice: extraSubtotal,
-          unit_price: extraSubtotal,
-          total: extraSubtotal,
-        });
-        if (extraDiscount > 0 && deal) {
-          invoiceItems.push({
-            kind: 'discount',
-            name_ar: deal.name_ar,
-            name_en: deal.name_en,
-            description: deal.name_en || deal.name_ar || 'Discount',
-            quantity: 1,
-            unitPrice: -extraDiscount,
-            unit_price: -extraDiscount,
-            total: -extraDiscount,
-          });
-        }
-
-        const { error: invoiceUpdateError } = await admin
-          .from('invoices')
-          .update({
-            amount: invoiceAmount,
-            line_items_json: {
-              ...lineItems,
-              extra_hours_package_id: extraPackage.id,
-              extra_hours_package_name_ar: extraPackage.name_ar,
-              extra_hours_package_name_en: extraPackage.name_en,
-              extra_hours_subtotal: extraSubtotal,
-              extra_hours_discount_amount: extraDiscount,
-              items: invoiceItems,
-            },
-          } as never)
-          .eq('id', invoiceId);
-        if (invoiceUpdateError) throw new Error(`Could not add extra-hours package to the invoice: ${invoiceUpdateError.message}`);
-      }
+      // What is paid now is the invoice as the database priced it (tuition, extra hours, discounts).
+      const { data: invoice, error: invoiceError } = await admin
+        .from('invoices')
+        .select('amount')
+        .eq('id', invoiceId)
+        .single();
+      if (invoiceError || !invoice) throw new Error(invoiceError?.message ?? 'Package invoice not found');
+      const invoiceAmount = Number(invoice.amount);
 
       let paymentProofPath: string | null = null;
       if (isWalletProvider(payment.method) && payment.wallet_receipt) {
@@ -1160,6 +1136,7 @@ Deno.serve(async (req) => {
           application_id: applicationId,
           payment_attempt_id: paymentAttemptId,
           checkout_url: checkoutUrl,
+          partner_claim_state: partnerClaimState,
         });
       }
       if (signupPaymentTestMode() && payment.method === 'card') {
@@ -1168,11 +1145,12 @@ Deno.serve(async (req) => {
           application_id: applicationId,
           payment_attempt_id: paymentAttemptId,
           payment_test_mode: true,
+          partner_claim_state: partnerClaimState,
         });
       }
     }
 
-    return jsonResponse({ child_id: childId, application_id: applicationId, payment_attempt_id: paymentAttemptId });
+    return jsonResponse({ child_id: childId, application_id: applicationId, payment_attempt_id: paymentAttemptId, partner_claim_state: partnerClaimState });
   } catch (e) {
     if (!signupCommitted && (createdAuthUserIds.length > 0 || uploadedObjects.length > 0)) {
       const admin = getAdminClient();

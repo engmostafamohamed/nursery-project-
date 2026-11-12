@@ -373,7 +373,7 @@ select set_config('test.renewal_invoice',
 select is(
   (select (amount, line_items_json ->> 'billing_period', line_items_json ->> 'discount_amount')::text
      from public.invoices where id = current_setting('test.renewal_invoice')::uuid),
-  '(2700.00,quarterly,)',
+  '(2700.00,quarterly,0)',
   'the renewal invoice is the full quarterly price with no discount'
 );
 

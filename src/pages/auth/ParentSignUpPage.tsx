@@ -25,7 +25,7 @@ import { ALLERGY_OPTIONS, OTHER_ALLERGY_VALUE, allergyLabel } from '@/lib/allerg
 import { egyptianMobilePattern } from '@/lib/phoneValidation';
 import { cn } from '@/lib/utils';
 
-import { signupFreeBytes } from '@/features/parent-signup/signupFileLimits';
+import { signupFreeBytes, signupProofFreeBytes } from '@/features/parent-signup/signupFileLimits';
 import { parentSignUpDefaults } from '@/features/parent-signup/parentSignUpDefaults';
 import {
   nurseryArrivalTime,
@@ -1539,6 +1539,16 @@ export function ParentSignUpPage() {
   const [paymentBillingPeriod, setPaymentBillingPeriod] = useState<ApplicationPackageBillingPeriod>('monthly');
   const [paymentMethod, setPaymentMethod] = useState<ParentPaymentMethodCode>('manual');
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails>(EMPTY_PAYMENT_DETAILS);
+  // Where the parents work: one of the nursery's partners (its discount is asked for with the
+  // application), and the proof that partner needs.
+  const [partnerId, setPartnerId] = useState<string | null>(null);
+  const [partnerProof, setPartnerProof] = useState<File | null>(null);
+  const [partnerTried, setPartnerTried] = useState(false);
+  const choosePartner = useCallback((id: string | null) => {
+    setPartnerId(id);
+    setPartnerProof(null);
+    setPartnerTried(false);
+  }, []);
   const updatePaymentDetails = useCallback((patch: Partial<PaymentDetails>) => {
     setPaymentDetails((current) => ({ ...current, ...patch }));
   }, []);
@@ -1652,7 +1662,8 @@ export function ParentSignUpPage() {
     setExtraHoursPackageId(null);
     setPaymentBillingPeriod('monthly');
     setPaymentDetails(EMPTY_PAYMENT_DETAILS);
-  }, [selectedNursery?.id]);
+    choosePartner(null);
+  }, [selectedNursery?.id, choosePartner]);
   const isFirst = safeStepIndex === 0;
   const isLast = safeStepIndex === visibleSteps.length - 1;
   const customQuestionsForStep = useMemo(
@@ -1672,6 +1683,12 @@ export function ParentSignUpPage() {
   }, [activeRegistrationTemplate?.questions, templateAnswers]);
   const currentTemplateStepComplete = customQuestionsForStep
     .every((question) => templateValidationPasses(question, templateAnswers[question.id]));
+  const chosenPartner = useMemo(
+    () => signupPaymentOptions.data?.partnerOffers.find((offer) => offer.id === partnerId) ?? null,
+    [signupPaymentOptions.data?.partnerOffers, partnerId],
+  );
+  // A partner that needs a proof cannot be asked for without it.
+  const partnerProofMissing = Boolean(chosenPartner?.requiresProof && !partnerProof);
   // What the parent is about to pay, recalculated on every choice on the packages step.
   const order = useMemo(
     () =>
@@ -1679,8 +1696,9 @@ export function ParentSignUpPage() {
         packageId: paymentPackageId,
         billingPeriod: paymentBillingPeriod,
         extraHoursPackageId,
+        partner: chosenPartner,
       }),
-    [signupPaymentOptions.data, paymentPackageId, paymentBillingPeriod, extraHoursPackageId],
+    [signupPaymentOptions.data, paymentPackageId, paymentBillingPeriod, extraHoursPackageId, chosenPartner],
   );
   const packageSelectionComplete = signupPaymentOptions.isSuccess && order.complete;
   const canContinue = currentStep === 'packages'
@@ -1688,6 +1706,7 @@ export function ParentSignUpPage() {
     : isStepComplete(currentStep, liveValues, files, activeRegistrationTemplate) && currentTemplateStepComplete;
   const paymentSelectionComplete =
     packageSelectionComplete &&
+    !partnerProofMissing &&
     availablePaymentMethods.includes(paymentMethod) &&
     paymentIssues.length === 0;
   const canSubmit =
@@ -1741,6 +1760,8 @@ export function ParentSignUpPage() {
   }
   if (!packageSelectionComplete) {
     submitBlockers.push({ text: t('signup.packages.chooseFirst'), step: 'packages' });
+  } else if (partnerProofMissing) {
+    submitBlockers.push({ text: t('discounts.signup.proofToContinue'), step: 'packages' });
   } else if (!availablePaymentMethods.includes(paymentMethod)) {
     submitBlockers.push({ text: t('signup.payment.completeSelection') });
   }
@@ -1754,6 +1775,10 @@ export function ParentSignUpPage() {
     if (fieldsToValidate.length > 0) {
       const valid = await form.trigger(fieldsToValidate as (keyof ParentSignUpFormValues)[]);
       if (!valid) return;
+    }
+    if (currentStep === 'packages' && partnerProofMissing) {
+      setPartnerTried(true);
+      return;
     }
     if (currentStep === 'parents') {
       const crossFieldError = validateCrossFieldRules(form.getValues(), { checkConsents: false });
@@ -1802,6 +1827,7 @@ export function ParentSignUpPage() {
     setPaymentBillingPeriod('monthly');
     setPaymentMethod('manual');
     setPaymentDetails(EMPTY_PAYMENT_DETAILS);
+    choosePartner(null);
     toast.success(t('signup.draftCleared'));
   };
 
@@ -1857,19 +1883,22 @@ export function ParentSignUpPage() {
         walletCustomerName: isWalletProvider(paymentMethod) ? paymentDetails.walletCustomerName : null,
         walletReceipt: isWalletProvider(paymentMethod) ? paymentDetails.walletReceipt : null,
         walletTransaction: isWalletProvider(paymentMethod) ? paymentDetails.walletTransaction : null,
+        partnerClaim: chosenPartner ? { partnerId: chosenPartner.id, proof: chosenPartner.requiresProof ? partnerProof : null } : null,
       });
       clearDraft();
       if (result.checkoutUrl) {
         window.location.assign(result.checkoutUrl);
         return;
       }
+      // The success page also says where the partner's discount stands.
+      const discount = result.partnerClaimState ? `discount=${result.partnerClaimState}` : '';
       if (result.paymentTestMode) {
-        navigate('/signup/success?payment=test');
+        navigate(`/signup/success?payment=test${discount ? `&${discount}` : ''}`);
         return;
       }
       // signup.success is the success page's namespace object — the toast needs its title.
       toast.success(t('signup.success.title'));
-      navigate('/signup/success');
+      navigate(`/signup/success${discount ? `?${discount}` : ''}`);
     } catch (err: unknown) {
       if (err instanceof SignupPaymentAfterCreateError) {
         clearDraft();
@@ -1963,6 +1992,18 @@ export function ParentSignUpPage() {
             extraHoursPackageId={extraHoursPackageId}
             onExtraHoursPackageChange={setExtraHoursPackageId}
             order={order}
+            partner={{
+              jobs: [liveValues.fatherJob, liveValues.motherJob],
+              partnerId,
+              onPartnerChange: choosePartner,
+              proof: partnerProof,
+              onProofChange: (file) => {
+                setPartnerProof(file);
+                setPartnerTried(false);
+              },
+              proofFreeBytes: signupProofFreeBytes(files),
+              showProofError: partnerTried,
+            }}
           />
         );
       case 'payment':

@@ -3,10 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { ChoiceCards } from '@/components/ui/ChoiceCards';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { invalidFieldClass } from '@/components/ui/FieldError';
 import { FormField, FormProblem } from '@/components/ui/FormField';
-import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Textarea } from '@/components/ui/textarea';
 import { localName } from '@/lib/bilingualName';
 import { cn } from '@/lib/utils';
@@ -66,24 +66,13 @@ export function RecordDoseDialog({ slot, mode, onClose }: { slot: RoundSlot; mod
           {mode === 'skipped' ? (
             <fieldset className="space-y-2">
               <legend className="text-sm font-semibold text-on-surface">{t('medicineRound.dialog.why')}</legend>
-              <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('medicineRound.dialog.why')}>
-                {SKIP_REASONS.map((r) => (
-                  <button
-                    key={r}
-                    type="button"
-                    role="radio"
-                    aria-checked={reason === r}
-                    onClick={() => setReason(r)}
-                    className={cn(
-                      'flex items-center gap-2 rounded-xl border px-3 py-2 text-start text-sm font-medium transition-colors',
-                      reason === r ? 'border-primary bg-primary/10 text-primary' : 'border-outline-variant text-on-surface hover:border-primary/60',
-                    )}
-                  >
-                    <MaterialSymbol name={REASON_ICON[r]} size="text-lg" />
-                    {t(`medicineRound.reasons.${r}`)}
-                  </button>
-                ))}
-              </div>
+              <ChoiceCards
+                label={t('medicineRound.dialog.why')}
+                value={reason || null}
+                onChange={setReason}
+                invalid={tried && issue === 'reason_required'}
+                options={SKIP_REASONS.map((r) => ({ value: r, label: t(`medicineRound.reasons.${r}`), icon: REASON_ICON[r] }))}
+              />
               {tried && issue === 'reason_required' ? <p id="dose-reason-error" role="alert" className="text-xs text-error">{t('medicineRound.issues.reason_required')}</p> : null}
             </fieldset>
           ) : null}

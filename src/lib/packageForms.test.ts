@@ -27,6 +27,13 @@ describe('deal form', () => {
     expect(dealFormIssues(deal({ name_en: '', name_ar: 'عرض الصيف' }))).toEqual({});
   });
 
+  it('covers the first few invoices only with a number between 2 and 60', () => {
+    expect(dealFormIssues(deal({ applies_for: 'first_invoices', applies_invoices: 3 }))).toEqual({});
+    expect(dealFormIssues(deal({ applies_for: 'first_invoices', applies_invoices: 1 })).appliesInvoices).toBe('invoicesRange');
+    expect(dealFormIssues(deal({ applies_for: 'first_invoices', applies_invoices: null })).appliesInvoices).toBe('invoicesRange');
+    expect(dealFormIssues(deal({ applies_for: 'every_invoice', applies_invoices: null }))).toEqual({});
+  });
+
   it('needs a name in either language', () => {
     expect(dealFormIssues(deal({ name_en: '  ' })).name).toBe('nameRequired');
   });

@@ -884,7 +884,21 @@ export function AdminChildRecordPage() {
       ) : null}
 
       {tab === 'billing' ? (
-        <ChildBillingTab childId={child.id} nurseryId={child.nursery_id} />
+        <ChildBillingTab
+          childId={child.id}
+          nurseryId={child.nursery_id}
+          families={parents.map((p) => ({
+            family: {
+              parentId: p.parent_id,
+              nameAr: p.user?.name_ar ?? '',
+              nameEn: p.user?.name_en ?? '',
+              phone: p.user?.phone ?? null,
+              email: p.user?.email ?? null,
+              children: [{ id: child.id, nameAr: child.full_name_ar ?? '', nameEn: child.full_name_en ?? '' }],
+            },
+            jobs: [...parents.flatMap((other) => [other.workplace, other.occupation]), text(father, 'job'), text(mother, 'job')],
+          }))}
+        />
       ) : null}
 
       {tab === 'documents' ? (

@@ -52,7 +52,15 @@ export async function prepareSignupFile(file: File, freeBytes: number): Promise<
   return { file: prepared };
 }
 
-/** The last check before sending, for what the fields cannot see: the receipt chosen on the payment step. */
-export function signupRequestTooLarge(files: ParentSignUpFileBundle, walletReceipt: File | null): boolean {
-  return bundleBytes(files) + (walletReceipt?.size ?? 0) > MAX_SIGNUP_REQUEST_FILES_BYTES;
+/** What the partner's proof (chosen on the packages step) may take: it counts as one more document. */
+export function signupProofFreeBytes(files: ParentSignUpFileBundle): number {
+  return Math.max(0, MAX_SIGNUP_DOCUMENTS_BYTES - bundleBytes(files));
+}
+
+/**
+ * The last check before sending, for what the fields cannot see: the receipt chosen on the payment
+ * step, and the partner's proof.
+ */
+export function signupRequestTooLarge(files: ParentSignUpFileBundle, walletReceipt: File | null, partnerProof: File | null = null): boolean {
+  return bundleBytes(files) + (walletReceipt?.size ?? 0) + (partnerProof?.size ?? 0) > MAX_SIGNUP_REQUEST_FILES_BYTES;
 }

@@ -63,6 +63,7 @@ export function AdminSettingsPage() {
     }
     const percentKeys: SettingsKey[] = [
       'late_payment_fee_percentage',
+      'max_total_discount_percentage',
       'sibling_discount_2nd_child_percentage',
       'sibling_discount_3rd_child_percentage',
       'summer_pause_charges_percentage',
