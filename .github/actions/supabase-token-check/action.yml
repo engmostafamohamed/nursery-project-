@@ -1,0 +1,46 @@
+name: Check the Supabase access token
+description: >
+  Fails with a plain annotation (readable without a GitHub sign-in) when the access token is missing,
+  invalid, or cannot reach the project, instead of a later step failing with only "exit code 1".
+  Used by the migrations and the edge functions workflows.
+
+inputs:
+  token:
+    description: SUPABASE_ACCESS_TOKEN of the environment
+    required: true
+  project-ref:
+    description: Supabase project ref
+    required: true
+  environment:
+    description: GitHub environment that holds the token (for the messages)
+    required: true
+  permissions:
+    description: The token permissions the calling workflow needs (for the messages)
+    required: false
+    default: Project Settings, API Keys and API Key Secrets (Read)
+
+runs:
+  using: composite
+  steps:
+    - name: Check the access token
+      shell: bash
+      env:
+        SUPABASE_ACCESS_TOKEN: ${{ inputs.token }}
+        SUPABASE_PROJECT_REF: ${{ inputs.project-ref }}
+        TARGET_ENVIRONMENT: ${{ inputs.environment }}
+        NEEDED: ${{ inputs.permissions }}
+      run: |
+        test -n "$SUPABASE_ACCESS_TOKEN" || { echo "::error::Missing secret SUPABASE_ACCESS_TOKEN in the '$TARGET_ENVIRONMENT' GitHub environment"; exit 1; }
+        [[ "$SUPABASE_PROJECT_REF" =~ ^[a-z]{20}$ ]] || { echo "::error::'$SUPABASE_PROJECT_REF' is not a Supabase project ref"; exit 1; }
+        status=$(curl -s -o /dev/null -m 30 -w '%{http_code}' -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+          "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF")
+        # What the secret looks like, without showing it: compare the fingerprint with the token
+        # you meant to save (sha256 of the token, first 8 characters).
+        fingerprint="length ${#SUPABASE_ACCESS_TOKEN}, starts with sbp_: $([[ "$SUPABASE_ACCESS_TOKEN" == sbp_* ]] && echo yes || echo no), spaces or newlines: $([[ "$SUPABASE_ACCESS_TOKEN" =~ [[:space:]] ]] && echo yes || echo no), quotes or '=': $([[ "$SUPABASE_ACCESS_TOKEN" == *[\"\'=]* ]] && echo yes || echo no), sha256 $(printf '%s' "$SUPABASE_ACCESS_TOKEN" | sha256sum | cut -c1-8)"
+        case "$status" in
+          200) echo "The access token can read project $SUPABASE_PROJECT_REF ($fingerprint)." ;;
+          401) echo "::error::SUPABASE_ACCESS_TOKEN in the '$TARGET_ENVIRONMENT' GitHub environment is invalid, expired or revoked (the secret seen: $fingerprint). An environment secret wins over a repository secret of the same name. Create a new token in Supabase (Account > Access Tokens) with the project and these permissions: $NEEDED, then update the secret."; exit 1 ;;
+          403) echo "::error::SUPABASE_ACCESS_TOKEN in the '$TARGET_ENVIRONMENT' GitHub environment cannot read project $SUPABASE_PROJECT_REF. Create a token scoped to this project with these permissions: $NEEDED."; exit 1 ;;
+          404) echo "::error::Project $SUPABASE_PROJECT_REF is not visible to the account of SUPABASE_ACCESS_TOKEN."; exit 1 ;;
+          *) echo "::error::Supabase answered HTTP $status when checking SUPABASE_ACCESS_TOKEN; try the run again."; exit 1 ;;
+        esac

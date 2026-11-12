@@ -1,0 +1,114 @@
+name: Supabase edge functions (shared)
+
+# One set of edge function steps for every environment. Called by dev-functions.yml (and later the
+# production release); never triggered on its own. Each function is type-checked first, then, when
+# deploying, deployed with its settings from supabase/config.toml ([functions.<name>] verify_jwt).
+# The caller names a GitHub environment that holds SUPABASE_ACCESS_TOKEN (the token needs the Edge
+# Functions permission with write access) and must pass `secrets: inherit`.
+# The functions' own secrets (ANTHROPIC_API_KEY, PAYMOB_*, …) live in the Supabase project, not here.
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: GitHub environment that holds the secrets (dev or production)
+        type: string
+        required: true
+      project-ref:
+        description: Supabase project ref of that environment
+        type: string
+        required: true
+      functions:
+        description: The functions to check and deploy, separated by spaces, or "all"
+        type: string
+        required: true
+      deploy:
+        description: false type-checks only
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  functions:
+    name: ${{ inputs.deploy && 'Deploy' || 'Check' }} edge functions (${{ inputs.environment }})
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ inputs.project-ref }}
+      REQUESTED: ${{ inputs.functions }}
+      # Never deployed: leftovers from the first version. The reminders they sent run in the
+      # database (pg_cron: run_payment_reminders, run_permission_deadline_reminders); nothing calls them.
+      NOT_DEPLOYED: emergency-broadcast payment-reminders permission-deadline-reminder
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Which functions
+        shell: bash
+        run: |
+          if [[ "$REQUESTED" == "all" ]]; then
+            requested=$(for dir in supabase/functions/*/; do name=$(basename "$dir"); [[ "$name" != _* && -f "$dir/index.ts" ]] && echo "$name"; done)
+          else
+            requested=$REQUESTED
+          fi
+          functions=""
+          for name in $requested; do
+            [[ "$name" =~ ^[a-z0-9-]+$ ]] || { echo "::error::'$name' is not a function name"; exit 1; }
+            [[ " $NOT_DEPLOYED " == *" $name "* ]] && continue
+            [ -f "supabase/functions/$name/index.ts" ] || { echo "::error::supabase/functions/$name/index.ts does not exist"; exit 1; }
+            functions="$functions $name"
+          done
+          echo "FUNCTIONS=$functions" >> "$GITHUB_ENV"
+          echo "Functions:$functions"
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check
+        shell: bash
+        run: |
+          failed=""
+          for name in $FUNCTIONS; do
+            echo "::group::$name"
+            # Without the app's node_modules: npm packages come from Deno's own cache, as on Supabase.
+            if ! deno check --node-modules-dir=none --no-lock "supabase/functions/$name/index.ts"; then failed="$failed $name"; fi
+            echo "::endgroup::"
+          done
+          [ -z "$failed" ] || { echo "::error::Type errors in:$failed"; exit 1; }
+
+      - if: inputs.deploy
+        uses: ./.github/actions/supabase-token-check
+        with:
+          token: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          project-ref: ${{ inputs.project-ref }}
+          environment: ${{ inputs.environment }}
+          permissions: Edge Functions (Read and write)
+
+      - if: inputs.deploy
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.120.0
+
+      - name: Deploy
+        if: inputs.deploy
+        shell: bash
+        run: |
+          set -o pipefail
+          failed=""
+          for name in $FUNCTIONS; do
+            echo "::group::$name"
+            # --use-api bundles on Supabase's side: no Docker needed.
+            if supabase functions deploy "$name" --project-ref "$SUPABASE_PROJECT_REF" --use-api 2>&1 | tee deploy.log; then
+              grep -qi "Deployed Functions" deploy.log || failed="$failed $name"
+            else
+              failed="$failed $name"
+            fi
+            if grep -qiE "403|forbidden|not authorized" deploy.log; then
+              echo "::error::Deploying $name was refused: SUPABASE_ACCESS_TOKEN needs the Edge Functions permission with write access."
+            fi
+            echo "::endgroup::"
+          done
+          [ -z "$failed" ] || { echo "::error::Not deployed:$failed"; exit 1; }
+          echo "Deployed: $FUNCTIONS"

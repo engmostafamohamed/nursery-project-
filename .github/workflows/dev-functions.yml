@@ -1,0 +1,81 @@
+name: Dev edge functions
+
+# Keeps the dev project's edge functions (hlhlpjecinkqqsqrjpcj) in step with supabase/functions:
+#   pull request that changes functions -> type-check them (nothing deployed)
+#   push to main that changes functions -> deploy the ones that changed
+#   a change to _shared/, config.toml or these workflows -> every function (all of them use them)
+#   run by hand (Actions -> Dev edge functions -> Run workflow) -> every function
+# A function removed from the repo is not removed from Supabase: delete it there by hand.
+# Secrets: GitHub environment "dev" -> SUPABASE_ACCESS_TOKEN (Edge Functions: read and write).
+on:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/functions/**"
+      - "supabase/config.toml"
+      - ".github/workflows/dev-functions.yml"
+      - ".github/workflows/supabase-functions.yml"
+      - ".github/actions/supabase-token-check/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "supabase/functions/**"
+      - "supabase/config.toml"
+      - ".github/workflows/dev-functions.yml"
+      - ".github/workflows/supabase-functions.yml"
+      - ".github/actions/supabase-token-check/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dev-functions
+  cancel-in-progress: false
+
+jobs:
+  changes:
+    name: Which functions
+    # Pull requests from forks never get the dev secrets.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
+    runs-on: ubuntu-latest
+    outputs:
+      functions: ${{ steps.pick.outputs.functions }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - id: pick
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [[ "$EVENT" == "workflow_dispatch" ]] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            functions=all
+          else
+            changed=$(git diff --name-only "$BEFORE" "$GITHUB_SHA")
+            if grep -qE '^(supabase/functions/_shared/|supabase/config\.toml$|\.github/workflows/(dev-functions|supabase-functions)\.yml$|\.github/actions/supabase-token-check/)' <<<"$changed"; then
+              functions=all
+            else
+              # The functions whose folder changed and still exist (a removed one is deleted by hand).
+              functions=$(grep -oE '^supabase/functions/[^/_][^/]*/' <<<"$changed" | cut -d/ -f3 | sort -u | while read -r name; do
+                [ -f "supabase/functions/$name/index.ts" ] && echo "$name"
+              done | tr '\n' ' ' | sed 's/ *$//')
+            fi
+          fi
+          echo "functions=$functions" >> "$GITHUB_OUTPUT"
+          echo "Functions: ${functions:-none}"
+
+  functions:
+    needs: changes
+    if: needs.changes.outputs.functions != ''
+    uses: ./.github/workflows/supabase-functions.yml
+    # A called workflow gets no secrets unless they are passed on, not even its environment's.
+    secrets: inherit
+    with:
+      environment: dev
+      project-ref: hlhlpjecinkqqsqrjpcj
+      functions: ${{ needs.changes.outputs.functions }}
+      deploy: ${{ github.event_name != 'pull_request' }}

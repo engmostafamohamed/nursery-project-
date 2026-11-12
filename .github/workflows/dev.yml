@@ -14,12 +14,14 @@ on:
       - "supabase/migrations/**"
       - ".github/workflows/dev.yml"
       - ".github/workflows/supabase-migrate.yml"
+      - ".github/actions/supabase-token-check/**"
   pull_request:
     branches: [main]
     paths:
       - "supabase/migrations/**"
       - ".github/workflows/dev.yml"
       - ".github/workflows/supabase-migrate.yml"
+      - ".github/actions/supabase-token-check/**"
   workflow_dispatch:
 
 permissions:

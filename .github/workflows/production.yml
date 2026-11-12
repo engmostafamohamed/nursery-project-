@@ -6,7 +6,9 @@ name: Production release (not live yet)
 #
 # Setup when going live (GitHub -> Settings):
 #   Environments -> "production" (add Required reviewers so every release waits for approval):
-#     secrets  SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD, VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
+#     secrets  SUPABASE_ACCESS_TOKEN (with Edge Functions: read and write), SUPABASE_DB_PASSWORD,
+#              VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
+#   In the production Supabase project: the functions' own secrets (ANTHROPIC_API_KEY, PAYMOB_*, …).
 #   Secrets and variables -> Actions -> Variables (repository):
 #     SUPABASE_PRODUCTION_PROJECT_REF   ref of the production Supabase project
 #   In the production Vercel project, turn off automatic Git deployments: this workflow deploys it.
@@ -61,9 +63,19 @@ jobs:
       project-ref: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
       apply: true
 
+  functions:
+    needs: migrations
+    uses: ./.github/workflows/supabase-functions.yml
+    secrets: inherit
+    with:
+      environment: production
+      project-ref: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+      functions: all
+      deploy: true
+
   deploy:
     name: Test, build and deploy the app
-    needs: migrations
+    needs: functions
     runs-on: ubuntu-latest
     environment: production
     env:
