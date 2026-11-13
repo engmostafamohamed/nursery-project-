@@ -2,349 +2,187 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { EventsCalendar } from '@/components/events/EventsCalendar';
-import { Badge } from '@/components/ui/badge';
+import { EventsViewToggle, type EventsView } from '@/components/events/EventsViewToggle';
+import { SelectedDayChip } from '@/components/events/SelectedDayChip';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { EmptyState } from '@/components/ui/EmptyState';
+import { TableCard, TableEmpty, TablePagination } from '@/components/ui/DataTable';
+import { FilterChips } from '@/components/ui/FilterChips';
+import { LoadError } from '@/components/ui/LoadError';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { StatTile } from '@/components/ui/StatTile';
+import { EventRosterDialog } from '@/features/events/EventRosterDialog';
+import { EVENT_CATEGORIES } from '@/features/events/events';
+import { TeacherEventCard } from '@/features/events/TeacherEventCard';
+import { filterTeacherEvents, TEACHER_EVENT_TABS, teacherEventsOverview, whenOf, type TeacherEventTab } from '@/features/events/teacherEvents';
+import { useTeacherEvents } from '@/features/events/useTeacherEvents';
 import { useAuthSession } from '@/hooks/useAuthSession';
-import { useTeacherEventsList, type TeacherEventsListRow } from '@/hooks/useTeacherEventsList';
-import { useUserProfile } from '@/hooks/useUserProfile';
 import { useNurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
-import { localName } from '@/lib/bilingualName';
+import { usePagination } from '@/hooks/usePagination';
+import { useSearchParam } from '@/hooks/useSearchParam';
+import { useUserProfile } from '@/hooks/useUserProfile';
 
-type CategoryFilter = 'all' | 'trip' | 'activity' | 'service' | 'doctor_visit';
+const CATEGORY_FILTERS = ['all', ...EVENT_CATEGORIES] as const;
+type CategoryFilter = (typeof CATEGORY_FILTERS)[number];
 
-const CHIP_BG: Record<string, string> = {
-  trip: 'bg-violet-100 text-violet-900',
-  activity: 'bg-blue-100 text-blue-900',
-  service: 'bg-amber-100 text-amber-900',
-  doctor_visit: 'bg-green-100 text-green-900',
-};
-
-function categoryChip(cat: string) {
-  return CHIP_BG[cat] ?? 'bg-surface-container text-on-surface';
-}
-
-// ─── Event detail dialog ─────────────────────────────────────────────────────
-
-function EventDetailDialog({
-  event,
-  onClose,
-  locale,
-  t,
-}: {
-  event: TeacherEventsListRow | null;
-  onClose: () => void;
-  locale: string;
-  t: (key: string, opts?: Record<string, unknown>) => string;
-}) {
-  if (!event) return null;
-  const isAr = locale.startsWith('ar');
-  const title = localName(event.title_ar, event.title_en, isAr);
-  const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'full', timeStyle: 'short', hour12: true });
-
-  return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <div className="flex flex-wrap gap-2">
-            <Badge className={`${categoryChip(event.category)} border-transparent text-xs`}>
-              {t(`teacher.events.categories.${event.category}`)}
-            </Badge>
-            {event.is_paid ? (
-              <Badge className="border-transparent bg-amber-100 text-amber-900 text-xs">
-                {t('teacher.events.paid')}
-              </Badge>
-            ) : null}
-            <Badge
-              className={`border-transparent text-xs ${
-                event.target_scope === 'class'
-                  ? 'bg-primary/10 text-primary'
-                  : 'bg-surface-container text-on-surface-variant'
-              }`}
-            >
-              {event.target_scope === 'class' ? t('teacher.events.myClassTag') : t('teacher.events.allClassesTag')}
-            </Badge>
-          </div>
-          <DialogTitle className="mt-2 text-base">{title}</DialogTitle>
-          <DialogDescription className="text-xs text-on-surface-variant">
-            {dateFmt.format(new Date(event.starts_at))}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-2 text-sm text-on-surface-variant">
-          {event.location ? (
-            <div className="flex items-start gap-2">
-              <span className="material-symbols-outlined text-base text-primary shrink-0" aria-hidden>location_on</span>
-              <p>{event.location}</p>
-            </div>
-          ) : null}
-          {event.permission_deadline ? (
-            <div className="flex items-start gap-2">
-              <span className="material-symbols-outlined text-base text-primary shrink-0" aria-hidden>timer</span>
-              <p>
-                {t('teacher.events.permissionDeadline', {
-                  date: new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short', hour12: true }).format(
-                    new Date(event.permission_deadline),
-                  ),
-                })}
-              </p>
-            </div>
-          ) : null}
-        </div>
-
-        <p className="text-xs text-on-surface-variant">
-          {t('teacher.events.readOnlyNote', { defaultValue: 'Permission responses are managed by the nursery admin.' })}
-        </p>
-
-        <Button variant="outline" className="w-full" onClick={onClose}>
-          {t('common.close', { defaultValue: 'Close' })}
-        </Button>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// ─── Main page ────────────────────────────────────────────────────────────────
-
+/**
+ * The events of the teacher's classes: today's first (the check-in day), the ones to come and the
+ * done ones, in a list or on the calendar. Each opens who of the teacher's children is going and
+ * who was checked in; a reminder's link (?event=<id>) opens it directly.
+ */
 export function TeacherEventsPage() {
   const { t, i18n } = useTranslation();
   const { user } = useAuthSession();
   const { data: profile } = useUserProfile(user?.id);
   useNurseryLanguagePref(profile?.nursery_id);
   const locale = i18n.language.startsWith('ar') ? 'ar-EG' : 'en-GB';
+  const eventsQuery = useTeacherEvents(user?.id);
 
+  const [view, setView] = useState<EventsView>('list');
+  const [tab, setTab] = useState<TeacherEventTab>('all');
+  const [category, setCategory] = useState<CategoryFilter>('all');
+  const [dayKey, setDayKey] = useState<string | null>(null);
   const [viewMonth, setViewMonth] = useState(() => {
     const n = new Date();
     return new Date(n.getFullYear(), n.getMonth(), 1);
   });
-  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
-  const [selectedEvent, setSelectedEvent] = useState<TeacherEventsListRow | null>(null);
-  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
-  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
+  const [openId, setOpenId] = useSearchParam('event');
+  const [now] = useState(() => new Date());
 
-  const { data, isPending, isError, classIdsLoading } = useTeacherEventsList({
-    userId: user?.id,
-    nurseryId: profile?.nursery_id,
-  });
+  const events = useMemo(() => eventsQuery.data ?? [], [eventsQuery.data]);
+  const overview = useMemo(() => teacherEventsOverview(events, now), [events, now]);
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: events.length };
+    for (const e of events) counts[e.category] = (counts[e.category] ?? 0) + 1;
+    return counts;
+  }, [events]);
+  const pickedDay = view === 'calendar' ? dayKey : null;
+  const shown = useMemo(() => filterTeacherEvents(events, { tab, category, dayKey: pickedDay }, now), [events, tab, category, pickedDay, now]);
+  const pager = usePagination(shown, 6, `${tab}|${category}|${pickedDay}|${view}`);
+  const openEvent = openId ? events.find((e) => e.id === openId) ?? null : null;
 
-  const allEvents = useMemo(() => data ?? [], [data]);
+  const filtersActive = tab !== 'all' || category !== 'all' || Boolean(pickedDay);
+  const clearFilters = () => {
+    setTab('all');
+    setCategory('all');
+    setDayKey(null);
+  };
+  const toggleTab = (next: TeacherEventTab) => setTab((current) => (current === next ? 'all' : next));
 
-  const calendarEvents = useMemo(() => {
-    if (categoryFilter === 'all') return allEvents;
-    return allEvents.filter((e) => e.category === categoryFilter);
-  }, [allEvents, categoryFilter]);
-
-  const [nowMs] = useState(() => Date.now());
-  const listEvents = useMemo(() => {
-    let list = calendarEvents;
-    if (selectedDateKey && viewMode === 'calendar') {
-      list = list.filter((e) => {
-        const d = new Date(e.starts_at);
-        const dk = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        return dk === selectedDateKey;
-      });
-    }
-    return list;
-  }, [calendarEvents, selectedDateKey, viewMode]);
-
-  const upcomingCount = useMemo(
-    () => allEvents.filter((e) => new Date(e.starts_at).getTime() > nowMs).length,
-    [allEvents, nowMs],
+  const header = (
+    <PageHeader icon="event" title={t('teacher.events.title')} description={t('teacher.events.subtitle')}>
+      {eventsQuery.isSuccess ? (
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <StatTile
+            icon="today"
+            label={t('teacher.events.tabs.today')}
+            value={overview.counts.today}
+            tone={overview.counts.today > 0 ? 'primary' : 'neutral'}
+            onClick={() => toggleTab('today')}
+            active={tab === 'today'}
+          />
+          <StatTile icon="groups" label={t('teacher.events.goingToday')} value={overview.goingToday} tone={overview.goingToday > 0 ? 'success' : 'neutral'} />
+          <StatTile icon="upcoming" label={t('teacher.events.tabs.upcoming')} value={overview.counts.upcoming} onClick={() => toggleTab('upcoming')} active={tab === 'upcoming'} />
+          <StatTile icon="history" label={t('teacher.events.tabs.past')} value={overview.counts.past} onClick={() => toggleTab('past')} active={tab === 'past'} />
+        </div>
+      ) : null}
+    </PageHeader>
   );
 
-  const CATS: CategoryFilter[] = ['all', 'trip', 'activity', 'service', 'doctor_visit'];
-
-  if (isPending || classIdsLoading) {
+  if (eventsQuery.isPending) {
     return (
-      <div className="space-y-4 pb-8">
-        <h1 className="text-lg font-semibold text-on-surface">{t('teacher.events.title')}</h1>
-        <LoadingSkeleton />
+      <div className="space-y-5 pb-8">
+        {header}
+        <LoadingSkeleton variant="eventCards" eventCardsLabel={t('teacher.events.title')} />
       </div>
     );
   }
 
-  if (isError) {
+  if (eventsQuery.isError) {
     return (
-      <div className="pb-8">
-        <h1 className="text-lg font-semibold text-on-surface">{t('teacher.events.title')}</h1>
-        <p className="mt-4 text-sm text-error" role="alert">{t('teacher.events.loadError')}</p>
+      <div className="space-y-5 pb-8">
+        {header}
+        <LoadError message={t('teacher.events.loadError')} onRetry={() => void eventsQuery.refetch()} />
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 pb-8">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-semibold text-on-surface">{t('teacher.events.title')}</h1>
-          {upcomingCount > 0 ? (
-            <p className="text-xs text-on-surface-variant">
-              {t('teacher.events.upcomingCount', { count: upcomingCount, defaultValue: `${upcomingCount} upcoming` })}
-            </p>
-          ) : null}
-        </div>
-        {/* View toggle */}
-        <div className="flex overflow-hidden rounded-lg border border-outline-variant">
-          <button
-            type="button"
-            className={`flex items-center gap-1 px-3 py-1.5 text-sm transition-colors ${
-              viewMode === 'calendar'
-                ? 'bg-primary text-on-primary'
-                : 'bg-surface-container-lowest text-on-surface-variant'
-            }`}
-            onClick={() => setViewMode('calendar')}
-          >
-            <span className="material-symbols-outlined text-base" aria-hidden>calendar_month</span>
-          </button>
-          <button
-            type="button"
-            className={`flex items-center gap-1 px-3 py-1.5 text-sm transition-colors ${
-              viewMode === 'list'
-                ? 'bg-primary text-on-primary'
-                : 'bg-surface-container-lowest text-on-surface-variant'
-            }`}
-            onClick={() => { setViewMode('list'); setSelectedDateKey(null); }}
-          >
-            <span className="material-symbols-outlined text-base" aria-hidden>view_list</span>
-          </button>
-        </div>
-      </div>
+    <div className="space-y-5 pb-8">
+      {header}
 
-      {/* Category filter chips */}
-      <div className="flex flex-wrap gap-2">
-        {CATS.map((c) => (
-          <button
-            key={c}
-            type="button"
-            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-              categoryFilter === c
-                ? 'bg-primary text-on-primary'
-                : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
-            }`}
-            onClick={() => setCategoryFilter(c)}
-          >
-            {t(`teacher.events.categories.${c}`)}
-          </button>
-        ))}
-      </div>
-
-      {allEvents.length === 0 ? (
-        <EmptyState
-          icon="event_busy"
-          title={t('teacher.events.emptyTitle')}
-          description={t('teacher.events.emptyDescription')}
-        />
-      ) : (
-        <>
-          {/* Calendar view */}
-          {viewMode === 'calendar' ? (
-            <div className="space-y-4">
-              <div className="rounded-3xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm">
-                <EventsCalendar
-                  events={calendarEvents}
-                  viewMonth={viewMonth}
-                  selectedDateKey={selectedDateKey}
-                  locale={locale}
-                  onPrevMonth={() => setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
-                  onNextMonth={() => setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
-                  onSelectDate={(key) => { setSelectedDateKey(key); setSelectedEvent(null); }}
-                  onEventClick={(ev) => setSelectedEvent(ev)}
-                />
-              </div>
-
-              {selectedDateKey ? (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-on-surface">
-                      {new Intl.DateTimeFormat(locale, { dateStyle: 'full' }).format(
-                        new Date(selectedDateKey + 'T00:00:00'),
-                      )}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedDateKey(null)}
-                      className="text-xs text-on-surface-variant hover:underline"
-                    >
-                      {t('parent.events.clearDateFilter')}
-                    </button>
-                  </div>
-                  {listEvents.length === 0 ? (
-                    <p className="text-sm text-on-surface-variant">{t('teacher.events.emptyFilterDescription')}</p>
-                  ) : (
-                    listEvents.map((ev) => <EventListRow key={ev.id} event={ev} locale={locale} t={t} onSelect={setSelectedEvent} />)
-                  )}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-
-          {/* List view */}
-          {viewMode === 'list' ? (
+      <TableCard
+        title={t('teacher.events.title')}
+        count={t('eventForm.eventsCount', { count: shown.length })}
+        actions={<EventsViewToggle value={view} onChange={setView} />}
+        filters={
+          events.length === 0 ? null : (
             <div className="space-y-3">
-              {calendarEvents.length === 0 ? (
-                <EmptyState icon="filter_alt_off" title={t('teacher.events.emptyFilterTitle')} description={t('teacher.events.emptyFilterDescription')} />
-              ) : (
-                calendarEvents.map((ev) => <EventListRow key={ev.id} event={ev} locale={locale} t={t} onSelect={setSelectedEvent} />)
-              )}
+              <FilterChips
+                label={t('teacher.events.whenLabel')}
+                value={tab}
+                onChange={setTab}
+                options={TEACHER_EVENT_TABS.map((key) => ({ value: key, label: t(`teacher.events.tabs.${key}`), count: overview.counts[key] }))}
+              />
+              <FilterChips
+                label={t('teacher.events.categoryLabel')}
+                value={category}
+                onChange={setCategory}
+                hideEmpty
+                options={CATEGORY_FILTERS.map((key) => ({ value: key, label: t(`admin.events.list.categoryOption.${key}`), count: categoryCounts[key] ?? 0 }))}
+              />
+              {pickedDay ? <SelectedDayChip dateKey={pickedDay} locale={locale} onClear={() => setDayKey(null)} /> : null}
             </div>
-          ) : null}
-        </>
-      )}
+          )
+        }
+        pagination={shown.length === 0 ? null : <TablePagination pager={pager} pageSizeOptions={[6, 12, 24]} />}
+      >
+        {view === 'calendar' ? (
+          <div className="border-b border-outline-variant p-4 sm:p-5">
+            <EventsCalendar
+              viewMonth={viewMonth}
+              events={events}
+              selectedDateKey={dayKey}
+              onSelectDate={setDayKey}
+              onPrevMonth={() => setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
+              onNextMonth={() => setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
+              onToday={() => {
+                const n = new Date();
+                setViewMonth(new Date(n.getFullYear(), n.getMonth(), 1));
+                setDayKey(null);
+              }}
+              locale={locale}
+            />
+          </div>
+        ) : null}
 
-      {/* Event detail dialog */}
-      <EventDetailDialog event={selectedEvent} onClose={() => setSelectedEvent(null)} locale={locale} t={t} />
+        {events.length === 0 ? (
+          <TableEmpty icon="event_busy" title={t('teacher.events.emptyTitle')} description={t('teacher.events.emptyDescription')} />
+        ) : shown.length === 0 ? (
+          <TableEmpty
+            icon="filter_alt_off"
+            title={t('teacher.events.emptyFilterTitle')}
+            description={t('teacher.events.emptyFilterDescription')}
+            action={
+              filtersActive ? (
+                <Button type="button" variant="outline" onClick={clearFilters}>
+                  {t('common.clearFilters')}
+                </Button>
+              ) : undefined
+            }
+          />
+        ) : (
+          <div className="grid gap-3 p-4 sm:p-5 xl:grid-cols-2">
+            {pager.pageItems.map((event) => (
+              <TeacherEventCard key={event.id} event={event} when={whenOf(event, now)} locale={locale} onOpen={() => setOpenId(event.id)} />
+            ))}
+          </div>
+        )}
+      </TableCard>
+
+      {openEvent ? (
+        <EventRosterDialog event={openEvent} isToday={whenOf(openEvent, now) === 'today'} locale={locale} onClose={() => setOpenId(null)} />
+      ) : null}
     </div>
-  );
-}
-
-// ─── List row ─────────────────────────────────────────────────────────────────
-
-function EventListRow({
-  event,
-  locale,
-  t,
-  onSelect,
-}: {
-  event: TeacherEventsListRow;
-  locale: string;
-  t: (key: string, opts?: Record<string, unknown>) => string;
-  onSelect: (e: TeacherEventsListRow) => void;
-}) {
-  const isAr = locale.startsWith('ar');
-  const title = localName(event.title_ar, event.title_en, isAr);
-  const [nowMs] = useState(() => Date.now());
-  const isPast = new Date(event.starts_at).getTime() < nowMs;
-  const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short', hour12: true });
-
-  return (
-    <button
-      type="button"
-      onClick={() => onSelect(event)}
-      className="flex w-full items-start gap-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 text-start transition-colors hover:bg-surface-container"
-    >
-      <span className={`material-symbols-outlined mt-0.5 shrink-0 text-xl ${isPast ? 'text-on-surface-variant' : 'text-primary'}`} aria-hidden>event</span>
-      <div className="min-w-0 flex-1 space-y-1">
-        <p className="text-sm font-semibold text-on-surface">{title}</p>
-        <p className="text-xs text-on-surface-variant">{dateFmt.format(new Date(event.starts_at))}</p>
-        <div className="flex flex-wrap gap-1 pt-0.5">
-          <Badge className={`${CHIP_BG[event.category] ?? 'bg-surface-container text-on-surface'} border-transparent text-xs`}>
-            {t(`teacher.events.categories.${event.category}`)}
-          </Badge>
-          {isPast ? (
-            <Badge className="border-transparent bg-surface-container text-on-surface-variant text-xs">
-              {t('teacher.events.past')}
-            </Badge>
-          ) : (
-            <Badge className="border-transparent bg-primary/10 text-primary text-xs">
-              {t('teacher.events.upcoming')}
-            </Badge>
-          )}
-        </div>
-      </div>
-      <span className="material-symbols-outlined text-base text-on-surface-variant" aria-hidden>chevron_right</span>
-    </button>
   );
 }

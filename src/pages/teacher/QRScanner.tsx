@@ -69,6 +69,8 @@ const QR_VERIFY_REFUSALS: ReadonlyArray<[RegExp, string]> = [
   [/child not found/i, 'attendance_child_not_found'],
   [/too many invalid manual qr codes/i, 'attendance_qr_manual_rate_limited'],
   [/invalid qr|token is required|invalid event qr/i, 'attendance_qr_invalid'],
+  [/event is not open|event has been cancelled/i, 'attendance_event_closed'],
+  [/no permission from the family/i, 'attendance_event_no_permission'],
 ];
 
 /** supabase.functions.invoke only reports "non-2xx status code"; the real reason is in the body. */

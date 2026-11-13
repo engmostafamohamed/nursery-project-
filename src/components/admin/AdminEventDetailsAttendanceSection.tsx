@@ -4,18 +4,31 @@ import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { DataTable, StatusPill, TableCard, TableEmpty, TBody, Td, Th, THead, Tr, type PillTone } from '@/components/ui/DataTable';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { Input } from '@/components/ui/input';
+import { SearchInput } from '@/components/ui/FilterBar';
+import { FilterChips } from '@/components/ui/FilterChips';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
+import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { StatTile } from '@/components/ui/StatTile';
 import type { AdminEventAttendanceRow, AdminEventDetailRow } from '@/hooks/useAdminEventDetails';
+import { useMoney } from '@/hooks/useMoney';
+import { localName } from '@/lib/bilingualName';
 import { localizedNames, templateNotificationRow } from '@/lib/notificationText';
 import { supabase } from '@/lib/supabase';
 import { getUserInitials } from '@/lib/utils';
 
-type FilterTab = 'all' | 'granted' | 'denied' | 'pending';
+const FILTERS = ['all', 'granted', 'pending', 'denied', 'checkedIn'] as const;
+type Filter = (typeof FILTERS)[number];
+
+const ANSWER: Record<string, { tone: PillTone; icon: string }> = {
+  granted: { tone: 'success', icon: 'task_alt' },
+  pending: { tone: 'warning', icon: 'pending_actions' },
+  denied: { tone: 'error', icon: 'block' },
+};
+const INVOICE_TONE: Record<string, PillTone> = { paid: 'success', pending: 'warning', overdue: 'error', cancelled: 'neutral' };
 
 type Props = {
   event: AdminEventDetailRow;
@@ -25,100 +38,81 @@ type Props = {
   eventTitleForMessage: string;
 };
 
-function statusBadgeClass(status: string): string {
-  if (status === 'granted') return 'border-transparent bg-success/10 text-success';
-  if (status === 'denied') return 'border-transparent bg-error-container text-on-error-container';
-  if (status === 'pending') return 'border-transparent bg-warning/10 text-warning';
-  return 'border-outline-variant bg-surface-container text-on-surface';
-}
-
 function csvEscape(value: string): string {
-  if (value.includes('"') || value.includes(',') || value.includes('\n')) {
-    return `"${value.replace(/"/g, '""')}"`;
-  }
-  return value;
+  return /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
 }
 
-export function AdminEventDetailsAttendanceSection({
-  event,
-  rows,
-  isLoading,
-  onRefresh,
-  eventTitleForMessage,
-}: Props) {
+/**
+ * The families of one event: who was asked, each answer, the payment of a paid event, and who the
+ * QR scanner checked in at the event. The admin can remind the families still to answer and export
+ * the list.
+ */
+export function AdminEventDetailsAttendanceSection({ event, rows, isLoading, onRefresh, eventTitleForMessage }: Props) {
   const { t, i18n } = useTranslation();
-  const [filter, setFilter] = useState<FilterTab>('all');
+  const money = useMoney();
+  const isAr = i18n.language.startsWith('ar');
+  const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
   const [reminderOpen, setReminderOpen] = useState(false);
   const [reminderBusy, setReminderBusy] = useState(false);
 
-  const locale = i18n.language.startsWith('ar') ? 'ar-EG' : 'en-GB';
+  const locale = isAr ? 'ar-EG' : 'en-GB';
   const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short', hour12: true });
+  const checkInFmt = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true });
 
-  const counts = useMemo(() => {
-    const total = rows.length;
-    const granted = rows.filter((r) => r.status === 'granted').length;
-    const denied = rows.filter((r) => r.status === 'denied').length;
-    const pending = rows.filter((r) => r.status === 'pending').length;
-    return { total, granted, denied, pending };
-  }, [rows]);
+  const counts = useMemo(
+    () => ({
+      all: rows.length,
+      granted: rows.filter((r) => r.status === 'granted').length,
+      pending: rows.filter((r) => r.status === 'pending').length,
+      denied: rows.filter((r) => r.status === 'denied').length,
+      checkedIn: rows.filter((r) => r.checked_in_at).length,
+    }),
+    [rows],
+  );
 
-  const priceNum = event.price ? Number(event.price) : 0;
-  const revenue =
-    event.is_paid && !Number.isNaN(priceNum) ? priceNum * counts.granted : 0;
-  const revenueFmt = new Intl.NumberFormat(locale, { style: 'currency', currency: 'EGP' });
+  // Families can be reminded only while the event is open and still to come.
+  const [nowMs] = useState(Date.now);
+  const canRemind = event.status === 'active' && !event.cancelled_at && new Date(event.starts_at).getTime() > nowMs;
+  const pendingParents = useMemo(() => new Set(rows.filter((r) => r.status === 'pending' && r.parent_id).map((r) => r.parent_id)).size, [rows]);
 
-  const pendingParents = useMemo(() => {
-    const ids = new Set<string>();
-    for (const r of rows) {
-      if (r.status === 'pending' && r.parent_id) ids.add(r.parent_id);
-    }
-    return ids.size;
-  }, [rows]);
+  const displayChild = (r: AdminEventAttendanceRow) => localName(r.child_name_ar, r.child_name_en, isAr);
+  const displayParent = (r: AdminEventAttendanceRow) => localName(r.parent_name_ar, r.parent_name_en, isAr);
 
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rows.filter((r) => {
-      if (filter === 'granted' && r.status !== 'granted') return false;
-      if (filter === 'denied' && r.status !== 'denied') return false;
-      if (filter === 'pending' && r.status !== 'pending') return false;
+      if (filter === 'checkedIn' ? !r.checked_in_at : filter !== 'all' && r.status !== filter) return false;
       if (!q) return true;
-      const hay = `${r.child_name_ar} ${r.child_name_en} ${r.parent_name_ar} ${r.parent_name_en}`.toLowerCase();
-      return hay.includes(q);
+      return `${r.child_name_ar} ${r.child_name_en} ${r.parent_name_ar} ${r.parent_name_en}`.toLowerCase().includes(q);
     });
   }, [rows, filter, search]);
 
-  const displayChild = (r: AdminEventAttendanceRow) =>
-    (i18n.language.startsWith('ar') ? r.child_name_ar : r.child_name_en) || r.child_name_en;
-  const displayParent = (r: AdminEventAttendanceRow) =>
-    (i18n.language.startsWith('ar') ? r.parent_name_ar : r.parent_name_en) || r.parent_name_en;
+  const toggle = (next: Filter) => setFilter((current) => (current === next ? 'all' : next));
+  const answerText = (status: string) => t(`admin.events.details.permissionStatus.${status}`, { defaultValue: status });
+  const invoiceText = (r: AdminEventAttendanceRow) =>
+    r.invoice_status
+      ? `${t(`admin.events.details.invoiceStatus.${r.invoice_status}`, { defaultValue: r.invoice_status })}${r.invoice_amount ? ` · ${money(Number(r.invoice_amount))}` : ''}`
+      : '';
 
   const exportCsv = () => {
-    const headers = [
-      t('admin.events.details.csv.child'),
-      t('admin.events.details.csv.parent'),
-      t('admin.events.details.csv.status'),
-      t('admin.events.details.csv.respondedAt'),
-      t('admin.events.details.csv.parentNote'),
-      t('admin.events.details.csv.payment'),
-    ];
+    const headers = ['child', 'parent', 'status', 'respondedAt', 'checkedIn', 'parentNote', ...(event.is_paid ? ['payment'] : [])].map((key) =>
+      t(`admin.events.details.csv.${key}`),
+    );
     const lines = [headers.join(',')];
     for (const r of filteredRows) {
-      const responded = r.responded_at ? dateFmt.format(new Date(r.responded_at)) : '';
-      const note = r.parent_note ?? '';
-      const pay =
-        event.is_paid && r.invoice_status
-          ? `${r.invoice_status}${r.invoice_amount ? ` (${r.invoice_amount})` : ''}`
-          : '—';
       lines.push(
         [
-          csvEscape(displayChild(r)),
-          csvEscape(displayParent(r)),
-          csvEscape(r.status),
-          csvEscape(responded),
-          csvEscape(note),
-          csvEscape(pay),
-        ].join(','),
+          displayChild(r),
+          displayParent(r),
+          answerText(r.status),
+          r.responded_at ? dateFmt.format(new Date(r.responded_at)) : '',
+          r.checked_in_at ? dateFmt.format(new Date(r.checked_in_at)) : '',
+          r.parent_note ?? '',
+          ...(event.is_paid ? [invoiceText(r)] : []),
+        ]
+          .map(csvEscape)
+          .join(','),
       );
     }
     const blob = new Blob([`\uFEFF${lines.join('\n')}`], { type: 'text/csv;charset=utf-8' });
@@ -132,8 +126,7 @@ export function AdminEventDetailsAttendanceSection({
   };
 
   const sendReminders = async () => {
-    const pendingRows = rows.filter((r) => r.status === 'pending' && r.parent_id);
-    const parentIds = [...new Set(pendingRows.map((r) => r.parent_id!))];
+    const parentIds = [...new Set(rows.filter((r) => r.status === 'pending' && r.parent_id).map((r) => r.parent_id!))];
     if (!parentIds.length) return;
     setReminderBusy(true);
     try {
@@ -150,7 +143,7 @@ export function AdminEventDetailsAttendanceSection({
       if (error) throw error;
       toast.success(t('admin.events.details.reminderSuccess', { count: parentIds.length }));
       setReminderOpen(false);
-      await onRefresh();
+      onRefresh();
     } catch {
       toast.error(t('admin.events.details.reminderError'));
     } finally {
@@ -159,102 +152,140 @@ export function AdminEventDetailsAttendanceSection({
   };
 
   if (isLoading) {
-    return (
-      <LoadingSkeleton
-        variant="permissionCards"
-        permissionCardsLabel={t('admin.events.details.attendanceLoading')}
-      />
-    );
+    return <LoadingSkeleton variant="permissionCards" permissionCardsLabel={t('admin.events.details.attendanceLoading')} />;
   }
 
   if (!rows.length) {
-    return (
-      <EmptyState
-        icon="assignment_ind"
-        title={t('admin.events.details.noPermissionsTitle')}
-        description={t('admin.events.details.noPermissionsDescription')}
-      />
-    );
+    return <EmptyState icon="assignment_ind" title={t('admin.events.details.noPermissionsTitle')} description={t('admin.events.details.noPermissionsDescription')} />;
   }
 
+  const price = event.is_paid ? Number(event.price ?? 0) : 0;
+
   return (
-    <div className="space-y-4">
-      <h2 className="text-base font-semibold text-on-surface">{t('admin.events.details.attendanceTitle')}</h2>
-
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3">
-          <p className="text-xs text-on-surface-variant">{t('admin.events.details.statTotal')}</p>
-          <p className="text-lg font-semibold text-on-surface">{counts.total}</p>
-        </div>
-        <div className="rounded-xl border border-success/40 bg-success/10 p-3">
-          <p className="text-xs text-success">{t('admin.events.details.statApproved')}</p>
-          <p className="text-lg font-semibold text-success">{counts.granted}</p>
-        </div>
-        <div className="rounded-xl border border-error/30 bg-error-container/40 p-3">
-          <p className="text-xs text-on-error-container">{t('admin.events.details.statDenied')}</p>
-          <p className="text-lg font-semibold text-on-error-container">{counts.denied}</p>
-        </div>
-        <div className="rounded-xl border border-warning/40 bg-warning/10 p-3">
-          <p className="text-xs text-warning">{t('admin.events.details.statPending')}</p>
-          <p className="text-lg font-semibold text-warning">{counts.pending}</p>
-        </div>
+    <div className="space-y-4" data-testid="event-families">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <StatTile icon="groups" label={t('admin.events.details.statTotal')} value={counts.all} onClick={() => setFilter('all')} active={filter === 'all'} />
+        <StatTile icon="task_alt" tone="success" label={t('admin.events.details.statApproved')} value={counts.granted} onClick={() => toggle('granted')} active={filter === 'granted'} />
+        <StatTile
+          icon="pending_actions"
+          tone={counts.pending > 0 ? 'warning' : 'neutral'}
+          label={t('admin.events.details.statPending')}
+          value={counts.pending}
+          onClick={() => toggle('pending')}
+          active={filter === 'pending'}
+        />
+        <StatTile
+          icon="block"
+          tone={counts.denied > 0 ? 'error' : 'neutral'}
+          label={t('admin.events.details.statDenied')}
+          value={counts.denied}
+          onClick={() => toggle('denied')}
+          active={filter === 'denied'}
+        />
+        <StatTile
+          icon="how_to_reg"
+          tone={counts.checkedIn > 0 ? 'primary' : 'neutral'}
+          label={t('admin.events.details.statCheckedIn')}
+          value={counts.checkedIn}
+          helper={counts.granted > 0 ? t('admin.events.details.checkedInOf', { going: counts.granted }) : undefined}
+          onClick={() => toggle('checkedIn')}
+          active={filter === 'checkedIn'}
+        />
       </div>
 
-      {event.is_paid ? (
-        <p className="text-sm font-medium text-on-surface">
-          {t('admin.events.details.totalRevenue', { amount: revenueFmt.format(revenue) })}
-        </p>
-      ) : null}
-
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <div className="flex flex-wrap gap-2">
-          {(['all', 'granted', 'denied', 'pending'] as const).map((key) => (
-            <button
-              key={key}
-              type="button"
-              className={`rounded-full px-3 py-1 text-sm ${
-                filter === key ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface-variant'
-              }`}
-              onClick={() => setFilter(key)}
-            >
-              {t(`admin.events.details.filters.${key}`)}
-            </button>
-          ))}
-        </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Input
-            className="sm:w-56"
-            placeholder={t('admin.events.details.searchPlaceholder')}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <Button type="button" variant="outline" size="sm" onClick={exportCsv}>
-            {t('admin.events.details.exportCsv')}
-          </Button>
-        </div>
-      </div>
-
-      {counts.pending > 0 ? (
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-on-surface-variant">
+      {counts.pending > 0 && canRemind ? (
+        <section className="flex flex-col gap-3 rounded-xl border border-warning/40 bg-warning/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="flex items-start gap-2 text-sm text-on-surface">
+            <MaterialSymbol name="notifications_active" size="text-lg" className="shrink-0 text-warning" />
             {t('admin.events.details.reminderHint', { count: pendingParents })}
           </p>
-          <Button type="button" size="sm" variant="secondary" onClick={() => setReminderOpen(true)}>
+          <Button type="button" size="sm" className="shrink-0" onClick={() => setReminderOpen(true)}>
             {t('admin.events.details.sendReminder')}
           </Button>
-        </div>
+        </section>
       ) : null}
+
+      <TableCard
+        title={t('admin.events.details.attendanceTitle')}
+        count={String(filteredRows.length)}
+        description={price > 0 ? t('admin.events.details.totalRevenue', { amount: money(price * counts.granted) }) : undefined}
+        actions={
+          <Button type="button" variant="outline" size="sm" onClick={exportCsv}>
+            <MaterialSymbol name="download" size="text-base" className="me-1" />
+            {t('admin.events.details.exportCsv')}
+          </Button>
+        }
+        filters={
+          <div className="space-y-3">
+            <FilterChips
+              label={t('admin.events.details.attendanceTitle')}
+              value={filter}
+              onChange={setFilter}
+              options={FILTERS.map((key) => ({ value: key, label: t(`admin.events.details.filters.${key}`), count: counts[key] }))}
+            />
+            <SearchInput value={search} onChange={setSearch} placeholder={t('admin.events.details.searchPlaceholder')} className="sm:max-w-sm" />
+          </div>
+        }
+      >
+        {filteredRows.length === 0 ? (
+          <TableEmpty icon="filter_alt_off" title={t('admin.events.details.noMatches')} />
+        ) : (
+          <DataTable minWidth={event.is_paid ? 900 : 780}>
+            <THead>
+              <Th>{t('admin.events.details.table.child')}</Th>
+              <Th>{t('admin.events.details.table.parent')}</Th>
+              <Th>{t('admin.events.details.table.permission')}</Th>
+              <Th>{t('admin.events.details.table.responded')}</Th>
+              <Th>{t('admin.events.details.table.checkedIn')}</Th>
+              <Th>{t('admin.events.details.table.denialNote')}</Th>
+              {event.is_paid ? <Th>{t('admin.events.details.table.payment')}</Th> : null}
+            </THead>
+            <TBody>
+              {filteredRows.map((r) => (
+                <Tr key={r.permission_id} data-testid="event-family-row">
+                  <Td>
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-8 w-8">
+                        {r.avatar_url ? <AvatarImage src={r.avatar_url} alt="" /> : null}
+                        <AvatarFallback className="text-xs">{getUserInitials(displayChild(r), null)}</AvatarFallback>
+                      </Avatar>
+                      <Link to={`/admin/children/${r.child_id}`} className="font-medium text-on-surface hover:text-primary hover:underline">
+                        {displayChild(r)}
+                      </Link>
+                    </div>
+                  </Td>
+                  <Td>{displayParent(r)}</Td>
+                  <Td>
+                    <StatusPill tone={ANSWER[r.status]?.tone ?? 'neutral'} icon={ANSWER[r.status]?.icon}>
+                      {answerText(r.status)}
+                    </StatusPill>
+                  </Td>
+                  <Td className="text-on-surface-variant">{r.responded_at ? dateFmt.format(new Date(r.responded_at)) : '—'}</Td>
+                  <Td>
+                    {r.checked_in_at ? (
+                      <StatusPill tone="success" icon="how_to_reg">{checkInFmt.format(new Date(r.checked_in_at))}</StatusPill>
+                    ) : (
+                      <span className="text-on-surface-variant">—</span>
+                    )}
+                  </Td>
+                  <Td className="max-w-[12rem] truncate text-on-surface-variant">{r.status === 'denied' && r.parent_note ? r.parent_note : '—'}</Td>
+                  {event.is_paid ? (
+                    <Td>
+                      {r.invoice_status ? <StatusPill tone={INVOICE_TONE[r.invoice_status] ?? 'neutral'}>{invoiceText(r)}</StatusPill> : '—'}
+                    </Td>
+                  ) : null}
+                </Tr>
+              ))}
+            </TBody>
+          </DataTable>
+        )}
+      </TableCard>
 
       <Dialog open={reminderOpen} onOpenChange={setReminderOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('admin.events.details.reminderTitle')}</DialogTitle>
-            <DialogDescription>
-              {t('admin.events.details.reminderConfirm', {
-                count: pendingParents,
-                event: eventTitleForMessage,
-              })}
-            </DialogDescription>
+            <DialogDescription>{t('admin.events.details.reminderConfirm', { count: pendingParents, event: eventTitleForMessage })}</DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button type="button" variant="outline" onClick={() => setReminderOpen(false)}>
@@ -266,68 +297,6 @@ export function AdminEventDetailsAttendanceSection({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <div className="overflow-x-auto rounded-xl border border-outline-variant bg-surface-container-lowest">
-        <table className="min-w-full text-sm">
-          <thead className="bg-surface-container text-on-surface-variant">
-            <tr>
-              <th className="px-3 py-2 text-start">{t('admin.events.details.table.child')}</th>
-              <th className="px-3 py-2 text-start">{t('admin.events.details.table.parent')}</th>
-              <th className="px-3 py-2 text-start">{t('admin.events.details.table.permission')}</th>
-              <th className="px-3 py-2 text-start">{t('admin.events.details.table.responded')}</th>
-              <th className="px-3 py-2 text-start">{t('admin.events.details.table.denialNote')}</th>
-              {event.is_paid ? (
-                <th className="px-3 py-2 text-start">{t('admin.events.details.table.payment')}</th>
-              ) : null}
-            </tr>
-          </thead>
-          <tbody>
-            {filteredRows.map((r) => (
-              <tr key={r.permission_id} className="border-t border-outline-variant">
-                <td className="px-3 py-2">
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
-                      {r.avatar_url ? <AvatarImage src={r.avatar_url} alt="" /> : null}
-                      <AvatarFallback className="text-xs">
-                        {getUserInitials(displayChild(r), null)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <Link to={`/admin/children/${r.child_id}`} className="hover:underline">
-                      {displayChild(r)}
-                    </Link>
-                  </div>
-                </td>
-                <td className="px-3 py-2">{displayParent(r)}</td>
-                <td className="px-3 py-2">
-                  <Badge className={statusBadgeClass(r.status)}>
-                    {t(`admin.events.details.permissionStatus.${r.status}`, { defaultValue: r.status })}
-                  </Badge>
-                </td>
-                <td className="px-3 py-2">
-                  {r.responded_at ? dateFmt.format(new Date(r.responded_at)) : '—'}
-                </td>
-                <td className="max-w-[12rem] truncate px-3 py-2 text-on-surface-variant">
-                  {r.status === 'denied' && r.parent_note ? r.parent_note : '—'}
-                </td>
-                {event.is_paid ? (
-                  <td className="px-3 py-2">
-                    {r.invoice_status ? (
-                      <span className="text-xs">
-                        {t(`admin.events.details.invoiceStatus.${r.invoice_status}`, {
-                          defaultValue: r.invoice_status,
-                        })}
-                        {r.invoice_amount ? ` · ${r.invoice_amount}` : ''}
-                      </span>
-                    ) : (
-                      '—'
-                    )}
-                  </td>
-                ) : null}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
     </div>
   );
 }

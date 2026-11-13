@@ -2,7 +2,9 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
-import { ParentEventsCalendar } from '@/components/parent/ParentEventsCalendar';
+import { EventsCalendar } from '@/components/events/EventsCalendar';
+import { EventsViewToggle } from '@/components/events/EventsViewToggle';
+import { SelectedDayChip } from '@/components/events/SelectedDayChip';
 import { ParentEventsEventCard } from '@/components/parent/ParentEventsEventCard';
 import { Button } from '@/components/ui/button';
 import { TableCard, TableEmpty, TablePagination } from '@/components/ui/DataTable';
@@ -20,7 +22,6 @@ import { usePagination } from '@/hooks/usePagination';
 import { useParentEventsCatalog, type ParentCatalogPermissionRow } from '@/hooks/useParentEventsCatalog';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { localDateKeyFromIso } from '@/lib/parentEventsCalendarUtils';
-import { cn } from '@/lib/utils';
 
 type TabFilter = 'all' | 'urgent' | 'mine' | 'upcoming' | 'past';
 type CategoryFilter = 'all' | 'trip' | 'activity' | 'service' | 'doctor_visit';
@@ -28,11 +29,6 @@ type SortMode = 'starts_at' | 'deadline';
 
 function eventHasGranted(eventId: string, permissions: ParentCatalogPermissionRow[]): boolean {
   return permissions.some((p) => p.event_id === eventId && p.status === 'granted');
-}
-
-function parseLocalDateKey(key: string): Date {
-  const [y, mo, d] = key.split('-').map(Number);
-  return new Date(y, (mo ?? 1) - 1, d ?? 1);
 }
 
 const TABS: TabFilter[] = ['all', 'urgent', 'mine', 'upcoming', 'past'];
@@ -68,7 +64,6 @@ export function ParentEventsPage() {
   const dateTimeFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short', hour12: true });
   const deadlineFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short', hour12: true });
   const priceFmt = new Intl.NumberFormat(locale, { style: 'currency', currency: 'EGP' });
-  const dayBannerFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'full' });
 
   const events = useMemo(() => catalogQuery.data?.events ?? [], [catalogQuery.data?.events]);
   const permissions = useMemo(() => catalogQuery.data?.permissions ?? [], [catalogQuery.data?.permissions]);
@@ -215,23 +210,7 @@ export function ParentEventsPage() {
         title={t('parent.events.pageTitle')}
         count={t('parent.events.totalCount', { count: filtered.length })}
         actions={
-          <div className="inline-flex rounded-lg border border-outline-variant bg-surface p-0.5" role="group" aria-label={t('parent.events.toggleViewLabel')}>
-            {(['calendar', 'list'] as const).map((option) => (
-              <button
-                key={option}
-                type="button"
-                aria-pressed={viewMode === option}
-                onClick={() => setViewMode(option)}
-                className={cn(
-                  'inline-flex h-8 items-center gap-1 rounded-md px-3 text-xs font-semibold transition-colors',
-                  viewMode === option ? 'bg-primary text-primary-foreground' : 'text-on-surface-variant hover:bg-surface-high',
-                )}
-              >
-                <span className="material-symbols-outlined text-base" aria-hidden>{option === 'calendar' ? 'calendar_month' : 'view_list'}</span>
-                {option === 'calendar' ? t('parent.events.viewCalendar') : t('parent.events.viewList')}
-              </button>
-            ))}
-          </div>
+          <EventsViewToggle value={viewMode} onChange={setViewMode} />
         }
         filters={
           showEmptyAll ? null : (
@@ -260,22 +239,7 @@ export function ParentEventsPage() {
                   <SearchInput value={search} onChange={setSearch} placeholder={t('parent.events.searchPlaceholder')} />
                 </FilterField>
               </FilterBar>
-              {selectedDateKey ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                    <span className="material-symbols-outlined text-sm" aria-hidden>event</span>
-                    {t('parent.events.selectedDayBanner', { date: dayBannerFmt.format(parseLocalDateKey(selectedDateKey)) })}
-                    <button
-                      type="button"
-                      onClick={() => setSelectedDateKey(null)}
-                      aria-label={t('parent.events.clearDateFilter')}
-                      className="ms-1 flex h-5 w-5 items-center justify-center rounded-full hover:bg-primary/15"
-                    >
-                      <span className="material-symbols-outlined text-sm" aria-hidden>close</span>
-                    </button>
-                  </span>
-                </div>
-              ) : null}
+              {selectedDateKey ? <SelectedDayChip dateKey={selectedDateKey} locale={locale} onClear={() => setSelectedDateKey(null)} /> : null}
             </div>
           )
         }
@@ -283,9 +247,9 @@ export function ParentEventsPage() {
       >
         {viewMode === 'calendar' ? (
           <div className="border-b border-outline-variant p-4 sm:p-5">
-            <ParentEventsCalendar
+            <EventsCalendar
               viewMonth={viewMonth}
-              allEvents={events}
+              events={events}
               selectedDateKey={selectedDateKey}
               onSelectDate={setSelectedDateKey}
               onPrevMonth={() => setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}

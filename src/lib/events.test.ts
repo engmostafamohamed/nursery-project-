@@ -1,4 +1,5 @@
-// Module 10 · Events & parent permissions — schedules, the parent calendar and permission slips.
+// Module 10 · Events & parent permissions — schedules, the parent calendar and the event form.
+// (Who is asked is set on the server: supabase/tests/database/event_flow.test.sql.)
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ParentCatalogPermissionRow } from '@/hooks/useParentEventsCatalog';
@@ -11,14 +12,8 @@ import {
   toIso,
   toLocalInput,
   type EventRowForEdit,
-} from '@/pages/admin/eventFormSchema';
-import { fakeDb } from '@/test/fakeSupabase';
+} from '@/features/events/eventFormSchema';
 
-import {
-  createPermissionsForEventScope,
-  ensureEventPermissionsForChildren,
-  syncIndividualEventPermissions,
-} from './eventPermissionOps';
 import { formatUrgentHour, sortUniqueNumbers, summarizeUrgentSchedule } from './eventUrgentSchedule';
 import { summarizePermissionsForEvent } from './parentEventPermissionSummary';
 import {
@@ -29,8 +24,6 @@ import {
   toLocalDateKey,
   weekdayShortHeaders,
 } from './parentEventsCalendarUtils';
-
-vi.mock('@/lib/supabase', () => import('@/test/fakeSupabase'));
 
 const t = i18n.getFixedT('en');
 
@@ -122,55 +115,6 @@ describe('the parent events calendar', () => {
     expect(categoryDotClass('trip')).toBe('bg-primary');
     expect(categoryDotClass('doctor_visit')).toBe('bg-success');
     expect(categoryDotClass('party')).toBe('bg-on-surface-variant');
-  });
-});
-
-describe('creating permission slips', () => {
-  beforeEach(() => {
-    fakeDb.reset();
-  });
-
-  it('adds slips only for children who do not have one yet', async () => {
-    fakeDb.setRows('permissions', [{ id: 'p1', child_id: 'c1', status: 'pending' }]);
-    await ensureEventPermissionsForChildren('e1', ['c1', 'c2', 'c2', ''], '2026-10-20');
-    expect(fakeDb.inserted('permissions')).toEqual([
-      { child_id: 'c2', event_id: 'e1', permission_type: 'event', status: 'pending', deadline: '2026-10-20' },
-    ]);
-  });
-
-  it('writes nothing when every child already has a slip', async () => {
-    fakeDb.setRows('permissions', [{ id: 'p1', child_id: 'c1', status: 'granted' }]);
-    await ensureEventPermissionsForChildren('e1', ['c1']);
-    expect(fakeDb.inserted('permissions')).toEqual([]);
-  });
-
-  it('invites every active child of a class', async () => {
-    fakeDb.setRows('children', [{ id: 'c1' }, { id: 'c2' }]);
-    await createPermissionsForEventScope('e1', 'class', { classId: 'k1' });
-    const childQuery = fakeDb.queries.find((q) => q.table === 'children');
-    expect(childQuery?.filters).toEqual([
-      ['eq', 'class_id', 'k1'],
-      ['eq', 'status', 'active'],
-    ]);
-    expect(fakeDb.inserted('permissions').map((row) => (row as { child_id: string }).child_id)).toEqual(['c1', 'c2']);
-  });
-
-  it('does nothing for a whole-nursery event with no nursery', async () => {
-    await createPermissionsForEventScope('e1', 'all', { nurseryId: null });
-    expect(fakeDb.queries).toEqual([]);
-  });
-
-  it('removes unanswered slips of uninvited children and keeps answered ones', async () => {
-    fakeDb.setRows('permissions', [
-      { id: 'p1', child_id: 'c1', status: 'pending' },
-      { id: 'p2', child_id: 'c2', status: 'granted' },
-      { id: 'p3', child_id: 'c4', status: 'denied' },
-    ]);
-    await syncIndividualEventPermissions('e1', ['c2', 'c3']);
-
-    const removal = fakeDb.queries.find((q) => q.action === 'delete');
-    expect(removal?.filters).toEqual([['in', 'id', ['p1']]]);
-    expect(fakeDb.inserted('permissions').map((row) => (row as { child_id: string }).child_id)).toEqual(['c3']);
   });
 });
 

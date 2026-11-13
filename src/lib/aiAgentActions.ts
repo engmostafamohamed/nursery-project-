@@ -1,5 +1,5 @@
 import { teacherAttendanceToggle } from '@/lib/teacherAttendanceToggle';
-import { generateEventInvoice, getInvoiceForPermission } from '@/lib/eventInvoices';
+import { respondToEvent } from '@/features/events/eventFlowApi';
 import { supabase } from '@/lib/supabase';
 import type { AiSurfaceRole } from '@/lib/aiContext';
 
@@ -177,24 +177,11 @@ export async function executeAiTool(
       if (error) throw error;
       const rows = (pending ?? []) as { id: string; child_id: string }[];
       if (!rows.length) return 'no_pending_permissions';
-      const now = new Date().toISOString();
+      // The same server step as the parent's buttons: deadline checked, paid events billed once.
       let approved = 0;
       for (const row of rows) {
-        const { error: uErr } = await supabase
-          .from('permissions')
-          .update({ status: 'granted', responded_at: now } as never)
-          .eq('id', row.id);
-        if (uErr) throw uErr;
+        await respondToEvent({ permissionId: row.id, granted: true });
         approved += 1;
-        const invoice = await getInvoiceForPermission(row.id);
-        if (!invoice) {
-          await generateEventInvoice({
-            permissionId: row.id,
-            eventId,
-            childId: row.child_id,
-            invoiceDueDays: 7,
-          });
-        }
       }
       return `approved_permissions:${approved}`;
     }

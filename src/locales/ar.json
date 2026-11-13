@@ -3005,12 +3005,9 @@
     "events": {
       "title": "الفعاليات",
       "new": "فعالية جديدة",
-      "emptyTitle": "لا توجد فعاليات بعد",
-      "emptyDescription": "أنشئ أول فعالية لبدء جمع موافقات أولياء الأمور.",
       "createTitle": "إنشاء فعالية",
       "back": "العودة للفعاليات",
       "create": {
-        "submit": "حفظ كمسودة",
         "saveDraft": "حفظ كمسودة",
         "publish": "نشر الفعالية",
         "publishSuccess": "تم نشر الفعالية وإشعار أولياء الأمور.",
@@ -3024,12 +3021,10 @@
           "category": "التصنيف",
           "targetScope": "نطاق الاستهداف",
           "targetClass": "الفصل",
-          "isPaid": "فعالية مدفوعة",
           "priceEgp": "السعر (جنيه مصري)",
           "permissionDeadline": "موعد انتهاء طلب الموافقة (اختياري)",
           "targetChildren": "الأطفال المدعوون",
           "isUrgent": "عاجل",
-          "urgentSchedule": "جدول التنبيه العاجل",
           "urgentDays": "أيام التنبيه العاجل",
           "urgentHours": "ساعات التنبيه العاجل",
           "urgentRepeatsWeekly": "يتكرر كل أسبوع"
@@ -3062,11 +3057,6 @@
         "noUrgentHoursYet": "لم يتم اختيار ساعات بعد."
       },
       "list": {
-        "filters": {
-          "status": "الحالة",
-          "category": "التصنيف",
-          "dateRange": "التاريخ"
-        },
         "statusTab": {
           "all": "الكل",
           "draft": "مسودة",
@@ -3098,8 +3088,6 @@
           "class": "فصل واحد",
           "individual": "أفراد"
         },
-        "paidBadge": "مدفوعة {{amount}} جنيه",
-        "freeBadge": "مجانية",
         "actions": {
           "view": "عرض التفاصيل",
           "edit": "تعديل",
@@ -3107,21 +3095,21 @@
           "duplicate": "نسخ",
           "cancelEvent": "إلغاء الفعالية"
         },
-        "searchLabel": "بحث بالعنوان",
         "searchPlaceholder": "اكتب للتصفية…",
-        "participantSummary": "{{total}} مدعو · {{granted}} موافق · {{pending}} معلق",
         "duplicateSuccess": "تم نسخ الفعالية كمسودة.",
         "duplicateError": "تعذر نسخ الفعالية.",
         "duplicateSuffixAr": "نسخة",
+        "filterStatus": "المرحلة",
+        "filterCategory": "النوع",
+        "filterDate": "الموعد",
+        "loading": "جارٍ تحميل الفعاليات…",
+        "noDayEvents": "لا فعاليات في هذا اليوم.",
         "duplicateSuffixEn": "copy",
-        "loadingLabel": "جاري تحميل الفعاليات",
         "emptyTitle": "لا توجد فعاليات",
         "emptyDescription": "لا توجد فعاليات مطابقة للمرشحات. غيّر المرشحات أو أنشئ فعالية جديدة.",
-        "createEvent": "إنشاء فعالية",
         "loadError": "تعذر تحميل الفعاليات. تحقق من الاتصال وحاول مرة أخرى.",
         "deleteTitle": "حذف الفعالية؟",
-        "deleteDescription": "هل أنت متأكد أنك تريد حذف هذه الفعالية؟ لا يمكن التراجع عن هذا الإجراء.",
-        "deleteCancel": "إلغاء",
+        "deleteDescription": "ستختفي الفعالية من كل الشاشات، وتبقى سجلاتها (الردود والفواتير) محفوظة.",
         "deleteConfirm": "حذف",
         "deleteSuccess": "تم حذف الفعالية.",
         "deleteError": "تعذر حذف الفعالية. حاول مرة أخرى.",
@@ -3131,9 +3119,7 @@
       },
       "edit": {
         "title": "تعديل الفعالية",
-        "breadcrumbLabel": "مسار التنقل",
         "breadcrumbEvents": "الفعاليات",
-        "breadcrumbEdit": "تعديل",
         "fields": {
           "eventStatus": "حالة الفعالية"
         },
@@ -3146,51 +3132,37 @@
         "save": "حفظ التغييرات",
         "cancel": "إلغاء",
         "success": "تم تحديث الفعالية.",
-        "error": "تعذر تحديث الفعالية. حاول مرة أخرى.",
         "notFound": "تعذر العثور على هذه الفعالية أو ليست لديك صلاحية الوصول.",
         "backToList": "العودة للفعاليات",
         "loadError": "تعذر تحميل هذه الفعالية. تحقق من الاتصال وحاول مرة أخرى."
       },
       "details": {
-        "breadcrumbLabel": "مسار التنقل",
         "breadcrumbEvents": "الفعاليات",
         "notFound": "الفعالية غير موجودة.",
         "loadError": "تعذر تحميل هذه الفعالية.",
         "delete": "حذف",
-        "deleteTitle": "حذف هذه الفعالية؟",
-        "deleteDescription": "سيؤدي ذلك إلى حذف الفعالية نهائياً والسجلات المرتبطة حيث يسمح بذلك. لا يمكن التراجع.",
-        "deleteConfirm": "حذف",
-        "deleteSuccess": "تم حذف الفعالية.",
-        "deleteError": "تعذر حذف الفعالية.",
         "cancelEvent": "إلغاء الفعالية",
-        "cancelTitle": "إلغاء الفعالية؟",
-        "cancelDescription": "سيتم تعليم الفعالية كملغاة وإشعار أولياء الأمور (عند تفعيل الإشعارات).",
-        "cancelConfirm": "تأكيد الإلغاء",
-        "cancelSuccess": "تم إلغاء الفعالية بنجاح.",
-        "cancelError": "تعذر إلغاء الفعالية.",
-        "refundCheckbox": "استرداد المدفوعات (سيتم معالجة استرداد الفواتير لاحقاً)",
-        "refundQueued": "تم تسجيل طلب الاسترداد — معالجة الفواتير قريباً.",
-        "infoTitle": "تفاصيل الفعالية",
         "className": "الفصل",
         "whenLabel": "التاريخ والوقت",
         "whereLabel": "المكان",
-        "costLabel": "التكلفة",
         "deadlineLabel": "موعد الموافقة",
-        "price": "السعر: {{amount}}",
         "notPaid": "فعالية مجانية",
-        "permissionDeadline": "موعد الموافقة: {{date}}",
         "attendanceTitle": "الحضور والموافقات",
         "attendanceLoading": "جاري تحميل الحضور",
-        "statTotal": "الأطفال (صفوف الموافقة)",
+        "statTotal": "الأطفال المدعوون",
         "statApproved": "موافق",
         "statDenied": "مرفوض",
         "statPending": "معلق",
-        "totalRevenue": "إجمالي الإيرادات (موافق × السعر): {{amount}}",
+        "statCheckedIn": "حضروا",
+        "checkedInOf": "من أصل {{going}} موافقة",
+        "noMatches": "لا توجد عائلات مطابقة",
+        "totalRevenue": "المتوقع من العائلات الموافقة: {{amount}}",
         "filters": {
           "all": "الكل",
           "granted": "موافق",
           "denied": "مرفوض",
-          "pending": "معلق"
+          "pending": "معلق",
+          "checkedIn": "حضروا"
         },
         "searchPlaceholder": "ابحث باسم الطفل أو ولي الأمر",
         "exportCsv": "تصدير CSV",
@@ -3209,6 +3181,7 @@
           "parent": "ولي الأمر",
           "permission": "الموافقة",
           "responded": "تاريخ الرد",
+          "checkedIn": "الحضور",
           "denialNote": "ملاحظة ولي الأمر",
           "payment": "الدفع"
         },
@@ -3217,6 +3190,7 @@
           "parent": "ولي الأمر",
           "status": "الحالة",
           "respondedAt": "تاريخ الرد",
+          "checkedIn": "وقت الحضور",
           "parentNote": "ملاحظة ولي الأمر",
           "payment": "الدفع"
         },
@@ -3234,32 +3208,11 @@
         },
         "urgentScheduleLabel": "جدول التنبيه العاجل"
       },
-      "eventType": "نوع الفعالية",
-      "types": {
-        "general": "فعالية عامة",
-        "trip": "رحلة",
-        "health": "زيارة طبيب",
-        "celebration": "احتفال",
-        "meeting": "اجتماع أولياء الأمور"
-      },
-      "titleAr": "العنوان (عربي)",
-      "titleEn": "العنوان (إنجليزي)",
-      "descriptionAr": "الوصف (عربي)",
-      "descriptionEn": "الوصف (إنجليزي)",
-      "startsAt": "تاريخ ووقت البداية",
-      "endsAt": "تاريخ ووقت النهاية",
-      "location": "الموقع (اختياري)",
       "audience": "الفئة المستهدفة",
       "allChildren": "كل الأطفال",
       "specificGroups": "مجموعات محددة",
       "byClasses": "اختيار الفصول",
       "byChildren": "اختيار الأطفال",
-      "permissionRequired": "موافقة ولي الأمر مطلوبة",
-      "permissionDeadline": "موعد انتهاء طلب الموافقة",
-      "paidEvent": "فعالية مدفوعة",
-      "amountEgp": "المبلغ (جنيه مصري)",
-      "privacyWarning": "⚠️ يوجد {{count}} أطفال لديهم قيود خصوصية للصور",
-      "publish": "نشر الفعالية",
       "createSuccess": "تم إنشاء الفعالية بنجاح.",
       "createError": "تعذر إنشاء الفعالية. حاول مرة أخرى.",
       "errors": {
@@ -3277,59 +3230,13 @@
         "urgentDaysRequired": "اختر يوماً واحداً على الأقل للتنبيه العاجل.",
         "urgentHoursRequired": "اختر ساعة واحدة على الأقل للتنبيه العاجل."
       },
-      "filters": {
-        "types": {
-          "all": "كل الأنواع",
-          "general": "عام",
-          "trip": "رحلة",
-          "health": "زيارة طبيب",
-          "celebration": "احتفال",
-          "meeting": "اجتماع أولياء الأمور"
-        },
-        "status": {
-          "all": "الكل",
-          "upcoming": "قادمة",
-          "ongoing": "جارية",
-          "past": "سابقة"
-        },
-        "search": "ابحث بالعنوان"
-      },
-      "status": {
-        "upcoming": "قادمة",
-        "ongoing": "جارية",
-        "past": "سابقة"
-      },
-      "attendeeCount": "{{count}} حاضر",
-      "permissionStats": "{{granted}}/{{total}} موافقة",
-      "paidBadge": "مدفوعة: {{amount}} جنيه",
       "actions": {
         "viewDetails": "عرض التفاصيل",
-        "edit": "تعديل",
-        "cancel": "إلغاء الفعالية"
-      },
-      "cancel": {
-        "title": "إلغاء هذه الفعالية؟",
-        "description": "سيتم تعليم الفعالية كملغاة مع الاحتفاظ بالسجل.",
-        "confirm": "تأكيد الإلغاء",
-        "keep": "الاحتفاظ بالفعالية",
-        "success": "تم إلغاء الفعالية.",
-        "error": "تعذر إلغاء الفعالية."
-      },
-      "permissions": {
-        "child": "الطفل",
-        "parent": "ولي الأمر",
-        "status": "الحالة",
-        "respondedAt": "وقت الرد",
-        "override": "تعديل الإدارة",
-        "note": "ملاحظة التعديل",
-        "markGranted": "اعتماد الموافقة",
-        "overrideSuccess": "تم اعتماد الموافقة بنجاح.",
-        "overrideError": "تعذر تعديل الموافقة."
+        "edit": "تعديل"
       },
       "invoices": {
         "title": "الفواتير التي تم إنشاؤها",
         "empty": "لا توجد فواتير لهذه الفعالية حتى الآن.",
-        "row": "فاتورة: {{amount}} جنيه - {{status}}",
         "view": "عرض تفاصيل الفاتورة",
         "invoiceDetailsTitle": "تفاصيل الفاتورة",
         "summary": "تم إنشاء {{generated}} فاتورة، {{paid}} مدفوعة، {{pending}} قيد الانتظار",
@@ -5569,33 +5476,10 @@
     "events": {
       "pageSubtitle": "الرحلات والأنشطة والخدمات في الحضانة، والأذونات التي تحتاجها منك.",
       "pendingPermissionsLabel": "بانتظار إذنك",
-      "moreOnDay": "+{{count}} أخرى",
-      "emptyTitle": "لا توجد طلبات موافقة حالياً",
-      "emptyDescription": "ستظهر طلبات الموافقة هنا عند الحاجة.",
-      "actionRequired": "إجراء مطلوب",
-      "deadline": "الموعد النهائي: {{date}} (متبقي {{countdown}})",
-      "grant": "منح الموافقة",
-      "decline": "رفض",
-      "grantedSuccess": "تم منح الموافقة.",
-      "declinedSuccess": "تم رفض الموافقة.",
-      "updateError": "تعذر تحديث الموافقة.",
-      "status": {
-        "pending": "قيد الانتظار",
-        "granted": "موافق",
-        "declined": "مرفوض",
-        "denied": "مرفوض"
-      },
-      "invoiceBadge": "الفاتورة: {{amount}} جنيه - {{status}}",
-      "payNow": "ادفع الآن",
       "invoiceDetailsTitle": "تفاصيل الفاتورة",
-      "viewInvoice": "عرض الفاتورة",
       "pageTitle": "الفعاليات",
       "totalCount": "{{count}} فعاليات",
-      "upcomingCount": "{{count}} قادمة",
       "pendingPermissions": "{{count}} موافقات معلقة",
-      "viewList": "عرض القائمة",
-      "viewCalendar": "عرض التقويم",
-      "toggleViewLabel": "اختر العرض",
       "tabAll": "كل الفعاليات",
       "tabMine": "فعالياتي",
       "tabUpcoming": "القادمة",
@@ -5625,14 +5509,8 @@
       "permissionPending": "معلق",
       "permissionDeclined": "مرفوض",
       "permissionNone": "لا تتطلب موافقة",
-      "calendarPrev": "الشهر السابق",
-      "calendarNext": "الشهر التالي",
-      "monthTitle": "{{monthYear}}",
-      "selectDay": "يوم {{date}}",
       "clearDateFilter": "إلغاء تصفية اليوم",
-      "selectedDayBanner": "عرض فعاليات {{date}}",
       "noNursery": "حسابك غير مرتبط بحضانة بعد.",
-      "noNurseryDescription": "حسابك غير مرتبط بحضانة. تواصل مع الدعم إذا كان ذلك غير متوقع.",
       "loadCatalogError": "تعذر تحميل الفعاليات. تحقق من الاتصال وحاول مرة أخرى.",
       "attendees": {
         "title": "الأطفال الحاضرون ({{count}})",
@@ -5715,17 +5593,8 @@
         "ariaWhen": "التاريخ والوقت",
         "ariaWhere": "الموقع",
         "ariaShare": "نسخ رابط الفعالية",
-        "approveConfirmTitle": "الموافقة لهذا الطفل؟",
-        "approveConfirmDescription": "تأكيد مشاركة طفلك. قد تنطبق رسوم للفعاليات المدفوعة.",
-        "approveChangeTitle": "الموافقة على المشاركة؟",
-        "approveChangeDescription": "كنت قد رفضت سابقاً. الموافقة الآن تعني تأكيد مشاركة طفلك (قد تُطبق رسوم للفعاليات المدفوعة).",
-        "approveChangeConfirm": "موافقة",
-        "approveInvoiceHint": "الموافقة ستُنشئ فاتورة بقيمة {{amount}}.",
-        "approveNoteLabel": "ملاحظة للحضانة (اختياري)",
-        "approveNotePlaceholder": "حتى 200 حرف",
         "viewInvoice": "عرض الفاتورة"
       },
-      "urgentCount": "{{count}} عاجلة",
       "tabUrgent": "عاجل",
       "urgentBadge": "عاجل",
       "create": {
@@ -6364,27 +6233,51 @@
     },
     "events": {
       "title": "فعاليات الفصل",
-      "subtitle": "الفعاليات النشطة لفصولك. يتم إدارة ردود الإذن من قِبل مشرف الحضانة.",
+      "subtitle": "فعاليات فصولك: من سيشارك، ومن سجّل الماسح حضوره.",
       "loadError": "تعذّر تحميل الفعاليات. يرجى المحاولة مرة أخرى.",
       "emptyTitle": "لا توجد فعاليات بعد",
       "emptyDescription": "عند نشر المشرف فعالية لفصلك، ستظهر هنا.",
       "emptyFilterTitle": "لا توجد فعاليات مطابقة",
       "emptyFilterDescription": "جرّب تغيير خيارات التصفية.",
-      "categoryLabel": "الفئة",
-      "dateLabel": "التاريخ",
-      "dateAll": "كل التواريخ",
-      "upcoming": "قادمة",
-      "past": "منتهية",
-      "paid": "مدفوعة",
-      "myClassTag": "فصلي",
-      "allClassesTag": "جميع الفصول",
-      "permissionDeadline": "موعد الإذن: {{date}}",
-      "categories": {
-        "all": "جميع الفئات",
-        "trip": "رحلة",
-        "activity": "نشاط",
-        "service": "خدمة",
-        "doctor_visit": "زيارة طبية"
+      "whenLabel": "الموعد",
+      "categoryLabel": "النوع",
+      "tabs": {
+        "all": "الكل",
+        "today": "اليوم",
+        "upcoming": "القادمة",
+        "past": "المنتهية"
+      },
+      "goingToday": "أطفال يشاركون اليوم",
+      "todayBadge": "اليوم",
+      "scope": {
+        "all": "كل الحضانة",
+        "class": "فصلي",
+        "individual": "أطفال مختارون"
+      },
+      "going_zero": "لا يشارك أحد بعد",
+      "going_one": "يشارك طفل واحد",
+      "going_two": "يشارك طفلان",
+      "going_few": "يشارك {{count}} أطفال",
+      "going_many": "يشارك {{count}} طفلًا",
+      "going_other": "يشارك {{count}} طفل",
+      "checkedIn_zero": "لم يُسجَّل حضور أحد",
+      "checkedIn_one": "حضر طفل واحد",
+      "checkedIn_two": "حضر طفلان",
+      "checkedIn_few": "حضر {{count}} أطفال",
+      "checkedIn_many": "حضر {{count}} طفلًا",
+      "checkedIn_other": "حضر {{count}} طفل",
+      "whoIsGoing": "من سيشارك",
+      "roster": {
+        "loadError": "تعذّر تحميل الأطفال.",
+        "empty": "لم يُدعَ أي من أطفالك لهذه الفعالية.",
+        "groups": {
+          "granted": "يشاركون",
+          "pending": "بانتظار الرد",
+          "denied": "لن يشاركوا"
+        },
+        "checkedInAt": "حضر {{time}}",
+        "notCheckedIn": "لم يُسجَّل حضوره",
+        "openScanner": "فتح ماسح QR"
       }
     },
     "courses": {
@@ -6712,10 +6605,16 @@
       "deleteDescription": "يُحذف الملف من التخزين. لا يمكن التراجع."
     },
     "deactivateConfirmTitle": "تعطيل هذا الموظف؟",
-    "deactivateConfirmDescription": "سيُضبط الحساب كغير نشط. يمكن إعادة التفعيل لاحقاً.",
+    "deactivateConfirmDescription": "يفقد الوصول فورًا ولا يستطيع تسجيل الدخول، وتبقى سجلاته.",
     "deactivateConfirm": "تعطيل",
     "deactivatedToast": "تم تعطيل الموظف.",
-    "deactivatedToastAr": "Staff member deactivated.",
+    "deactivateErrors": {
+      "staff_forbidden": "لا يمكنك تعطيل هذا الشخص.",
+      "staff_not_yourself": "لا يمكنك تعطيل نفسك.",
+      "staff_not_found": "هذا الشخص ليس من الموظفين.",
+      "network": "لا يوجد اتصال. حاول مرة أخرى.",
+      "failed": "تعذّر تعطيل الموظف."
+    },
     "workDate": "تاريخ العمل"
   },
   "payroll": {
@@ -7683,7 +7582,9 @@
       "attendance_undo_window_passed": "يمكن التراجع عن تسجيل الحضور خلال 15 دقيقة فقط ومن نفس الشخص الذي سجّله.",
       "attendance_reason_required": "يرجى كتابة السبب.",
       "attendance_invalid_times": "راجع الأوقات: يجب أن تكون في نفس اليوم وفي الماضي، والانصراف بعد الحضور.",
-      "attendance_invalid_range": "اختر فترة تاريخ صحيحة."
+      "attendance_invalid_range": "اختر فترة تاريخ صحيحة.",
+      "attendance_event_closed": "هذه الفعالية غير مفتوحة لتسجيل الحضور.",
+      "attendance_event_no_permission": "عائلة هذا الطفل لم توافق على الفعالية."
     },
     "scanner": {
       "alreadyCheckedIn": "تم تسجيل حضور {{name}} بالفعل (منذ {{time}}).",
@@ -8879,6 +8780,243 @@
       "failed": "حدث خطأ. حاول مرة أخرى."
     }
   },
+  "eventFlow": {
+    "errors": {
+      "event_forbidden": "لا يمكنك تنفيذ هذا الإجراء لهذه الفعالية.",
+      "event_closed": "هذه الفعالية مغلقة: أُلغيت أو اكتملت أو لم تعد مفتوحة.",
+      "event_started": "بدأت هذه الفعالية بالفعل.",
+      "event_deadline_passed": "انتهى وقت الرد.",
+      "event_withdraw_closed": "اقترب موعد الفعالية ولا يمكن سحب الموافقة الآن. يُرجى التواصل مع الحضانة.",
+      "event_answer_required": "اختر نعم أو لا.",
+      "event_cancel_reason_required": "اكتب سبب إلغاء الفعالية.",
+      "event_cancel_reason_too_long": "السبب طويل جدًا.",
+      "event_delete_not_allowed": "يمكن حذف المسودة أو الفعالية الملغاة فقط. ألغِ الفعالية المفتوحة أولًا.",
+      "event_not_paid": "هذه الفعالية مجانية: لا يوجد ما يُفوتر.",
+      "network": "لا يوجد اتصال. تحقّق من الإنترنت وحاول مرة أخرى.",
+      "failed": "حدث خطأ. حاول مرة أخرى."
+    },
+    "publish": {
+      "done_zero": "لم تُبلَّغ أي عائلة.",
+      "done_one": "أُبلغت عائلة واحدة.",
+      "done_two": "أُبلغت عائلتان.",
+      "done_few": "أُبلغت {{count}} عائلات.",
+      "done_many": "أُبلغت {{count}} عائلة.",
+      "done_other": "أُبلغت {{count}} عائلة.",
+      "savedAsDraft": "حُفظت كمسودة ولم تُنشر",
+      "failed": "تعذّر نشر الفعالية",
+      "confirmTitle": "نشر «{{event}}»؟",
+      "confirmBody": "ستصل الدعوة الآن إلى عائلات الأطفال المدعوين، ويمكنهم الرد حتى آخر موعد."
+    },
+    "cancel": {
+      "title": "إلغاء «{{event}}»",
+      "body": "سيتم إبلاغ العائلات المدعوة مع السبب. تُلغى فواتيرها غير المدفوعة، وإن كانت عائلة قد دفعت يُبلَّغ المسؤولون لترتيب الاسترداد.",
+      "reason": "السبب للعائلات",
+      "reasonHint": "تقرأ العائلات هذا في الإشعار.",
+      "reasonPlaceholder": "مثال: ألغت شركة النقل الرحلة بسبب الطقس.",
+      "reasonRequired": "اكتب السبب.",
+      "reasonTooLong": "اجعله أقل من {{max}} حرفًا.",
+      "keep": "الإبقاء على الفعالية",
+      "confirm": "إلغاء الفعالية",
+      "done": "أُلغيت الفعالية",
+      "doneFamilies_zero": "لم تُبلَّغ أي عائلة.",
+      "doneFamilies_one": "أُبلغت عائلة واحدة.",
+      "doneFamilies_two": "أُبلغت عائلتان.",
+      "doneFamilies_few": "أُبلغت {{count}} عائلات.",
+      "doneFamilies_many": "أُبلغت {{count}} عائلة.",
+      "doneFamilies_other": "أُبلغت {{count}} عائلة.",
+      "doneInvoices_zero": "لم تُلغَ أي فاتورة.",
+      "doneInvoices_one": "أُلغيت فاتورة واحدة غير مدفوعة.",
+      "doneInvoices_two": "أُلغيت فاتورتان غير مدفوعتين.",
+      "doneInvoices_few": "أُلغيت {{count}} فواتير غير مدفوعة.",
+      "doneInvoices_many": "أُلغيت {{count}} فاتورة غير مدفوعة.",
+      "doneInvoices_other": "أُلغيت {{count}} فاتورة غير مدفوعة.",
+      "donePaid_zero": "لم تدفع أي عائلة.",
+      "donePaid_one": "دفعت عائلة واحدة: يلزم استرداد.",
+      "donePaid_two": "دفعت عائلتان: يلزم استرداد.",
+      "donePaid_few": "دفعت {{count}} عائلات: يلزم استرداد.",
+      "donePaid_many": "دفعت {{count}} عائلة: يلزم استرداد.",
+      "donePaid_other": "دفعت {{count}} عائلة: يلزم استرداد.",
+      "zoneHint": "الإلغاء يُبلغ كل عائلة مدعوة بالسبب، ويلغي الفواتير غير المدفوعة."
+    },
+    "sync": {
+      "asked_zero": "لم تُدعَ عائلات جديدة.",
+      "asked_one": "دُعيت عائلة أخرى.",
+      "asked_two": "دُعيت عائلتان أخريان.",
+      "asked_few": "دُعيت {{count}} عائلات أخرى.",
+      "asked_many": "دُعيت {{count}} عائلة أخرى.",
+      "asked_other": "دُعيت {{count}} عائلة أخرى.",
+      "withdrawn_zero": "لم يُسحب أي طلب.",
+      "withdrawn_one": "سُحب طلب واحد وأُبلغت العائلة.",
+      "withdrawn_two": "سُحب طلبان وأُبلغت العائلتان.",
+      "withdrawn_few": "سُحبت {{count}} طلبات وأُبلغت العائلات.",
+      "withdrawn_many": "سُحب {{count}} طلبًا وأُبلغت العائلات.",
+      "withdrawn_other": "سُحب {{count}} طلب وأُبلغت العائلات."
+    },
+    "edit": {
+      "movedTold": "أُبلغت العائلات المدعوة بالموعد والمكان الجديدين."
+    },
+    "bill": {
+      "title_zero": "لا توجد موافقات بدون فاتورة",
+      "title_one": "عائلة واحدة وافقت وليس لها فاتورة",
+      "title_two": "عائلتان وافقتا وليس لهما فاتورة",
+      "title_few": "{{count}} عائلات وافقت وليس لها فواتير",
+      "title_many": "{{count}} عائلة وافقت وليس لها فواتير",
+      "title_other": "{{count}} عائلة وافقت وليس لها فواتير",
+      "hint": "موافقات من قبل أن تعمل الفوترة، أو فوترة تعثّرت. يُفوتر كل طفل مرة واحدة، والاستحقاق من اليوم.",
+      "action_zero": "فوترة العائلات",
+      "action_one": "فوترة عائلة واحدة",
+      "action_two": "فوترة عائلتين",
+      "action_few": "فوترة {{count}} عائلات",
+      "action_many": "فوترة {{count}} عائلة",
+      "action_other": "فوترة {{count}} عائلة",
+      "done_zero": "لم تصدر أي فاتورة.",
+      "done_one": "صدرت فاتورة واحدة.",
+      "done_two": "صدرت فاتورتان.",
+      "done_few": "صدرت {{count}} فواتير.",
+      "done_many": "صدرت {{count}} فاتورة.",
+      "done_other": "صدرت {{count}} فاتورة.",
+      "failed": "تعذّر إصدار الفواتير"
+    },
+    "editCopy": "تعديل النسخة"
+  },
+  "eventForm": {
+    "createDescription": "املأ التفاصيل؛ تعرض المعاينة ما ستراه العائلات.",
+    "listDescription": "خطّط للرحلات والأنشطة، وادعُ العائلات، وتابع ردودها.",
+    "fixErrors": "بعض الحقول تحتاج إلى مراجعة. راجع الحقول المعلَّمة بالأحمر.",
+    "publishHint": "النشر يرسل الدعوة إلى كل العائلات المدعوة.",
+    "publishFromStageHint": "للنشر، اختر «نشطة» في «الخطوة التالية».",
+    "lockedCancelled": "أُلغيت هذه الفعالية، لذا لا يمكن تعديلها.",
+    "lockedCompleted": "اكتملت هذه الفعالية، لذا لا يمكن تعديلها.",
+    "locationPlaceholder": "مثال: القاعة الرئيسية، حديقة الحيوان",
+    "endsAt": "تنتهي في",
+    "endsAtHint": "تخطط العائلات لموعد الاستلام بناءً عليه.",
+    "paidLabel": "العائلات تدفع مقابل هذه الفعالية",
+    "paidHint": "كل عائلة توافق تصلها فاتورة بهذا المبلغ.",
+    "childrenChosen_zero": "لم يُختر أي طفل",
+    "childrenChosen_one": "طفل واحد مختار",
+    "childrenChosen_two": "طفلان مختاران",
+    "childrenChosen_few": "{{count}} أطفال مختارون",
+    "childrenChosen_many": "{{count}} طفلًا مختارًا",
+    "childrenChosen_other": "{{count}} طفل مختار",
+    "searchChildren": "ابحث عن طفل",
+    "selectShown": "اختيار الظاهرين",
+    "clearChosen": "مسح",
+    "noChildMatch": "لا يوجد طفل مطابق.",
+    "notSentYet": "لم تُرسل بعد: تراها العائلات بعد النشر.",
+    "cancelledOn": "أُلغيت في",
+    "deleteHint": "الحذف يُخفي الفعالية من كل الشاشات، وتبقى سجلاتها محفوظة.",
+    "allEvents": "كل الفعاليات",
+    "eventsCount_zero": "لا فعاليات",
+    "eventsCount_one": "فعالية واحدة",
+    "eventsCount_two": "فعاليتان",
+    "eventsCount_few": "{{count}} فعاليات",
+    "eventsCount_many": "{{count}} فعالية",
+    "eventsCount_other": "{{count}} فعالية",
+    "noMatchTitle": "لا توجد فعاليات مطابقة",
+    "noMatchDescription": "جرّب عوامل تصفية أخرى أو امسحها.",
+    "sections": {
+      "stage": {
+        "title": "الخطوة التالية",
+        "hint": "انشر المسودة، أو علّم الفعالية كمكتملة."
+      },
+      "about": {
+        "title": "عن الفعالية",
+        "hint": "الاسم والنوع أول ما تراه العائلات."
+      },
+      "when": {
+        "title": "الموعد",
+        "hint": "البداية والنهاية وآخر موعد للرد."
+      },
+      "who": {
+        "title": "المدعوون",
+        "hint": "تصل الدعوة إلى عائلات الأطفال المدعوين."
+      },
+      "fee": {
+        "title": "الرسوم",
+        "hint": "مجانية، أو سعر يُفوتر لكل عائلة توافق."
+      },
+      "urgent": {
+        "title": "عاجلة"
+      }
+    },
+    "categoryHints": {
+      "trip": "نزهات خارج الحضانة",
+      "activity": "أعمال يدوية وحفلات وألعاب",
+      "service": "تصوير وقص شعر وخدمات أخرى",
+      "doctor_visit": "فحوصات وتطعيمات"
+    },
+    "scopeHints": {
+      "all": "كل أطفال الحضانة",
+      "class": "أطفال فصل واحد",
+      "individual": "أطفال تختارهم بالاسم"
+    },
+    "preview": {
+      "title": "معاينة العائلة",
+      "hint": "كيف ستظهر الفعالية للعائلات",
+      "untitled": "اسم الفعالية",
+      "free": "مجانية",
+      "audienceAll": "كل العائلات",
+      "audienceClass": "عائلات {{name}}",
+      "audienceClassMissing": "اختر فصلًا",
+      "audienceChildren_zero": "لم يُختر أي طفل",
+      "audienceChildren_one": "طفل واحد مختار",
+      "audienceChildren_two": "طفلان مختاران",
+      "audienceChildren_few": "{{count}} أطفال مختارون",
+      "audienceChildren_many": "{{count}} طفلًا مختارًا",
+      "audienceChildren_other": "{{count}} طفل مختار"
+    },
+    "overview": {
+      "upcoming": "القادمة",
+      "drafts": "المسودات",
+      "draftsHelper": "لم تُرسل للعائلات بعد",
+      "awaitingReplies": "ردود منتظرة",
+      "awaitingHelper": "على الفعاليات القادمة",
+      "thisMonth": "هذا الشهر"
+    },
+    "replies": {
+      "granted_zero": "لا موافقات",
+      "granted_one": "موافقة واحدة",
+      "granted_two": "موافقتان",
+      "granted_few": "{{count}} موافقات",
+      "granted_many": "{{count}} موافقة",
+      "granted_other": "{{count}} موافقة",
+      "denied_zero": "لا رفض",
+      "denied_one": "رفض واحد",
+      "denied_two": "رفضان",
+      "denied_few": "{{count}} حالات رفض",
+      "denied_many": "{{count}} رفضًا",
+      "denied_other": "{{count}} رفض",
+      "pending_zero": "لا أحد بالانتظار",
+      "pending_one": "واحد بالانتظار",
+      "pending_two": "اثنان بالانتظار",
+      "pending_few": "{{count}} بالانتظار",
+      "pending_many": "{{count}} بالانتظار",
+      "pending_other": "{{count}} بالانتظار",
+      "summary": "{{total}} مدعو: {{granted}} موافقة، {{denied}} رفض، {{pending}} بالانتظار"
+    }
+  },
+  "eventsCalendar": {
+    "prev": "الشهر السابق",
+    "next": "الشهر التالي",
+    "selectDay_zero": "{{date}}: لا فعاليات",
+    "selectDay_one": "{{date}}: فعالية واحدة",
+    "selectDay_two": "{{date}}: فعاليتان",
+    "selectDay_few": "{{date}}: {{count}} فعاليات",
+    "selectDay_many": "{{date}}: {{count}} فعالية",
+    "selectDay_other": "{{date}}: {{count}} فعالية",
+    "moreOnDay_zero": "+{{count}} أخرى",
+    "moreOnDay_one": "+{{count}} أخرى",
+    "moreOnDay_two": "+{{count}} أخرى",
+    "moreOnDay_few": "+{{count}} أخرى",
+    "moreOnDay_many": "+{{count}} أخرى",
+    "moreOnDay_other": "+{{count}} أخرى",
+    "legend": "أنواع الفعاليات",
+    "selectedDay": "عرض {{date}}",
+    "clearDay": "عرض كل الأيام",
+    "viewLabel": "اختر العرض",
+    "viewCalendar": "التقويم",
+    "viewList": "القائمة"
+  },
   "notificationTemplates": {
     "medication_due": {
       "title": "{{medicine}} لـ{{child}} الساعة {{time}}",
@@ -9212,6 +9350,56 @@
     "staff_payroll_paid": {
       "title": "تم صرف الراتب",
       "body": "تم صرف راتب {{month}} بقيمة {{amount}}."
+    },
+    "event_cancelled": {
+      "title": "أُلغيت فعالية {{event}}",
+      "body": "أُلغيت فعالية {{event}} يوم {{date}}. السبب: {{reason}}"
+    },
+    "event_refund_due": {
+      "title": "استردادات مطلوبة: {{event}}",
+      "body": "أُلغيت فعالية {{event}}. عدد العائلات التي دفعت: {{count}}.",
+      "segments": {
+        "full": " سياسة الحضانة: استرداد كامل.",
+        "partial": " سياسة الحضانة: استرداد جزئي.",
+        "none": " سياسة الحضانة: لا استرداد؛ أبلغ العائلات."
+      }
+    },
+    "event_updated": {
+      "title": "{{event}}: موعد أو مكان جديد",
+      "body": "أصبحت {{event}} يوم {{date}} الساعة {{start_time}}.",
+      "segments": {
+        "place": " المكان: {{location}}."
+      }
+    },
+    "event_invitation_withdrawn": {
+      "title": "{{event}}: لا حاجة للرد",
+      "body": "سحبت الحضانة طلب الموافقة على {{event}}، ولا حاجة للرد."
+    },
+    "event_withdrawn_paid": {
+      "title": "استرداد مطلوب: {{event}}",
+      "body": "لن يشارك {{child}} في {{event}}، وكانت العائلة قد دفعت.",
+      "segments": {
+        "full": " سياسة الحضانة: استرداد كامل.",
+        "partial": " سياسة الحضانة: استرداد جزئي.",
+        "none": " سياسة الحضانة: لا استرداد؛ أبلغ العائلة."
+      }
+    },
+    "event_tomorrow": {
+      "title": "غدًا: {{event}}",
+      "body": "{{event}} غدًا الساعة {{start_time}}.",
+      "segments": {
+        "place": " المكان: {{location}}.",
+        "qr": " رمز حضور طفلك في صفحة الفعالية."
+      }
+    },
+    "event_tomorrow_staff": {
+      "title": "غدًا: {{event}}",
+      "body_zero": "لا يشارك أحد من فصلك في {{event}} غدًا.",
+      "body_one": "يشارك طفل واحد من فصلك في {{event}} غدًا الساعة {{start_time}}.",
+      "body_two": "يشارك طفلان من فصلك في {{event}} غدًا الساعة {{start_time}}.",
+      "body_few": "يشارك {{count}} أطفال من فصولك في {{event}} غدًا الساعة {{start_time}}.",
+      "body_many": "يشارك {{count}} طفلًا من فصولك في {{event}} غدًا الساعة {{start_time}}.",
+      "body_other": "يشارك {{count}} طفل من فصولك في {{event}} غدًا الساعة {{start_time}}."
     },
     "event_published": {
       "title": "فعالية جديدة",

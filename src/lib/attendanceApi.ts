@@ -325,6 +325,8 @@ const KNOWN_CODES = new Set([
   'attendance_reason_required',
   'attendance_invalid_times',
   'attendance_invalid_range',
+  'attendance_event_closed',
+  'attendance_event_no_permission',
 ]);
 
 /** i18n key for a server rejection reason or a thrown RPC error (attendance.errors.*). */

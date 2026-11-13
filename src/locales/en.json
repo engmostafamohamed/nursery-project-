@@ -2822,12 +2822,9 @@
     "events": {
       "title": "Events",
       "new": "New Event",
-      "emptyTitle": "No events yet",
-      "emptyDescription": "Create your first event to start collecting parent permissions.",
       "createTitle": "Create Event",
       "back": "Back to events",
       "create": {
-        "submit": "Save draft",
         "saveDraft": "Save as draft",
         "publish": "Publish event",
         "publishSuccess": "Event published and parents notified.",
@@ -2841,12 +2838,10 @@
           "category": "Category",
           "targetScope": "Target scope",
           "targetClass": "Class",
-          "isPaid": "Paid event",
           "priceEgp": "Price (EGP)",
           "permissionDeadline": "Permission deadline (optional)",
           "targetChildren": "Children to invite",
           "isUrgent": "Urgent event",
-          "urgentSchedule": "Urgent schedule",
           "urgentDays": "Urgent days",
           "urgentHours": "Urgent hours",
           "urgentRepeatsWeekly": "Repeat every week"
@@ -2884,11 +2879,6 @@
         "oneTime": "One time"
       },
       "list": {
-        "filters": {
-          "status": "Status",
-          "category": "Category",
-          "dateRange": "Date"
-        },
         "statusTab": {
           "all": "All",
           "draft": "Draft",
@@ -2920,8 +2910,6 @@
           "class": "One class",
           "individual": "Individual"
         },
-        "paidBadge": "Paid {{amount}} EGP",
-        "freeBadge": "Free",
         "actions": {
           "view": "View details",
           "edit": "Edit",
@@ -2929,21 +2917,21 @@
           "duplicate": "Duplicate",
           "cancelEvent": "Cancel event"
         },
-        "searchLabel": "Search by title",
         "searchPlaceholder": "Type to filter…",
-        "participantSummary": "{{total}} invited · {{granted}} approved · {{pending}} pending",
         "duplicateSuccess": "Event duplicated as a draft.",
         "duplicateError": "Could not duplicate this event.",
         "duplicateSuffixAr": "نسخة",
+        "filterStatus": "Stage",
+        "filterCategory": "Kind",
+        "filterDate": "When",
+        "loading": "Loading events…",
+        "noDayEvents": "No events on this day.",
         "duplicateSuffixEn": "copy",
-        "loadingLabel": "Loading events",
         "emptyTitle": "No events found",
         "emptyDescription": "No events match your filters. Adjust filters or create a new event.",
-        "createEvent": "Create Event",
         "loadError": "Could not load events. Check your connection and try again.",
         "deleteTitle": "Delete event?",
-        "deleteDescription": "Are you sure you want to delete this event? This cannot be undone.",
-        "deleteCancel": "Cancel",
+        "deleteDescription": "The event disappears from every screen. Its records (replies, invoices) are kept.",
         "deleteConfirm": "Delete",
         "deleteSuccess": "Event deleted.",
         "deleteError": "Could not delete event. Please try again.",
@@ -2953,9 +2941,7 @@
       },
       "edit": {
         "title": "Edit event",
-        "breadcrumbLabel": "Breadcrumb",
         "breadcrumbEvents": "Events",
-        "breadcrumbEdit": "Edit",
         "fields": {
           "eventStatus": "Event status"
         },
@@ -2968,52 +2954,38 @@
         "save": "Save changes",
         "cancel": "Cancel",
         "success": "Event updated.",
-        "error": "Could not update event. Please try again.",
         "notFound": "This event could not be found or you do not have access.",
         "backToList": "Back to events",
         "loadError": "Could not load this event. Check your connection and try again."
       },
       "details": {
-        "breadcrumbLabel": "Breadcrumb",
         "breadcrumbEvents": "Events",
         "notFound": "Event not found.",
         "loadError": "Could not load this event.",
         "delete": "Delete",
-        "deleteTitle": "Delete this event?",
-        "deleteDescription": "This permanently removes the event and related records where allowed. This cannot be undone.",
-        "deleteConfirm": "Delete",
-        "deleteSuccess": "Event deleted.",
-        "deleteError": "Could not delete event.",
         "cancelEvent": "Cancel event",
-        "cancelTitle": "Cancel event?",
-        "cancelDescription": "This will mark the event as cancelled and notify parents (when notifications are enabled).",
-        "cancelConfirm": "Confirm cancel",
-        "cancelSuccess": "Event cancelled successfully.",
-        "cancelError": "Could not cancel event.",
-        "refundCheckbox": "Refund paid events (invoice refunds will be processed separately)",
-        "refundQueued": "Refund request noted — invoice refunds will be implemented soon.",
-        "infoTitle": "Event details",
         "className": "Class",
         "whenLabel": "Date & time",
         "whereLabel": "Location",
-        "costLabel": "Cost",
         "deadlineLabel": "Permission deadline",
         "urgentScheduleLabel": "Urgent schedule",
-        "price": "Price: {{amount}}",
         "notPaid": "Free event",
-        "permissionDeadline": "Permission deadline: {{date}}",
         "attendanceTitle": "Attendance & permissions",
         "attendanceLoading": "Loading attendance",
-        "statTotal": "Children (permission rows)",
+        "statTotal": "Children asked",
         "statApproved": "Approved",
         "statDenied": "Denied",
         "statPending": "Pending",
-        "totalRevenue": "Total revenue (approved × price): {{amount}}",
+        "statCheckedIn": "Checked in",
+        "checkedInOf": "of {{going}} going",
+        "noMatches": "No family matches these filters",
+        "totalRevenue": "Expected from the families who said yes: {{amount}}",
         "filters": {
           "all": "All",
           "granted": "Approved",
           "denied": "Denied",
-          "pending": "Pending"
+          "pending": "Pending",
+          "checkedIn": "Checked in"
         },
         "searchPlaceholder": "Search by child or parent name",
         "exportCsv": "Export CSV",
@@ -3032,6 +3004,7 @@
           "parent": "Parent",
           "permission": "Permission",
           "responded": "Responded",
+          "checkedIn": "Checked in",
           "denialNote": "Parent note",
           "payment": "Payment"
         },
@@ -3040,6 +3013,7 @@
           "parent": "Parent",
           "status": "Status",
           "respondedAt": "Responded at",
+          "checkedIn": "Checked in at",
           "parentNote": "Parent note",
           "payment": "Payment"
         },
@@ -3056,32 +3030,11 @@
           "cancelled": "Cancelled"
         }
       },
-      "eventType": "Event Type",
-      "types": {
-        "general": "General Event",
-        "trip": "Trip",
-        "health": "Doctor Visit",
-        "celebration": "Celebration",
-        "meeting": "Parent Meeting"
-      },
-      "titleAr": "Title (AR)",
-      "titleEn": "Title (EN)",
-      "descriptionAr": "Description (AR)",
-      "descriptionEn": "Description (EN)",
-      "startsAt": "Start Date & Time",
-      "endsAt": "End Date & Time",
-      "location": "Location (optional)",
       "audience": "Target Audience",
       "allChildren": "All Children",
       "specificGroups": "Specific Groups",
       "byClasses": "Select classes",
       "byChildren": "Select children",
-      "permissionRequired": "Permission required from parent",
-      "permissionDeadline": "Permission deadline",
-      "paidEvent": "Paid event",
-      "amountEgp": "Amount (EGP)",
-      "privacyWarning": "⚠️ {{count}} children have photo restrictions",
-      "publish": "Publish Event",
       "createSuccess": "Event created successfully.",
       "createError": "Could not create event. Please try again.",
       "errors": {
@@ -3099,59 +3052,13 @@
         "urgentDaysRequired": "Choose at least one urgent day.",
         "urgentHoursRequired": "Choose at least one urgent hour."
       },
-      "filters": {
-        "types": {
-          "all": "All Types",
-          "general": "General",
-          "trip": "Trip",
-          "health": "Doctor Visit",
-          "celebration": "Celebration",
-          "meeting": "Parent Meeting"
-        },
-        "status": {
-          "all": "All",
-          "upcoming": "Upcoming",
-          "ongoing": "Ongoing",
-          "past": "Past"
-        },
-        "search": "Search by title"
-      },
-      "status": {
-        "upcoming": "Upcoming",
-        "ongoing": "Ongoing",
-        "past": "Past"
-      },
-      "attendeeCount": "{{count}} attendees",
-      "permissionStats": "{{granted}}/{{total}} granted",
-      "paidBadge": "Paid: {{amount}} EGP",
       "actions": {
         "viewDetails": "View Details",
-        "edit": "Edit",
-        "cancel": "Cancel Event"
-      },
-      "cancel": {
-        "title": "Cancel this event?",
-        "description": "This will mark the event as cancelled and keep its history.",
-        "confirm": "Confirm cancel",
-        "keep": "Keep event",
-        "success": "Event cancelled.",
-        "error": "Could not cancel event."
-      },
-      "permissions": {
-        "child": "Child",
-        "parent": "Parent",
-        "status": "Status",
-        "respondedAt": "Responded at",
-        "override": "Admin override",
-        "note": "Override note",
-        "markGranted": "Mark granted",
-        "overrideSuccess": "Permission marked as granted.",
-        "overrideError": "Could not override permission."
+        "edit": "Edit"
       },
       "invoices": {
         "title": "Invoices Generated",
         "empty": "No invoices generated for this event yet.",
-        "row": "Invoice: EGP {{amount}} - {{status}}",
         "view": "View invoice details",
         "invoiceDetailsTitle": "Invoice Details",
         "summary": "{{generated}} invoices generated, {{paid}} paid, {{pending}} pending",
@@ -5286,33 +5193,10 @@
     "events": {
       "pageSubtitle": "Trips, activities and services at the nursery, and the permissions they need from you.",
       "pendingPermissionsLabel": "Waiting for your permission",
-      "moreOnDay": "+{{count}} more",
-      "emptyTitle": "No event permissions right now",
-      "emptyDescription": "Permission requests will appear here when needed.",
-      "actionRequired": "Action Required",
-      "deadline": "Deadline: {{date}} ({{countdown}} left)",
-      "grant": "Grant Permission",
-      "decline": "Decline",
-      "grantedSuccess": "Permission granted.",
-      "declinedSuccess": "Permission declined.",
-      "updateError": "Could not update permission.",
-      "status": {
-        "pending": "Pending",
-        "granted": "Granted",
-        "declined": "Declined",
-        "denied": "Declined"
-      },
-      "invoiceBadge": "Invoice: EGP {{amount}} - {{status}}",
-      "payNow": "Pay Now",
       "invoiceDetailsTitle": "Invoice Details",
-      "viewInvoice": "View Invoice",
       "pageTitle": "Events",
       "totalCount": "{{count}} events",
-      "upcomingCount": "{{count}} upcoming",
       "pendingPermissions": "{{count}} pending permissions",
-      "viewList": "List view",
-      "viewCalendar": "Calendar view",
-      "toggleViewLabel": "Choose view",
       "tabAll": "All events",
       "tabMine": "My events",
       "tabUpcoming": "Upcoming",
@@ -5342,14 +5226,8 @@
       "permissionPending": "Pending",
       "permissionDeclined": "Declined",
       "permissionNone": "No permission required",
-      "calendarPrev": "Previous month",
-      "calendarNext": "Next month",
-      "monthTitle": "{{monthYear}}",
-      "selectDay": "Day {{date}}",
       "clearDateFilter": "Clear day filter",
-      "selectedDayBanner": "Showing events on {{date}}",
       "noNursery": "Your account is not linked to a nursery yet.",
-      "noNurseryDescription": "Your account is not linked to a nursery. Contact support if this is unexpected.",
       "loadCatalogError": "Could not load events. Check your connection and try again.",
       "attendees": {
         "title": "Attending children ({{count}})",
@@ -5432,17 +5310,8 @@
         "ariaWhen": "Date and time",
         "ariaWhere": "Location",
         "ariaShare": "Copy event link",
-        "approveConfirmTitle": "Approve for this child?",
-        "approveConfirmDescription": "Confirm that your child can attend. Fees may apply for paid events.",
-        "approveChangeTitle": "Approve participation?",
-        "approveChangeDescription": "You previously declined. Approve now to confirm your child can attend (a fee may apply for paid events).",
-        "approveChangeConfirm": "Approve",
-        "approveInvoiceHint": "Approving will create an invoice for {{amount}}.",
-        "approveNoteLabel": "Note for the nursery (optional)",
-        "approveNotePlaceholder": "Up to 200 characters",
         "viewInvoice": "View invoice"
       },
-      "urgentCount": "{{count}} urgent",
       "tabUrgent": "Urgent",
       "urgentBadge": "Urgent",
       "create": {
@@ -6057,27 +5926,43 @@
     },
     "events": {
       "title": "Class Events",
-      "subtitle": "Active events for your classes. Permission responses are managed by the nursery admin.",
+      "subtitle": "The events of your classes: who is going, and who the scanner checked in.",
       "loadError": "Failed to load events. Please try again.",
       "emptyTitle": "No events yet",
       "emptyDescription": "When the admin publishes an event for your class, it will appear here.",
       "emptyFilterTitle": "No matching events",
       "emptyFilterDescription": "Try changing your filters.",
-      "categoryLabel": "Category",
-      "dateLabel": "Date",
-      "dateAll": "All dates",
-      "upcoming": "Upcoming",
-      "past": "Past",
-      "paid": "Paid",
-      "myClassTag": "My class",
-      "allClassesTag": "All classes",
-      "permissionDeadline": "Permission deadline: {{date}}",
-      "categories": {
-        "all": "All categories",
-        "trip": "Trip",
-        "activity": "Activity",
-        "service": "Service",
-        "doctor_visit": "Doctor Visit"
+      "whenLabel": "When",
+      "categoryLabel": "Kind",
+      "tabs": {
+        "all": "All",
+        "today": "Today",
+        "upcoming": "Upcoming",
+        "past": "Past"
+      },
+      "goingToday": "Children going today",
+      "todayBadge": "Today",
+      "scope": {
+        "all": "Whole nursery",
+        "class": "My class",
+        "individual": "Chosen children"
+      },
+      "going_one": "{{count}} child going",
+      "going_other": "{{count}} children going",
+      "checkedIn_one": "{{count}} checked in",
+      "checkedIn_other": "{{count}} checked in",
+      "whoIsGoing": "Who's going",
+      "roster": {
+        "loadError": "Could not load the children.",
+        "empty": "None of your children were asked to this event.",
+        "groups": {
+          "granted": "Going",
+          "pending": "Still to answer",
+          "denied": "Not going"
+        },
+        "checkedInAt": "Checked in {{time}}",
+        "notCheckedIn": "Not checked in",
+        "openScanner": "Open the QR scanner"
       }
     },
     "courses": {
@@ -6400,10 +6285,16 @@
       "deleteDescription": "This deletes the file from storage. You cannot undo this action."
     },
     "deactivateConfirmTitle": "Deactivate this staff member?",
-    "deactivateConfirmDescription": "Their account will be set to inactive. You can reactivate later from user management when available.",
+    "deactivateConfirmDescription": "They lose access at once and can no longer sign in; their records stay.",
     "deactivateConfirm": "Deactivate",
     "deactivatedToast": "Staff member deactivated.",
-    "deactivatedToastAr": "تم تعطيل الموظف.",
+    "deactivateErrors": {
+      "staff_forbidden": "You can't deactivate this person.",
+      "staff_not_yourself": "You can't deactivate yourself.",
+      "staff_not_found": "This person is not a staff member.",
+      "network": "No connection. Try again.",
+      "failed": "Could not deactivate this staff member."
+    },
     "workDate": "Work date",
     "filterStatusAll": "All statuses"
   },
@@ -7352,7 +7243,9 @@
       "attendance_undo_window_passed": "Check-ins can only be undone within 15 minutes by the person who recorded them.",
       "attendance_reason_required": "Please enter a reason.",
       "attendance_invalid_times": "Check the times: they must be on that day, in the past, and pickup after drop-off.",
-      "attendance_invalid_range": "Choose a valid date range."
+      "attendance_invalid_range": "Choose a valid date range.",
+      "attendance_event_closed": "This event is not open for check-in.",
+      "attendance_event_no_permission": "This child's family did not say yes to the event."
     },
     "scanner": {
       "alreadyCheckedIn": "{{name}} is already checked in (since {{time}}).",
@@ -8460,6 +8353,175 @@
       "failed": "Something went wrong. Try again."
     }
   },
+  "eventFlow": {
+    "errors": {
+      "event_forbidden": "You can't do this for this event.",
+      "event_closed": "This event is closed: it was cancelled, completed or is no longer open.",
+      "event_started": "This event has already started.",
+      "event_deadline_passed": "The time to reply has passed.",
+      "event_withdraw_closed": "It's too close to the event to take back a yes. Please contact the nursery.",
+      "event_answer_required": "Choose yes or no.",
+      "event_cancel_reason_required": "Write why the event is cancelled.",
+      "event_cancel_reason_too_long": "The reason is too long.",
+      "event_delete_not_allowed": "Only a draft or a cancelled event can be deleted. Cancel an open event first.",
+      "event_not_paid": "This event is free: there is nothing to bill.",
+      "network": "No connection. Check the internet and try again.",
+      "failed": "Something went wrong. Please try again."
+    },
+    "publish": {
+      "done_one": "{{count}} family was told.",
+      "done_other": "{{count}} families were told.",
+      "savedAsDraft": "Saved as a draft, but not published",
+      "failed": "Could not publish the event",
+      "confirmTitle": "Publish “{{event}}”?",
+      "confirmBody": "The families of the children asked get the request now, and can reply until the deadline."
+    },
+    "cancel": {
+      "title": "Cancel “{{event}}”",
+      "body": "The families who were asked are told, with your reason. Its unpaid invoices are cancelled; if anyone already paid, the admins are told to arrange the refund.",
+      "reason": "Reason for the families",
+      "reasonHint": "Families read this in the notice.",
+      "reasonPlaceholder": "e.g. The bus company cancelled because of the weather.",
+      "reasonRequired": "Write a reason.",
+      "reasonTooLong": "Keep it under {{max}} characters.",
+      "keep": "Keep the event",
+      "confirm": "Cancel event",
+      "done": "Event cancelled",
+      "doneFamilies_one": "{{count}} family told.",
+      "doneFamilies_other": "{{count}} families told.",
+      "doneInvoices_one": "{{count}} unpaid invoice cancelled.",
+      "doneInvoices_other": "{{count}} unpaid invoices cancelled.",
+      "donePaid_one": "{{count}} family already paid: a refund is needed.",
+      "donePaid_other": "{{count}} families already paid: refunds are needed.",
+      "zoneHint": "Cancelling tells every family asked, with your reason, and cancels the unpaid invoices."
+    },
+    "sync": {
+      "asked_one": "{{count}} more family was asked.",
+      "asked_other": "{{count}} more families were asked.",
+      "withdrawn_one": "{{count}} request was withdrawn and the family told.",
+      "withdrawn_other": "{{count}} requests were withdrawn and the families told."
+    },
+    "edit": {
+      "movedTold": "The families asked were told the new time and place."
+    },
+    "bill": {
+      "title_one": "{{count}} family said yes but has no invoice",
+      "title_other": "{{count}} families said yes but have no invoice",
+      "hint": "Answers from before billing worked, or a billing that failed. Each child is billed once, due from today.",
+      "action_one": "Bill {{count}} family",
+      "action_other": "Bill {{count}} families",
+      "done_one": "{{count}} invoice issued.",
+      "done_other": "{{count}} invoices issued.",
+      "failed": "Could not issue the invoices"
+    },
+    "editCopy": "Edit the copy"
+  },
+  "eventForm": {
+    "createDescription": "Fill in the details; the preview shows what families will see.",
+    "listDescription": "Plan trips and activities, ask the families, and follow their replies.",
+    "fixErrors": "Some fields need attention. Check the ones marked in red.",
+    "publishHint": "Publishing sends the request to every family asked.",
+    "publishFromStageHint": "To publish, choose “Active” under “What next”.",
+    "lockedCancelled": "This event was cancelled, so it can't be changed.",
+    "lockedCompleted": "This event is completed, so it can't be changed.",
+    "locationPlaceholder": "e.g. Main hall, City zoo",
+    "endsAt": "Ends at",
+    "endsAtHint": "Families plan the pickup around it.",
+    "paidLabel": "Families pay for this event",
+    "paidHint": "Each family who says yes gets an invoice for this amount.",
+    "childrenChosen_one": "{{count}} child chosen",
+    "childrenChosen_other": "{{count}} children chosen",
+    "searchChildren": "Search children",
+    "selectShown": "Select shown",
+    "clearChosen": "Clear",
+    "noChildMatch": "No child matches.",
+    "notSentYet": "Not sent yet: families see it once you publish.",
+    "cancelledOn": "Cancelled on",
+    "deleteHint": "Deleting hides this event from every screen; its records are kept.",
+    "allEvents": "All events",
+    "eventsCount_one": "{{count}} event",
+    "eventsCount_other": "{{count}} events",
+    "noMatchTitle": "No events match",
+    "noMatchDescription": "Try other filters or clear them.",
+    "sections": {
+      "stage": {
+        "title": "What next",
+        "hint": "Publish the draft, or mark the event as done."
+      },
+      "about": {
+        "title": "About the event",
+        "hint": "The name and kind families see first."
+      },
+      "when": {
+        "title": "When",
+        "hint": "The start, the end and the last moment to reply."
+      },
+      "who": {
+        "title": "Who is invited",
+        "hint": "Families of the children asked get the request."
+      },
+      "fee": {
+        "title": "Fee",
+        "hint": "Free, or a price billed to each family who says yes."
+      },
+      "urgent": {
+        "title": "Urgent"
+      }
+    },
+    "categoryHints": {
+      "trip": "Outings away from the nursery",
+      "activity": "Crafts, parties and games",
+      "service": "Photos, haircuts and other services",
+      "doctor_visit": "Check-ups and vaccinations"
+    },
+    "scopeHints": {
+      "all": "Every child in the nursery",
+      "class": "The children of one class",
+      "individual": "Children you pick by name"
+    },
+    "preview": {
+      "title": "Family preview",
+      "hint": "How families will see this event",
+      "untitled": "Event name",
+      "free": "Free",
+      "audienceAll": "All families",
+      "audienceClass": "Families of {{name}}",
+      "audienceClassMissing": "Choose a class",
+      "audienceChildren_one": "{{count}} child chosen",
+      "audienceChildren_other": "{{count}} children chosen"
+    },
+    "overview": {
+      "upcoming": "Upcoming",
+      "drafts": "Drafts",
+      "draftsHelper": "Not sent to families yet",
+      "awaitingReplies": "Replies awaited",
+      "awaitingHelper": "On events still to come",
+      "thisMonth": "This month"
+    },
+    "replies": {
+      "granted_one": "{{count}} yes",
+      "granted_other": "{{count}} yes",
+      "denied_one": "{{count}} no",
+      "denied_other": "{{count}} no",
+      "pending_one": "{{count}} waiting",
+      "pending_other": "{{count}} waiting",
+      "summary": "{{total}} asked: {{granted}} yes, {{denied}} no, {{pending}} waiting"
+    }
+  },
+  "eventsCalendar": {
+    "prev": "Previous month",
+    "next": "Next month",
+    "selectDay_one": "{{date}}: {{count}} event",
+    "selectDay_other": "{{date}}: {{count}} events",
+    "moreOnDay_one": "+{{count}} more",
+    "moreOnDay_other": "+{{count}} more",
+    "legend": "Event kinds",
+    "selectedDay": "Showing {{date}}",
+    "clearDay": "Show all days",
+    "viewLabel": "Choose view",
+    "viewCalendar": "Calendar",
+    "viewList": "List"
+  },
   "notificationTemplates": {
     "medication_due": {
       "title": "{{medicine}} for {{child}} at {{time}}",
@@ -8793,6 +8855,52 @@
     "staff_payroll_paid": {
       "title": "Payslip paid",
       "body": "Your {{month}} payslip has been paid: {{amount}}."
+    },
+    "event_cancelled": {
+      "title": "{{event}} is cancelled",
+      "body": "{{event}} on {{date}} is cancelled. Reason: {{reason}}"
+    },
+    "event_refund_due": {
+      "title": "Refunds to arrange: {{event}}",
+      "body": "{{event}} was cancelled. Families who already paid: {{count}}.",
+      "segments": {
+        "full": " The nursery's policy is a full refund.",
+        "partial": " The nursery's policy is a partial refund.",
+        "none": " The nursery's policy is no refund; let the families know."
+      }
+    },
+    "event_updated": {
+      "title": "{{event}}: new time or place",
+      "body": "{{event}} is now on {{date}} at {{start_time}}.",
+      "segments": {
+        "place": " Place: {{location}}."
+      }
+    },
+    "event_invitation_withdrawn": {
+      "title": "{{event}}: no reply needed",
+      "body": "The nursery withdrew the request for {{event}}; you don't need to reply."
+    },
+    "event_withdrawn_paid": {
+      "title": "Refund to arrange: {{event}}",
+      "body": "{{child}} won't join {{event}}; the family had already paid.",
+      "segments": {
+        "full": " The nursery's policy is a full refund.",
+        "partial": " The nursery's policy is a partial refund.",
+        "none": " The nursery's policy is no refund; let the family know."
+      }
+    },
+    "event_tomorrow": {
+      "title": "Tomorrow: {{event}}",
+      "body": "{{event}} is tomorrow at {{start_time}}.",
+      "segments": {
+        "place": " Place: {{location}}.",
+        "qr": " Your child's check-in code is on the event page."
+      }
+    },
+    "event_tomorrow_staff": {
+      "title": "Tomorrow: {{event}}",
+      "body_one": "{{count}} child of your class is going to {{event}} tomorrow at {{start_time}}.",
+      "body_other": "{{count}} children of your classes are going to {{event}} tomorrow at {{start_time}}."
     },
     "event_published": {
       "title": "New nursery event",

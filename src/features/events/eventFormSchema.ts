@@ -1,10 +1,6 @@
 import { z } from 'zod';
 
-const CATEGORIES = ['trip', 'activity', 'service', 'doctor_visit'] as const;
-const TARGET_SCOPES = ['all', 'class', 'individual'] as const;
-
-export const EVENT_EDIT_STATUSES = ['draft', 'active', 'completed', 'cancelled'] as const;
-export type EventEditStatus = (typeof EVENT_EDIT_STATUSES)[number];
+import { EVENT_CATEGORIES, EVENT_SCOPES, EVENT_STAGES, type EventStage } from './events';
 
 const eventFormFieldsSchema = z.object({
   titleAr: z.string().trim().optional(),
@@ -12,9 +8,11 @@ const eventFormFieldsSchema = z.object({
   descriptionAr: z.string().trim().optional(),
   descriptionEn: z.string().trim().optional(),
   startsAt: z.string().min(1),
+  /** Optional: when the event ends (the families plan the pickup around it). */
+  endsAt: z.string().optional(),
   location: z.string().trim().optional(),
-  category: z.enum(CATEGORIES),
-  targetScope: z.enum(TARGET_SCOPES),
+  category: z.enum(EVENT_CATEGORIES),
+  targetScope: z.enum(EVENT_SCOPES),
   targetClassId: z.string().optional(),
   /** Invited children when target_scope is individual (UUID strings). */
   targetChildIds: z.array(z.string().uuid()).default([]),
@@ -46,6 +44,13 @@ function refineEventFormFields(
   }
   if (options.requireFutureStart && start <= new Date()) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['startsAt'], message: 'startInFuture' });
+  }
+  const endRaw = values.endsAt?.trim();
+  if (endRaw) {
+    const end = new Date(endRaw);
+    if (Number.isNaN(end.getTime()) || end <= start) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['endsAt'], message: 'endAfterStart' });
+    }
   }
   if (values.isPaid && (values.price === undefined || Number.isNaN(values.price) || values.price <= 0)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['price'], message: 'amountPositive' });
@@ -85,18 +90,14 @@ function refineEventFormFields(
   }
 }
 
+/** The create form, for a draft and for publishing alike (choosing children stays optional). */
 export const eventFormSchema = eventFormFieldsSchema.superRefine((values, ctx) =>
-  refineEventFormFields(values, ctx, { requireFutureStart: true, requireIndividualChildren: false }),
-);
-
-/** Use when publishing from the create form. Individual child selection is optional. */
-export const eventPublishFormSchema = eventFormFieldsSchema.superRefine((values, ctx) =>
   refineEventFormFields(values, ctx, { requireFutureStart: true, requireIndividualChildren: false }),
 );
 
 export const eventEditFormSchema = eventFormFieldsSchema
   .extend({
-    eventStatus: z.enum(EVENT_EDIT_STATUSES),
+    eventStatus: z.enum(EVENT_STAGES),
   })
   .superRefine((values, ctx) => {
     const { eventStatus, ...fields } = values;
@@ -116,6 +117,7 @@ export type EventRowForEdit = {
   description_ar: string | null;
   description_en: string | null;
   starts_at: string;
+  ends_at?: string | null;
   location: string | null;
   category: string;
   is_paid: boolean;
@@ -133,7 +135,7 @@ export type EventRowForEdit = {
   nursery_id?: string;
 };
 
-export function mapDbStatusToEditForm(row: Pick<EventRowForEdit, 'cancelled_at' | 'status'>): EventEditStatus {
+export function mapDbStatusToEditForm(row: Pick<EventRowForEdit, 'cancelled_at' | 'status'>): EventStage {
   if (row.cancelled_at) return 'cancelled';
   const s = String(row.status ?? 'draft').toLowerCase();
   if (s === 'draft') return 'draft';
@@ -150,6 +152,7 @@ export function eventRowToEditFormValues(row: EventRowForEdit): EventEditFormVal
     descriptionAr: row.description_ar ?? '',
     descriptionEn: row.description_en ?? '',
     startsAt: toLocalInput(new Date(row.starts_at)),
+    endsAt: row.ends_at ? toLocalInput(new Date(row.ends_at)) : '',
     location: row.location ?? '',
     category: row.category as EventFormValues['category'],
     targetScope: row.target_scope as EventFormValues['targetScope'],
@@ -165,6 +168,39 @@ export function eventRowToEditFormValues(row: EventRowForEdit): EventEditFormVal
       ? toLocalInput(new Date(row.permission_deadline))
       : '',
     eventStatus: mapDbStatusToEditForm(row),
+  };
+}
+
+/**
+ * The form as an events row (without the nursery or the status, which each page sets): a title in
+ * one language fills the other, blanks become null, and the urgent schedule and the price are kept
+ * only when the event is urgent or paid.
+ */
+export function eventRowPayload(v: EventFormFields) {
+  const ar = v.titleAr?.trim() ?? '';
+  const en = v.titleEn?.trim() ?? '';
+  const urgent = v.isUrgent;
+  const deadline = v.permissionDeadline?.trim();
+  const end = v.endsAt?.trim();
+  const classId = v.targetClassId?.trim();
+  return {
+    title_ar: ar || en,
+    title_en: en || ar,
+    description_ar: v.descriptionAr?.trim() || null,
+    description_en: v.descriptionEn?.trim() || null,
+    starts_at: toIso(v.startsAt),
+    ends_at: end ? toIso(end) : null,
+    location: v.location?.trim() || null,
+    category: v.category,
+    is_urgent: urgent,
+    urgent_days_of_week: urgent ? v.urgentDaysOfWeek : [],
+    urgent_hours_of_day: urgent ? v.urgentHoursOfDay : [],
+    urgent_repeats_weekly: urgent ? v.urgentRepeatsWeekly : false,
+    is_paid: v.isPaid,
+    price: v.isPaid && v.price !== undefined && !Number.isNaN(v.price) ? String(v.price) : null,
+    target_scope: v.targetScope,
+    target_class_id: v.targetScope === 'class' && classId ? classId : null,
+    permission_deadline: deadline ? toIso(deadline) : null,
   };
 }
 

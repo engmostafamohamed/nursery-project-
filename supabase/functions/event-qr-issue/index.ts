@@ -50,6 +50,7 @@ Deno.serve(async (req) => {
       .from('events')
       .select('id, nursery_id, starts_at')
       .eq('id', eventId)
+      .is('deleted_at', null)
       .maybeSingle();
     if (eventErr) return jsonResponse({ error: eventErr.message }, 500);
     const event = eventRow as { id: string; nursery_id: string; starts_at: string } | null;
@@ -73,14 +74,14 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'Not allowed to issue QR codes for this event' }, 403);
     }
 
-    // Targeted children = those that already have an event permission row.
-    // (createPermissionsForEventScope runs before this in the publish flow and
-    // covers all / class / individual scopes uniformly.)
+    // Targeted children = those asked (a request not withdrawn); the server sets them
+    // (event_publish / event_sync_children) for every scope.
     const { data: permRows, error: permErr } = await admin
       .from('permissions')
       .select('child_id')
       .eq('event_id', eventId)
-      .eq('permission_type', 'event');
+      .eq('permission_type', 'event')
+      .is('deleted_at', null);
     if (permErr) return jsonResponse({ error: permErr.message }, 500);
     const targetChildIds = [
       ...new Set(((permRows ?? []) as { child_id: string }[]).map((r) => r.child_id).filter(Boolean)),

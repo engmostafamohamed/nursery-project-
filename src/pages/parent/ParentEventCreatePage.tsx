@@ -21,7 +21,7 @@ import {
   URGENT_EVENT_HOURS,
 } from '@/lib/eventUrgentSchedule';
 import { supabase } from '@/lib/supabase';
-import { toLocalInput } from '@/pages/admin/eventFormSchema';
+import { toLocalInput } from '@/features/events/eventFormSchema';
 
 type ParentChildOption = {
   id: string;

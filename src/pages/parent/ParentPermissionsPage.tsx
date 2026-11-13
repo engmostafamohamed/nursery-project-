@@ -18,17 +18,13 @@ import {
   type ParentPermissionCard,
   type ParentPermissionTab,
 } from '@/hooks/useParentPermissionsPage';
-import { generateEventInvoice, getInvoiceForPermission } from '@/lib/eventInvoices';
-import { localizedNames, templateNotificationRow } from '@/lib/notificationText';
-import { useSettings } from '@/lib/useSettings';
-import { supabase } from '@/lib/supabase';
+import { eventFlowErrorKey, respondToEvent } from '@/features/events/eventFlowApi';
 
 const TABS: ParentPermissionTab[] = ['pending', 'granted', 'denied'];
 
 export function ParentPermissionsPage() {
   const { t, i18n } = useTranslation();
   const { user } = useAuthSession();
-  const { settings } = useSettings();
   const queryClient = useQueryClient();
   const parentId = user?.id;
   const [tab, setTab] = useState<ParentPermissionTab>('pending');
@@ -69,47 +65,17 @@ export function ParentPermissionsPage() {
     await queryClient.invalidateQueries({ queryKey: ['parent-invoices', parentId] });
   };
 
+  // The server checks the deadline, bills a paid event once per child and tells the family.
   const onApprove = async (row: ParentPermissionCard) => {
     if (!parentId) return;
     setBusyId(row.id);
     setBusyAction('approve');
     try {
-      const { error } = await supabase
-        .from('permissions')
-        .update({ status: 'granted', responded_at: new Date().toISOString() } as never)
-        .eq('id', row.id);
-      if (error) throw error;
-
-      try {
-        let invoice = await getInvoiceForPermission(row.id);
-        if (!invoice) {
-          invoice = await generateEventInvoice({
-            permissionId: row.id,
-            eventId: row.event_id,
-            childId: row.child_id,
-            invoiceDueDays: Number(settings.invoice_due_days ?? 7),
-          });
-        }
-        if (invoice) {
-          await supabase.from('notifications').insert(
-            templateNotificationRow({
-              nurseryId: null,
-              userId: parentId,
-              type: 'event_invoice_generated',
-              params: { event: localizedNames(row.title_ar, row.title_en), amount: Number(invoice.amount), currency: 'EGP' },
-              actionLink: `/parent/invoices/${invoice.id}`,
-              channel: 'push',
-            }) as never,
-          );
-        }
-      } catch (invErr) {
-        console.error('event invoice generation failed (non-blocking)', invErr);
-      }
-
+      await respondToEvent({ permissionId: row.id, granted: true });
       toast.success(t('parent.permissions.toastGranted', { title: displayTitle(row) }));
       await invalidateAll();
-    } catch {
-      toast.error(t('parent.permissions.updateError'));
+    } catch (error) {
+      toast.error(t(eventFlowErrorKey(error)));
     } finally {
       setBusyId(null);
       setBusyAction(null);
@@ -121,22 +87,13 @@ export function ParentPermissionsPage() {
     setBusyId(denyTarget.id);
     setBusyAction('deny');
     try {
-      const note = denyNote.trim() || null;
-      const { error } = await supabase
-        .from('permissions')
-        .update({
-          status: 'denied',
-          parent_note: note,
-          responded_at: new Date().toISOString(),
-        } as never)
-        .eq('id', denyTarget.id);
-      if (error) throw error;
+      await respondToEvent({ permissionId: denyTarget.id, granted: false, note: denyNote });
       toast.success(t('parent.permissions.toastDenied', { title: displayTitle(denyTarget) }));
       setDenyTarget(null);
       setDenyNote('');
       await invalidateAll();
-    } catch {
-      toast.error(t('parent.permissions.updateError'));
+    } catch (error) {
+      toast.error(t(eventFlowErrorKey(error)));
     } finally {
       setBusyId(null);
       setBusyAction(null);

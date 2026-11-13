@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
+import { EventDateBlock } from '@/components/events/EventDateBlock';
 import { StatusPill } from '@/components/ui/DataTable';
-import { TONE_TINT } from '@/components/ui/toneClasses';
 import type { ParentCatalogEventRow, ParentCatalogPermissionRow } from '@/hooks/useParentEventsCatalog';
 import { summarizeUrgentSchedule } from '@/lib/eventUrgentSchedule';
 import { summarizePermissionsForEvent } from '@/lib/parentEventPermissionSummary';
@@ -59,10 +59,7 @@ export function ParentEventsEventCard({
         event.is_urgent ? 'border-error/40' : 'border-outline-variant',
       )}
     >
-      <div className={cn('flex h-16 w-14 shrink-0 flex-col items-center justify-center rounded-lg', TONE_TINT[tone])}>
-        <span className="text-[11px] font-semibold uppercase">{startsAt.toLocaleDateString(locale, { month: 'short' })}</span>
-        <span className="text-2xl font-bold leading-none tabular-nums">{startsAt.toLocaleDateString(locale, { day: 'numeric' })}</span>
-      </div>
+      <EventDateBlock startsAt={event.starts_at} category={event.category} locale={locale} />
 
       <div className="min-w-0 flex-1 space-y-2">
         <div className="flex flex-wrap items-start justify-between gap-2">

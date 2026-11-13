@@ -129,7 +129,8 @@ export function notificationText(row: NotificationTextRow, language: string = i1
     }
     const params = isRecord(row.template_params) ? row.template_params : {};
     const options = { ...templateVars(params, lang), lng: lang };
-    let body = i18n.exists(`${base}.body`, { lng: lang }) ? i18n.t(`${base}.body`, options) : '';
+    // With the params, so a body with plural forms (body_one, body_other) is found by its count.
+    let body = i18n.exists(`${base}.body`, options) ? i18n.t(`${base}.body`, options) : '';
     const segments = Array.isArray(params.segments) ? params.segments : [];
     for (const segment of segments) {
       if (typeof segment === 'string' && i18n.exists(`${base}.segments.${segment}`, { lng: lang })) {

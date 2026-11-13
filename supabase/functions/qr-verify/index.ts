@@ -162,7 +162,7 @@ Deno.serve(async (req) => {
       }
       const { data: evRow, error: evErr } = await admin
         .from('events')
-        .select('id, nursery_id, status, title_ar, title_en')
+        .select('id, nursery_id, status, cancelled_at, deleted_at, title_ar, title_en')
         .eq('id', row.event_id)
         .maybeSingle();
       if (evErr || !evRow) {
@@ -172,14 +172,31 @@ Deno.serve(async (req) => {
         id: string;
         nursery_id: string;
         status: string;
+        cancelled_at: string | null;
+        deleted_at: string | null;
         title_ar: string;
         title_en: string;
       };
       if (ev.nursery_id !== teacherNurseryId) {
         return jsonResponse({ error: 'QR code is for a different nursery' }, 403);
       }
-      if (String(ev.status).toLowerCase() === 'cancelled') {
-        return jsonResponse({ error: 'This event has been cancelled' }, 400);
+      // Only an open event takes check-ins (not a draft, a cancelled or a deleted one)…
+      if (String(ev.status).toLowerCase() !== 'active' || ev.cancelled_at || ev.deleted_at) {
+        return jsonResponse({ error: 'This event is not open' }, 400);
+      }
+      // …and only children whose family said yes (a withdrawn request does not count).
+      const { data: permission, error: permErr } = await admin
+        .from('permissions')
+        .select('id')
+        .eq('event_id', ev.id)
+        .eq('child_id', child.id)
+        .eq('status', 'granted')
+        .is('deleted_at', null)
+        .limit(1)
+        .maybeSingle();
+      if (permErr) return jsonResponse({ error: permErr.message }, 500);
+      if (!permission) {
+        return jsonResponse({ error: 'No permission from the family for this event' }, 400);
       }
 
       const { data: existingAtt } = await admin

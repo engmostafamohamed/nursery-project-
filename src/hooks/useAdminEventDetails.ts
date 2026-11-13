@@ -48,6 +48,8 @@ export type AdminEventAttendanceRow = {
   parent_note: string | null;
   invoice_status: string | null;
   invoice_amount: string | null;
+  /** When the QR scanner checked the child in at the event. */
+  checked_in_at: string | null;
 };
 
 function normalizeClassEmbed(
@@ -120,6 +122,12 @@ export function useAdminEventAttendance(eventId: string | undefined, nurseryId: 
 
       const childIds = [...new Set(permissions.map((p) => p.child_id))];
 
+      const checkInsRes = await supabase.from('event_attendance').select('child_id, checked_in_at').eq('event_id', eventId);
+      if (checkInsRes.error) throw checkInsRes.error;
+      const checkedInByChild = new Map(
+        ((checkInsRes.data ?? []) as { child_id: string; checked_in_at: string }[]).map((a) => [a.child_id, a.checked_in_at]),
+      );
+
       const childrenRes = await supabase
         .from('children')
         .select('id, full_name_ar, full_name_en, avatar_url')
@@ -174,15 +182,16 @@ export function useAdminEventAttendance(eventId: string | undefined, nurseryId: 
         const invMap = new Map(
           ((invRes.data ?? []) as { id: string; amount: string; status: string }[]).map((i) => [i.id, i]),
         );
+        // A child billed again after a cancelled invoice shows the live one.
+        const keep = (permissionId: string, inv: { status: string; amount: string }) => {
+          const had = invoiceByPermission.get(permissionId);
+          if (!had || had.status === 'cancelled') invoiceByPermission.set(permissionId, { status: inv.status, amount: inv.amount });
+        };
         for (const link of evLinks) {
           const inv = invMap.get(link.invoice_id);
           if (!inv) continue;
-          if (link.permission_id) {
-            invoiceByPermission.set(link.permission_id, { status: inv.status, amount: inv.amount });
-          } else {
-            const perm = permissions.find((p) => p.child_id === link.child_id);
-            if (perm) invoiceByPermission.set(perm.id, { status: inv.status, amount: inv.amount });
-          }
+          const permissionId = link.permission_id ?? permissions.find((p) => p.child_id === link.child_id)?.id;
+          if (permissionId) keep(permissionId, inv);
         }
       }
 
@@ -205,6 +214,7 @@ export function useAdminEventAttendance(eventId: string | undefined, nurseryId: 
           parent_note: p.parent_note,
           invoice_status: inv?.status ?? null,
           invoice_amount: inv?.amount ?? null,
+          checked_in_at: checkedInByChild.get(p.child_id) ?? null,
         };
       });
 

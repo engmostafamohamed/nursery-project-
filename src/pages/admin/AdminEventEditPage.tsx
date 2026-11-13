@@ -1,36 +1,39 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, type FieldValues, type UseFormReturn } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
-import { AdminEventEditFormLayout } from '@/components/admin/AdminEventEditFormLayout';
-import type { EventClassRow } from '@/components/admin/EventFormFields';
 import { Button } from '@/components/ui/button';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
+import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { eventFlowErrorKey, publishEvent, syncEventChildren, type SyncResult } from '@/features/events/eventFlowApi';
+import { askedChildIds } from '@/features/events/eventAdminApi';
+import {
+  eventEditFormSchema,
+  eventRowPayload,
+  eventRowToEditFormValues,
+  mapDbStatusToEditForm,
+  type EventEditFormValues,
+  type EventRowForEdit,
+} from '@/features/events/eventFormSchema';
+import { EventFormFields } from '@/features/events/EventFormFields';
+import { EventFormLayout } from '@/features/events/EventFormLayout';
+import { EventPreviewCard } from '@/features/events/EventPreviewCard';
+import { editStageOptions } from '@/features/events/events';
+import { useEventFormData } from '@/features/events/useEventFormData';
 import { useAuthSession } from '@/hooks/useAuthSession';
-import { useNurseryChildrenPicker } from '@/hooks/useNurseryChildrenPicker';
 import { useNurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { localName } from '@/lib/bilingualName';
-import { createPermissionsForEventScope, fetchPermissionChildIdsForEvent, syncIndividualEventPermissions } from '@/lib/eventPermissionOps';
-import { notifyParentsEventPublished } from '@/lib/eventPublishNotifications';
-import { issueEventQrCodes } from '@/lib/eventQrOps';
 import { invalidateAllEventQueries } from '@/lib/eventCache';
+import { issueEventQrCodes } from '@/lib/eventQrOps';
 import { supabase } from '@/lib/supabase';
-import {
-  eventEditFormSchema,
-  eventRowToEditFormValues,
-  mapDbStatusToEditForm,
-  toIso,
-  type EventEditFormValues,
-  type EventRowForEdit,
-} from '@/pages/admin/eventFormSchema';
 
-const adminEventEditQueryKey = (eventId: string | undefined, nurseryId: string | undefined | null) =>
-  ['admin-event-edit', eventId, nurseryId] as const;
+const EVENT_EDIT_COLUMNS =
+  'title_ar, title_en, description_ar, description_en, starts_at, ends_at, location, category, is_urgent, urgent_days_of_week, urgent_hours_of_day, urgent_repeats_weekly, is_paid, price, target_scope, target_class_id, status, permission_deadline, cancelled_at, nursery_id';
 
 export function AdminEventEditPage() {
   const { t, i18n } = useTranslation();
@@ -42,8 +45,11 @@ export function AdminEventEditPage() {
   const profileQuery = useUserProfile(user?.id);
   const nurseryId = profileQuery.data?.nursery_id;
   const { data: languagePref = 'both' } = useNurseryLanguagePref(nurseryId);
+  const { classes, classesLoading, children, childrenLoading } = useEventFormData(nurseryId);
+  const [problem, setProblem] = useState<string | null>(null);
   const isPreview = import.meta.env.DEV && searchParams.get('preview') === 'true';
   const qs = isPreview ? '?preview=true' : '';
+  const listPath = `/admin/events${qs}`;
 
   const form = useForm({
     resolver: zodResolver(eventEditFormSchema),
@@ -53,6 +59,7 @@ export function AdminEventEditPage() {
       descriptionAr: '',
       descriptionEn: '',
       startsAt: '',
+      endsAt: '',
       location: '',
       category: 'activity' as EventEditFormValues['category'],
       targetScope: 'all' as EventEditFormValues['targetScope'],
@@ -70,235 +77,157 @@ export function AdminEventEditPage() {
   });
 
   const eventQuery = useQuery({
-    queryKey: adminEventEditQueryKey(eventId, nurseryId),
+    queryKey: ['admin-event-edit', eventId, nurseryId] as const,
     queryFn: async (): Promise<EventRowForEdit | null> => {
       if (!eventId || !nurseryId) return null;
-      const { data, error } = await supabase
-        .from('events')
-        .select(
-          'title_ar, title_en, description_ar, description_en, starts_at, location, category, is_urgent, urgent_days_of_week, urgent_hours_of_day, urgent_repeats_weekly, is_paid, price, target_scope, target_class_id, status, permission_deadline, cancelled_at, nursery_id',
-        )
-        .eq('id', eventId)
-        .maybeSingle();
+      const { data, error } = await supabase.from('events').select(EVENT_EDIT_COLUMNS).eq('id', eventId).maybeSingle();
       if (error) throw error;
       const row = data as EventRowForEdit | null;
-      if (!row || row.nursery_id !== nurseryId) return null;
-      return row;
+      return row && row.nursery_id === nurseryId ? row : null;
     },
     enabled: Boolean(eventId && nurseryId),
   });
+  const row = eventQuery.data;
 
   useEffect(() => {
-    const row = eventQuery.data;
-    if (!row) return;
-    form.reset(eventRowToEditFormValues(row));
-  }, [eventQuery.data, form]);
+    if (row) form.reset(eventRowToEditFormValues(row));
+  }, [row, form]);
 
+  // The children already asked, for an event sent to chosen children.
   const permChildrenQuery = useQuery({
     queryKey: ['admin-event-permission-children', eventId],
-    queryFn: () => fetchPermissionChildIdsForEvent(eventId!),
-    enabled: Boolean(eventId && eventQuery.data?.target_scope === 'individual'),
+    queryFn: () => askedChildIds(eventId!),
+    enabled: Boolean(eventId && row?.target_scope === 'individual'),
   });
-
   useEffect(() => {
-    if (eventQuery.data?.target_scope !== 'individual') return;
-    const rows = permChildrenQuery.data;
-    if (!rows?.length) return;
-    form.setValue(
-      'targetChildIds',
-      [...new Set(rows.map((r) => r.child_id))],
-      { shouldValidate: false },
-    );
-  }, [eventQuery.data?.target_scope, permChildrenQuery.data, form]);
+    if (row?.target_scope !== 'individual' || !permChildrenQuery.data?.length) return;
+    form.setValue('targetChildIds', permChildrenQuery.data, { shouldValidate: false });
+  }, [row?.target_scope, permChildrenQuery.data, form]);
 
-  const classesQuery = useQuery({
-    queryKey: ['events-create-classes', nurseryId],
-    queryFn: async (): Promise<EventClassRow[]> => {
-      if (!nurseryId) return [];
-      const { data, error } = await supabase
-        .from('classes')
-        .select('id, name_ar, name_en')
-        .eq('nursery_id', nurseryId)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as EventClassRow[];
-    },
-    enabled: Boolean(nurseryId),
-  });
+  const stage = row ? mapDbStatusToEditForm(row) : 'draft';
+  const locked = stage === 'cancelled' || stage === 'completed';
 
-  const childrenPickerQuery = useNurseryChildrenPicker(nurseryId);
-
-  const classes = classesQuery.data ?? [];
-  const nurseryChildren = childrenPickerQuery.data ?? [];
-  const showAr = languagePref === 'ar' || languagePref === 'both';
-  const showEn = languagePref === 'en' || languagePref === 'both';
-
-  const headerTitle =
-    localName(eventQuery.data?.title_ar, eventQuery.data?.title_en, i18n.language.startsWith('ar')) || '';
-
-  const onSubmit = form.handleSubmit(async (values) => {
-    const parsed: EventEditFormValues = eventEditFormSchema.parse(values);
-    if (!eventId || !nurseryId || !eventQuery.data) {
-      toast.error(t('admin.events.edit.error'));
-      return;
-    }
-    if (
-      parsed.targetScope === 'individual' &&
-      parsed.eventStatus === 'active' &&
-      !parsed.targetChildIds.length
-    ) {
-      toast.error(t('admin.events.errors.individualChildrenRequired'));
-      return;
-    }
+  const save = async (values: EventEditFormValues) => {
+    setProblem(null);
+    if (!eventId || !nurseryId || !row || locked) return;
+    const publishing = stage === 'draft' && values.eventStatus === 'active';
+    const payload = eventRowPayload(values);
+    // An open event moved (day, time or place): the server tells the families asked.
+    const moved =
+      stage === 'active' &&
+      (payload.starts_at !== new Date(row.starts_at).toISOString() ||
+        payload.ends_at !== (row.ends_at ? new Date(row.ends_at).toISOString() : null) ||
+        (payload.location ?? '') !== (row.location ?? '').trim());
+    let changes: SyncResult | null = null;
     try {
-      const titleAr = parsed.titleAr?.trim() || parsed.titleEn?.trim() || '';
-      const titleEn = parsed.titleEn?.trim() || parsed.titleAr?.trim() || '';
-      const deadlineRaw = parsed.permissionDeadline?.trim();
-      const cancelledAt =
-        parsed.eventStatus === 'cancelled'
-          ? (eventQuery.data.cancelled_at ?? new Date().toISOString())
-          : null;
-
-      const prevListed = mapDbStatusToEditForm(eventQuery.data);
-      const becameActive = parsed.eventStatus === 'active' && prevListed !== 'active';
-      const deadline = deadlineRaw ? toIso(deadlineRaw) : null;
-
-      if (parsed.targetScope === 'individual') {
-        await syncIndividualEventPermissions(eventId, parsed.targetChildIds, deadline);
-      } else if (parsed.eventStatus === 'active') {
-        // For all/class scopes: ensure permissions exist whenever the event is active.
-        // ensureEventPermissionsForChildren inside createPermissionsForEventScope is idempotent.
-        await createPermissionsForEventScope(eventId, parsed.targetScope, {
-          nurseryId,
-          classId: parsed.targetScope === 'class' ? (parsed.targetClassId?.trim() || null) : null,
-          deadline,
-        });
-      }
-
-      const payload = {
-        title_ar: titleAr,
-        title_en: titleEn,
-        description_ar: parsed.descriptionAr?.trim() || null,
-        description_en: parsed.descriptionEn?.trim() || null,
-        starts_at: toIso(parsed.startsAt),
-        location: parsed.location?.trim() || null,
-        category: parsed.category,
-        is_urgent: parsed.isUrgent,
-        urgent_days_of_week: parsed.isUrgent ? parsed.urgentDaysOfWeek : [],
-        urgent_hours_of_day: parsed.isUrgent ? parsed.urgentHoursOfDay : [],
-        urgent_repeats_weekly: parsed.isUrgent ? parsed.urgentRepeatsWeekly : false,
-        is_paid: parsed.isPaid,
-        price: parsed.isPaid && parsed.price !== undefined && !Number.isNaN(parsed.price) ? String(parsed.price) : null,
-        target_scope: parsed.targetScope,
-        target_class_id: parsed.targetScope === 'class' && parsed.targetClassId?.trim() ? parsed.targetClassId.trim() : null,
-        permission_deadline: deadlineRaw ? toIso(deadlineRaw) : null,
-        status: parsed.eventStatus,
-        cancelled_at: cancelledAt,
-      };
-
-      const { error } = await supabase.from('events').update(payload as never).eq('id', eventId).eq('nursery_id', nurseryId);
+      // The row first: the scope, the class and the deadline are what the server reads next.
+      // Publishing is the server's step too, so the row keeps its stage here; marking an open
+      // event done is a plain change.
+      const { error } = await supabase
+        .from('events')
+        .update({ ...payload, status: publishing ? stage : values.eventStatus } as never)
+        .eq('id', eventId)
+        .eq('nursery_id', nurseryId);
       if (error) throw error;
-
-      if (becameActive) {
-        try {
-          await notifyParentsEventPublished({
-            eventId,
-            nurseryId,
-            titleAr,
-            titleEn,
-          });
-        } catch {
-          /* non-blocking */
-        }
-        try {
-          // Mint a per-child check-in QR for every targeted child.
-          await issueEventQrCodes(eventId);
-        } catch {
-          /* non-blocking */
-        }
+      // Who is asked, set by the server (a request no longer needed is withdrawn, never removed).
+      if (values.eventStatus !== 'completed' && new Date(payload.starts_at) > new Date()) {
+        changes = await syncEventChildren(eventId, values.targetScope === 'individual' ? values.targetChildIds : null);
       }
-
-      // Refresh every event cache so popup / list, view, and edit stay in sync.
-      await invalidateAllEventQueries(queryClient);
-
-      toast.success(t('admin.events.edit.success'));
-      navigate(`/admin/events${qs}`);
-    } catch (err) {
-      console.error(err);
-      const e = err as { message?: string; details?: string; hint?: string } | null;
-      const detail =
-        err instanceof Error ? err.message : e?.message || e?.details || e?.hint || JSON.stringify(err);
-      toast.error(`${t('admin.events.edit.error')}: ${detail}`);
+    } catch (error) {
+      console.error('Edit event failed', error);
+      setProblem(t(eventFlowErrorKey(error)));
+      return;
     }
-  });
+
+    if (publishing) {
+      try {
+        const opened = await publishEvent(eventId);
+        await issueEventQrCodes(eventId).catch(() => undefined);
+        toast.success(t('admin.events.create.publishSuccess'), { description: t('eventFlow.publish.done', { count: opened.notified }) });
+      } catch (error) {
+        toast.error(t('eventFlow.publish.savedAsDraft'), { description: t(eventFlowErrorKey(error)) });
+      }
+    } else {
+      const notes = [
+        moved ? t('eventFlow.edit.movedTold') : null,
+        stage === 'active' && changes?.asked ? t('eventFlow.sync.asked', { count: changes.asked }) : null,
+        stage === 'active' && changes?.withdrawn ? t('eventFlow.sync.withdrawn', { count: changes.withdrawn }) : null,
+      ].filter(Boolean);
+      toast.success(t('admin.events.edit.success'), notes.length ? { description: notes.join(' ') } : undefined);
+      // Children added to an open event get their check-in QR too.
+      if (stage === 'active' && changes?.asked) await issueEventQrCodes(eventId).catch(() => undefined);
+    }
+    await invalidateAllEventQueries(queryClient);
+    navigate(listPath);
+  };
+
+  const onSave = form.handleSubmit((values) => save(values as EventEditFormValues), () => setProblem(null));
+  const formAny = form as unknown as UseFormReturn<FieldValues>;
 
   const noNursery = Boolean(user) && !profileQuery.isPending && !nurseryId;
-  const showLoading =
-    Boolean(user) && (profileQuery.isPending || (Boolean(nurseryId) && eventQuery.isPending));
-  const missingEvent =
-    Boolean(eventId) && Boolean(nurseryId) && eventQuery.isSuccess && eventQuery.data === null;
+  const loading = Boolean(user) && (profileQuery.isPending || (Boolean(nurseryId) && eventQuery.isPending));
+  const missing = !eventId || (Boolean(nurseryId) && eventQuery.isSuccess && row === null);
 
-  if (showLoading) {
+  if (loading) {
     return (
-      <div className="mx-auto max-w-3xl space-y-4 px-1 pb-8">
+      <div className="mx-auto max-w-6xl space-y-4 pb-8">
         <LoadingSkeleton />
       </div>
     );
   }
-
-  if (noNursery) {
+  if (noNursery || missing || eventQuery.isError) {
+    const message = noNursery
+      ? t('admin.events.list.noNurseryDescription')
+      : eventQuery.isError
+        ? t('admin.events.edit.loadError')
+        : t('admin.events.edit.notFound');
     return (
-      <div className="mx-auto max-w-3xl space-y-4 px-1 pb-8">
-        <h1 className="text-lg font-semibold text-on-surface">{t('admin.events.list.noNurseryTitle')}</h1>
-        <p className="text-sm text-on-surface-variant" role="alert">
-          {t('admin.events.list.noNurseryDescription')}
-        </p>
+      <div className="mx-auto max-w-3xl space-y-4 pb-8">
+        <p className="text-sm text-error" role="alert">{message}</p>
         <Button asChild variant="outline">
-          <Link to={`/admin/events${qs}`}>{t('admin.events.edit.backToList')}</Link>
-        </Button>
-      </div>
-    );
-  }
-
-  if (!eventId || missingEvent) {
-    return (
-      <div className="mx-auto max-w-3xl space-y-4 px-1 pb-8">
-        <p className="text-sm text-error" role="alert">
-          {t('admin.events.edit.notFound')}
-        </p>
-        <Button asChild variant="outline">
-          <Link to={`/admin/events${qs}`}>{t('admin.events.edit.backToList')}</Link>
-        </Button>
-      </div>
-    );
-  }
-
-  if (eventQuery.isError) {
-    return (
-      <div className="mx-auto max-w-3xl space-y-4 px-1 pb-8">
-        <p className="text-sm text-error" role="alert">
-          {t('admin.events.edit.loadError')}
-        </p>
-        <Button asChild variant="outline">
-          <Link to={`/admin/events${qs}`}>{t('admin.events.edit.backToList')}</Link>
+          <Link to={listPath}>{t('admin.events.edit.backToList')}</Link>
         </Button>
       </div>
     );
   }
 
   return (
-    <AdminEventEditFormLayout
-      qs={qs}
-      headerTitle={headerTitle}
-      form={form as unknown as UseFormReturn<FieldValues>}
-      showAr={showAr}
-      showEn={showEn}
-      classes={classes}
-      classesLoading={classesQuery.isPending}
-      nurseryChildren={nurseryChildren}
-      childrenLoading={childrenPickerQuery.isPending}
-      onSubmit={onSubmit}
-      isSubmitting={form.formState.isSubmitting}
-    />
+    <EventFormLayout
+      icon="edit_calendar"
+      title={t('admin.events.edit.title')}
+      description={localName(row?.title_ar, row?.title_en, i18n.language.startsWith('ar')) || '—'}
+      backTo={listPath}
+      problem={problem ?? (Object.keys(form.formState.errors).length ? t('eventForm.fixErrors') : null)}
+      preview={<EventPreviewCard form={formAny} classes={classes} />}
+      actions={
+        <>
+          {locked ? (
+            <p className="flex items-start gap-2 rounded-lg bg-surface-container-low px-3 py-2 text-xs text-on-surface-variant">
+              <MaterialSymbol name="lock" size="text-base" />
+              {stage === 'cancelled' ? t('eventForm.lockedCancelled') : t('eventForm.lockedCompleted')}
+            </p>
+          ) : null}
+          <Button type="button" disabled={locked || form.formState.isSubmitting} onClick={() => void onSave()} data-testid="event-save">
+            <MaterialSymbol name="save" size="text-base" />
+            {t('admin.events.edit.save')}
+          </Button>
+          <Button type="button" variant="outline" onClick={() => navigate(listPath)}>
+            {t('admin.events.edit.cancel')}
+          </Button>
+          {stage === 'draft' ? <p className="text-center text-xs text-on-surface-variant">{t('eventForm.publishFromStageHint')}</p> : null}
+        </>
+      }
+    >
+      <EventFormFields
+        form={formAny}
+        showAr={languagePref === 'ar' || languagePref === 'both'}
+        showEn={languagePref === 'en' || languagePref === 'both'}
+        stageOptions={editStageOptions(stage)}
+        classes={classes}
+        classesLoading={classesLoading}
+        nurseryChildren={children}
+        childrenLoading={childrenLoading}
+      />
+    </EventFormLayout>
   );
 }

@@ -16,11 +16,8 @@ import {
   useParentEventDetails,
   type ParentEventDetailsPermission,
 } from '@/hooks/useParentEventDetails';
+import { eventFlowErrorKey, respondToEvent } from '@/features/events/eventFlowApi';
 import { parentPermissionsCountsQueryKey } from '@/hooks/useParentPermissionsPage';
-import { generateEventInvoice, getInvoiceForPermission } from '@/lib/eventInvoices';
-import { localizedNames, templateNotificationRow } from '@/lib/notificationText';
-import { supabase } from '@/lib/supabase';
-import { useSettings } from '@/lib/useSettings';
 
 export function ParentEventDetailsPage() {
   const { t, i18n } = useTranslation();
@@ -29,7 +26,6 @@ export function ParentEventDetailsPage() {
   const { user } = useAuthSession();
   const parentId = user?.id;
   const queryClient = useQueryClient();
-  const { settings } = useSettings();
 
   const detailQuery = useParentEventDetails(eventId, parentId);
   const data = detailQuery.data;
@@ -79,64 +75,18 @@ export function ParentEventDetailsPage() {
     await queryClient.invalidateQueries({ queryKey: ['parent-invoices', parentId] });
   };
 
-  const runInvoiceAfterGrant = async (permissionId: string, childId: string) => {
-    if (!parentId || !eventId || !event) return null;
-    let invoice = await getInvoiceForPermission(permissionId);
-    if (!invoice) {
-      invoice = await generateEventInvoice({
-        permissionId,
-        eventId,
-        childId,
-        invoiceDueDays: Number(settings.invoice_due_days ?? 7),
-      });
-    }
-    if (invoice) {
-      await supabase.from('notifications').insert(
-        templateNotificationRow({
-          nurseryId: null,
-          userId: parentId,
-          type: 'event_invoice_generated',
-          params: { event: localizedNames(event.title_ar, event.title_en), amount: Number(invoice.amount), currency: 'EGP' },
-          actionLink: `/parent/invoices/${invoice.id}`,
-          channel: 'push',
-        }) as never,
-      );
-    }
-    return invoice;
-  };
-
+  // The server checks the deadline, bills a paid event once per child and tells the family.
   const handleApprove = async (permissionId: string) => {
     if (!parentId) return;
-    const row = permissions.find((p) => p.id === permissionId);
-    if (!row) return;
     setBusyId(permissionId);
     setBusyAction('approve');
     try {
-      const { error } = await supabase
-        .from('permissions')
-        .update({
-          status: 'granted',
-          responded_at: new Date().toISOString(),
-          parent_note: null,
-        } as never)
-        .eq('id', permissionId);
-      if (error) throw error;
-      // The permission is granted now. Invoice generation is best-effort — if it
-      // fails (e.g. a paid-event invoice insert), the approval must still show as
-      // saved and the UI must refresh, not jump to the error path.
-      let invoice: Awaited<ReturnType<typeof runInvoiceAfterGrant>> = null;
-      try {
-        invoice = await runInvoiceAfterGrant(permissionId, row.child_id);
-      } catch (invErr) {
-        console.error('event invoice generation failed (non-blocking)', invErr);
-      }
+      const { invoice } = await respondToEvent({ permissionId, granted: true });
       toast.success(t('parent.permissions.toastGranted', { title: displayEventTitle() }));
       await invalidateAll();
-      if (event?.is_paid && invoice?.id) {
-        navigate(`/parent/invoices?highlight=${encodeURIComponent(invoice.id)}`);
-      }
-    } catch {
-      toast.error(t('parent.permissions.updateError'));
+      if (invoice?.id) navigate(`/parent/invoices?highlight=${encodeURIComponent(invoice.id)}`);
+    } catch (error) {
+      toast.error(t(eventFlowErrorKey(error)));
     } finally {
       setBusyId(null);
       setBusyAction(null);
@@ -148,22 +98,13 @@ export function ParentEventDetailsPage() {
     setBusyId(denyTarget.id);
     setBusyAction('deny');
     try {
-      const note = denyNote.trim().slice(0, 200) || null;
-      const { error } = await supabase
-        .from('permissions')
-        .update({
-          status: 'denied',
-          parent_note: note,
-          responded_at: new Date().toISOString(),
-        } as never)
-        .eq('id', denyTarget.id);
-      if (error) throw error;
+      await respondToEvent({ permissionId: denyTarget.id, granted: false, note: denyNote });
       toast.success(t('parent.permissions.toastDenied', { title: displayEventTitle() }));
       setDenyTarget(null);
       setDenyNote('');
       await invalidateAll();
-    } catch {
-      toast.error(t('parent.permissions.updateError'));
+    } catch (error) {
+      toast.error(t(eventFlowErrorKey(error)));
     } finally {
       setBusyId(null);
       setBusyAction(null);
