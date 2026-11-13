@@ -25,11 +25,17 @@ export type FamilyEventDraft = {
 export type FamilyEventProblem = 'titleRequired' | 'startInvalid' | 'startInPast' | 'childRequired' | 'daysRequired' | 'hoursRequired';
 export type FamilyEventField = 'title' | 'startsAt' | 'children' | 'days' | 'hours';
 
-/** The next full hour from now (at least 30 minutes away). */
+/**
+ * Where the form's start begins: the next full hour at least 30 minutes away, within the nursery's
+ * day (8 am to 5 pm); late in the day or at night, 9 am the next morning.
+ */
 export function nextFullHour(now: Date = new Date()): Date {
   const d = new Date(now.getTime() + 30 * 60000);
   d.setMinutes(0, 0, 0);
   d.setHours(d.getHours() + 1);
+  if (d.getHours() >= 8 && d.getHours() <= 17) return d;
+  if (d.getHours() > 17) d.setDate(d.getDate() + 1);
+  d.setHours(9, 0, 0, 0);
   return d;
 }
 
@@ -87,9 +93,4 @@ export function familyEventArgs(draft: FamilyEventDraft, isAr: boolean) {
     p_urgent_hours_of_day: draft.repeatsWeekly ? sorted(draft.hours) : [],
     p_urgent_repeats_weekly: draft.repeatsWeekly,
   };
-}
-
-/** Adds or removes one value of a list (a day, an hour, a child). */
-export function toggled<T>(list: T[], value: T): T[] {
-  return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
 }

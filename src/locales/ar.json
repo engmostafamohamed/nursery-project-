@@ -3247,7 +3247,7 @@
         "createdAt": "تاريخ الإنشاء"
       },
       "urgentSchedule": {
-        "summary": "{{repeat}} ? {{days}} ? {{hours}}",
+        "summary": "{{repeat}} · {{days}} · {{hours}}",
         "repeatsWeekly": "أسبوعي",
         "oneTime": "مرة واحدة"
       }
@@ -12261,6 +12261,12 @@
       "childRequired": "اختر طفلًا واحدًا على الأقل.",
       "daysRequired": "اختر الأيام.",
       "hoursRequired": "اختر وقتًا واحدًا على الأقل."
+    },
+    "fixErrors": "راجع الحقول المعلّمة بالأحمر.",
+    "preview": {
+      "title": "ما تراه الحضانة",
+      "hint": "يتحدّث أثناء الكتابة",
+      "noChild": "اختر طفلًا"
     }
   }
 }

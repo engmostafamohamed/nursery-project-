@@ -67,6 +67,7 @@ describe('event texts', () => {
         'EventRosterDialog.tsx',
         'FamilyEventForm.tsx',
         'FamilyEventNotice.tsx',
+        'FamilyEventPreview.tsx',
       ].map((f) => path.join(dir, f)),
       ...['AdminEventsListPage.tsx', 'AdminEventCreatePage.tsx', 'AdminEventEditPage.tsx', 'AdminEventDetailsPage.tsx'].map((f) => path.join(pages, 'admin', f)),
       ...['ParentEventDetailsPage.tsx', 'ParentPermissionsPage.tsx', 'ParentEventCreatePage.tsx'].map((f) => path.join(pages, 'parent', f)),

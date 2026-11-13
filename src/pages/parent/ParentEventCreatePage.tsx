@@ -20,40 +20,41 @@ export function ParentEventCreatePage() {
   const queryClient = useQueryClient();
   const kidsQuery = useParentChildren();
 
-  const header = (
-    <PageHeader
-      icon="priority_high"
-      title={t('familyEvent.pageTitle')}
-      description={t('familyEvent.pageSubtitle')}
-      actions={
-        <Button asChild variant="outline">
-          <Link to="/parent/events">
-            <MaterialSymbol name="arrow_back" size="text-base" className="me-1 rtl:-scale-x-100" />
-            {t('parent.events.create.back')}
-          </Link>
-        </Button>
-      }
-    />
-  );
+  if (kidsQuery.data?.length) {
+    return (
+      <FamilyEventForm
+        kids={kidsQuery.data}
+        onCreated={async (eventId) => {
+          toast.success(t('familyEvent.sent'), { description: t('familyEvent.sentHint') });
+          await invalidateFamilyEventQueries(queryClient);
+          navigate(`/parent/events/${eventId}`);
+        }}
+      />
+    );
+  }
 
+  // Before the form: loading, a load error, or no child to tell the nursery about.
   return (
-    <div className="mx-auto max-w-3xl space-y-5 pb-28">
-      {header}
+    <div className="mx-auto max-w-6xl space-y-5 pb-8">
+      <PageHeader
+        icon="priority_high"
+        title={t('familyEvent.pageTitle')}
+        description={t('familyEvent.pageSubtitle')}
+        actions={
+          <Button asChild variant="outline">
+            <Link to="/parent/events">
+              <MaterialSymbol name="arrow_back" size="text-base" className="me-1 rtl:-scale-x-100" />
+              {t('parent.events.create.back')}
+            </Link>
+          </Button>
+        }
+      />
       {kidsQuery.isPending && kidsQuery.fetchStatus !== 'idle' ? (
         <LoadingSkeleton />
       ) : kidsQuery.isError ? (
         <LoadError message={t('familyEvent.childrenLoadError')} onRetry={() => void kidsQuery.refetch()} />
-      ) : !kidsQuery.data?.length ? (
-        <EmptyState icon="child_care" title={t('parent.events.create.noChildren')} description={t('familyEvent.noChildrenHint')} />
       ) : (
-        <FamilyEventForm
-          kids={kidsQuery.data}
-          onCreated={async (eventId) => {
-            toast.success(t('familyEvent.sent'), { description: t('familyEvent.sentHint') });
-            await invalidateFamilyEventQueries(queryClient);
-            navigate(`/parent/events/${eventId}`);
-          }}
-        />
+        <EmptyState icon="child_care" title={t('parent.events.create.noChildren')} description={t('familyEvent.noChildrenHint')} />
       )}
     </div>
   );

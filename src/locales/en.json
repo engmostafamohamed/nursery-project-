@@ -11663,6 +11663,12 @@
       "childRequired": "Choose at least one child.",
       "daysRequired": "Choose the days.",
       "hoursRequired": "Choose at least one time."
+    },
+    "fixErrors": "Check the fields marked in red.",
+    "preview": {
+      "title": "What the nursery sees",
+      "hint": "Updated as you type",
+      "noChild": "Choose a child"
     }
   }
 }
