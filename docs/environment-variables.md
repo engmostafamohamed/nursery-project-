@@ -108,14 +108,9 @@ npx supabase functions deploy <name> --project-ref <project-ref> --use-api
 - أرقام استقبال المحافظ: فودافون كاش، واتصالات كاش، وغيرهم. **المحفظة اللي مالهاش رقم مابتظهرش لولي الأمر.**
 - بيانات التحويل البنكي، وتعليمات الدفع.
 
-## 6. دوال مش منشورة عن قصد
+## 6. دوال قديمة اتمسحت
 
-| الدالة | السبب |
-|---|---|
-| `payment-reminders` و`permission-deadline-reminder` | الشغل ده بتعمله مهام مجدولة جوه قاعدة البيانات (`payment-reminders-daily` و`permission-deadline-reminders-daily`). الدالتين نسخة قديمة، ومافيهمش أي تحقق من الصلاحيات |
-| `emergency-broadcast` | مافيش أي جزء في التطبيق بيناديها، ومافيهاش تحقق من الصلاحيات |
-
-الأحسن تتمسح. ولو احتجتها، لازم يتضاف لها تحقق من الصلاحيات قبل النشر، زي `email-dispatch`.
+`payment-reminders` و`permission-deadline-reminder` و`emergency-broadcast` اتمسحوا (13 نوفمبر 2026): ماكانش فيهم أي تحقق من الصلاحيات، ومحدش كان بيناديهم. التذكيرات بتعملها مهام مجدولة جوه قاعدة البيانات (`payment-reminders-daily` و`permission-deadline-reminders-daily`). لو احتجت تنبيه طوارئ، يتعمل من جديد بتحقق من الصلاحيات زي `email-dispatch`.
 
 ## 7. مين يقدر يبعت رسايل
 

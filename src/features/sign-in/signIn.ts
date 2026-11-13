@@ -24,6 +24,21 @@ export function magicLinkProblem(value: string): ResetEmailProblem | null {
   return resetEmailProblem(value);
 }
 
+/** Mirrors the signup function: a parent's auth address is derived from their username. */
+const USERNAME_EMAIL_DOMAIN = 'parents.xo.local';
+const USERNAME_PATTERN = /^[a-zA-Z0-9._-]{4,32}$/;
+
+/**
+ * The sign-in address of what was typed: an email as it is; a username's address is made from it, as
+ * signup made it. (Accounts from before usernames sign in with their email. Nothing asks the
+ * database which email a username has: that answered anyone with the family's address.)
+ */
+export function toAuthEmail(identifier: string): string {
+  const value = identifier.trim();
+  if (value.includes('@') || !USERNAME_PATTERN.test(value)) return value;
+  return `${value.toLowerCase()}@${USERNAME_EMAIL_DOMAIN}`;
+}
+
 type AuthFailure = { code?: string | null; status?: number | null; name?: string | null; message?: string | null } | null | undefined;
 
 const isNetwork = (error: NonNullable<AuthFailure>) =>

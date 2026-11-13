@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { setStaffActive } from '@/features/staff-status/staffStatusApi';
 import { supabase } from '@/lib/supabase';
 import type { StaffContractType, StaffDepartment } from '@/types/tables';
 
@@ -166,8 +167,7 @@ export function useStaff(nurseryId?: string) {
 
   const deactivateStaff = useMutation({
     mutationFn: async (args: { profileId: string; userId: string; hasStaffProfile: boolean }) => {
-      const userRes = await supabase.from('users').update({ status: 'inactive' } as never).eq('id', args.userId);
-      if (userRes.error) throw userRes.error;
+      await setStaffActive(args.userId, false);
       if (args.hasStaffProfile) {
         const profileRes = await supabase.from('staff_profiles').update({ position: 'Inactive' } as never).eq('id', args.profileId);
         if (profileRes.error) throw profileRes.error;

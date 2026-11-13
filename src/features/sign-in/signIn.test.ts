@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import ar from '@/locales/ar.json';
 import en from '@/locales/en.json';
 
-import { identifierProblem, magicLinkOutcome, magicLinkProblem, passwordProblem, signInErrorKey } from './signIn';
+import { identifierProblem, magicLinkOutcome, magicLinkProblem, passwordProblem, signInErrorKey, toAuthEmail } from './signIn';
 
 describe('what is typed', () => {
   it('needs a username or email and a password of at least 8 characters', () => {
@@ -20,6 +20,14 @@ describe('what is typed', () => {
     expect(magicLinkProblem('mona@')).toBe('invalid');
     expect(magicLinkProblem('mona.ali@parents.xo.local')).toBe('noMailbox');
     expect(magicLinkProblem(' mona@example.com ')).toBeNull();
+  });
+});
+
+describe('the sign-in address', () => {
+  it('is the email as typed, or the address signup made from the username (never asked of the server)', () => {
+    expect(toAuthEmail(' mona@example.com ')).toBe('mona@example.com');
+    expect(toAuthEmail('Mona.Ali')).toBe('mona.ali@parents.xo.local');
+    expect(toAuthEmail('ab')).toBe('ab'); // not a username: sent as typed, the server refuses it
   });
 });
 

@@ -51,9 +51,4 @@ Official client libraries handle these headers: supabase-js (React Native), supa
 
 ## Known issues
 
-- `staff-onboarding-complete`: Gives every new staff member the same first password; fix before using it from a mobile app (task T1.3).
-- `emergency-broadcast`: Does not check who is calling: anyone with the public key could alert every parent of any nursery. Not deployed today; add a caller check before deploying it.
-- `email-dispatch`: Does not check who is calling; add a check before connecting a real provider.
-- `sms-dispatch`: Does not check who is calling; add a check before connecting a real provider.
-- `whatsapp-dispatch`: Does not check who is calling; add a check before connecting a real provider.
-- Not deployed in production: `child-enrollment-complete`, `event-qr-issue`, `staff-onboarding-complete`, `ai-assistant`, `ai-import-mapper`, `process-import`, `tenant-export`, `xo-create-nursery`, `xo-assign-nursery-admin`, `xo-check-admin-email`, `emergency-broadcast`, `email-dispatch`, `sms-dispatch`, `whatsapp-dispatch`, `payment-reminders`, `permission-deadline-reminder`.
+- Not deployed in production: `child-enrollment-complete`, `event-qr-issue`, `staff-onboarding-complete`, `ai-assistant`, `ai-import-mapper`, `process-import`, `tenant-export`, `xo-create-nursery`, `xo-assign-nursery-admin`, `xo-check-admin-email`, `email-dispatch`, `sms-dispatch`, `whatsapp-dispatch`.

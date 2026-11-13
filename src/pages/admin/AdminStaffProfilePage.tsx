@@ -26,6 +26,7 @@ import { Fact, FactList } from '@/components/ui/FactList';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StaffAbsencesPanel } from '@/features/staff-absence/StaffAbsencesPanel';
+import { staffStatusErrorKey } from '@/features/staff-status/staffStatusApi';
 import { usePersonAbsences } from '@/features/staff-absence/usePersonAbsences';
 import { useAdminBasePath } from '@/hooks/useAdminBasePath';
 import { useBilingualNames } from '@/hooks/useBilingualNames';
@@ -286,14 +287,18 @@ export function AdminStaffProfilePage() {
             <Button
               type="button"
               variant="destructive"
-              onClick={() => {
-                void staff.deactivateStaff({
-                  profileId: String(selected.id),
-                  userId: String(selected.user_id),
-                  hasStaffProfile: selected.hasStaffProfile,
-                });
+              onClick={async () => {
                 setDeactivateOpen(false);
-                toast.success(`${t('staff.deactivatedToast')}\n${t('staff.deactivatedToastAr')}`);
+                try {
+                  await staff.deactivateStaff({
+                    profileId: String(selected.id),
+                    userId: String(selected.user_id),
+                    hasStaffProfile: selected.hasStaffProfile,
+                  });
+                  toast.success(t('staff.deactivatedToast'));
+                } catch (error) {
+                  toast.error(t(staffStatusErrorKey(error)));
+                }
               }}
             >
               {t('staff.deactivateConfirm')}

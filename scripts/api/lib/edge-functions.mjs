@@ -52,7 +52,6 @@ export const EDGE_FUNCTIONS = [
     audience: 'app',
     summary: 'Admin onboards a staff member (new or existing user); returns staff_profile_id for uploading documents.',
     fields: ['nurseryId', 'userMode', 'existingUserId', 'newNameAr', 'newNameEn', 'newEmail', 'newMobile', 'employeeId', 'position', 'employmentType', 'startDate', 'gender', 'nationalId', 'baseSalary', 'workingDays', 'workStartTime', 'workEndTime', 'emergencyName', 'emergencyPhone', 'termsAccepted'],
-    warning: 'Gives every new staff member the same first password; fix before using it from a mobile app (task T1.3).',
   },
 
   // Admin tools
@@ -101,44 +100,24 @@ export const EDGE_FUNCTIONS = [
     fields: ['email'],
   },
 
-  // Internal: messaging providers and schedules
-  {
-    name: 'emergency-broadcast',
-    audience: 'internal',
-    summary: 'Sends an emergency alert to every parent of a nursery.',
-    fields: ['nursery_id', 'message', 'message_ar', 'message_en'],
-    warning: 'Does not check who is calling: anyone with the public key could alert every parent of any nursery. Not deployed today; add a caller check before deploying it.',
-  },
+  // Internal: messaging providers (each checks the caller and what they may send)
   {
     name: 'email-dispatch',
     audience: 'internal',
     summary: 'Sends one email notification. The email provider is not connected yet (it only logs).',
     fields: ['nursery_id', 'user_id', 'recipient_email', 'trigger_type', 'language', 'data'],
-    warning: 'Does not check who is calling; add a check before connecting a real provider.',
   },
   {
     name: 'sms-dispatch',
     audience: 'internal',
     summary: 'Sends one SMS. The SMS provider is not connected yet (it only logs).',
     fields: ['nursery_id', 'user_id', 'recipient_phone', 'trigger_type', 'language', 'data', 'whatsapp_failed_at'],
-    warning: 'Does not check who is calling; add a check before connecting a real provider.',
   },
   {
     name: 'whatsapp-dispatch',
     audience: 'internal',
     summary: 'Sends one WhatsApp message. The provider is not connected yet (it only logs).',
     fields: ['nursery_id', 'user_id', 'recipient_phone', 'trigger_type', 'language', 'data'],
-    warning: 'Does not check who is calling; add a check before connecting a real provider.',
-  },
-  {
-    name: 'payment-reminders',
-    audience: 'internal',
-    summary: 'Scheduled job: sends invoice payment reminders.',
-  },
-  {
-    name: 'permission-deadline-reminder',
-    audience: 'internal',
-    summary: 'Scheduled job: reminds parents about event permission slips that are due.',
   },
 ];
 

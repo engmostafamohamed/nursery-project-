@@ -32915,7 +32915,7 @@
           "Server functions · app"
         ],
         "summary": "Admin onboards a staff member (new or existing user); returns staff_profile_id for uploading documents.",
-        "description": "Not deployed in production.\n\nWarning: Gives every new staff member the same first password; fix before using it from a mobile app (task T1.3).",
+        "description": "Not deployed in production.",
         "x-audience": "app",
         "x-deployed": false,
         "parameters": [
@@ -33244,54 +33244,13 @@
         }
       }
     },
-    "/functions/v1/emergency-broadcast": {
-      "post": {
-        "tags": [
-          "Server functions · internal (not for apps)"
-        ],
-        "summary": "Sends an emergency alert to every parent of a nursery.",
-        "description": "Internal: called by the server or a schedule, not by apps.\n\nNot deployed in production.\n\nWarning: Does not check who is calling: anyone with the public key could alert every parent of any nursery. Not deployed today; add a caller check before deploying it.",
-        "x-audience": "internal",
-        "x-deployed": false,
-        "parameters": [
-          {
-            "in": "body",
-            "name": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {
-                "nursery_id": {},
-                "message": {},
-                "message_ar": {},
-                "message_en": {}
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "JSON result"
-          },
-          "400": {
-            "description": "Missing or invalid fields"
-          },
-          "401": {
-            "description": "Not signed in"
-          },
-          "403": {
-            "description": "Signed in, but not allowed"
-          }
-        }
-      }
-    },
     "/functions/v1/email-dispatch": {
       "post": {
         "tags": [
           "Server functions · internal (not for apps)"
         ],
         "summary": "Sends one email notification. The email provider is not connected yet (it only logs).",
-        "description": "Internal: called by the server or a schedule, not by apps.\n\nNot deployed in production.\n\nWarning: Does not check who is calling; add a check before connecting a real provider.",
+        "description": "Internal: called by the server or a schedule, not by apps.\n\nNot deployed in production.",
         "x-audience": "internal",
         "x-deployed": false,
         "parameters": [
@@ -33334,7 +33293,7 @@
           "Server functions · internal (not for apps)"
         ],
         "summary": "Sends one SMS. The SMS provider is not connected yet (it only logs).",
-        "description": "Internal: called by the server or a schedule, not by apps.\n\nNot deployed in production.\n\nWarning: Does not check who is calling; add a check before connecting a real provider.",
+        "description": "Internal: called by the server or a schedule, not by apps.\n\nNot deployed in production.",
         "x-audience": "internal",
         "x-deployed": false,
         "parameters": [
@@ -33378,7 +33337,7 @@
           "Server functions · internal (not for apps)"
         ],
         "summary": "Sends one WhatsApp message. The provider is not connected yet (it only logs).",
-        "description": "Internal: called by the server or a schedule, not by apps.\n\nNot deployed in production.\n\nWarning: Does not check who is calling; add a check before connecting a real provider.",
+        "description": "Internal: called by the server or a schedule, not by apps.\n\nNot deployed in production.",
         "x-audience": "internal",
         "x-deployed": false,
         "parameters": [
@@ -33399,58 +33358,6 @@
             }
           }
         ],
-        "responses": {
-          "200": {
-            "description": "JSON result"
-          },
-          "400": {
-            "description": "Missing or invalid fields"
-          },
-          "401": {
-            "description": "Not signed in"
-          },
-          "403": {
-            "description": "Signed in, but not allowed"
-          }
-        }
-      }
-    },
-    "/functions/v1/payment-reminders": {
-      "post": {
-        "tags": [
-          "Server functions · internal (not for apps)"
-        ],
-        "summary": "Scheduled job: sends invoice payment reminders.",
-        "description": "Internal: called by the server or a schedule, not by apps.\n\nNot deployed in production.",
-        "x-audience": "internal",
-        "x-deployed": false,
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "JSON result"
-          },
-          "400": {
-            "description": "Missing or invalid fields"
-          },
-          "401": {
-            "description": "Not signed in"
-          },
-          "403": {
-            "description": "Signed in, but not allowed"
-          }
-        }
-      }
-    },
-    "/functions/v1/permission-deadline-reminder": {
-      "post": {
-        "tags": [
-          "Server functions · internal (not for apps)"
-        ],
-        "summary": "Scheduled job: reminds parents about event permission slips that are due.",
-        "description": "Internal: called by the server or a schedule, not by apps.\n\nNot deployed in production.",
-        "x-audience": "internal",
-        "x-deployed": false,
-        "parameters": [],
         "responses": {
           "200": {
             "description": "JSON result"

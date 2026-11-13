@@ -24,11 +24,8 @@ export function useInquiries(nurseryId?: string, filters?: InquiryFilters) {
     queryKey: ['public-inquiry-classes', nurseryId],
     queryFn: async () => {
       if (!nurseryId) return [];
-      const res = await supabase
-        .from('classes')
-        .select('id, name_ar, name_en')
-        .eq('nursery_id', nurseryId)
-        .order('created_at', { ascending: true });
+      // The public form reads one nursery's class names, not the classes table.
+      const res = await supabase.rpc('inquiry_classes' as never, { p_nursery_id: nurseryId } as never);
       if (res.error) throw res.error;
       return (res.data ?? []) as Array<Record<string, unknown>>;
     },

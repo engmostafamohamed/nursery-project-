@@ -38,9 +38,6 @@ jobs:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_REF: ${{ inputs.project-ref }}
       REQUESTED: ${{ inputs.functions }}
-      # Never deployed: leftovers from the first version. The reminders they sent run in the
-      # database (pg_cron: run_payment_reminders, run_permission_deadline_reminders); nothing calls them.
-      NOT_DEPLOYED: emergency-broadcast payment-reminders permission-deadline-reminder
     steps:
       - uses: actions/checkout@v5
 
@@ -55,7 +52,6 @@ jobs:
           functions=""
           for name in $requested; do
             [[ "$name" =~ ^[a-z0-9-]+$ ]] || { echo "::error::'$name' is not a function name"; exit 1; }
-            [[ " $NOT_DEPLOYED " == *" $name "* ]] && continue
             [ -f "supabase/functions/$name/index.ts" ] || { echo "::error::supabase/functions/$name/index.ts does not exist"; exit 1; }
             functions="$functions $name"
           done

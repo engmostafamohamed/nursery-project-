@@ -6,37 +6,14 @@ import type { Session } from '@supabase/supabase-js';
 
 import { supabase } from '@/lib/supabase';
 
-import { magicLinkOutcome, signInErrorKey, type MagicLinkOutcome, type SignInErrorKey } from './signIn';
-
-/** Mirrors the signup function: a parent's auth address is derived from their username. */
-const USERNAME_EMAIL_DOMAIN = 'parents.xo.local';
-const USERNAME_PATTERN = /^[a-zA-Z0-9._-]{4,32}$/;
-
-/**
- * Parents registered before usernames existed authenticate with their real email, while newer ones
- * use the synthetic address signup mints. Ask the database which applies, and fall back to the
- * synthetic form if the lookup is unavailable.
- */
-export async function toAuthEmail(identifier: string): Promise<string> {
-  const value = identifier.trim();
-  if (value.includes('@')) return value;
-  if (!USERNAME_PATTERN.test(value)) return value;
-
-  // Cast: this RPC is newer than the generated database types.
-  const { data, error } = await (supabase.rpc as unknown as (
-    fn: string,
-    args: Record<string, unknown>,
-  ) => Promise<{ data: unknown; error: unknown }>)('auth_email_for_username', { p_username: value });
-  if (!error && typeof data === 'string' && data) return data;
-  return `${value.toLowerCase()}@${USERNAME_EMAIL_DOMAIN}`;
-}
+import { magicLinkOutcome, signInErrorKey, toAuthEmail, type MagicLinkOutcome, type SignInErrorKey } from './signIn';
 
 export type SignInResult = { ok: true } | { ok: false; reason: SignInErrorKey | 'notPersisted' };
 
 /** Signs in with a password. On success the session is stored and the app moves on by itself. */
 export async function signInWithPassword(identifier: string, password: string): Promise<SignInResult> {
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({ email: await toAuthEmail(identifier), password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email: toAuthEmail(identifier), password });
     if (error) return { ok: false, reason: signInErrorKey(error) };
     let session: Session | null = data.session;
     if (!session) session = (await supabase.auth.getSession()).data.session;
