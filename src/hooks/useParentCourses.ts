@@ -1,5 +1,4 @@
-import { useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
 import type {
@@ -47,11 +46,8 @@ export type ParentCourseInvoiceRow = {
 };
 
 export function useParentCourses(parentUserId: string | undefined) {
-  const queryClient = useQueryClient();
-  const key = ['parent-courses', parentUserId] as const;
-
   const query = useQuery({
-    queryKey: key,
+    queryKey: ['parent-courses', parentUserId],
     queryFn: async (): Promise<{ enrollments: ParentCourseRow[]; invoices: ParentCourseInvoiceRow[] }> => {
       if (!parentUserId) return { enrollments: [], invoices: [] };
 
@@ -68,36 +64,36 @@ export function useParentCourses(parentUserId: string | undefined) {
         .select('id, full_name_en, full_name_ar')
         .in('id', childIds);
 
-      const { data: enrollmentData, error: enrollErr } = await supabase
-        .from('course_enrollments')
-        .select('id, course_id, child_id, status')
-        .in('child_id', childIds)
-        .eq('status', 'active');
-      if (enrollErr) throw enrollErr;
-      const enrollments = (enrollmentData ?? []) as Pick<CourseEnrollmentsRow, 'id' | 'course_id' | 'child_id' | 'status'>[];
-      if (enrollments.length === 0) return { enrollments: [], invoices: [] };
-
-      const courseIds = [...new Set(enrollments.map((e) => e.course_id))];
-      const { data: courseData } = await supabase
-        .from('courses')
-        .select('id, title_en, title_ar, category, price_per_month, schedule_days, schedule_time_start, schedule_time_end, status, teacher_user_id')
-        .in('id', courseIds);
-      const courses = (courseData ?? []) as Pick<
-        CoursesRow,
-        'id' | 'title_en' | 'title_ar' | 'category' | 'price_per_month' | 'schedule_days' | 'schedule_time_start' | 'schedule_time_end' | 'status' | 'teacher_user_id'
-      >[];
-
-      const teacherIds = [...new Set(courses.map((c) => c.teacher_user_id).filter(Boolean))] as string[];
-      const [teachersRes, invoicesRes] = await Promise.all([
-        teacherIds.length
-          ? supabase.from('users').select('id, name_en, name_ar').in('id', teacherIds)
-          : Promise.resolve({ data: [], error: null }),
+      // The active courses, and every bill (a course the child left can still have one to pay).
+      const [enrollRes, invoicesRes] = await Promise.all([
+        supabase.from('course_enrollments').select('id, course_id, child_id, status').in('child_id', childIds).eq('status', 'active'),
         supabase
           .from('course_invoices')
           .select('id, course_id, enrollment_id, child_id, billing_month, amount, currency, status, due_date, paid_at, invoice_number')
           .in('child_id', childIds)
           .order('billing_month', { ascending: false }),
       ]);
+      if (enrollRes.error) throw enrollRes.error;
+      if (invoicesRes.error) throw invoicesRes.error;
+      const enrollments = (enrollRes.data ?? []) as Pick<CourseEnrollmentsRow, 'id' | 'course_id' | 'child_id' | 'status'>[];
+      const invoices = (invoicesRes.data ?? []) as Omit<CourseInvoicesRow, 'nursery_id' | 'notes' | 'created_at' | 'updated_at'>[];
+      if (enrollments.length === 0 && invoices.length === 0) return { enrollments: [], invoices: [] };
+
+      const courseIds = [...new Set([...enrollments, ...invoices].map((e) => e.course_id))];
+      const { data: courseData, error: courseErr } = await supabase
+        .from('courses')
+        .select('id, title_en, title_ar, category, price_per_month, schedule_days, schedule_time_start, schedule_time_end, status, teacher_user_id')
+        .in('id', courseIds);
+      if (courseErr) throw courseErr;
+      const courses = (courseData ?? []) as Pick<
+        CoursesRow,
+        'id' | 'title_en' | 'title_ar' | 'category' | 'price_per_month' | 'schedule_days' | 'schedule_time_start' | 'schedule_time_end' | 'status' | 'teacher_user_id'
+      >[];
+
+      const teacherIds = [...new Set(courses.map((c) => c.teacher_user_id).filter(Boolean))] as string[];
+      const teachersRes = teacherIds.length
+        ? await supabase.from('users').select('id, name_en, name_ar').in('id', teacherIds)
+        : { data: [] };
 
       const childMap = new Map(
         ((children ?? []) as Pick<ChildrenRow, 'id' | 'full_name_en' | 'full_name_ar'>[]).map((c) => [c.id, c]),
@@ -106,7 +102,6 @@ export function useParentCourses(parentUserId: string | undefined) {
       const teacherMap = new Map(
         ((teachersRes.data ?? []) as Pick<UsersRow, 'id' | 'name_en' | 'name_ar'>[]).map((u) => [u.id, u]),
       );
-      const invoices = (invoicesRes.data ?? []) as Omit<CourseInvoicesRow, 'nursery_id' | 'notes' | 'created_at' | 'updated_at'>[];
 
       const enrollmentRows: ParentCourseRow[] = enrollments.map((e) => {
         const child = childMap.get(e.child_id);
@@ -147,20 +142,6 @@ export function useParentCourses(parentUserId: string | undefined) {
     },
     enabled: Boolean(parentUserId),
   });
-
-  useEffect(() => {
-    if (!parentUserId) return;
-    const channel = supabase
-      .channel(`parent-courses-${parentUserId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'course_enrollments' }, () =>
-        void queryClient.invalidateQueries({ queryKey: key }),
-      )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'course_invoices' }, () =>
-        void queryClient.invalidateQueries({ queryKey: key }),
-      )
-      .subscribe();
-    return () => { void supabase.removeChannel(channel); };
-  }, [parentUserId, queryClient, key]);
 
   return query;
 }

@@ -5,7 +5,10 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-do
 import { Button } from '@/components/ui/button';
 import { TableCard, TableEmpty, TableLoading, TablePagination } from '@/components/ui/DataTable';
 import { FilterBar, SearchInput } from '@/components/ui/FilterBar';
+import { FilterChips } from '@/components/ui/FilterChips';
 import { FilterField } from '@/components/ui/FilterField';
+import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FamilyDiscountsCard } from '@/features/discounts/FamilyDiscountsCard';
@@ -18,7 +21,6 @@ import { usePagination } from '@/hooks/usePagination';
 import { useParentChildren } from '@/hooks/useParentChildren';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { invoiceItemDescription, invoiceRawItems } from '@/lib/invoiceItems';
-import { cn } from '@/lib/utils';
 
 type StatusFilter = 'all' | 'open' | 'paid';
 type Sort = 'due_soon' | 'newest';
@@ -59,6 +61,14 @@ export function ParentInvoicesPage() {
   // The figures at the top count the chosen child's invoices, whatever the status filter.
   const forChild = useMemo(() => (childId ? all.filter((i) => i.childIds.includes(childId)) : all), [all, childId]);
   const summary = useMemo(() => billingSummary(forChild), [forChild]);
+  const statusCounts = useMemo(
+    () => ({
+      all: forChild.length,
+      open: forChild.filter((i) => i.status === 'pending' || i.status === 'overdue').length,
+      paid: forChild.filter((i) => i.status === 'paid').length,
+    }),
+    [forChild],
+  );
 
   const shown = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -105,40 +115,34 @@ export function ParentInvoicesPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-4 pb-28">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-on-surface">{t('parent.invoices.title')}</h1>
-        <Button asChild variant="ghost" size="sm">
-          <Link to="/parent/payment-record">
-            <span className="material-symbols-outlined me-1 text-base" aria-hidden>history</span>
-            {t('parent.paymentRecord.title')}
-          </Link>
-        </Button>
-      </div>
+    <div className="mx-auto w-full max-w-6xl space-y-4 pb-28">
+      <PageHeader
+        icon="receipt_long"
+        title={t('parent.invoices.title')}
+        description={t('parent.invoices.description')}
+        actions={
+          <Button asChild variant="outline">
+            <Link to="/parent/payment-record">
+              <MaterialSymbol name="history" size="text-base" className="me-1" />
+              {t('parent.paymentRecord.title')}
+            </Link>
+          </Button>
+        }
+      />
 
       {billing.isLoading ? <Skeleton className="h-36 rounded-xl" /> : <BalanceHero summary={summary} onPay={pay} />}
-
-      <div role="tablist" aria-label={t('parentBilling.list.filterLabel')} className="flex gap-2 overflow-x-auto">
-        {STATUS_FILTERS.map((value) => (
-          <button
-            key={value}
-            type="button"
-            role="tab"
-            aria-selected={status === value}
-            onClick={() => setStatus(value)}
-            className={cn(
-              'shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
-              status === value ? 'border-primary bg-primary text-primary-foreground' : 'border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-container-lowest',
-            )}
-          >
-            {t(`parentBilling.list.filters.${value}`)}
-          </button>
-        ))}
-      </div>
 
       <TableCard
         title={t(`parentBilling.list.filters.${status}`)}
         count={t('parent.invoices.resultsCount', { count: shown.length })}
+        actions={
+          <FilterChips
+            label={t('parentBilling.list.filterLabel')}
+            value={status}
+            onChange={setStatus}
+            options={STATUS_FILTERS.map((value) => ({ value, label: t(`parentBilling.list.filters.${value}`), count: statusCounts[value] }))}
+          />
+        }
         filters={
           all.length ? (
             <FilterBar onClear={clearFilters} canClear={filtersActive}>

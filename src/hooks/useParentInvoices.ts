@@ -180,6 +180,7 @@ export function useParentInvoices({ parentId, childId, status, sort }: UseParent
     data,
     allData: query.data ?? [],
     isLoading: query.isLoading,
+    isError: query.isError,
     refetch: query.refetch,
   };
 }

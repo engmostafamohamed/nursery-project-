@@ -50,7 +50,7 @@ export function useParentMedia(params: {
 }) {
   const query = useQuery({
     queryKey: ['parent-media', params.parentId, params.nurseryId, params.filters],
-    queryFn: async (): Promise<{ items: ParentMediaItem[]; children: { id: string; name: string }[] }> => {
+    queryFn: async (): Promise<{ items: ParentMediaItem[]; children: { id: string; nameAr: string | null; nameEn: string | null }[] }> => {
       if (!params.parentId || !params.nurseryId) return { items: [], children: [] };
 
       const linksRes = await supabase.from('parent_children').select('child_id').eq('parent_id', params.parentId);
@@ -157,7 +157,7 @@ export function useParentMedia(params: {
 
       return {
         items,
-        children: children.map((c) => ({ id: c.id, name: c.full_name_ar || c.full_name_en || 'Child' })),
+        children: children.map((c) => ({ id: c.id, nameAr: c.full_name_ar, nameEn: c.full_name_en })),
       };
     },
     enabled: Boolean(params.parentId && params.nurseryId),
@@ -165,9 +165,12 @@ export function useParentMedia(params: {
 
   const stats = useMemo(() => {
     const items = query.data?.items ?? [];
-    const currentMonth = new Date().getMonth();
-    const thisMonthCount = items.filter((m) => new Date(m.capturedAt).getMonth() === currentMonth).length;
-    const lastUploaded = items.length ? items[0].capturedAt : null;
+    const now = new Date();
+    const thisMonthCount = items.filter((m) => {
+      const d = new Date(m.capturedAt);
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    }).length;
+    const lastUploaded = items.reduce<string | null>((latest, m) => (!latest || m.capturedAt > latest ? m.capturedAt : latest), null);
     return { total: items.length, thisMonthCount, lastUploaded };
   }, [query.data]);
 

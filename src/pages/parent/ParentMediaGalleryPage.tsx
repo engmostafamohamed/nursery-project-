@@ -3,19 +3,28 @@ import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { ParentMediaDetailModal } from '@/components/parent/ParentMediaDetailModal';
-import { EmptyState } from '@/components/ui/EmptyState';
+import { TableCard, TableEmpty } from '@/components/ui/DataTable';
+import { FilterBar } from '@/components/ui/FilterBar';
+import { FilterField } from '@/components/ui/FilterField';
 import { Input } from '@/components/ui/input';
+import { LoadError } from '@/components/ui/LoadError';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { StatTile } from '@/components/ui/StatTile';
 import { PARENT_MEDIA_ACTIVITY_FILTER_KEYS } from '@/constants/mediaActivities';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useParentMedia, type ParentMediaItem, type ParentMediaSort } from '@/hooks/useParentMedia';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { localName } from '@/lib/bilingualName';
 import { formatDate } from '@/lib/datetime';
 import { supabase } from '@/lib/supabase';
 
+/** The photos and videos the nursery shared of the family's children; a notice opens one (?id=). */
 export function ParentMediaGalleryPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isAr = i18n.language.startsWith('ar');
   const { user } = useAuthSession();
   const { data: profile } = useUserProfile(user?.id);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -26,6 +35,7 @@ export function ParentMediaGalleryPage() {
   const [activityType, setActivityType] = useState('');
   const [sort, setSort] = useState<ParentMediaSort>('newest');
   const [activeItem, setActiveItem] = useState<ParentMediaItem | null>(null);
+  const filtered = Boolean(childId || fromDate || toDate || activityType);
 
   const media = useParentMedia({
     parentId: user?.id,
@@ -39,6 +49,7 @@ export function ParentMediaGalleryPage() {
     },
   });
 
+  // Opening the gallery reads the "new photos" notices.
   useEffect(() => {
     if (!user?.id) return;
     void supabase
@@ -63,123 +74,133 @@ export function ParentMediaGalleryPage() {
   useEffect(() => {
     if (!activeItem) return;
     void media.markViewed(activeItem);
+    // Only when another item opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeItem]);
 
-  const activeIndex = useMemo(
-    () => (activeItem ? media.media.findIndex((m) => m.id === activeItem.id) : -1),
-    [activeItem, media.media],
-  );
+  const activeIndex = useMemo(() => (activeItem ? media.media.findIndex((m) => m.id === activeItem.id) : -1), [activeItem, media.media]);
+  const open = (item: ParentMediaItem) => {
+    setActiveItem(item);
+    setSearchParams((prev) => {
+      prev.set('id', item.id);
+      return prev;
+    });
+  };
+  const clearFilters = () => {
+    setChildId('');
+    setFromDate('');
+    setToDate('');
+    setActivityType('');
+  };
 
   return (
-    <div className="space-y-4">
-      <h1 className="flex items-center gap-2 text-lg font-semibold text-on-surface">
-        <MaterialSymbol name="photo_library" className="text-primary" size="text-2xl" />
-        {t('parent.media.galleryTitle')}
-      </h1>
+    <div className="mx-auto w-full max-w-6xl space-y-4 pb-28">
+      <PageHeader icon="photo_library" title={t('parent.media.galleryTitle')} description={t('parent.media.description')}>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatTile icon="photo_library" label={t('parent.media.stats.total')} value={media.stats.total} />
+          <StatTile icon="calendar_month" label={t('parent.media.stats.thisMonth')} value={media.stats.thisMonthCount} tone="success" />
+          <StatTile icon="fiber_new" label={t('parent.media.stats.new')} value={media.unseenCount} tone={media.unseenCount ? 'warning' : 'neutral'} />
+          <StatTile
+            icon="schedule"
+            label={t('parent.media.stats.lastUploaded')}
+            value={media.stats.lastUploaded ? formatDate(media.stats.lastUploaded, { day: 'numeric', month: 'short' }) : '—'}
+            tone="neutral"
+          />
+        </div>
+      </PageHeader>
 
-      <div className="grid grid-cols-3 gap-2">
-        <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3">
-          <p className="text-xs">{t('parent.media.stats.total')}</p>
-          <p className="text-base font-semibold">{media.stats.total}</p>
-        </div>
-        <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3">
-          <p className="text-xs">{t('parent.media.stats.thisMonth')}</p>
-          <p className="text-base font-semibold">{media.stats.thisMonthCount}</p>
-        </div>
-        <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3">
-          <p className="text-xs">{t('parent.media.stats.lastUploaded')}</p>
-          <p className="text-xs font-semibold">
-            {media.stats.lastUploaded ? formatDate(media.stats.lastUploaded) : '-'}
-          </p>
-        </div>
-      </div>
-
-      <div className="grid gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest p-3 md:grid-cols-5">
-        <Select
-          className="h-11 rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm"
-          value={childId}
-          onChange={(e) => setChildId(e.target.value)}
-        >
-          <option value="">{t('parent.childSelector.allChildren')}</option>
-          {media.children.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </Select>
-        <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
-        <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
-        <Select
-          className="h-11 rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm"
-          value={activityType}
-          onChange={(e) => setActivityType(e.target.value)}
-        >
-          <option value="">{t('parent.media.filterActivity')}</option>
-          {PARENT_MEDIA_ACTIVITY_FILTER_KEYS.map((k) => (
-            <option key={k} value={k}>
-              {t(`media.activity.${k}`)}
-            </option>
-          ))}
-        </Select>
-        <Select
-          className="h-11 rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm"
-          value={sort}
-          onChange={(e) => setSort(e.target.value as ParentMediaSort)}
-        >
-          <option value="newest">{t('parent.media.sortNewest')}</option>
-          <option value="oldest">{t('parent.media.sortOldest')}</option>
-          <option value="most_viewed">{t('parent.media.sortMostViewed')}</option>
-        </Select>
-      </div>
-
-      {!media.isLoading && !media.media.length ? (
-        <EmptyState icon="photo_library" title={t('parent.media.emptyTitle')} description={t('parent.media.emptyDescription')} />
-      ) : (
-        <div className="columns-2 gap-3 md:columns-3">
-          {media.media.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => {
-                setActiveItem(item);
-                setSearchParams((prev) => {
-                  prev.set('id', item.id);
-                  return prev;
-                });
-              }}
-              className="mb-3 w-full break-inside-avoid rounded-xl border border-outline-variant bg-surface-container-lowest p-2 text-start"
-            >
-              <div className="overflow-hidden rounded-lg">
-                {item.fileType === 'photo' ? (
-                  <img
-                  src={item.gridSignedUrl}
-                  alt={item.caption ?? item.id}
-                  className="w-full object-cover"
-                  loading="lazy"
-                  decoding="async"
-                />
-                ) : (
-                  <video src={item.signedUrl} className="w-full object-cover" />
-                )}
-              </div>
-              <p className="mt-2 truncate text-xs text-on-surface">{(item.caption ?? '-').slice(0, 50)}</p>
-              <div className="mt-1 flex items-center justify-between text-[11px] text-on-surface-variant">
-                <span>{formatDate(item.capturedAt)}</span>
-                <span className="inline-flex items-center gap-1">
-                  {item.viewedByParent ? <MaterialSymbol name="visibility" size="text-sm" /> : null}
-                  <MaterialSymbol name="download" size="text-sm" />
-                </span>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
+      <TableCard
+        title={t('parent.media.listTitle')}
+        count={t('parent.media.count', { count: media.media.length })}
+        filters={
+          <FilterBar onClear={clearFilters} canClear={filtered}>
+            {media.children.length > 1 ? (
+              <FilterField label={t('parent.media.filterChild')} className="w-full sm:w-52">
+                <Select value={childId} onChange={(e) => setChildId(e.target.value)}>
+                  <option value="">{t('parent.childSelector.allChildren')}</option>
+                  {media.children.map((c) => (
+                    <option key={c.id} value={c.id}>{localName(c.nameAr, c.nameEn, isAr)}</option>
+                  ))}
+                </Select>
+              </FilterField>
+            ) : null}
+            <FilterField label={t('parent.media.from')} className="w-[calc(50%-0.375rem)] sm:w-44">
+              <Input type="date" value={fromDate} max={toDate || undefined} onChange={(e) => setFromDate(e.target.value)} />
+            </FilterField>
+            <FilterField label={t('parent.media.to')} className="w-[calc(50%-0.375rem)] sm:w-44">
+              <Input type="date" value={toDate} min={fromDate || undefined} onChange={(e) => setToDate(e.target.value)} />
+            </FilterField>
+            <FilterField label={t('parent.media.filterActivity')} className="w-full sm:w-48">
+              <Select value={activityType} onChange={(e) => setActivityType(e.target.value)}>
+                <option value="">{t('parent.media.allActivities')}</option>
+                {PARENT_MEDIA_ACTIVITY_FILTER_KEYS.map((k) => (
+                  <option key={k} value={k}>{t(`media.activity.${k}`)}</option>
+                ))}
+              </Select>
+            </FilterField>
+            <FilterField label={t('parent.media.sort')} className="w-full sm:w-44">
+              <Select value={sort} onChange={(e) => setSort(e.target.value as ParentMediaSort)}>
+                <option value="newest">{t('parent.media.sortNewest')}</option>
+                <option value="oldest">{t('parent.media.sortOldest')}</option>
+                <option value="most_viewed">{t('parent.media.sortMostViewed')}</option>
+              </Select>
+            </FilterField>
+          </FilterBar>
+        }
+      >
+        {media.isError ? (
+          <LoadError inset message={t('parent.media.loadError')} onRetry={() => void media.refetch()} />
+        ) : media.isLoading ? (
+          <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 sm:p-5 lg:grid-cols-4">
+            {Array.from({ length: 8 }, (_, k) => <Skeleton key={k} className="aspect-square w-full rounded-xl" />)}
+          </div>
+        ) : !media.media.length ? (
+          <TableEmpty
+            icon={filtered ? 'filter_alt_off' : 'photo_library'}
+            title={filtered ? t('parent.media.noMatch') : t('parent.media.emptyTitle')}
+            description={filtered ? undefined : t('parent.media.emptyDescription')}
+          />
+        ) : (
+          <ul className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 sm:p-5 lg:grid-cols-4">
+            {media.media.map((item) => (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  onClick={() => open(item)}
+                  className="group relative block aspect-square w-full overflow-hidden rounded-xl border border-outline-variant bg-surface-high text-start"
+                  data-testid="media-tile"
+                >
+                  {item.fileType === 'photo' ? (
+                    <img src={item.gridSignedUrl} alt={item.caption ?? ''} className="h-full w-full object-cover transition-transform group-hover:scale-105" loading="lazy" decoding="async" />
+                  ) : (
+                    <>
+                      <video src={item.signedUrl} preload="metadata" muted className="h-full w-full object-cover" />
+                      <span className="absolute inset-0 flex items-center justify-center">
+                        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-black/50 text-white">
+                          <MaterialSymbol name="play_arrow" size="text-2xl" />
+                        </span>
+                      </span>
+                    </>
+                  )}
+                  {!item.viewedByParent ? (
+                    <span className="absolute start-2 top-2 rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold text-primary-foreground">{t('parent.media.new')}</span>
+                  ) : null}
+                  <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2 pt-6 text-white">
+                    {item.caption ? <span className="block truncate text-xs font-medium">{item.caption}</span> : null}
+                    <span className="block text-[11px] opacity-90">{formatDate(item.capturedAt, { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </TableCard>
 
       <ParentMediaDetailModal
         open={Boolean(activeItem)}
         media={activeItem}
-        onOpenChange={(open) => {
-          if (!open) {
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
             setActiveItem(null);
             setSearchParams((prev) => {
               prev.delete('id');

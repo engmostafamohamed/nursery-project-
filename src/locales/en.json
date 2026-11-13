@@ -5130,7 +5130,8 @@
       "monthsUnpaid": "{{count}} month(s) with dues",
       "awaitingApproval": "{{count}} payment(s) awaiting finance approval",
       "totalInvoiced": "Total invoiced",
-      "invoiceCount": "{{count}} invoice(s)",
+      "invoiceCount_one": "{{count}} invoice",
+      "invoiceCount_other": "{{count}} invoices",
       "inReviewHint": "Sent and waiting for the nursery to confirm",
       "byChild": "By child",
       "familyCharges": "Family charges",
@@ -5142,7 +5143,11 @@
       "byMonth": "By month",
       "statusPaid": "Paid",
       "statusUnpaid": "Has dues",
-      "pending": "Awaiting approval"
+      "pending": "Awaiting approval",
+      "description": "Every invoice and payment, by child, by kind and by month.",
+      "child": "Child",
+      "allChildren": "All children",
+      "loadError": "Could not load your invoices."
     },
     "inbox": {
       "unreadLabel": "Unread",
@@ -5399,7 +5404,8 @@
       "totalDue": "Total Due",
       "nextDue": "Next Payment Due",
       "emptyTitle": "No invoices yet.",
-      "emptyDescription": "No invoices yet."
+      "emptyDescription": "No invoices yet.",
+      "description": "What you owe, what is paid, and each invoice with its items."
     },
     "financial": {
       "breakdownTitle": "Still owed per child",
@@ -5451,8 +5457,8 @@
     },
     "media": {
       "galleryTitle": "Media Gallery",
-      "filterChild": "Filter by child",
-      "filterActivity": "Activity type",
+      "filterChild": "Child",
+      "filterActivity": "Activity",
       "sortNewest": "Newest first",
       "sortOldest": "Oldest first",
       "sortMostViewed": "Most viewed",
@@ -5471,10 +5477,22 @@
       "viewAll": "View All",
       "noRecent": "No photos yet",
       "stats": {
-        "total": "Total Photos/Videos",
+        "total": "Photos & videos",
         "thisMonth": "This Month",
-        "lastUploaded": "Last Uploaded"
-      }
+        "lastUploaded": "Last Uploaded",
+        "new": "Not seen yet"
+      },
+      "description": "Photos and videos the teachers shared of your children. New ones are marked.",
+      "listTitle": "Photos & videos",
+      "count_one": "{{count}} item",
+      "count_other": "{{count}} items",
+      "from": "From",
+      "to": "To",
+      "sort": "Order",
+      "allActivities": "All activities",
+      "new": "New",
+      "noMatch": "Nothing matches these filters.",
+      "loadError": "Could not load the photos."
     },
     "reports": {
       "publishedAtTime": "Published {{time}}",
@@ -5571,12 +5589,9 @@
     },
     "courses": {
       "title": "Courses",
-      "subtitle": "{{count}} active enrollment(s)",
       "loadError": "Could not load courses.",
       "tabCourses": "Enrolled courses",
       "tabInvoices": "Invoices",
-      "totalEnrolled": "{{count}} enrolled",
-      "pendingInvoices": "{{count}} payment(s) pending",
       "emptyTitle": "No courses enrolled",
       "emptyDescription": "Your children are not enrolled in any courses yet.",
       "emptyInvoicesTitle": "No invoices",
@@ -5586,7 +5601,19 @@
         "paid": "Paid",
         "overdue": "Overdue",
         "waived": "Waived"
-      }
+      },
+      "description": "The courses your children take, when they meet, and their monthly bills.",
+      "stats": {
+        "courses": "Courses",
+        "monthly": "A month",
+        "openBills": "Bills to pay",
+        "openAmount": "To pay"
+      },
+      "payHint": "Course bills are paid at the nursery office; they show as paid here once the office records it.",
+      "when": "When",
+      "teacher": "Teacher",
+      "paidOn": "paid {{date}}",
+      "dueOn": "due {{date}}"
     }
   },
   "teacher": {
@@ -6032,33 +6059,26 @@
   "milestones": {
     "recordTitle": "Record Milestone",
     "listTitle": "Milestones",
-    "parentTitle": "Child Milestones",
     "recordNew": "Record Milestone",
     "child": "Child",
     "selectChild": "Select child",
     "allChildren": "All children",
-    "category": "Category",
-    "allCategories": "All categories",
-    "milestoneText": "Milestone text",
+    "category": "Area",
+    "allCategories": "All areas",
+    "milestoneText": "What the child did",
     "achievedAt": "Date achieved",
     "notesOptional": "Notes (optional)",
-    "photoUrl": "Photo URL (optional)",
-    "shareWithParent": "Share with parent",
+    "shareWithParent": "Share with the family",
     "save": "Save milestone",
     "saved": "Milestone saved.",
     "updated": "Milestone updated.",
     "edit": "Edit",
     "delete": "Delete",
-    "toggleShare": "Toggle Share",
-    "sharedAll": "Shared filter: all",
     "sharedYes": "Shared",
     "sharedNo": "Not shared",
     "emptyTitle": "No milestones yet.",
     "emptyDescription": "Start recording your first milestone.",
     "share": "Share",
-    "downloadCard": "Download branded card",
-    "downloaded": "Milestone card downloaded.",
-    "validationRequired": "Child and milestone text are required.",
     "categories": {
       "motor_skills": "Motor Skills",
       "social": "Social",
@@ -6074,6 +6094,94 @@
       "language": "Used 3-word sentences",
       "self_care": "Put on shoes independently",
       "creative": "Drew a person with 5 body parts"
+    },
+    "editTitle": "Edit milestone",
+    "teacherDescription": "What the children of your classes learned. Share one and the family is told right away.",
+    "sharedNow": "Shared with the family. They were told.",
+    "hidden": "The family no longer sees it.",
+    "shareWithFamily": "Share with family",
+    "hideFromFamily": "Hide from family",
+    "removeTitle": "Remove this milestone?",
+    "removeBody": "It leaves your list and the family's.",
+    "removed": "Milestone removed.",
+    "parent": {
+      "title": "Milestones",
+      "description": "What your child learned at the nursery, as the teachers share it. You get a notice for each new one.",
+      "stats": {
+        "total": "Milestones",
+        "thisMonth": "This month",
+        "areas": "Areas of growth",
+        "latest": "Latest"
+      },
+      "timeline": "Timeline",
+      "timelineHint": "Newest first. Share any milestone as a picture.",
+      "count_one": "{{count}} milestone",
+      "count_other": "{{count}} milestones",
+      "loadError": "Could not load the milestones.",
+      "emptyTitle": "No milestones yet",
+      "emptyDescription": "When a teacher shares something new your child did, it shows here and you get a notice.",
+      "noMatch": "No milestones match these filters.",
+      "areasOf": "{{count}} of 6"
+    },
+    "filters": {
+      "from": "From",
+      "to": "To",
+      "shared": "Family",
+      "sharedAll": "All"
+    },
+    "card": {
+      "heading": "A new milestone",
+      "footer": "Shared from the nursery app",
+      "downloaded": "Picture saved to your downloads.",
+      "failed": "Could not make the picture. Try again."
+    },
+    "form": {
+      "description": "Record what the child did. When it is shared, the family gets a notice and sees it in the app.",
+      "suggestions": "Suggestions:",
+      "photo": "Photo (optional)",
+      "photoAdd": "Add a photo",
+      "photoChange": "Change photo",
+      "photoRemove": "Remove",
+      "shareHint": "The family is told the first time you share it.",
+      "errors": {
+        "child": "Choose the child.",
+        "text": "Write what the child did.",
+        "date": "Choose a day that has passed."
+      }
+    },
+    "errors": {
+      "forbidden": "Only the child's teachers and the nursery's admins can do this.",
+      "not_found": "This milestone no longer exists.",
+      "child_required": "Choose the child.",
+      "text_required": "Write what the child did.",
+      "too_long": "Keep it shorter (200 letters, notes 300).",
+      "category_invalid": "Choose an area.",
+      "date_invalid": "The day must be between the child's birth and today.",
+      "photo_invalid": "The photo did not upload; try again.",
+      "network": "No connection. Try again.",
+      "failed": "Something went wrong. Try again."
+    },
+    "templates": {
+      "a12": [
+        "Walked alone",
+        "Said first words",
+        "Waved bye-bye",
+        "Drank from a cup",
+        "Climbed the stairs"
+      ],
+      "a23": [
+        "Used the potty",
+        "Said two-word phrases",
+        "Shared toys",
+        "Jumped with both feet"
+      ],
+      "a34": [
+        "Counted to 10",
+        "Named the colours",
+        "Dressed alone",
+        "Used scissors",
+        "Drew a person"
+      ]
     }
   },
   "staff": {
@@ -8966,6 +9074,14 @@
       "title": "Tasks not done on {{date}}",
       "body_one": "{{count}} task was not done today. Open the board to see which.",
       "body_other": "{{count}} tasks were not done today. Open the board to see which."
+    },
+    "quarterly_report_sent": {
+      "title": "{{child}}'s term report",
+      "body": "The {{term}} report is ready: the grades and the teacher's comment."
+    },
+    "course_invoice_new": {
+      "title": "Course bill: {{course}}",
+      "body": "{{child}}'s {{course}} for {{month}}: {{amount}}, due {{due_date}}."
     }
   },
   "qr": {
@@ -11873,5 +11989,19 @@
       "network": "No connection. Try again.",
       "failed": "Something went wrong. Try again."
     }
+  },
+  "termReports": {
+    "period": "{{from}} – {{to}}",
+    "sentOn": "sent {{date}}",
+    "print": "Print",
+    "attendanceDays": "{{present}} of {{total}} days",
+    "stats": {
+      "reports": "Reports",
+      "latest": "Latest",
+      "graded": "Graded items"
+    },
+    "list": "The reports",
+    "loadError": "Could not load the reports.",
+    "of": "{{part}} of {{whole}}"
   }
 }

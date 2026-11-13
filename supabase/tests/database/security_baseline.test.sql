@@ -1,5 +1,6 @@
--- Database test · the rules every change keeps: each public table has row level security on; each
--- function that runs as its owner fixes its search path; the signed-out reach none of the children's
+-- Database test · the rules every change keeps: each public table has row level security on and
+-- sends live updates (but the logs kept out on purpose); each function that runs as its owner fixes
+-- its search path; the signed-out reach none of the children's
 -- routines and milestones, no family's email from a username, and only one nursery's class names
 -- for the inquiry form; the staff reach the routines of their nursery only. Rolled back.
 --
@@ -9,7 +10,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(9);
+select plan(10);
 
 select is(
   (select coalesce(string_agg(c.relname, ', ' order by c.relname), '-')
@@ -25,6 +26,15 @@ select is(
   '-', 'every function that runs as its owner fixes its search path');
 
 select ok(not exists (select 1 from pg_proc where proname = 'auth_email_for_username'), 'no function hands out an email for a username');
+
+select is(
+  (select coalesce(string_agg(c.relname, ', ' order by c.relname), '-')
+     from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relkind = 'r'
+      and c.relname not in (select public.realtime_skipped_tables())
+      and not exists (select 1 from pg_publication_tables p
+                       where p.pubname = 'supabase_realtime' and p.schemaname = 'public' and p.tablename = c.relname)),
+  '-', 'every table the screens read sends live updates (supabase_realtime)');
 
 -- A nursery with a class, a child and a routine.
 insert into public.nurseries (id, name_ar, name_en) values

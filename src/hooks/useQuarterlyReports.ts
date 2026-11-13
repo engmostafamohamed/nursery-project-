@@ -311,6 +311,7 @@ export async function fetchReportGrades(reportId: string): Promise<Record<string
 export type ParentQuarterlyReport = {
   report: {
     id: string;
+    child_id: string;
     term_label: string;
     period_from: string | null;
     period_to: string | null;
@@ -337,16 +338,18 @@ export function useParentQuarterlyReports(parentId: string | undefined) {
       const childIds = ((links.data ?? []) as { child_id: string }[]).map((r) => r.child_id);
       if (!childIds.length) return [];
 
-      const { data: reps } = await supabase
+      const { data: reps, error } = await supabase
         .from('quarterly_reports')
         .select(
-          'id, template_id, term_label, period_from, period_to, attendance_present, attendance_total, comment, sent_at, children (full_name_en, full_name_ar)',
+          'id, child_id, template_id, term_label, period_from, period_to, attendance_present, attendance_total, comment, sent_at, children (full_name_en, full_name_ar)',
         )
         .in('child_id', childIds)
         .eq('status', 'sent')
         .order('sent_at', { ascending: false });
+      if (error) throw error;
       const reports = (reps ?? []) as Array<{
         id: string;
+        child_id: string;
         template_id: string;
         term_label: string;
         period_from: string | null;
@@ -359,19 +362,28 @@ export function useParentQuarterlyReports(parentId: string | undefined) {
       }>;
       if (!reports.length) return [];
 
-      const out: ParentQuarterlyReport[] = [];
-      const templateCache = new Map<string, QuarterlyTemplate | null>();
-      for (const r of reports) {
-        let tpl = templateCache.get(r.template_id);
-        if (tpl === undefined) {
-          tpl = await loadTemplateById(r.template_id);
-          templateCache.set(r.template_id, tpl);
-        }
-        if (!tpl) continue;
+      // Each template once, and every report's grades in one request.
+      const templateIds = [...new Set(reports.map((r) => r.template_id))];
+      const [templates, gradesRes] = await Promise.all([
+        Promise.all(templateIds.map(loadTemplateById)),
+        supabase.from('quarterly_report_grades').select('report_id, item_id, grade_code').in('report_id', reports.map((r) => r.id)),
+      ]);
+      if (gradesRes.error) throw gradesRes.error;
+      const templateOf = new Map(templateIds.map((id, i) => [id, templates[i]]));
+      const gradesOf = new Map<string, Record<string, string>>();
+      for (const g of (gradesRes.data ?? []) as { report_id: string; item_id: string; grade_code: string | null }[]) {
+        if (!g.grade_code) continue;
+        gradesOf.set(g.report_id, { ...(gradesOf.get(g.report_id) ?? {}), [g.item_id]: g.grade_code });
+      }
+
+      return reports.flatMap((r) => {
+        const tpl = templateOf.get(r.template_id);
+        if (!tpl) return [];
         const c = Array.isArray(r.children) ? r.children[0] : r.children;
-        out.push({
+        return [{
           report: {
             id: r.id,
+            child_id: r.child_id,
             term_label: r.term_label,
             period_from: r.period_from,
             period_to: r.period_to,
@@ -383,10 +395,9 @@ export function useParentQuarterlyReports(parentId: string | undefined) {
             childNameAr: c?.full_name_ar ?? '',
           },
           template: tpl,
-          grades: await fetchReportGrades(r.id),
-        });
-      }
-      return out;
+          grades: gradesOf.get(r.id) ?? {},
+        }];
+      });
     },
     enabled: Boolean(parentId),
   });

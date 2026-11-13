@@ -1,110 +1,87 @@
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 
-import { EmptyState } from '@/components/ui/EmptyState';
-import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
+import { TableCard, TableEmpty, TableLoading } from '@/components/ui/DataTable';
+import { LoadError } from '@/components/ui/LoadError';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { StatTile } from '@/components/ui/StatTile';
+import { attendanceRate, gradedCount, pickReport } from '@/features/term-reports/termReports';
+import { TermReportView } from '@/features/term-reports/TermReportView';
 import { useAuthSession } from '@/hooks/useAuthSession';
-import {
-  useParentQuarterlyReports,
-  type ParentQuarterlyReport,
-} from '@/hooks/useQuarterlyReports';
+import { useParentQuarterlyReports } from '@/hooks/useQuarterlyReports';
 import { localName } from '@/lib/bilingualName';
+import { formatDate } from '@/lib/datetime';
+import { cn } from '@/lib/utils';
 
-function ReportCard({ data, isAr }: { data: ParentQuarterlyReport; isAr: boolean }) {
-  const { t } = useTranslation();
-  const { report, template, grades } = data;
-  const childName = localName(report.childNameAr, report.childNameEn, isAr);
-
-  return (
-    <article className="overflow-hidden rounded-2xl border border-outline-variant bg-surface">
-      <header className="border-b border-outline-variant px-5 py-4">
-        <h2 className="text-lg font-bold text-on-surface">{childName}</h2>
-        <div className="mt-1 flex flex-wrap gap-x-6 gap-y-1 text-sm text-on-surface-variant">
-          <span>{report.term_label}</span>
-          {report.period_from && report.period_to ? (
-            <span>
-              {report.period_from} → {report.period_to}
-            </span>
-          ) : null}
-          {report.attendance_present != null && report.attendance_total != null ? (
-            <span>
-              {t('reports.attendance')}: {report.attendance_present} / {report.attendance_total}
-            </span>
-          ) : null}
-        </div>
-      </header>
-
-      <div className="space-y-3 p-4">
-        {template.sections.map((s) => (
-          <section key={s.id} className="overflow-hidden rounded-xl border border-outline-variant">
-            <div className="bg-success/15 px-4 py-2 text-sm font-semibold text-on-surface">
-              {localName(s.title_ar, s.title_en, isAr)}
-            </div>
-            <div className="divide-y divide-outline-variant">
-              {s.items.map((it) => (
-                <div key={it.id} className="flex items-center gap-3 px-4 py-2">
-                  <span className="flex-1 text-sm text-on-surface">
-                    {localName(it.label_ar, it.label_en, isAr)}
-                  </span>
-                  <span className="w-8 rounded bg-primary/10 py-0.5 text-center text-sm font-bold text-primary">
-                    {grades[it.id] ?? '—'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </section>
-        ))}
-
-        {report.comment ? (
-          <section className="rounded-xl border border-outline-variant p-4">
-            <h3 className="mb-1 text-sm font-semibold text-on-surface">{t('reports.comment')}</h3>
-            <p className="whitespace-pre-line text-sm text-on-surface-variant">{report.comment}</p>
-          </section>
-        ) : null}
-
-        {template.gradeLevels.length ? (
-          <section className="rounded-xl border border-outline-variant p-4">
-            <h3 className="mb-2 text-sm font-semibold text-on-surface">{t('reports.legend')}</h3>
-            <ul className="grid grid-cols-2 gap-1 text-xs text-on-surface-variant sm:grid-cols-4">
-              {template.gradeLevels.map((g) => (
-                <li key={g.id}>
-                  <span className="font-bold text-primary">{g.code}</span> ·{' '}
-                  {localName(g.label_ar, g.label_en, isAr)}
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-      </div>
-    </article>
-  );
-}
-
+/** The term reports the nursery sent; a notice opens one (?report=<id>), else the newest shows. */
 export function ParentQuarterlyReportsPage() {
   const { t, i18n } = useTranslation();
   const isAr = i18n.language.startsWith('ar');
   const { user } = useAuthSession();
+  const [params, setParams] = useSearchParams();
   const query = useParentQuarterlyReports(user?.id);
+  const reports = query.data ?? [];
+  const shown = pickReport(reports, params.get('report'));
+  const rate = shown ? attendanceRate(shown.report.attendance_present, shown.report.attendance_total) : null;
+  const graded = shown ? gradedCount(shown) : null;
 
   return (
-    <div className="mx-auto max-w-3xl lg:max-w-none space-y-4 px-4 py-6">
-      <header>
-        <h1 className="text-xl font-semibold text-on-surface">{t('reports.parentTitle')}</h1>
-        <p className="mt-1 text-sm text-on-surface-variant">{t('reports.parentSubtitle')}</p>
-      </header>
+    <div className="mx-auto w-full max-w-6xl space-y-4 pb-28">
+      <div className="no-print">
+        <PageHeader icon="grading" title={t('reports.parentTitle')} description={t('reports.parentSubtitle')}>
+          {reports.length ? (
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <StatTile icon="description" label={t('termReports.stats.reports')} value={reports.length} />
+              <StatTile icon="event" label={t('termReports.stats.latest')} value={reports[0].report.term_label} tone="neutral" />
+              <StatTile icon="how_to_reg" label={t('reports.attendance')} value={rate != null ? `${rate}%` : '—'} tone={rate == null ? 'neutral' : rate >= 85 ? 'success' : 'warning'} />
+              <StatTile icon="checklist" label={t('termReports.stats.graded')} value={graded ? t('termReports.of', { part: graded.graded, whole: graded.items }) : '—'} tone="primary" />
+            </div>
+          ) : null}
+        </PageHeader>
+      </div>
 
-      {query.isPending ? (
-        <LoadingSkeleton />
-      ) : (query.data ?? []).length === 0 ? (
-        <EmptyState
-          icon="grading"
-          title={t('reports.parentEmptyTitle')}
-          description={t('reports.parentEmptyDesc')}
-        />
+      {query.isError ? (
+        <LoadError message={t('termReports.loadError')} onRetry={() => void query.refetch()} />
+      ) : query.isPending ? (
+        <TableCard title={t('reports.parentTitle')}>
+          <TableLoading rows={4} />
+        </TableCard>
+      ) : !shown ? (
+        <TableCard title={t('reports.parentTitle')}>
+          <TableEmpty icon="grading" title={t('reports.parentEmptyTitle')} description={t('reports.parentEmptyDesc')} />
+        </TableCard>
       ) : (
-        <div className="space-y-5">
-          {(query.data ?? []).map((d) => (
-            <ReportCard key={d.report.id} data={d} isAr={isAr} />
-          ))}
+        <div className={cn('grid gap-4', reports.length > 1 && 'lg:grid-cols-[18rem_minmax(0,1fr)]')}>
+          {reports.length > 1 ? (
+            <nav aria-label={t('termReports.list')} className="no-print">
+              <ul className="space-y-2">
+                {reports.map((r) => {
+                  const selected = r.report.id === shown.report.id;
+                  return (
+                    <li key={r.report.id}>
+                      <button
+                        type="button"
+                        aria-current={selected ? 'true' : undefined}
+                        onClick={() => setParams({ report: r.report.id }, { replace: true })}
+                        className={cn(
+                          'w-full rounded-xl border p-3 text-start transition-colors',
+                          selected ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-outline-variant bg-surface hover:bg-surface-high',
+                        )}
+                        data-testid="term-report-pick"
+                      >
+                        <span className="block text-sm font-semibold text-on-surface">{r.report.term_label}</span>
+                        <span className="block text-xs text-on-surface-variant">
+                          {localName(r.report.childNameAr, r.report.childNameEn, isAr)}
+                          {r.report.sent_at ? ` · ${formatDate(r.report.sent_at, { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+          ) : null}
+          <TermReportView data={shown} />
         </div>
       )}
     </div>

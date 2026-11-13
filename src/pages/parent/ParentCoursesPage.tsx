@@ -1,212 +1,156 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 
-import { Badge } from '@/components/ui/badge';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
+import { StatusPill, TableCard, TableEmpty, TableLoading } from '@/components/ui/DataTable';
+import { FilterChips } from '@/components/ui/FilterChips';
+import { LoadError } from '@/components/ui/LoadError';
+import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { StatTile } from '@/components/ui/StatTile';
+import { TONE_TINT } from '@/components/ui/toneClasses';
+import { BILL_TONE, COURSE_LOOK, courseTotals } from '@/features/parent-courses/parentCourses';
 import { useAuthSession } from '@/hooks/useAuthSession';
-import { useParentCourses, type ParentCourseInvoiceRow } from '@/hooks/useParentCourses';
+import { useParentCourses, type ParentCourseInvoiceRow, type ParentCourseRow } from '@/hooks/useParentCourses';
 import { localName } from '@/lib/bilingualName';
+import { formatDate } from '@/lib/datetime';
+import { formatMoneyAmount } from '@/lib/money';
+import { cn } from '@/lib/utils';
 
-const CATEGORY_COLORS: Record<string, string> = {
-  sport: 'bg-blue-100 text-blue-900',
-  art: 'bg-pink-100 text-pink-900',
-  music: 'bg-purple-100 text-purple-900',
-  academic: 'bg-amber-100 text-amber-900',
-  language: 'bg-green-100 text-green-900',
-  other: 'bg-surface-container text-on-surface',
-};
+type Tab = 'courses' | 'invoices';
 
-const INVOICE_STATUS_COLORS: Record<string, string> = {
-  pending: 'border-outline-variant bg-surface-container-highest text-on-surface-variant',
-  paid: 'border-transparent bg-success/10 text-success',
-  overdue: 'border-transparent bg-error-container text-on-error-container',
-  waived: 'border-transparent bg-surface-container text-on-surface-variant',
-};
-
-function InvoiceCard({ invoice, locale, t }: {
-  invoice: ParentCourseInvoiceRow;
-  locale: string;
-  t: ReturnType<typeof useTranslation>['t'];
-}) {
-  const isAr = locale.startsWith('ar');
-  const courseTitle = localName(invoice.course_title_ar, invoice.course_title_en, isAr);
-  const childName = localName(invoice.child_name_ar, invoice.child_name_en, isAr);
-  const priceFmt = new Intl.NumberFormat(locale, { style: 'currency', currency: invoice.currency });
-  const monthFmt = new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'long' });
+/** The children's courses and their bills; a bill's notice opens the bills (?tab=invoices). */
+export function ParentCoursesPage() {
+  const { t } = useTranslation();
+  const { user } = useAuthSession();
+  const [params, setParams] = useSearchParams();
+  const tab: Tab = params.get('tab') === 'invoices' ? 'invoices' : 'courses';
+  const { data, isPending, isError, refetch } = useParentCourses(user?.id);
+  const courses = data?.enrollments ?? [];
+  const bills = data?.invoices ?? [];
+  const totals = courseTotals(courses, bills);
+  const money = (amount: number) => t('invoice.egpAmount', { amount: formatMoneyAmount(amount) });
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-outline-variant bg-surface-container-lowest p-3">
-      <div className="min-w-0 flex-1 space-y-0.5">
-        <p className="text-sm font-medium text-on-surface">{courseTitle}</p>
-        <p className="text-xs text-on-surface-variant">{childName}</p>
-        <p className="text-xs text-on-surface-variant">
-          {monthFmt.format(new Date(invoice.billing_month + 'T00:00:00'))}
-        </p>
-      </div>
-      <div className="flex flex-col items-end gap-1.5">
-        <p className="text-sm font-semibold text-on-surface">{priceFmt.format(invoice.amount)}</p>
-        <Badge className={`text-xs ${INVOICE_STATUS_COLORS[invoice.status] ?? ''}`}>
-          {t(`parent.courses.invoiceStatus.${invoice.status}`)}
-        </Badge>
-      </div>
+    <div className="mx-auto w-full max-w-6xl space-y-4 pb-28">
+      <PageHeader icon="school" title={t('parent.courses.title')} description={t('parent.courses.description')}>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatTile icon="school" label={t('parent.courses.stats.courses')} value={totals.courses} onClick={() => setParams({}, { replace: true })} active={tab === 'courses'} />
+          <StatTile icon="calendar_month" label={t('parent.courses.stats.monthly')} value={money(totals.monthly)} tone="neutral" />
+          <StatTile
+            icon="receipt_long"
+            label={t('parent.courses.stats.openBills')}
+            value={totals.openBills}
+            tone={totals.openBills ? 'warning' : 'success'}
+            onClick={() => setParams({ tab: 'invoices' }, { replace: true })}
+            active={tab === 'invoices'}
+          />
+          <StatTile icon="payments" label={t('parent.courses.stats.openAmount')} value={money(totals.openAmount)} tone={totals.openAmount ? 'error' : 'success'} />
+        </div>
+      </PageHeader>
+
+      <TableCard
+        title={tab === 'courses' ? t('parent.courses.tabCourses') : t('parent.courses.tabInvoices')}
+        description={tab === 'invoices' ? t('parent.courses.payHint') : undefined}
+        actions={
+          <FilterChips
+            label={t('parent.courses.title')}
+            value={tab}
+            onChange={(next) => setParams(next === 'invoices' ? { tab: 'invoices' } : {}, { replace: true })}
+            options={[
+              { value: 'courses' as const, label: t('parent.courses.tabCourses'), count: courses.length },
+              { value: 'invoices' as const, label: t('parent.courses.tabInvoices'), count: bills.length },
+            ]}
+          />
+        }
+      >
+        {isError ? (
+          <LoadError inset message={t('parent.courses.loadError')} onRetry={() => void refetch()} />
+        ) : isPending ? (
+          <TableLoading rows={3} />
+        ) : tab === 'courses' ? (
+          courses.length ? (
+            <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-3">
+              {courses.map((c) => <CourseCard key={c.enrollment_id} course={c} money={money} />)}
+            </div>
+          ) : (
+            <TableEmpty icon="school" title={t('parent.courses.emptyTitle')} description={t('parent.courses.emptyDescription')} />
+          )
+        ) : bills.length ? (
+          <ul className="divide-y divide-outline-variant">
+            {bills.map((b) => <BillRow key={b.id} bill={b} money={money} />)}
+          </ul>
+        ) : (
+          <TableEmpty icon="receipt_long" title={t('parent.courses.emptyInvoicesTitle')} description={t('parent.courses.emptyInvoicesDescription')} />
+        )}
+      </TableCard>
     </div>
   );
 }
 
-export function ParentCoursesPage() {
+/** One course a child takes: what, who teaches it, when, and what it costs a month. */
+function CourseCard({ course, money }: { course: ParentCourseRow; money: (n: number) => string }) {
   const { t, i18n } = useTranslation();
-  const { user } = useAuthSession();
-  const locale = i18n.language.startsWith('ar') ? 'ar-EG' : 'en-GB';
   const isAr = i18n.language.startsWith('ar');
-
-  const { data, isPending, isError } = useParentCourses(user?.id);
-  const enrollments = data?.enrollments ?? [];
-  const invoices = data?.invoices ?? [];
-
-  const [tab, setTab] = useState<'courses' | 'invoices'>('courses');
-
-  const priceFmt = new Intl.NumberFormat(locale, { style: 'currency', currency: 'EGP' });
-
-  const pendingCount = invoices.filter((i) => i.status === 'pending' || i.status === 'overdue').length;
-
-  if (isPending) {
-    return (
-      <div className="mx-auto max-w-2xl lg:max-w-none space-y-4 px-4 pb-28 pt-2">
-        <h1 className="text-lg font-semibold text-on-surface">{t('parent.courses.title')}</h1>
-        <LoadingSkeleton />
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="mx-auto max-w-2xl lg:max-w-none px-4 py-6">
-        <h1 className="text-lg font-semibold text-on-surface">{t('parent.courses.title')}</h1>
-        <p className="mt-4 text-sm text-error" role="alert">{t('parent.courses.loadError')}</p>
-      </div>
-    );
-  }
+  const look = COURSE_LOOK[course.category] ?? COURSE_LOOK.other;
+  const teacher = localName(course.teacher_name_ar, course.teacher_name_en, isAr);
+  const days = (course.schedule_days ?? []).map((d) => t(`admin.courses.days.${d}`)).join(' · ');
+  const time = [course.schedule_time_start?.slice(0, 5), course.schedule_time_end?.slice(0, 5)].filter(Boolean).join('–');
 
   return (
-    <div className="mx-auto max-w-2xl lg:max-w-none space-y-4 px-4 pb-28 pt-2">
-      <div>
-        <h1 className="text-lg font-semibold text-on-surface">{t('parent.courses.title')}</h1>
-        {enrollments.length > 0 ? (
-          <p className="text-xs text-on-surface-variant">
-            {t('parent.courses.subtitle', { count: enrollments.length })}
-          </p>
-        ) : null}
-      </div>
-
-      {/* Summary strip */}
-      {(enrollments.length > 0 || pendingCount > 0) ? (
-        <div className="flex flex-wrap gap-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-3">
-          <div className="flex items-center gap-2 text-sm text-on-surface-variant">
-            <span className="material-symbols-outlined text-lg text-primary" aria-hidden>school</span>
-            {t('parent.courses.totalEnrolled', { count: enrollments.length })}
-          </div>
-          {pendingCount > 0 ? (
-            <div className="flex items-center gap-2 text-sm text-error">
-              <span className="material-symbols-outlined text-lg" aria-hidden>receipt_long</span>
-              {t('parent.courses.pendingInvoices', { count: pendingCount })}
-            </div>
-          ) : null}
+    <article className="flex flex-col gap-3 rounded-xl border border-outline-variant bg-surface p-4 shadow-sm" data-testid="parent-course">
+      <div className="flex items-start gap-3">
+        <span className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-lg', TONE_TINT[look.tone])}>
+          <MaterialSymbol name={look.icon} size="text-xl" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h3 className="font-semibold text-on-surface">{localName(course.course_title_ar, course.course_title_en, isAr)}</h3>
+          <p className="text-sm text-on-surface-variant">{localName(course.child_name_ar, course.child_name_en, isAr)}</p>
         </div>
-      ) : null}
-
-      {/* Tabs */}
-      <div className="flex gap-2 border-b border-outline-variant">
-        {(['courses', 'invoices'] as const).map((tabKey) => (
-          <button
-            key={tabKey}
-            type="button"
-            className={`px-4 py-2 text-sm font-medium transition-colors ${
-              tab === tabKey
-                ? 'border-b-2 border-primary text-primary'
-                : 'text-on-surface-variant hover:text-on-surface'
-            }`}
-            onClick={() => setTab(tabKey)}
-          >
-            {t(`parent.courses.tab${tabKey.charAt(0).toUpperCase()}${tabKey.slice(1)}`)}
-            {tabKey === 'invoices' && pendingCount > 0 ? (
-              <span className="ms-1.5 rounded-full bg-error px-1.5 text-[10px] text-white">{pendingCount}</span>
-            ) : null}
-          </button>
-        ))}
+        <StatusPill tone={look.tone}>{t(`admin.courses.categories.${course.category || 'other'}`)}</StatusPill>
       </div>
-
-      {/* Courses tab */}
-      {tab === 'courses' ? (
-        enrollments.length === 0 ? (
-          <EmptyState
-            icon="school"
-            title={t('parent.courses.emptyTitle')}
-            description={t('parent.courses.emptyDescription')}
-          />
-        ) : (
-          <div className="space-y-3">
-            {enrollments.map((e) => {
-              const courseTitle = localName(e.course_title_ar, e.course_title_en, isAr);
-              const childName = localName(e.child_name_ar, e.child_name_en, isAr);
-              const teacher = localName(e.teacher_name_ar, e.teacher_name_en, isAr);
-              const dayLabels = (e.schedule_days ?? []).map((d) => t(`admin.courses.days.${d}`)).join(' · ');
-
-              return (
-                <div key={e.enrollment_id} className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-on-surface">{courseTitle}</p>
-                      <p className="text-sm text-on-surface-variant">{childName}</p>
-                    </div>
-                    <Badge className={`${CATEGORY_COLORS[e.category] ?? ''} border-transparent shrink-0 text-xs`}>
-                      {t(`admin.courses.categories.${e.category}`)}
-                    </Badge>
-                  </div>
-
-                  <div className="flex flex-wrap gap-3 text-xs text-on-surface-variant">
-                    <span className="flex items-center gap-1">
-                      <span className="material-symbols-outlined text-sm text-primary" aria-hidden>payments</span>
-                      {priceFmt.format(e.price_per_month)} {t('admin.courses.list.perMonth')}
-                    </span>
-                    {teacher ? (
-                      <span className="flex items-center gap-1">
-                        <span className="material-symbols-outlined text-sm text-primary" aria-hidden>person</span>
-                        {teacher}
-                      </span>
-                    ) : null}
-                    {dayLabels ? (
-                      <span className="flex items-center gap-1">
-                        <span className="material-symbols-outlined text-sm text-primary" aria-hidden>schedule</span>
-                        {dayLabels}
-                        {e.schedule_time_start ? ` · ${e.schedule_time_start}` : ''}
-                        {e.schedule_time_end ? `–${e.schedule_time_end}` : ''}
-                      </span>
-                    ) : null}
-                  </div>
-                </div>
-              );
-            })}
+      <dl className="space-y-1.5 text-sm text-on-surface-variant">
+        {days ? (
+          <div className="flex items-center gap-2">
+            <MaterialSymbol name="schedule" size="text-base" className="text-primary" />
+            <dt className="sr-only">{t('parent.courses.when')}</dt>
+            <dd>{time ? `${days} · ${time}` : days}</dd>
           </div>
-        )
-      ) : null}
-
-      {/* Invoices tab */}
-      {tab === 'invoices' ? (
-        invoices.length === 0 ? (
-          <EmptyState
-            icon="receipt_long"
-            title={t('parent.courses.emptyInvoicesTitle')}
-            description={t('parent.courses.emptyInvoicesDescription')}
-          />
-        ) : (
-          <div className="space-y-2">
-            {invoices.map((inv) => (
-              <InvoiceCard key={inv.id} invoice={inv} locale={locale} t={t} />
-            ))}
+        ) : null}
+        {teacher ? (
+          <div className="flex items-center gap-2">
+            <MaterialSymbol name="person" size="text-base" className="text-primary" />
+            <dt className="sr-only">{t('parent.courses.teacher')}</dt>
+            <dd>{teacher}</dd>
           </div>
-        )
-      ) : null}
-    </div>
+        ) : null}
+      </dl>
+      <p className="mt-auto border-t border-outline-variant pt-3 text-sm">
+        <strong className="text-on-surface">{money(Number(course.price_per_month))}</strong>{' '}
+        <span className="text-on-surface-variant">{t('admin.courses.list.perMonth')}</span>
+      </p>
+    </article>
+  );
+}
+
+/** One course bill: the course and child, the month, the amount, when it is due, and its state. */
+function BillRow({ bill, money }: { bill: ParentCourseInvoiceRow; money: (n: number) => string }) {
+  const { t, i18n } = useTranslation();
+  const isAr = i18n.language.startsWith('ar');
+  return (
+    <li className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5" data-testid="parent-course-bill">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-on-surface">{localName(bill.course_title_ar, bill.course_title_en, isAr)}</p>
+        <p className="text-xs text-on-surface-variant">
+          {localName(bill.child_name_ar, bill.child_name_en, isAr)} · {formatDate(`${bill.billing_month}T00:00:00`, { month: 'long', year: 'numeric' })}
+          {bill.status === 'paid' && bill.paid_at
+            ? ` · ${t('parent.courses.paidOn', { date: formatDate(bill.paid_at, { day: 'numeric', month: 'short' }) })}`
+            : bill.due_date
+              ? ` · ${t('parent.courses.dueOn', { date: formatDate(bill.due_date, { day: 'numeric', month: 'short', year: 'numeric' }) })}`
+              : ''}
+        </p>
+      </div>
+      <span className="text-sm font-semibold tabular-nums text-on-surface">{money(Number(bill.amount))}</span>
+      <StatusPill tone={BILL_TONE[bill.status] ?? 'neutral'}>{t(`parent.courses.invoiceStatus.${bill.status}`)}</StatusPill>
+    </li>
   );
 }

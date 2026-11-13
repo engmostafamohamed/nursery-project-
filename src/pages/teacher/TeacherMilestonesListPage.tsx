@@ -4,129 +4,137 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { Input } from '@/components/ui/input';
-import { Pagination } from '@/components/ui/Pagination';
-import { Select } from '@/components/ui/select';
+import { confirm } from '@/components/ui/confirm';
+import { StatusPill, TableCard, TableEmpty, TableLoading, TablePagination } from '@/components/ui/DataTable';
+import { LoadError } from '@/components/ui/LoadError';
+import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { StatTile } from '@/components/ui/StatTile';
+import { MilestoneCard } from '@/features/milestones/MilestoneCard';
+import { draftOf } from '@/features/milestones/milestoneDraft';
+import { MilestoneFilters } from '@/features/milestones/MilestoneFilters';
+import { MilestoneMonths } from '@/features/milestones/MilestoneMonths';
+import { matches, milestoneStats, NO_MILESTONE_FILTER, type MilestoneFilter } from '@/features/milestones/milestones';
+import { milestoneErrorKey } from '@/features/milestones/milestonesApi';
 import { useAuthSession } from '@/hooks/useAuthSession';
-import { useMilestones, type MilestoneCategory } from '@/hooks/useMilestones';
+import { useMilestones, type MilestoneItem } from '@/hooks/useMilestones';
 import { usePagination } from '@/hooks/usePagination';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { getNurseryCalendarDateString } from '@/lib/nurseryDay';
 
-const categories: Array<MilestoneCategory | 'all'> = ['all', 'motor_skills', 'social', 'cognitive', 'language', 'self_care', 'creative'];
-
+/** The milestones of the teacher's classes: record, change, share with the family or not, remove. */
 export function TeacherMilestonesListPage() {
   const { t, i18n } = useTranslation();
   const { user } = useAuthSession();
   const { data: profile } = useUserProfile(user?.id);
   const milestone = useMilestones({ userId: user?.id, nurseryId: profile?.nursery_id ?? undefined, role: 'teacher' });
+  const [filter, setFilter] = useState<MilestoneFilter>(NO_MILESTONE_FILTER);
+  const [busy, setBusy] = useState<string | null>(null);
 
-  const [childId, setChildId] = useState('');
-  const [category, setCategory] = useState<MilestoneCategory | 'all'>('all');
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
-  const [shared, setShared] = useState<'all' | 'yes' | 'no'>('all');
-
-  const filtered = useMemo(() => milestone.milestones.filter((m) => {
-    if (childId && m.child_id !== childId) return false;
-    if (category !== 'all' && m.category !== category) return false;
-    if (fromDate && m.achieved_at < fromDate) return false;
-    if (toDate && m.achieved_at > toDate) return false;
-    if (shared === 'yes' && !m.shared_with_parent) return false;
-    if (shared === 'no' && m.shared_with_parent) return false;
-    return true;
-  }), [milestone.milestones, childId, category, fromDate, toDate, shared]);
-
-  const pager = usePagination(filtered, 20, `${childId}|${category}|${fromDate}|${toDate}|${shared}`);
-
-  const groupedByChild = useMemo(
-    () =>
-      pager.pageItems.reduce<Record<string, typeof filtered>>((acc, item) => {
-        const key = item.childName ?? 'Child';
-        acc[key] = [...(acc[key] ?? []), item];
-        return acc;
-      }, {}),
-    [pager.pageItems],
+  const kids = useMemo(
+    () => milestone.children.map((c) => ({ id: c.id, name: (i18n.language === 'ar' ? c.full_name_ar : c.full_name_en) || c.full_name_en })),
+    [milestone.children, i18n.language],
   );
+  const filtered = useMemo(() => milestone.milestones.filter((m) => matches(m, filter)), [milestone.milestones, filter]);
+  const stats = milestoneStats(milestone.milestones, getNurseryCalendarDateString());
+  const pager = usePagination(filtered, 24, JSON.stringify(filter));
+
+  const run = async (m: MilestoneItem, action: () => Promise<unknown>, done: string) => {
+    setBusy(m.id);
+    try {
+      await action();
+      toast.success(t(done));
+    } catch (error) {
+      toast.error(t(milestoneErrorKey(error)));
+    } finally {
+      setBusy(null);
+    }
+  };
+  const toggleShare = (m: MilestoneItem) =>
+    run(m, () => milestone.saveMilestone({ id: m.id, draft: { ...draftOf(m), sharedWithParent: !m.shared_with_parent } }),
+      m.shared_with_parent ? 'milestones.hidden' : 'milestones.sharedNow');
+  const remove = async (m: MilestoneItem) => {
+    const ok = await confirm({ title: t('milestones.removeTitle'), description: t('milestones.removeBody'), confirmText: t('milestones.delete'), variant: 'danger' });
+    if (ok) await run(m, () => milestone.deleteMilestone(m.id), 'milestones.removed');
+  };
 
   return (
-    <div className="space-y-4 pb-28">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-on-surface">{t('milestones.listTitle')}</h1>
-        <Button asChild><Link to="/teacher/milestones/record">{t('milestones.recordNew')}</Link></Button>
-      </div>
-      <div className="grid gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest p-3 md:grid-cols-5">
-        <Select className="h-11 rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={childId} onChange={(e) => setChildId(e.target.value)}>
-          <option value="">{t('milestones.allChildren')}</option>
-          {milestone.children.map((c) => <option key={c.id} value={c.id}>{i18n.language === 'ar' ? c.full_name_ar : c.full_name_en}</option>)}
-        </Select>
-        <Select className="h-11 rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={category} onChange={(e) => setCategory(e.target.value as MilestoneCategory | 'all')}>
-          {categories.map((c) => <option key={c} value={c}>{c === 'all' ? t('milestones.allCategories') : t(`milestones.categories.${c}`)}</option>)}
-        </Select>
-        <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
-        <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
-        <Select className="h-11 rounded-lg border border-outline-variant bg-surface text-foreground px-3 text-sm" value={shared} onChange={(e) => setShared(e.target.value as 'all' | 'yes' | 'no')}>
-          <option value="all">{t('milestones.sharedAll')}</option>
-          <option value="yes">{t('milestones.sharedYes')}</option>
-          <option value="no">{t('milestones.sharedNo')}</option>
-        </Select>
-      </div>
-
-      {!filtered.length ? (
-        <EmptyState icon="trophy" title={t('milestones.emptyTitle')} description={t('milestones.emptyDescription')} />
-      ) : (
-        <div className="space-y-3">
-          {Object.entries(groupedByChild).map(([name, items]) => (
-            <section key={name} className="space-y-2">
-              <h2 className="text-sm font-semibold text-on-surface">{name}</h2>
-              {items.map((m) => (
-                <article key={m.id} className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-on-surface-variant">{m.shared_with_parent ? t('milestones.sharedYes') : t('milestones.sharedNo')}</span>
-                  </div>
-                  <p className="text-xs text-on-surface-variant">{t(`milestones.categories.${m.category}`)}</p>
-                  <p className="mt-1 text-sm text-on-surface">{m.milestone_text}</p>
-                  <p className="text-xs text-on-surface-variant">{new Date(m.achieved_at).toLocaleDateString()}</p>
-                  {m.photo_url ? (
-                    <img
-                      src={m.photo_url}
-                      alt={m.milestone_text}
-                      className="mt-2 h-24 w-24 rounded-lg object-cover"
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  ) : null}
-                  <div className="mt-2 flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => toast.message(t('common.comingSoon'))}>{t('milestones.edit')}</Button>
-                    <Button size="sm" variant="outline" onClick={() => void milestone.deleteMilestone(m.id)}>{t('milestones.delete')}</Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={async () => {
-                        await milestone.saveMilestone({ ...m, id: m.id, shared_with_parent: !m.shared_with_parent });
-                        toast.success(t('milestones.updated'));
-                      }}
-                    >
-                      {t('milestones.toggleShare')}
-                    </Button>
-                  </div>
-                </article>
-              ))}
-            </section>
-          ))}
-          <Pagination
-            page={pager.page}
-            pageCount={pager.pageCount}
-            total={pager.total}
-            startIndex={pager.startIndex}
-            endIndex={pager.endIndex}
-            hasPrev={pager.hasPrev}
-            hasNext={pager.hasNext}
-            onPrev={pager.prev}
-            onNext={pager.next}
-          />
+    <div className="mx-auto w-full max-w-6xl space-y-4 pb-28">
+      <PageHeader
+        icon="emoji_events"
+        title={t('milestones.listTitle')}
+        description={t('milestones.teacherDescription')}
+        actions={
+          <Button asChild>
+            <Link to="/teacher/milestones/record">
+              <MaterialSymbol name="add" size="text-base" className="me-1" />
+              {t('milestones.recordNew')}
+            </Link>
+          </Button>
+        }
+      >
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatTile icon="emoji_events" label={t('milestones.parent.stats.total')} value={stats.total} />
+          <StatTile icon="calendar_month" label={t('milestones.parent.stats.thisMonth')} value={stats.thisMonth} tone="success" />
+          <StatTile icon="family_restroom" label={t('milestones.sharedYes')} value={stats.shared} tone="primary" onClick={() => setFilter({ ...filter, shared: 'shared' })} active={filter.shared === 'shared'} />
+          <StatTile icon="visibility_off" label={t('milestones.sharedNo')} value={stats.total - stats.shared} tone="warning" onClick={() => setFilter({ ...filter, shared: 'private' })} active={filter.shared === 'private'} />
         </div>
-      )}
+      </PageHeader>
+
+      <TableCard
+        title={t('milestones.listTitle')}
+        count={t('milestones.parent.count', { count: filtered.length })}
+        filters={milestone.milestones.length ? <MilestoneFilters value={filter} onChange={setFilter} items={milestone.milestones} kids={kids} withShared /> : undefined}
+        pagination={<TablePagination pager={pager} />}
+      >
+        {milestone.isError ? (
+          <LoadError inset message={t('milestones.parent.loadError')} onRetry={milestone.retry} />
+        ) : milestone.isLoading ? (
+          <TableLoading rows={3} />
+        ) : !milestone.milestones.length ? (
+          <TableEmpty
+            icon="emoji_events"
+            title={t('milestones.emptyTitle')}
+            description={t('milestones.emptyDescription')}
+            action={<Button asChild><Link to="/teacher/milestones/record">{t('milestones.recordNew')}</Link></Button>}
+          />
+        ) : !filtered.length ? (
+          <TableEmpty icon="filter_alt_off" title={t('milestones.parent.noMatch')} />
+        ) : (
+          <MilestoneMonths
+            items={pager.pageItems}
+            card={(m) => (
+              <MilestoneCard
+                key={m.id}
+                milestone={m}
+                badge={
+                  <StatusPill tone={m.shared_with_parent ? 'success' : 'neutral'} icon={m.shared_with_parent ? 'family_restroom' : 'visibility_off'}>
+                    {m.shared_with_parent ? t('milestones.sharedYes') : t('milestones.sharedNo')}
+                  </StatusPill>
+                }
+                actions={
+                  <>
+                    <Button asChild size="sm" variant="outline">
+                      <Link to={`/teacher/milestones/record?edit=${m.id}`}>
+                        <MaterialSymbol name="edit" size="text-base" className="me-1" />
+                        {t('milestones.edit')}
+                      </Link>
+                    </Button>
+                    <Button size="sm" variant="outline" disabled={busy === m.id} onClick={() => void toggleShare(m)}>
+                      <MaterialSymbol name={m.shared_with_parent ? 'visibility_off' : 'family_restroom'} size="text-base" className="me-1" />
+                      {m.shared_with_parent ? t('milestones.hideFromFamily') : t('milestones.shareWithFamily')}
+                    </Button>
+                    <Button size="sm" variant="ghost" className="text-error" disabled={busy === m.id} onClick={() => void remove(m)}>
+                      <MaterialSymbol name="delete" size="text-base" className="me-1" />
+                      {t('milestones.delete')}
+                    </Button>
+                  </>
+                }
+              />
+            )}
+          />
+        )}
+      </TableCard>
     </div>
   );
 }

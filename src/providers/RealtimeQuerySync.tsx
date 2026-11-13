@@ -11,7 +11,7 @@ const REFRESH_DEBOUNCE_MS = 600;
  * Queries whose data is regenerated rather than read (fresh signed URLs every fetch):
  * refreshing them on unrelated changes would only make images and files reload.
  */
-const EXCLUDED_QUERY_ROOTS = new Set(['chat-image-urls', 'chat-file-urls']);
+const EXCLUDED_QUERY_ROOTS = new Set(['chat-image-urls', 'chat-file-urls', 'milestone-photo']);
 
 const shouldRefresh = (query: Query) => !EXCLUDED_QUERY_ROOTS.has(String(query.queryKey[0]));
 

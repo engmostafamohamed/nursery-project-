@@ -5417,7 +5417,12 @@
       "monthsUnpaid": "{{count}} شهر عليه مستحقات",
       "awaitingApproval": "{{count}} دفعة بانتظار موافقة الشؤون المالية",
       "totalInvoiced": "إجمالي الفواتير",
-      "invoiceCount": "{{count}} فاتورة",
+      "invoiceCount_zero": "لا فواتير",
+      "invoiceCount_one": "فاتورة واحدة",
+      "invoiceCount_two": "فاتورتان",
+      "invoiceCount_few": "{{count}} فواتير",
+      "invoiceCount_many": "{{count}} فاتورة",
+      "invoiceCount_other": "{{count}} فاتورة",
       "inReviewHint": "تم الإرسال وبانتظار تأكيد الحضانة",
       "byChild": "حسب الطفل",
       "familyCharges": "رسوم عامة للأسرة",
@@ -5429,7 +5434,11 @@
       "byMonth": "حسب الشهر",
       "statusPaid": "مدفوع",
       "statusUnpaid": "عليه مستحقات",
-      "pending": "بانتظار الموافقة"
+      "pending": "بانتظار الموافقة",
+      "description": "كل الفواتير والمدفوعات، حسب الطفل والنوع والشهر.",
+      "child": "الطفل",
+      "allChildren": "كل الأطفال",
+      "loadError": "تعذّر تحميل فواتيرك."
     },
     "inbox": {
       "unreadLabel": "غير مقروء",
@@ -5706,7 +5715,8 @@
       "totalDue": "إجمالي المستحق",
       "nextDue": "موعد الاستحقاق التالي",
       "emptyTitle": "لا توجد فواتير بعد.",
-      "emptyDescription": "لا توجد فواتير بعد."
+      "emptyDescription": "لا توجد فواتير بعد.",
+      "description": "ما عليك وما دُفع، وكل فاتورة ببنودها."
     },
     "financial": {
       "breakdownTitle": "المتبقي على كل طفل",
@@ -5766,8 +5776,8 @@
     },
     "media": {
       "galleryTitle": "معرض الوسائط",
-      "filterChild": "تصفية حسب الطفل",
-      "filterActivity": "نوع النشاط",
+      "filterChild": "الطفل",
+      "filterActivity": "النشاط",
       "sortNewest": "الأحدث أولاً",
       "sortOldest": "الأقدم أولاً",
       "sortMostViewed": "الأكثر مشاهدة",
@@ -5786,10 +5796,26 @@
       "viewAll": "عرض الكل",
       "noRecent": "لا توجد صور بعد",
       "stats": {
-        "total": "إجمالي الصور/الفيديو",
+        "total": "الصور والفيديوهات",
         "thisMonth": "هذا الشهر",
-        "lastUploaded": "آخر رفع"
-      }
+        "lastUploaded": "آخر رفع",
+        "new": "لم تُشاهد بعد"
+      },
+      "description": "الصور والفيديوهات التي شاركها المعلمون لأطفالك. الجديدة عليها علامة.",
+      "listTitle": "الصور والفيديوهات",
+      "count_zero": "لا شيء",
+      "count_one": "عنصر واحد",
+      "count_two": "عنصران",
+      "count_few": "{{count}} عناصر",
+      "count_many": "{{count}} عنصرًا",
+      "count_other": "{{count}} عنصر",
+      "from": "من",
+      "to": "إلى",
+      "sort": "الترتيب",
+      "allActivities": "كل الأنشطة",
+      "new": "جديد",
+      "noMatch": "لا شيء يطابق هذا البحث.",
+      "loadError": "تعذّر تحميل الصور."
     },
     "reports": {
       "publishedAtTime": "نُشر {{time}}",
@@ -5890,12 +5916,9 @@
     },
     "courses": {
       "title": "الكورسات",
-      "subtitle": "{{count}} تسجيل نشط",
       "loadError": "تعذّر تحميل الكورسات.",
       "tabCourses": "الكورسات المسجّلة",
       "tabInvoices": "الفواتير",
-      "totalEnrolled": "{{count}} مسجّل",
-      "pendingInvoices": "{{count}} دفعة معلّقة",
       "emptyTitle": "لا توجد كورسات مسجّلة",
       "emptyDescription": "لم يتم تسجيل أطفالك في أي كورس بعد.",
       "emptyInvoicesTitle": "لا توجد فواتير",
@@ -5905,7 +5928,19 @@
         "paid": "مدفوعة",
         "overdue": "متأخرة",
         "waived": "معفوة"
-      }
+      },
+      "description": "الدورات التي يحضرها أطفالك ومواعيدها وفواتيرها الشهرية.",
+      "stats": {
+        "courses": "الدورات",
+        "monthly": "شهريًا",
+        "openBills": "فواتير للدفع",
+        "openAmount": "المطلوب"
+      },
+      "payHint": "تُدفع فواتير الدورات في مكتب الحضانة، وتظهر هنا مدفوعة بعد أن يسجلها المكتب.",
+      "when": "الموعد",
+      "teacher": "المعلم",
+      "paidOn": "دُفعت {{date}}",
+      "dueOn": "تستحق {{date}}"
     }
   },
   "teacher": {
@@ -6359,33 +6394,26 @@
   "milestones": {
     "recordTitle": "تسجيل إنجاز",
     "listTitle": "الإنجازات",
-    "parentTitle": "إنجازات الطفل",
     "recordNew": "تسجيل إنجاز",
     "child": "الطفل",
     "selectChild": "اختر الطفل",
     "allChildren": "كل الأطفال",
-    "category": "الفئة",
-    "allCategories": "كل الفئات",
-    "milestoneText": "نص الإنجاز",
+    "category": "المجال",
+    "allCategories": "كل المجالات",
+    "milestoneText": "ما فعله الطفل",
     "achievedAt": "تاريخ الإنجاز",
     "notesOptional": "ملاحظات (اختياري)",
-    "photoUrl": "رابط الصورة (اختياري)",
-    "shareWithParent": "مشاركة مع ولي الأمر",
+    "shareWithParent": "مشاركة مع الأسرة",
     "save": "حفظ الإنجاز",
     "saved": "تم حفظ الإنجاز.",
     "updated": "تم تحديث الإنجاز.",
     "edit": "تعديل",
     "delete": "حذف",
-    "toggleShare": "تبديل المشاركة",
-    "sharedAll": "تصفية المشاركة: الكل",
     "sharedYes": "مشارك",
     "sharedNo": "غير مشارك",
     "emptyTitle": "لا توجد إنجازات بعد.",
     "emptyDescription": "ابدأ بتسجيل أول إنجاز.",
     "share": "مشاركة",
-    "downloadCard": "تنزيل بطاقة الإنجاز",
-    "downloaded": "تم تنزيل بطاقة الإنجاز.",
-    "validationRequired": "اختيار الطفل ونص الإنجاز مطلوبان.",
     "categories": {
       "motor_skills": "المهارات الحركية",
       "social": "اجتماعي",
@@ -6401,6 +6429,98 @@
       "language": "استخدم جملة من 3 كلمات",
       "self_care": "لبس الحذاء بنفسه",
       "creative": "رسم شخصاً مع 5 أجزاء للجسم"
+    },
+    "editTitle": "تعديل الإنجاز",
+    "teacherDescription": "ما تعلّمه أطفال فصولك. شارك إنجازًا فتصل الأسرة رسالة فورًا.",
+    "sharedNow": "تمت المشاركة مع الأسرة، ووصلتها رسالة.",
+    "hidden": "لم تعد الأسرة تراه.",
+    "shareWithFamily": "مشاركة مع الأسرة",
+    "hideFromFamily": "إخفاء عن الأسرة",
+    "removeTitle": "إزالة هذا الإنجاز؟",
+    "removeBody": "سيختفي من قائمتك ومن قائمة الأسرة.",
+    "removed": "أُزيل الإنجاز.",
+    "parent": {
+      "title": "الإنجازات",
+      "description": "ما تعلّمه طفلك في الحضانة كما يشاركه المعلمون. تصلك رسالة مع كل إنجاز جديد.",
+      "stats": {
+        "total": "الإنجازات",
+        "thisMonth": "هذا الشهر",
+        "areas": "مجالات النمو",
+        "latest": "الأحدث"
+      },
+      "timeline": "الخط الزمني",
+      "timelineHint": "الأحدث أولًا. يمكنك مشاركة أي إنجاز كصورة.",
+      "count_zero": "لا إنجازات",
+      "count_one": "إنجاز واحد",
+      "count_two": "إنجازان",
+      "count_few": "{{count}} إنجازات",
+      "count_many": "{{count}} إنجازًا",
+      "count_other": "{{count}} إنجاز",
+      "loadError": "تعذّر تحميل الإنجازات.",
+      "emptyTitle": "لا إنجازات بعد",
+      "emptyDescription": "عندما يشارك المعلم شيئًا جديدًا فعله طفلك يظهر هنا وتصلك رسالة.",
+      "noMatch": "لا إنجازات تطابق هذا البحث.",
+      "areasOf": "{{count}} من 6"
+    },
+    "filters": {
+      "from": "من",
+      "to": "إلى",
+      "shared": "الأسرة",
+      "sharedAll": "الكل"
+    },
+    "card": {
+      "heading": "إنجاز جديد",
+      "footer": "من تطبيق الحضانة",
+      "downloaded": "حُفظت الصورة في التنزيلات.",
+      "failed": "تعذّر إنشاء الصورة. حاول مرة أخرى."
+    },
+    "form": {
+      "description": "سجّل ما فعله الطفل. عند المشاركة تصل الأسرة رسالة وتراه في التطبيق.",
+      "suggestions": "اقتراحات:",
+      "photo": "صورة (اختياري)",
+      "photoAdd": "إضافة صورة",
+      "photoChange": "تغيير الصورة",
+      "photoRemove": "إزالة",
+      "shareHint": "تصل الأسرة رسالة أول مرة تشاركه فيها.",
+      "errors": {
+        "child": "اختر الطفل.",
+        "text": "اكتب ما فعله الطفل.",
+        "date": "اختر يومًا مضى."
+      }
+    },
+    "errors": {
+      "forbidden": "هذا لمعلمي الطفل ومشرفي الحضانة فقط.",
+      "not_found": "لم يعد هذا الإنجاز موجودًا.",
+      "child_required": "اختر الطفل.",
+      "text_required": "اكتب ما فعله الطفل.",
+      "too_long": "اختصر (200 حرف، والملاحظات 300).",
+      "category_invalid": "اختر المجال.",
+      "date_invalid": "يجب أن يكون اليوم بين ميلاد الطفل واليوم.",
+      "photo_invalid": "لم تُرفع الصورة؛ حاول مرة أخرى.",
+      "network": "لا يوجد اتصال. حاول مرة أخرى.",
+      "failed": "حدث خطأ. حاول مرة أخرى."
+    },
+    "templates": {
+      "a12": [
+        "مشى وحده",
+        "نطق أول كلماته",
+        "لوّح مودّعًا",
+        "شرب من الكوب",
+        "صعد الدرج"
+      ],
+      "a23": [
+        "استخدم النونية",
+        "قال جملًا من كلمتين",
+        "شارك ألعابه",
+        "قفز بقدميه معًا"
+      ],
+      "a34": [
+        "عدّ حتى 10",
+        "سمّى الألوان",
+        "لبس ملابسه وحده",
+        "استخدم المقص",
+        "رسم شخصًا"
+      ]
     }
   },
   "staff": {
@@ -9485,6 +9605,14 @@
       "body_few": "لم تُنجز {{count}} مهام اليوم. افتح اللوحة لمعرفتها.",
       "body_many": "لم تُنجز {{count}} مهمة اليوم. افتح اللوحة لمعرفتها.",
       "body_other": "لم تُنجز {{count}} مهمة اليوم. افتح اللوحة لمعرفتها."
+    },
+    "quarterly_report_sent": {
+      "title": "تقرير الفصل لـ {{child}}",
+      "body": "تقرير {{term}} جاهز: التقديرات وتعليق المعلم."
+    },
+    "course_invoice_new": {
+      "title": "فاتورة دورة: {{course}}",
+      "body": "دورة {{course}} لـ {{child}} عن {{month}}: {{amount}}، تستحق {{due_date}}."
     }
   },
   "qr": {
@@ -12487,5 +12615,19 @@
       "network": "لا يوجد اتصال. حاول مرة أخرى.",
       "failed": "حدث خطأ. حاول مرة أخرى."
     }
+  },
+  "termReports": {
+    "period": "{{from}} – {{to}}",
+    "sentOn": "أُرسل {{date}}",
+    "print": "طباعة",
+    "attendanceDays": "{{present}} من {{total}} يومًا",
+    "stats": {
+      "reports": "التقارير",
+      "latest": "الأحدث",
+      "graded": "البنود المقيّمة"
+    },
+    "list": "التقارير",
+    "loadError": "تعذّر تحميل التقارير.",
+    "of": "{{part}} من {{whole}}"
   }
 }

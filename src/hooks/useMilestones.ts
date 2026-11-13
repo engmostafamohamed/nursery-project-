@@ -1,15 +1,11 @@
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 
+import { removeMilestone, saveMilestone, type MilestoneDraft } from '@/features/milestones/milestonesApi';
 import { supabase } from '@/lib/supabase';
 
 export type MilestoneCategory = 'motor_skills' | 'social' | 'cognitive' | 'language' | 'self_care' | 'creative';
-
-export const MILESTONE_TEMPLATES: Record<string, string[]> = {
-  '1-2': ['Walked independently', 'Said first words', 'Waved bye', 'Drank from cup', 'Climbed stairs'],
-  '2-3': ['Used potty', '2-word phrases', 'Shared toys', 'Jumped with both feet'],
-  '3-4': ['Counted to 10', 'Recognized colors', 'Dressed self', 'Used scissors', 'Drew person'],
-};
 
 export type MilestoneItem = {
   id: string;
@@ -58,11 +54,11 @@ export function useMilestones(params: { userId?: string; nurseryId?: string; rol
       if (res.error) throw res.error;
       return (res.data ?? []) as { id: string; name_ar: string; name_en: string }[];
     },
-    enabled: Boolean(params.nurseryId),
+    enabled: Boolean(params.nurseryId) && params.role !== 'parent',
   });
 
   const childrenQuery = useQuery({
-    queryKey: ['milestone-children', params.userId, params.role, classesQuery.data],
+    queryKey: ['milestone-children', params.userId, params.role, params.role === 'parent' ? null : classesQuery.data],
     queryFn: async () => {
       if (params.role === 'parent' && params.userId) {
         const links = await supabase.from('parent_children').select('child_id').eq('parent_id', params.userId);
@@ -82,50 +78,40 @@ export function useMilestones(params: { userId?: string; nurseryId?: string; rol
     enabled: params.role === 'parent' ? Boolean(params.userId) : Boolean(classesQuery.data?.length),
   });
 
+  const childIds = useMemo(() => (childrenQuery.data ?? []).map((c) => c.id), [childrenQuery.data]);
   const listQuery = useQuery({
-    queryKey: ['milestones-list', params, (childrenQuery.data ?? []).map((c) => c.id)],
+    queryKey: ['milestones-list', params.role, params.nurseryId, childIds],
     queryFn: async (): Promise<MilestoneItem[]> => {
-      if (!params.nurseryId) return [];
-      let q = supabase.from('milestones').select('*').eq('nursery_id', params.nurseryId).order('achieved_at', { ascending: false });
-      if (params.role === 'teacher') {
-        // Scope to children in classes the teacher leads or assists in
-        // (covers both lead and assistant via class_staff -> children).
-        const childIds = (childrenQuery.data ?? []).map((c) => c.id);
+      let q = supabase.from('milestones').select('*').order('achieved_at', { ascending: false }).order('created_at', { ascending: false });
+      // A family and a teacher read their children's (the rules also keep each to those); an admin, the nursery's.
+      if (params.role === 'admin') {
+        if (!params.nurseryId) return [];
+        q = q.eq('nursery_id', params.nurseryId);
+      } else {
         if (!childIds.length) return [];
         q = q.in('child_id', childIds);
       }
-      if (params.role === 'parent') q = q.eq('shared_with_parent', true);
       const res = await q;
       if (res.error) throw res.error;
-      const rows = (res.data ?? []) as MilestoneItem[];
-      const childMap = new Map((childrenQuery.data ?? []).map((c) => [c.id, c.full_name_ar || c.full_name_en]));
-      return rows.map((r) => ({ ...r, childName: childMap.get(r.child_id) ?? 'Child' }));
+      return (res.data ?? []) as MilestoneItem[];
     },
-    enabled: Boolean(params.nurseryId) && (params.role !== 'teacher' || childrenQuery.isFetched),
+    enabled: params.role === 'admin' ? Boolean(params.nurseryId) : childrenQuery.isFetched,
   });
 
+  // Each milestone with its child's name in the language on screen.
+  const { i18n } = useTranslation();
+  const ar = i18n.language === 'ar';
+  const milestones = useMemo(() => {
+    const names = new Map((childrenQuery.data ?? []).map((c) => [c.id, (ar ? c.full_name_ar : c.full_name_en) || c.full_name_en || c.full_name_ar]));
+    return (listQuery.data ?? []).map((m) => ({ ...m, childName: names.get(m.child_id) }));
+  }, [listQuery.data, childrenQuery.data, ar]);
+
+  const refresh = () => void qc.invalidateQueries({ queryKey: ['milestones-list'] });
   const upsertMilestone = useMutation({
-    mutationFn: async (input: Omit<MilestoneItem, 'id' | 'created_at'> & { id?: string }) => {
-      const payload = { ...input };
-      if (input.id) {
-        const res = await supabase.from('milestones').update(payload as never).eq('id', input.id);
-        if (res.error) throw res.error;
-        return input.id;
-      }
-      const res = await supabase.from('milestones').insert(payload as never).select('id').single();
-      if (res.error) throw res.error;
-      return (res.data as { id: string }).id;
-    },
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ['milestones-list'] }),
+    mutationFn: ({ id, draft }: { id: string | null; draft: MilestoneDraft }) => saveMilestone(id, draft),
+    onSuccess: refresh,
   });
-
-  const deleteMilestone = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await supabase.from('milestones').delete().eq('id', id);
-      if (res.error) throw res.error;
-    },
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ['milestones-list'] }),
-  });
+  const deleteMilestone = useMutation({ mutationFn: removeMilestone, onSuccess: refresh });
 
   const childAgeMap = useMemo(() => {
     const map = new Map<string, number>();
@@ -142,9 +128,11 @@ export function useMilestones(params: { userId?: string; nurseryId?: string; rol
   return {
     classes: classesQuery.data ?? [],
     children: childrenQuery.data ?? [],
-    milestones: listQuery.data ?? [],
+    milestones,
     childAgeMap,
-    isLoading: listQuery.isLoading || childrenQuery.isLoading,
+    isLoading: childrenQuery.isLoading || listQuery.isLoading,
+    isError: childrenQuery.isError || listQuery.isError,
+    retry: () => void Promise.all([childrenQuery.refetch(), listQuery.refetch()]),
     saveMilestone: upsertMilestone.mutateAsync,
     deleteMilestone: deleteMilestone.mutateAsync,
   };
