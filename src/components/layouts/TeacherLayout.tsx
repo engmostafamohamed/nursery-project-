@@ -33,6 +33,7 @@ type TeacherNavItem = { to: string; key: string; icon: string; feature?: Feature
 
 const primaryNavItems: TeacherNavItem[] = [
   { to: '/teacher', key: 'home', icon: 'home' },
+  { to: '/teacher/tasks', key: 'tasks', icon: 'checklist' },
   { to: '/teacher/attendance', key: 'attendance', icon: 'fact_check', feature: 'dashboard_attendance' },
   { to: '/teacher/events', key: 'events', icon: 'event', feature: 'event_calendar' },
   { to: '/teacher/courses', key: 'courses', icon: 'school', feature: 'courses' },

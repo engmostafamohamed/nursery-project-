@@ -93,6 +93,7 @@ describe('admin screens need a permission', () => {
     '/admin/inbox',
     '/admin/notifications',
     '/admin/reminders',
+    '/admin/my-tasks', // a staff member's own checklist
   ];
 
   it('every other admin screen maps to a permission', () => {

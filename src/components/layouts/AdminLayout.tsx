@@ -107,6 +107,8 @@ const moreNavGroups: { titleKey: string; items: NavItem[] }[] = [
       { to: '/admin/children/enroll', key: 'childEnrollment', icon: 'child_care', feature: 'child_enrollment' },
       { to: '/admin/staff/onboarding', key: 'staffOnboarding', icon: 'assignment_ind', feature: 'staff_onboarding' },
       { to: '/admin/staff/absences', key: 'staffAbsences', icon: 'event_busy', feature: 'staff' },
+      { to: '/admin/staff-tasks', key: 'staffTasks', icon: 'task_alt', feature: 'staff' },
+      { to: '/admin/my-tasks', key: 'myTasks', icon: 'checklist' },
       { to: '/admin/admissions/import', key: 'admissionsImport', icon: 'upload_file', feature: 'admissions' },
       { to: '/admin/inventory', key: 'inventory', icon: 'inventory_2', feature: 'inventory' },
       { to: '/admin/qr-codes', key: 'qrCodes', icon: 'qr_code_2', feature: 'qr_code' },

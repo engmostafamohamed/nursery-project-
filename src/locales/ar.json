@@ -2289,7 +2289,9 @@
       "reports": "التقارير",
       "brandSubtitle": "الإدارة",
       "collapseSidebar": "طي الشريط الجانبي",
-      "expandSidebar": "توسيع الشريط الجانبي"
+      "expandSidebar": "توسيع الشريط الجانبي",
+      "staffTasks": "مهام الموظفين",
+      "myTasks": "مهامي"
     },
     "classes": {
       "list": {
@@ -6010,7 +6012,8 @@
       "messages": "الرسائل",
       "settings": "الإعدادات",
       "events": "الفعاليات",
-      "courses": "الكورسات"
+      "courses": "الكورسات",
+      "tasks": "مهامي"
     },
     "inbox": {
       "title": "صندوق الوارد",
@@ -9456,6 +9459,32 @@
     "event_family_notice_cancelled": {
       "title": "ألغته العائلة: {{event}}",
       "body": "لم يعد {{event}} لـ {{child}} يوم {{date}} قائمًا. السبب: {{reason}}"
+    },
+    "staff_tasks_today": {
+      "title": "مهامك اليوم",
+      "body_zero": "لا مهام لديك اليوم.",
+      "body_one": "لديك مهمة واحدة اليوم. علّمها عند إنجازها.",
+      "body_two": "لديك مهمتان اليوم. علّم كل واحدة عند إنجازها.",
+      "body_few": "لديك {{count}} مهام اليوم. علّم كل واحدة عند إنجازها.",
+      "body_many": "لديك {{count}} مهمة اليوم. علّم كل واحدة عند إنجازها.",
+      "body_other": "لديك {{count}} مهمة اليوم. علّم كل واحدة عند إنجازها."
+    },
+    "staff_task_new": {
+      "title": "مهمة جديدة: {{task}}",
+      "body": "أعطاك المشرف «{{task}}» لليوم، قبل {{time}}."
+    },
+    "staff_task_due": {
+      "title": "قريبًا: {{task}}",
+      "body": "موعد «{{task}}» قبل {{time}} ولم تُعلَّم بعد."
+    },
+    "staff_tasks_missed": {
+      "title": "مهام لم تُنجز يوم {{date}}",
+      "body_zero": "أُنجزت كل المهام اليوم.",
+      "body_one": "لم تُنجز مهمة واحدة اليوم. افتح اللوحة لمعرفتها.",
+      "body_two": "لم تُنجز مهمتان اليوم. افتح اللوحة لمعرفتهما.",
+      "body_few": "لم تُنجز {{count}} مهام اليوم. افتح اللوحة لمعرفتها.",
+      "body_many": "لم تُنجز {{count}} مهمة اليوم. افتح اللوحة لمعرفتها.",
+      "body_other": "لم تُنجز {{count}} مهمة اليوم. افتح اللوحة لمعرفتها."
     }
   },
   "qr": {
@@ -12267,6 +12296,196 @@
       "title": "ما تراه الحضانة",
       "hint": "يتحدّث أثناء الكتابة",
       "noChild": "اختر طفلًا"
+    }
+  },
+  "staffTasks": {
+    "admin": {
+      "title": "مهام الموظفين",
+      "subtitle": "المهام التي تعطيها للفريق تصبح قائمة يومية لكل شخص؛ اعرف ما أُنجز وما لم يُنجز بعد.",
+      "boardTab": "لوحة اليوم",
+      "listTab": "المهام"
+    },
+    "loadError": "تعذّر تحميل المهام.",
+    "photoNeeded": "صورة",
+    "oneIsEnough": "يكفي شخص واحد",
+    "categories": {
+      "classroom": "الفصل",
+      "cleaning": "النظافة",
+      "safety": "السلامة",
+      "paperwork": "أوراق",
+      "kitchen": "المطبخ",
+      "other": "أخرى"
+    },
+    "assignTo": {
+      "teachers": "كل المعلمين",
+      "teachersHint": "كل معلم حاضر في ذلك اليوم",
+      "class_team": "فريق فصل",
+      "class_teamHint": "معلمو فصل واحد",
+      "people": "أشخاص محددون",
+      "peopleHint": "معلمون أو مديرون أو مشرفون تختارهم"
+    },
+    "completion": {
+      "each": "كل شخص",
+      "eachHint": "يعلّم كل واحد مهمته",
+      "any": "يكفي شخص واحد",
+      "anyHint": "أول من ينجزها تُغلق للجميع"
+    },
+    "repeats": {
+      "daily": "كل يوم دراسي",
+      "weekly": "أيام من الأسبوع",
+      "monthly": "مرة في الشهر",
+      "once": "مرة واحدة"
+    },
+    "roles": {
+      "teacher": "معلم",
+      "manager": "مدير",
+      "branch_admin": "مشرف"
+    },
+    "state": {
+      "by": "قبل {{time}}",
+      "lateBy": "متأخرة، موعدها {{time}}",
+      "doneAt": "أُنجزت {{time}}",
+      "doneBy": "أنجزها {{name}}"
+    },
+    "check": {
+      "markDone": "تم",
+      "photoAndDone": "صورة وتم",
+      "done": "تم «{{task}}»",
+      "undone": "أُعيدت كغير منجزة",
+      "undo": "تراجع",
+      "notePlaceholder": "ملاحظة للمشرف (اختياري)",
+      "noteLabel": "ملاحظة",
+      "yourNote": "ملاحظتك: {{note}}",
+      "covered_zero": "لم تُغلق لأحد آخر.",
+      "covered_one": "أُغلقت لزميل آخر أيضًا.",
+      "covered_two": "أُغلقت لزميلين أيضًا.",
+      "covered_few": "أُغلقت لـ {{count}} زملاء أيضًا.",
+      "covered_many": "أُغلقت لـ {{count}} زميلًا أيضًا.",
+      "covered_other": "أُغلقت لـ {{count}} زميل أيضًا."
+    },
+    "tiles": {
+      "today": "اليوم",
+      "done": "أُنجزت",
+      "todo": "متبقية",
+      "late": "متأخرة",
+      "rate": "أُنجز اليوم"
+    },
+    "mine": {
+      "title": "مهامي",
+      "subtitle": "ما طلبه منك المشرف اليوم. علّم كل مهمة عند إنجازها.",
+      "today": "اليوم",
+      "emptyTitle": "لا شيء اليوم",
+      "emptyHint": "تظهر هنا كل يوم المهام التي يعطيها لك المشرف.",
+      "earlier": "سابقة لم تُنجز",
+      "earlierHint": "من الأسبوع الماضي؛ ما زال بإمكانك تعليمها."
+    },
+    "home": {
+      "title": "مهام اليوم",
+      "all": "كل المهام",
+      "allDone": "أنجزت كل مهام اليوم"
+    },
+    "filters": {
+      "all": "الكل",
+      "late": "متأخرة",
+      "todo": "متبقية",
+      "done": "أُنجزت"
+    },
+    "board": {
+      "title": "مهام اليوم",
+      "photo": "الصورة",
+      "photoError": "تعذّر فتح الصورة",
+      "prevDay": "اليوم السابق",
+      "nextDay": "اليوم التالي",
+      "today": "اليوم",
+      "noneHere": "لا شيء هنا",
+      "emptyTitle": "لا مهام في هذا اليوم",
+      "emptyHint": "تظهر المهام هنا في أيامها (أيام الدراسة فقط)."
+    },
+    "list": {
+      "title": "المهام",
+      "hint": "تصبح كل مهمة بندًا في قائمة أصحابها في أيامها.",
+      "new": "مهمة جديدة",
+      "emptyTitle": "لا مهام بعد",
+      "emptyHint": "أعطِ الفريق مهمة: فحص مخارج الطوارئ كل صباح، ترتيب فصل، كشف التوقيع الشهري.",
+      "task": "المهمة",
+      "forWhom": "لمن",
+      "schedule": "متى",
+      "rules": "تكتمل عندما",
+      "actions": "إجراءات",
+      "paused": "متوقفة",
+      "edit": "تعديل",
+      "pause": "إيقاف",
+      "resume": "استئناف",
+      "pausedDone": "أُوقفت المهمة",
+      "resumed": "استؤنفت المهمة",
+      "delete": "حذف",
+      "deleteTitle": "حذف «{{task}}»؟",
+      "deleteBody": "لن تتكرر بعد الآن؛ وما أُنجز يبقى في اللوحة.",
+      "deleted": "حُذفت المهمة",
+      "classTeam": "فريق {{name}}",
+      "people_zero": "{{names}}",
+      "people_one": "{{names}} وشخص آخر",
+      "people_two": "{{names}} وشخصان آخران",
+      "people_few": "{{names}} و{{count}} آخرين",
+      "people_many": "{{names}} و{{count}} آخرين",
+      "people_other": "{{names}} و{{count}} آخرين",
+      "monthly": "يوم {{day}} من كل شهر",
+      "when": "{{repeat}}، قبل {{time}}"
+    },
+    "form": {
+      "newTitle": "مهمة جديدة",
+      "editTitle": "تعديل المهمة",
+      "subtitle": "تصبح بندًا في قائمة أصحابها في كل يوم مستحق.",
+      "what": "ما المهمة",
+      "title": "المهمة",
+      "titlePlaceholder": "مثال: التأكد من خلو مخارج الطوارئ",
+      "category": "النوع",
+      "instructions": "طريقة التنفيذ",
+      "who": "لمن",
+      "class": "الفصل",
+      "chooseClass": "اختر فصلًا",
+      "searchPeople": "ابحث في الموظفين",
+      "completion": "تكتمل عندما",
+      "photoRequired": "تُثبت بصورة",
+      "photoRequiredHint": "يلتقط الشخص صورة عند تعليمها.",
+      "when": "متى",
+      "onDate": "في",
+      "dayOfMonth": "يوم من الشهر",
+      "dayOfMonthHint": "29–31 تقع في آخر يوم من الأشهر الأقصر.",
+      "dueTime": "قبل الساعة",
+      "endsOn": "حتى",
+      "schoolDaysHint": "في أيام الدراسة فقط، ولا تُعطى لمن هو غائب في ذلك اليوم.",
+      "fixErrors": "راجع الحقول المعلّمة بالأحمر.",
+      "save": "حفظ",
+      "create": "إنشاء المهمة",
+      "saved": "حُفظت المهمة",
+      "created": "أُنشئت المهمة",
+      "savedHint": "تحدّثت قوائم اليوم.",
+      "errors": {
+        "titleRequired": "اكتب المهمة.",
+        "peopleRequired": "اختر شخصًا واحدًا على الأقل.",
+        "classRequired": "اختر فصلًا.",
+        "dateRequired": "اختر اليوم.",
+        "daysRequired": "اختر أيام الأسبوع.",
+        "dueTimeRequired": "اختر الوقت."
+      }
+    },
+    "errors": {
+      "staff_task_forbidden": "لا يمكنك فعل هذا.",
+      "staff_task_not_found": "هذه المهمة لم تعد موجودة.",
+      "staff_task_title_required": "اكتب المهمة.",
+      "staff_task_too_long": "اختصر النص.",
+      "staff_task_category_invalid": "اختر النوع.",
+      "staff_task_people_required": "اختر موظفين من هذه الحضانة.",
+      "staff_task_class_required": "اختر فصلًا.",
+      "staff_task_schedule_invalid": "راجع موعد المهمة.",
+      "staff_task_due_time_invalid": "اختر الوقت.",
+      "staff_task_closed": "لم تعد هذه المهمة مستحقة.",
+      "staff_task_not_yet": "هذه ليوم لاحق.",
+      "staff_task_photo_required": "التقط صورة لتعليم هذه المهمة.",
+      "staff_task_photo_invalid": "لم تُرفع الصورة؛ حاول مرة أخرى.",
+      "network": "لا يوجد اتصال. حاول مرة أخرى.",
+      "failed": "حدث خطأ. حاول مرة أخرى."
     }
   }
 }

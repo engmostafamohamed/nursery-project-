@@ -14,6 +14,7 @@ const ADMIN_ROUTES: ReadonlyArray<readonly [string, FeatureKey]> = [
   ['/admin/payroll', 'payroll'],
   ['/admin/staff/onboarding', 'staff_onboarding'],
   ['/admin/staff/absences', 'staff'],
+  ['/admin/staff-tasks', 'staff'],
   ['/admin/health/medicines', 'health_alerts'],
   ['/admin/staff/new', 'staff_onboarding'],
   ['/admin/staff', 'staff'],

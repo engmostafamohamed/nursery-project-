@@ -2121,7 +2121,9 @@
       "reports": "Reports",
       "brandSubtitle": "Admin",
       "collapseSidebar": "Collapse sidebar",
-      "expandSidebar": "Expand sidebar"
+      "expandSidebar": "Expand sidebar",
+      "staffTasks": "Staff tasks",
+      "myTasks": "My tasks"
     },
     "classes": {
       "list": {
@@ -5691,7 +5693,8 @@
       "messages": "Messages",
       "settings": "Settings",
       "events": "Events",
-      "courses": "Courses"
+      "courses": "Courses",
+      "tasks": "My tasks"
     },
     "inbox": {
       "title": "Inbox",
@@ -8945,6 +8948,24 @@
     "event_family_notice_cancelled": {
       "title": "Cancelled by the family: {{event}}",
       "body": "{{event}} for {{child}} on {{date}} is off. Reason: {{reason}}"
+    },
+    "staff_tasks_today": {
+      "title": "Your tasks today",
+      "body_one": "You have {{count}} task today. Check it off when it is done.",
+      "body_other": "You have {{count}} tasks today. Check each off when it is done."
+    },
+    "staff_task_new": {
+      "title": "New task: {{task}}",
+      "body": "The admin gave you “{{task}}” for today, by {{time}}."
+    },
+    "staff_task_due": {
+      "title": "Due soon: {{task}}",
+      "body": "“{{task}}” is due by {{time}} and is not checked off yet."
+    },
+    "staff_tasks_missed": {
+      "title": "Tasks not done on {{date}}",
+      "body_one": "{{count}} task was not done today. Open the board to see which.",
+      "body_other": "{{count}} tasks were not done today. Open the board to see which."
     }
   },
   "qr": {
@@ -11669,6 +11690,188 @@
       "title": "What the nursery sees",
       "hint": "Updated as you type",
       "noChild": "Choose a child"
+    }
+  },
+  "staffTasks": {
+    "admin": {
+      "title": "Staff tasks",
+      "subtitle": "Tasks you give the team become each person's daily checklist; see what is done and what is still to do.",
+      "boardTab": "Today's board",
+      "listTab": "Tasks"
+    },
+    "loadError": "Could not load the tasks.",
+    "photoNeeded": "Photo",
+    "oneIsEnough": "One is enough",
+    "categories": {
+      "classroom": "Classroom",
+      "cleaning": "Cleaning",
+      "safety": "Safety",
+      "paperwork": "Paperwork",
+      "kitchen": "Kitchen",
+      "other": "Other"
+    },
+    "assignTo": {
+      "teachers": "Every teacher",
+      "teachersHint": "Each teacher at work that day",
+      "class_team": "A class's team",
+      "class_teamHint": "The teachers of one class",
+      "people": "Chosen people",
+      "peopleHint": "Teachers, managers or admins you pick"
+    },
+    "completion": {
+      "each": "Each person",
+      "eachHint": "Everyone checks off their own",
+      "any": "One is enough",
+      "anyHint": "The first to do it closes it for all"
+    },
+    "repeats": {
+      "daily": "Every school day",
+      "weekly": "Some weekdays",
+      "monthly": "Once a month",
+      "once": "One time"
+    },
+    "roles": {
+      "teacher": "Teacher",
+      "manager": "Manager",
+      "branch_admin": "Admin"
+    },
+    "state": {
+      "by": "By {{time}}",
+      "lateBy": "Late, was due {{time}}",
+      "doneAt": "Done at {{time}}",
+      "doneBy": "Done by {{name}}"
+    },
+    "check": {
+      "markDone": "Done",
+      "photoAndDone": "Photo & done",
+      "done": "“{{task}}” done",
+      "undone": "Marked as not done",
+      "undo": "Undo",
+      "notePlaceholder": "A note for the admin (optional)",
+      "noteLabel": "Note",
+      "yourNote": "Your note: {{note}}",
+      "covered_one": "Closed for {{count}} colleague too.",
+      "covered_other": "Closed for {{count}} colleagues too."
+    },
+    "tiles": {
+      "today": "Today",
+      "done": "Done",
+      "todo": "To do",
+      "late": "Late",
+      "rate": "Done today"
+    },
+    "mine": {
+      "title": "My tasks",
+      "subtitle": "What the admin asked you to do today. Check each off when it is done.",
+      "today": "Today",
+      "emptyTitle": "Nothing for today",
+      "emptyHint": "Tasks the admin gives you show here each day.",
+      "earlier": "Earlier, not done",
+      "earlierHint": "From the past week; you can still check them off."
+    },
+    "home": {
+      "title": "Today's tasks",
+      "all": "All tasks",
+      "allDone": "All done for today"
+    },
+    "filters": {
+      "all": "All",
+      "late": "Late",
+      "todo": "To do",
+      "done": "Done"
+    },
+    "board": {
+      "title": "The day's tasks",
+      "photo": "Photo",
+      "photoError": "Could not open the photo",
+      "prevDay": "Previous day",
+      "nextDay": "Next day",
+      "today": "Today",
+      "noneHere": "Nothing here",
+      "emptyTitle": "No tasks this day",
+      "emptyHint": "Tasks show here on the days they are due (school days only)."
+    },
+    "list": {
+      "title": "Tasks",
+      "hint": "Each becomes a checklist item for its people on the days it is due.",
+      "new": "New task",
+      "emptyTitle": "No tasks yet",
+      "emptyHint": "Give the team a task: checking the fire exits each morning, tidying a class, the monthly sign-in sheet.",
+      "task": "Task",
+      "forWhom": "For",
+      "schedule": "When",
+      "rules": "Done when",
+      "actions": "Actions",
+      "paused": "Paused",
+      "edit": "Edit",
+      "pause": "Pause",
+      "resume": "Resume",
+      "pausedDone": "Task paused",
+      "resumed": "Task resumed",
+      "delete": "Delete",
+      "deleteTitle": "Delete “{{task}}”?",
+      "deleteBody": "It stops coming back; what was done stays on the board.",
+      "deleted": "Task deleted",
+      "classTeam": "The team of {{name}}",
+      "people_one": "{{names}} and {{count}} more",
+      "people_other": "{{names}} and {{count}} more",
+      "monthly": "On day {{day}} of each month",
+      "when": "{{repeat}}, by {{time}}"
+    },
+    "form": {
+      "newTitle": "New task",
+      "editTitle": "Edit task",
+      "subtitle": "It becomes a checklist item for its people on each day it is due.",
+      "what": "What",
+      "title": "Task",
+      "titlePlaceholder": "e.g. Check the fire exits are clear",
+      "category": "Kind",
+      "instructions": "How to do it",
+      "who": "For whom",
+      "class": "Class",
+      "chooseClass": "Choose a class",
+      "searchPeople": "Search staff",
+      "completion": "Done when",
+      "photoRequired": "A photo proves it",
+      "photoRequiredHint": "The person takes a photo when checking it off.",
+      "when": "When",
+      "onDate": "On",
+      "dayOfMonth": "Day of the month",
+      "dayOfMonthHint": "29–31 fall on the month's last day in shorter months.",
+      "dueTime": "Done by",
+      "endsOn": "Until",
+      "schoolDaysHint": "Only on the nursery's school days, and never for someone absent that day.",
+      "fixErrors": "Check the fields marked in red.",
+      "save": "Save",
+      "create": "Create task",
+      "saved": "Task saved",
+      "created": "Task created",
+      "savedHint": "Today's checklists are updated.",
+      "errors": {
+        "titleRequired": "Write the task.",
+        "peopleRequired": "Choose at least one person.",
+        "classRequired": "Choose a class.",
+        "dateRequired": "Choose the day.",
+        "daysRequired": "Choose the weekdays.",
+        "dueTimeRequired": "Choose the time."
+      }
+    },
+    "errors": {
+      "staff_task_forbidden": "You can't do this.",
+      "staff_task_not_found": "This task no longer exists.",
+      "staff_task_title_required": "Write the task.",
+      "staff_task_too_long": "Keep it shorter.",
+      "staff_task_category_invalid": "Choose a kind.",
+      "staff_task_people_required": "Choose staff of this nursery.",
+      "staff_task_class_required": "Choose a class.",
+      "staff_task_schedule_invalid": "Check when it is due.",
+      "staff_task_due_time_invalid": "Choose the time.",
+      "staff_task_closed": "This task is no longer due.",
+      "staff_task_not_yet": "This is for a later day.",
+      "staff_task_photo_required": "Take a photo to check this off.",
+      "staff_task_photo_invalid": "The photo did not upload; try again.",
+      "network": "No connection. Try again.",
+      "failed": "Something went wrong. Try again."
     }
   }
 }

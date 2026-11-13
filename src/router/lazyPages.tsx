@@ -399,6 +399,8 @@ export const QRScannerPage = lazy(() => import('@/pages/teacher/QRScanner').then
 export const TeacherEventsPage = lazy(() =>
   import('@/pages/teacher/TeacherEventsPage').then((m) => ({ default: m.TeacherEventsPage })),
 );
+export const AdminStaffTasksPage = lazy(() => import('@/pages/admin/AdminStaffTasksPage').then((m) => ({ default: m.AdminStaffTasksPage })));
+export const MyTasksPage = lazy(() => import('@/pages/shared/MyTasksPage').then((m) => ({ default: m.MyTasksPage })));
 export const XoAdminHomePage = lazy(() =>
   import('@/pages/xo-admin/XoAdminHomePage').then((m) => ({ default: m.XoAdminHomePage })),
 );

@@ -109,6 +109,9 @@ export function AppRouter() {
               <Route path="settings" element={<P.AdminSettingsPage />} />
               <Route path="teacher-reminders" element={<P.AdminTeacherRemindersPage />} />
               <Route path="reminders" element={<P.RemindersPage />} />
+              <Route path="staff-tasks" element={<P.AdminStaffTasksPage view="board" />} />
+              <Route path="staff-tasks/list" element={<P.AdminStaffTasksPage view="list" />} />
+              <Route path="my-tasks" element={<P.MyTasksPage />} />
               <Route path="packages" element={<P.AdminPackagesPage />} />
               <Route path="deals" element={<P.AdminDealsPage />} />
               <Route path="deals/partners" element={<P.AdminPartnershipsPage />} />
@@ -198,6 +201,7 @@ export function AppRouter() {
               <Route path="daily-reports" element={<P.TeacherDailyReportPage />} />
               <Route path="meals" element={<P.TeacherMealsPage />} />
               <Route path="absences" element={<P.TeacherAbsencesPage />} />
+              <Route path="tasks" element={<P.MyTasksPage />} />
               <Route path="medicines" element={<P.TeacherMedicinesPage />} />
               <Route path="daily-reports/:childId/:date" element={<P.TeacherDailyReportEditorPage />} />
               <Route path="report-rates" element={<P.DailyReportRatesPage />} />

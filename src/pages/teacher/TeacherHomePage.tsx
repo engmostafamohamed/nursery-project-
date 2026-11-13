@@ -30,6 +30,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { StatTile } from '@/components/ui/StatTile';
 import { MedicineDueBanner } from '@/features/medicine-round/MedicineDueBanner';
 import { StaffClockCard } from '@/features/staff-clock/StaffClockCard';
+import { MyTasksTodayCard } from '@/features/staff-tasks/MyTasksTodayCard';
 import { CoverBanner } from '@/features/staff-absence/CoverBanner';
 import { useMyAbsences } from '@/features/staff-absence/useStaffAbsence';
 import { useAuthSession } from '@/hooks/useAuthSession';
@@ -160,6 +161,7 @@ export function TeacherHomePage() {
     return (
       <div className="space-y-5">
         <StaffClockCard />
+        <MyTasksTodayCard link="/teacher/tasks" />
         <EmptyState icon="school" title={t('teacher.home.noClassesTitle')} description={t('teacher.home.noClassesDescription')} />
       </div>
     );
@@ -167,8 +169,9 @@ export function TeacherHomePage() {
 
   return (
     <div className="space-y-5 pb-8">
-      {/* Clocking in and out comes first: it is the day's first thing to do */}
+      {/* Clocking in and out comes first: it is the day's first thing to do; then the admin's tasks */}
       <StaffClockCard />
+      <MyTasksTodayCard link="/teacher/tasks" />
 
       {/* Greeting and the day's shortcuts */}
       <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
