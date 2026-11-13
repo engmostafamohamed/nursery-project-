@@ -14,17 +14,20 @@ import { cn } from '@/lib/utils';
 import { CANCEL_REASON_MAX, cancelEvent, eventFlowErrorKey, type CancelResult } from './eventFlowApi';
 
 /**
- * Cancelling an event, always with a reason the families read. The server tells the families of
- * the children asked, cancels the invoices not paid yet, and tells the admins how many families
- * already paid (with the nursery's refund policy).
+ * Cancelling an event, always with a reason. The server tells the families of the children asked,
+ * cancels the invoices not paid yet, and tells the admins how many families already paid (with the
+ * nursery's refund policy). `forFamily`: a family taking back its own urgent event, read by the
+ * nursery and the teachers.
  */
-export function CancelEventDialog({ eventId, eventTitle, onClose, onCancelled }: {
+export function CancelEventDialog({ eventId, eventTitle, onClose, onCancelled, forFamily = false }: {
   eventId: string;
   eventTitle: string;
   onClose: () => void;
   onCancelled: (result: CancelResult) => void;
+  forFamily?: boolean;
 }) {
   const { t } = useTranslation();
+  const copy = forFamily ? 'eventFlow.familyCancel' : 'eventFlow.cancel';
   const [reason, setReason] = useState('');
   const [tried, setTried] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
@@ -38,12 +41,14 @@ export function CancelEventDialog({ eventId, eventTitle, onClose, onCancelled }:
     setProblem(null);
     try {
       const result = await cancel.mutateAsync();
-      const notes = [
-        t('eventFlow.cancel.doneFamilies', { count: result.notified }),
-        result.invoicesCancelled ? t('eventFlow.cancel.doneInvoices', { count: result.invoicesCancelled }) : null,
-        result.paidInvoices ? t('eventFlow.cancel.donePaid', { count: result.paidInvoices }) : null,
-      ].filter(Boolean).join(' ');
-      toast.success(t('eventFlow.cancel.done'), { description: notes });
+      const notes = forFamily
+        ? t('eventFlow.familyCancel.doneHint')
+        : [
+            t('eventFlow.cancel.doneFamilies', { count: result.notified }),
+            result.invoicesCancelled ? t('eventFlow.cancel.doneInvoices', { count: result.invoicesCancelled }) : null,
+            result.paidInvoices ? t('eventFlow.cancel.donePaid', { count: result.paidInvoices }) : null,
+          ].filter(Boolean).join(' ');
+      toast.success(t(`${copy}.done`), { description: notes });
       onCancelled(result);
     } catch (error) {
       setProblem(t(eventFlowErrorKey(error)));
@@ -56,16 +61,16 @@ export function CancelEventDialog({ eventId, eventTitle, onClose, onCancelled }:
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MaterialSymbol name="event_busy" size="text-xl" className="text-error" />
-            {t('eventFlow.cancel.title', { event: eventTitle })}
+            {t(`${copy}.title`, { event: eventTitle })}
           </DialogTitle>
-          <DialogDescription>{t('eventFlow.cancel.body')}</DialogDescription>
+          <DialogDescription>{t(`${copy}.body`)}</DialogDescription>
         </DialogHeader>
-        <FormField id="cancel-event-reason" label={t('eventFlow.cancel.reason')} hint={t('eventFlow.cancel.reasonHint')} error={tried ? issue : null}>
+        <FormField id="cancel-event-reason" label={t(`${copy}.reason`)} hint={t(`${copy}.reasonHint`)} error={tried ? issue : null}>
           <Textarea
             id="cancel-event-reason"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder={t('eventFlow.cancel.reasonPlaceholder')}
+            placeholder={t(`${copy}.reasonPlaceholder`)}
             aria-invalid={Boolean(tried && issue)}
             className={cn('min-h-24', tried && issue && invalidFieldClass)}
             autoFocus

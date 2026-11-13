@@ -4,9 +4,10 @@ import { supabase } from '@/lib/supabase';
 
 /*
  * An event's steps through the server (event_publish, event_sync_children, event_respond,
- * event_bill_approved, event_cancel, event_delete): the database asks the children, keeps the
- * deadline, bills a paid event once per child, cancels the unpaid invoices of a cancelled event,
- * tells the families, and deletes by marking rows (nothing is removed). The screens only call these.
+ * event_bill_approved, event_cancel, event_delete, and a family's create_parent_urgent_event): the
+ * database asks the children, keeps the deadline, bills a paid event once per child, cancels the
+ * unpaid invoices of a cancelled event, tells the families and the staff, and deletes by marking
+ * rows (nothing is removed). The screens only call these.
  */
 
 export type PublishResult = { children: number; notified: number };
@@ -18,6 +19,16 @@ async function call(name: string, args: Record<string, unknown>) {
   const { data, error } = await supabase.rpc(name as never, args as never);
   if (error) throw error;
   return obj(data);
+}
+
+/**
+ * A family tells the nursery about something for its children (create_parent_urgent_event): the
+ * children's requests are given at once, and the admins and the teachers are told. Returns its id.
+ */
+export async function createFamilyEvent(args: Record<string, unknown>): Promise<string> {
+  const { data, error } = await supabase.rpc('create_parent_urgent_event' as never, args as never);
+  if (error) throw error;
+  return text(data);
 }
 
 /** Opens a draft: the children are asked and each family is told once. */
@@ -79,6 +90,15 @@ export const EVENT_FLOW_ERROR_CODES = [
   'event_cancel_reason_too_long',
   'event_delete_not_allowed',
   'event_not_paid',
+  // A family's urgent event (create_parent_urgent_event)
+  'event_title_required',
+  'event_title_too_long',
+  'event_start_in_past',
+  'event_category_invalid',
+  'event_schedule_invalid',
+  'event_schedule_days_required',
+  'event_child_required',
+  'event_children_invalid',
 ] as const;
 
 /** The text key for a refused step (eventFlow.errors.<code>, network, failed). */

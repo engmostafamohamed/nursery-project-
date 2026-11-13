@@ -51,6 +51,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { STEP_DATE_TIME } from '@/lib/admissionTimeline';
 import { applicationStatusUi } from '@/lib/applicationStatus';
 import { localName } from '@/lib/bilingualName';
+import { answersByEvent, awaitingAnswers } from '@/features/events/familyAnswers';
 import { CHART_CURSOR, CHART_GRID_STROKE, CHART_TOOLTIP_STYLE, chartColor, chartDirection } from '@/lib/chartTheme';
 import { formatDate, formatDateTime } from '@/lib/datetime';
 import { formatMoneyAmount } from '@/lib/money';
@@ -623,6 +624,10 @@ export function ParentDashboardPage() {
     return uniqueEventIds.size;
   }, [eventPermissionsQuery.data]);
 
+  // Where each event stands for the family, and the ones still waiting for its answer.
+  const familyAnswers = useMemo(() => answersByEvent(eventPermissionsQuery.data ?? []), [eventPermissionsQuery.data]);
+  const awaitingFamilyAnswers = useMemo(() => awaitingAnswers(eventPermissionsQuery.data ?? []), [eventPermissionsQuery.data]);
+
   const showChildSkeleton = Boolean(user) && (childrenQuery.isPending || !nurseryId);
   const moneyFormatter = useMemo(
     () =>
@@ -823,6 +828,12 @@ export function ParentDashboardPage() {
             upcoming={scheduleQuery.data?.upcoming ?? []}
             pickup={scheduleQuery.data?.pickup ?? { standardEndTime: null, nurseryClosesAt: null }}
             isLoading={Boolean(user) && scheduleQuery.isPending}
+            answers={familyAnswers}
+            awaiting={awaitingFamilyAnswers}
+            childName={(id) => {
+              const child = childRows.find((c) => c.id === id);
+              return child ? localName(child.nameAr, child.nameEn, i18n.language.startsWith('ar')) : '';
+            }}
           />
         </div>
         <div className="space-y-3 xl:col-span-5">

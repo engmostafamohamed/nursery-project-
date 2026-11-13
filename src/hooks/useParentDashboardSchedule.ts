@@ -8,6 +8,7 @@ export type ParentScheduleTodayEvent = {
   titleEn: string;
   startsAt: string;
   location: string | null;
+  category: string;
 };
 
 export type ParentScheduleUpcoming = ParentScheduleTodayEvent;
@@ -41,7 +42,7 @@ export function useParentDashboardSchedule(
       const [evTodayRes, evUpcomingRes, settingsRes, nurseryRes] = await Promise.all([
         supabase
           .from('events')
-          .select('id, title_ar, title_en, starts_at, location')
+          .select('id, title_ar, title_en, starts_at, location, category')
           .eq('nursery_id', nurseryId)
           .is('cancelled_at', null)
           .neq('status', 'cancelled')
@@ -50,7 +51,7 @@ export function useParentDashboardSchedule(
           .order('starts_at', { ascending: true }),
         supabase
           .from('events')
-          .select('id, title_ar, title_en, starts_at, location')
+          .select('id, title_ar, title_en, starts_at, location, category')
           .eq('nursery_id', nurseryId)
           .is('cancelled_at', null)
           .neq('status', 'cancelled')
@@ -71,6 +72,7 @@ export function useParentDashboardSchedule(
         title_en: string | null;
         starts_at: string;
         location: string | null;
+        category: string;
       };
 
       const mapEvent = (row: EventRow): ParentScheduleTodayEvent => ({
@@ -79,6 +81,7 @@ export function useParentDashboardSchedule(
         titleEn: row.title_en ?? '',
         startsAt: row.starts_at,
         location: row.location,
+        category: row.category,
       });
 
       const todayEvents = ((evTodayRes.data ?? []) as EventRow[]).map(mapEvent);

@@ -40,7 +40,7 @@ end;
 $$;
 -- The child's event invoices as "status amount" (oldest first).
 create function pg_temp.invoices(p_event uuid, p_child uuid) returns text language sql as $$
-  select coalesce(string_agg(format('%s %s', i.status, i.amount::numeric(8,2)), ', ' order by i.created_at, i.id), '-')
+  select coalesce(string_agg(format('%s %s', i.status, i.amount::numeric(8,2)), ', ' order by i.created_at, (i.status <> 'cancelled'), i.id), '-')
     from public.event_invoices ei join public.invoices i on i.id = ei.invoice_id
    where ei.event_id = p_event and ei.child_id = p_child
 $$;

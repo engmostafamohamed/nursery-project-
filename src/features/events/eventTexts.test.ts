@@ -40,6 +40,11 @@ describe('event texts', () => {
       ...ROSTER_STATUSES.map((status) => `teacher.events.roster.groups.${status}`),
       ...['all', 'granted', 'pending', 'denied', 'checkedIn'].map((f) => `admin.events.details.filters.${f}`),
       ...['child', 'parent', 'status', 'respondedAt', 'checkedIn', 'parentNote', 'payment'].map((c) => `admin.events.details.csv.${c}`),
+      ...['titleRequired', 'startInvalid', 'startInPast', 'childRequired', 'daysRequired', 'hoursRequired'].map((code) => `familyEvent.errors.${code}`),
+      ...EVENT_CATEGORIES.map((c) => `familyEvent.titlePlaceholder.${c}`),
+      ...['title', 'body', 'reason', 'reasonHint', 'reasonPlaceholder', 'done', 'doneHint'].map((part) => `eventFlow.familyCancel.${part}`),
+      ...['going', 'notGoing'].map((a) => `parent.dashboard.schedule.answer.${a}`),
+      ...['event_family_notice', 'event_family_notice_cancelled'].flatMap((key) => [`notificationTemplates.${key}.title`, `notificationTemplates.${key}.body`]),
     ])).toEqual([]);
   });
 
@@ -60,9 +65,12 @@ describe('event texts', () => {
         'useEventActions.tsx',
         'TeacherEventCard.tsx',
         'EventRosterDialog.tsx',
+        'FamilyEventForm.tsx',
+        'FamilyEventNotice.tsx',
       ].map((f) => path.join(dir, f)),
       ...['AdminEventsListPage.tsx', 'AdminEventCreatePage.tsx', 'AdminEventEditPage.tsx', 'AdminEventDetailsPage.tsx'].map((f) => path.join(pages, 'admin', f)),
-      ...['ParentEventDetailsPage.tsx', 'ParentPermissionsPage.tsx'].map((f) => path.join(pages, 'parent', f)),
+      ...['ParentEventDetailsPage.tsx', 'ParentPermissionsPage.tsx', 'ParentEventCreatePage.tsx'].map((f) => path.join(pages, 'parent', f)),
+      ...['ParentEventFacts.tsx', 'ParentEventDetailsPermissionList.tsx', 'ParentDashboardScheduleSection.tsx'].map((f) => path.join(components, 'parent', f)),
       path.join(pages, 'teacher', 'TeacherEventsPage.tsx'),
       ...['events/EventsCalendar.tsx', 'events/EventsViewToggle.tsx', 'events/SelectedDayChip.tsx', 'admin/AdminEventDetailsAttendanceSection.tsx'].map((f) => path.join(components, f)),
     ]);
@@ -92,6 +100,9 @@ describe('event texts', () => {
       'teacher.events.going',
       'teacher.events.checkedIn',
       'notificationTemplates.event_tomorrow_staff.body',
+      'parent.events.details.awaitingCount',
+      'parent.dashboard.schedule.awaitingTitle',
+      'parent.dashboard.schedule.awaitingMore',
     ])).toEqual([]);
   });
 
@@ -160,5 +171,22 @@ describe('event texts', () => {
     expect(staff(1, 'en')).toMatch(/^1 child of your class is going to Zoo trip tomorrow at 9:00/);
     expect(staff(13, 'en')).toMatch(/^13 children of your classes are going/);
     expect(staff(2, 'ar')).toContain('طفلان');
+  });
+
+  it('the nursery reads which family told it what, and when the family took it back', () => {
+    const params = {
+      event: { ar: 'طبيب أسنان', en: 'Dentist' },
+      family: { ar: 'منى', en: 'Mona' },
+      child: { ar: 'ليلى', en: 'Laila' },
+      date: '2026-11-17',
+      start_time: '2026-11-17T08:00:00Z',
+      tz: 'Africa/Cairo',
+    };
+    const told = notificationText({ template_key: 'event_family_notice', template_params: params }, 'en');
+    expect(told.title).toBe('From a family: Dentist');
+    expect(told.body).toMatch(/^Mona told the nursery: Laila, Dentist on 17 Nov 2026 at 10:00/);
+    expect(notificationText({ template_key: 'event_family_notice', template_params: params }, 'ar').body).toContain('منى');
+    const off = notificationText({ template_key: 'event_family_notice_cancelled', template_params: { ...params, reason: 'Moved' } }, 'en');
+    expect(off.body).toBe('Dentist for Laila on 17 Nov 2026 is off. Reason: Moved');
   });
 });

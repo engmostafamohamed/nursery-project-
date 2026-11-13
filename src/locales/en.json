@@ -5044,14 +5044,24 @@
         "upcomingEvents": "{{count}} upcoming events"
       },
       "schedule": {
-        "title": "Today’s schedule",
         "pickupLine": "Typical pickup window ends around {{time}} — confirm with your class if unsure.",
         "pickupFallback": "Ask your nursery about pickup times.",
         "today": "Today’s activities",
         "noToday": "No activities listed for today.",
         "upcoming": "Coming up",
         "noUpcoming": "No upcoming activities in the next few days.",
-        "allEvents": "All events"
+        "allEvents": "All events",
+        "answer": {
+          "going": "Going",
+          "notGoing": "Not going"
+        },
+        "awaitingTitle_one": "{{count}} event waits for your answer",
+        "awaitingTitle_other": "{{count}} events wait for your answer",
+        "awaitingFor": "For {{names}}",
+        "answerBy": "Answer by {{date}}",
+        "awaitingMore_one": "{{count}} more",
+        "awaitingMore_other": "{{count}} more",
+        "tellNursery": "Tell the nursery"
       },
       "quick": {
         "title": "Quick actions",
@@ -5235,12 +5245,10 @@
         "more": "+{{count}} more"
       },
       "details": {
-        "breadcrumbLabel": "Breadcrumb",
         "breadcrumbEvents": "Events",
         "loadingLabel": "Loading event",
         "notFound": "Event not found.",
         "loadError": "Could not load this event. Check your connection and try again.",
-        "backToPermissions": "Back to permissions",
         "qr": {
           "sectionTitle": "Event check-in QR",
           "hint": "Show this code to staff at the event to check your child in.",
@@ -5250,7 +5258,6 @@
         "cancelledBanner": "This event has been cancelled.",
         "deadlineExpired": "The permission deadline has passed. You can still decline if you need to update your response.",
         "detailsCardTitle": "Event details",
-        "sectionWhat": "What",
         "sectionWhen": "When",
         "sectionWhere": "Where",
         "sectionWho": "Who",
@@ -5260,9 +5267,7 @@
         "targetIndividual": "Selected children only",
         "free": "Free",
         "pricePerChild": "EGP {{amount}} per child",
-        "endsAt": "Ends: {{date}}",
         "locationTbd": "To be announced",
-        "durationBadge": "{{duration}}",
         "durationMinutes": "{{count}} minutes",
         "durationHours": "{{count}} hours",
         "durationHoursMinutes": "{{hours}} h {{minutes}} min",
@@ -5270,13 +5275,10 @@
         "startsInHours": "{{count}} hours",
         "startsInMinutes": "{{count}} minutes",
         "eventStartsIn": "Starts in {{text}}",
-        "datesTitle": "Important dates",
         "permissionDeadlineLabel": "Permission deadline",
-        "eventDateLabel": "Event date",
         "permissionSectionTitle": "Your response",
         "paymentCardTitle": "Payment required",
         "paymentInstructions": "Pay invoices from the Invoices section before the due date. Contact the nursery if you need help.",
-        "noPermissionDraft": "Permission requests will be sent when the event is published.",
         "noPermissionNotRequired": "This event does not require permission for your children.",
         "noInvoiceYet": "No invoice yet",
         "totalApproved": "Total: {{total}} ({{count}} children)",
@@ -5296,8 +5298,6 @@
           "cancelled": "Cancelled",
           "completed": "Completed"
         },
-        "approvedOn": "You approved on {{date}}",
-        "declinedOn": "You declined on {{date}}",
         "yourNote": "Your note",
         "approve": "Approve",
         "deny": "Decline",
@@ -5307,48 +5307,19 @@
         "share": "Share",
         "shareSuccess": "Event link copied.",
         "shareError": "Could not copy link.",
-        "ariaWhen": "Date and time",
-        "ariaWhere": "Location",
         "ariaShare": "Copy event link",
-        "viewInvoice": "View invoice"
+        "viewInvoice": "View invoice",
+        "durationLabel": "How long",
+        "repeatsLabel": "Every week",
+        "awaitingCount_one": "{{count}} to answer",
+        "awaitingCount_other": "{{count}} to answer"
       },
       "tabUrgent": "Urgent",
       "urgentBadge": "Urgent",
       "create": {
         "button": "Create urgent event",
-        "title": "Create urgent event",
-        "subtitle": "Create an urgent event for your child and notify the nursery.",
         "back": "Back to events",
-        "submit": "Create event",
-        "success": "Urgent event created.",
-        "error": "Could not create urgent event.",
-        "noChildren": "No active children are linked to your account.",
-        "fields": {
-          "title": "Event title",
-          "description": "Description (optional)",
-          "startsAt": "Date and time",
-          "category": "Category",
-          "location": "Location (optional)",
-          "children": "Children",
-          "urgentSchedule": "Urgent schedule",
-          "urgentHours": "Urgent hours",
-          "addHour": "Add an hour",
-          "urgentRepeatsWeekly": "Repeat every week"
-        },
-        "hints": {
-          "urgentSchedule": "Choose the days and hours when this urgent event should be highlighted.",
-          "childrenOptional": "Optional. Leave empty to create the event without assigning it to children."
-        },
-        "errors": {
-          "title": "Enter an event title.",
-          "date": "Choose a valid date and time.",
-          "future": "Choose a future date and time.",
-          "children": "Choose at least one child.",
-          "days": "Choose at least one urgent day.",
-          "hours": "Choose at least one urgent hour.",
-          "unknown": "Could not create urgent event.",
-          "no_active_children": "No active children were found for your account."
-        }
+        "noChildren": "No active children are linked to your account."
       }
     },
     "permissions": {
@@ -8366,7 +8337,15 @@
       "event_delete_not_allowed": "Only a draft or a cancelled event can be deleted. Cancel an open event first.",
       "event_not_paid": "This event is free: there is nothing to bill.",
       "network": "No connection. Check the internet and try again.",
-      "failed": "Something went wrong. Please try again."
+      "failed": "Something went wrong. Please try again.",
+      "event_title_required": "Write what it is.",
+      "event_title_too_long": "Keep the title short.",
+      "event_start_in_past": "Choose a time still to come.",
+      "event_category_invalid": "Choose a kind.",
+      "event_schedule_invalid": "Choose valid days and hours.",
+      "event_schedule_days_required": "Choose the days and hours it repeats.",
+      "event_child_required": "Choose at least one child.",
+      "event_children_invalid": "Choose your own children, at one nursery."
     },
     "publish": {
       "done_one": "{{count}} family was told.",
@@ -8414,7 +8393,16 @@
       "done_other": "{{count}} invoices issued.",
       "failed": "Could not issue the invoices"
     },
-    "editCopy": "Edit the copy"
+    "editCopy": "Edit the copy",
+    "familyCancel": {
+      "title": "Cancel “{{event}}”",
+      "body": "The nursery and your child's teachers are told it is off, with your reason.",
+      "reason": "Reason for the nursery",
+      "reasonHint": "The nursery reads this.",
+      "reasonPlaceholder": "e.g. The doctor moved the appointment.",
+      "done": "Cancelled",
+      "doneHint": "The nursery and the teachers were told."
+    }
   },
   "eventForm": {
     "createDescription": "Fill in the details; the preview shows what families will see.",
@@ -8949,6 +8937,14 @@
     "partner_agreement_ending": {
       "title": "{{partner}} agreement ends soon",
       "body": "The {{partner}} agreement ends on {{date}}. Families with its discount: {{families}}. Renew it or let it end."
+    },
+    "event_family_notice": {
+      "title": "From a family: {{event}}",
+      "body": "{{family}} told the nursery: {{child}}, {{event}} on {{date}} at {{start_time}}."
+    },
+    "event_family_notice_cancelled": {
+      "title": "Cancelled by the family: {{event}}",
+      "body": "{{event}} for {{child}} on {{date}} is off. Reason: {{reason}}"
     }
   },
   "qr": {
@@ -11622,6 +11618,51 @@
       "family_not_found": "This family has no child at this branch.",
       "network": "Could not reach the server. Check the connection and try again.",
       "failed": "Something went wrong. Try again."
+    }
+  },
+  "familyEvent": {
+    "pageTitle": "Tell the nursery",
+    "pageSubtitle": "Something the nursery must know about for your child: a doctor's visit, an early pickup, a session every week. The nursery and your child's teachers are told at once.",
+    "who": "For which child?",
+    "whoHint": "Their teachers are told too.",
+    "what": "What is it?",
+    "title": "Title",
+    "titlePlaceholder": {
+      "trip": "e.g. Family trip, picked up at 11",
+      "activity": "e.g. Swimming lesson",
+      "service": "e.g. Speech therapy session",
+      "doctor_visit": "e.g. Dentist appointment"
+    },
+    "description": "Details for the nursery",
+    "descriptionHint": "Anything they should do or know: who picks up, medicine, when back.",
+    "when": "When and where",
+    "startsAt": "Date and time",
+    "location": "Where",
+    "locationPlaceholder": "e.g. Al Salam clinic",
+    "repeat": "Every week?",
+    "repeatHint": "For a session on the same days every week; the nursery sees those days marked.",
+    "repeatsWeekly": "It repeats every week",
+    "days": "On",
+    "hours": "At",
+    "addHour": "Add a time",
+    "told": "The nursery's admins and your child's teachers are told as soon as you send it. You can cancel it from its page.",
+    "toldNamed": "The nursery's admins and the teachers of {{names}} are told as soon as you send it. You can cancel it from its page.",
+    "submit": "Send to the nursery",
+    "sent": "Sent to the nursery",
+    "sentHint": "The admins and the teachers were told.",
+    "childrenLoadError": "Could not load your children.",
+    "noChildrenHint": "Once your child is enrolled, you can tell the nursery about their visits and sessions here.",
+    "yours": "You told the nursery about this",
+    "yoursHint": "No answer is needed. The nursery and the teachers of {{names}} were told.",
+    "yoursBadge": "Your notice",
+    "cancel": "Cancel it",
+    "errors": {
+      "titleRequired": "Write what it is.",
+      "startInvalid": "Choose a date and time.",
+      "startInPast": "Choose a time still to come.",
+      "childRequired": "Choose at least one child.",
+      "daysRequired": "Choose the days.",
+      "hoursRequired": "Choose at least one time."
     }
   }
 }

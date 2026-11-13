@@ -5323,14 +5323,32 @@
         "upcomingEvents": "{{count}} فعاليات قادمة"
       },
       "schedule": {
-        "title": "جدول اليوم",
         "pickupLine": "عادةً تنتهي نافذة الاستلام حوالي {{time}} — تأكد مع الفصل إن لزم.",
         "pickupFallback": "اسأل الحضانة عن أوقات الاستلام.",
         "today": "أنشطة اليوم",
         "noToday": "لا أنشطة مدرجة لليوم.",
         "upcoming": "القادم",
         "noUpcoming": "لا فعاليات قادمة خلال الأيام القليلة.",
-        "allEvents": "كل الفعاليات"
+        "allEvents": "كل الفعاليات",
+        "answer": {
+          "going": "سيشارك",
+          "notGoing": "لن يشارك"
+        },
+        "awaitingTitle_zero": "لا فعاليات بانتظار ردك",
+        "awaitingTitle_one": "فعالية واحدة بانتظار ردك",
+        "awaitingTitle_two": "فعاليتان بانتظار ردك",
+        "awaitingTitle_few": "{{count}} فعاليات بانتظار ردك",
+        "awaitingTitle_many": "{{count}} فعالية بانتظار ردك",
+        "awaitingTitle_other": "{{count}} فعالية بانتظار ردك",
+        "awaitingFor": "لـ {{names}}",
+        "answerBy": "الرد قبل {{date}}",
+        "awaitingMore_zero": "لا مزيد",
+        "awaitingMore_one": "واحدة أخرى",
+        "awaitingMore_two": "اثنتان أخريان",
+        "awaitingMore_few": "{{count}} أخرى",
+        "awaitingMore_many": "{{count}} أخرى",
+        "awaitingMore_other": "{{count}} أخرى",
+        "tellNursery": "إبلاغ الحضانة"
       },
       "quick": {
         "title": "إجراءات سريعة",
@@ -5518,12 +5536,10 @@
         "more": "+{{count}} آخرون"
       },
       "details": {
-        "breadcrumbLabel": "مسار التنقل",
         "breadcrumbEvents": "الفعاليات",
         "loadingLabel": "جاري تحميل الفعالية",
         "notFound": "الفعالية غير موجودة.",
         "loadError": "تعذر تحميل هذه الفعالية. تحقق من الاتصال وحاول مرة أخرى.",
-        "backToPermissions": "العودة إلى الموافقات",
         "qr": {
           "sectionTitle": "رمز تسجيل الحضور للفعالية",
           "hint": "اعرض هذا الرمز لموظفي الحضانة في الفعالية لتسجيل حضور طفلك.",
@@ -5533,7 +5549,6 @@
         "cancelledBanner": "تم إلغاء هذه الفعالية.",
         "deadlineExpired": "انتهى موعد الموافقة. يمكنك الرفض إذا احتجت تحديث ردك.",
         "detailsCardTitle": "تفاصيل الفعالية",
-        "sectionWhat": "ماذا",
         "sectionWhen": "متى",
         "sectionWhere": "أين",
         "sectionWho": "لمن",
@@ -5543,9 +5558,7 @@
         "targetIndividual": "أطفال محددون فقط",
         "free": "مجانية",
         "pricePerChild": "{{amount}} جنيه لكل طفل",
-        "endsAt": "ينتهي: {{date}}",
         "locationTbd": "سيُعلن لاحقاً",
-        "durationBadge": "{{duration}}",
         "durationMinutes": "{{count}} دقيقة",
         "durationHours": "{{count}} ساعة",
         "durationHoursMinutes": "{{hours}} س {{minutes}} د",
@@ -5553,13 +5566,10 @@
         "startsInHours": "{{count}} ساعة",
         "startsInMinutes": "{{count}} دقيقة",
         "eventStartsIn": "تبدأ خلال {{text}}",
-        "datesTitle": "تواريخ مهمة",
         "permissionDeadlineLabel": "موعد الموافقة",
-        "eventDateLabel": "تاريخ الفعالية",
         "permissionSectionTitle": "ردك",
         "paymentCardTitle": "الدفع مطلوب",
         "paymentInstructions": "ادفع الفواتير من قسم الفواتير قبل الاستحقاق. تواصل مع الحضانة إذا احتجت مساعدة.",
-        "noPermissionDraft": "سيتم إرسال طلبات الموافقة عند نشر الفعالية.",
         "noPermissionNotRequired": "هذه الفعالية لا تتطلب موافقة لأطفالك.",
         "noInvoiceYet": "لا توجد فاتورة بعد",
         "totalApproved": "الإجمالي: {{total}} ({{count}} أطفال)",
@@ -5579,8 +5589,6 @@
           "cancelled": "ملغاة",
           "completed": "مكتملة"
         },
-        "approvedOn": "وافقت في {{date}}",
-        "declinedOn": "رفضت في {{date}}",
         "yourNote": "ملاحظتك",
         "approve": "موافقة",
         "deny": "رفض",
@@ -5590,48 +5598,23 @@
         "share": "مشاركة",
         "shareSuccess": "تم نسخ رابط الفعالية.",
         "shareError": "تعذر نسخ الرابط.",
-        "ariaWhen": "التاريخ والوقت",
-        "ariaWhere": "الموقع",
         "ariaShare": "نسخ رابط الفعالية",
-        "viewInvoice": "عرض الفاتورة"
+        "viewInvoice": "عرض الفاتورة",
+        "durationLabel": "المدة",
+        "repeatsLabel": "كل أسبوع",
+        "awaitingCount_zero": "لا شيء بانتظار الرد",
+        "awaitingCount_one": "طفل بانتظار الرد",
+        "awaitingCount_two": "طفلان بانتظار الرد",
+        "awaitingCount_few": "{{count}} أطفال بانتظار الرد",
+        "awaitingCount_many": "{{count}} طفلًا بانتظار الرد",
+        "awaitingCount_other": "{{count}} طفل بانتظار الرد"
       },
       "tabUrgent": "عاجل",
       "urgentBadge": "عاجل",
       "create": {
         "button": "إنشاء حدث عاجل",
-        "title": "إنشاء حدث عاجل",
-        "subtitle": "أنشئ حدثاً عاجلاً لطفلك وأبلغ الحضانة.",
         "back": "العودة للفعاليات",
-        "submit": "إنشاء الحدث",
-        "success": "تم إنشاء الحدث العاجل.",
-        "error": "تعذر إنشاء الحدث العاجل.",
-        "noChildren": "لا يوجد أطفال نشطون مرتبطون بحسابك.",
-        "fields": {
-          "title": "عنوان الحدث",
-          "description": "الوصف (اختياري)",
-          "startsAt": "التاريخ والوقت",
-          "category": "التصنيف",
-          "location": "المكان (اختياري)",
-          "children": "الأطفال",
-          "urgentSchedule": "جدول التنبيه العاجل",
-          "urgentHours": "ساعات التنبيه العاجل",
-          "addHour": "أضف ساعة",
-          "urgentRepeatsWeekly": "يتكرر كل أسبوع"
-        },
-        "hints": {
-          "urgentSchedule": "اختر الأيام والساعات التي يظهر فيها هذا الحدث كعاجل.",
-          "childrenOptional": "اختياري. اتركه فارغاً لإنشاء الحدث بدون تعيينه لأطفال."
-        },
-        "errors": {
-          "title": "أدخل عنوان الحدث.",
-          "date": "اختر تاريخاً ووقتاً صالحين.",
-          "future": "اختر تاريخاً ووقتاً في المستقبل.",
-          "children": "اختر طفلاً واحداً على الأقل.",
-          "days": "اختر يوماً واحداً على الأقل للتنبيه العاجل.",
-          "hours": "اختر ساعة واحدة على الأقل للتنبيه العاجل.",
-          "unknown": "تعذر إنشاء الحدث العاجل.",
-          "no_active_children": "لم يتم العثور على أطفال نشطين في حسابك."
-        }
+        "noChildren": "لا يوجد أطفال نشطون مرتبطون بحسابك."
       }
     },
     "permissions": {
@@ -8793,7 +8776,15 @@
       "event_delete_not_allowed": "يمكن حذف المسودة أو الفعالية الملغاة فقط. ألغِ الفعالية المفتوحة أولًا.",
       "event_not_paid": "هذه الفعالية مجانية: لا يوجد ما يُفوتر.",
       "network": "لا يوجد اتصال. تحقّق من الإنترنت وحاول مرة أخرى.",
-      "failed": "حدث خطأ. حاول مرة أخرى."
+      "failed": "حدث خطأ. حاول مرة أخرى.",
+      "event_title_required": "اكتب ما هو.",
+      "event_title_too_long": "اجعل العنوان قصيرًا.",
+      "event_start_in_past": "اختر وقتًا لم يأتِ بعد.",
+      "event_category_invalid": "اختر النوع.",
+      "event_schedule_invalid": "اختر أيامًا وساعات صحيحة.",
+      "event_schedule_days_required": "اختر الأيام والساعات التي يتكرر فيها.",
+      "event_child_required": "اختر طفلًا واحدًا على الأقل.",
+      "event_children_invalid": "اختر أطفالك أنت، في حضانة واحدة."
     },
     "publish": {
       "done_zero": "لم تُبلَّغ أي عائلة.",
@@ -8877,7 +8868,16 @@
       "done_other": "صدرت {{count}} فاتورة.",
       "failed": "تعذّر إصدار الفواتير"
     },
-    "editCopy": "تعديل النسخة"
+    "editCopy": "تعديل النسخة",
+    "familyCancel": {
+      "title": "إلغاء «{{event}}»",
+      "body": "تُبلَّغ الحضانة ومعلمو طفلك بأنه أُلغي، مع سببك.",
+      "reason": "السبب للحضانة",
+      "reasonHint": "تقرأ الحضانة هذا.",
+      "reasonPlaceholder": "مثال: الطبيب غيّر موعد الكشف.",
+      "done": "أُلغي",
+      "doneHint": "أُبلغت الحضانة والمعلمون."
+    }
   },
   "eventForm": {
     "createDescription": "املأ التفاصيل؛ تعرض المعاينة ما ستراه العائلات.",
@@ -9448,6 +9448,14 @@
     "partner_agreement_ending": {
       "title": "اتفاقية {{partner}} تنتهي قريبًا",
       "body": "تنتهي اتفاقية {{partner}} في {{date}}. الأسر المستفيدة: {{families}}. جدّدها أو اتركها تنتهي."
+    },
+    "event_family_notice": {
+      "title": "من ولي أمر: {{event}}",
+      "body": "أبلغ {{family}} الحضانة: {{child}}، {{event}} يوم {{date}} الساعة {{start_time}}."
+    },
+    "event_family_notice_cancelled": {
+      "title": "ألغته العائلة: {{event}}",
+      "body": "لم يعد {{event}} لـ {{child}} يوم {{date}} قائمًا. السبب: {{reason}}"
     }
   },
   "qr": {
@@ -12208,6 +12216,51 @@
       "family_not_found": "ليس لهذه الأسرة طفل في هذا الفرع.",
       "network": "تعذّر الاتصال بالخادم. تحقق من الاتصال وحاول مرة أخرى.",
       "failed": "حدث خطأ. حاول مرة أخرى."
+    }
+  },
+  "familyEvent": {
+    "pageTitle": "إبلاغ الحضانة",
+    "pageSubtitle": "أمر يجب أن تعرفه الحضانة عن طفلك: زيارة طبيب، استلام مبكر، جلسة كل أسبوع. تُبلَّغ الحضانة ومعلمو طفلك فورًا.",
+    "who": "لأي طفل؟",
+    "whoHint": "يُبلَّغ معلموه أيضًا.",
+    "what": "ما الأمر؟",
+    "title": "العنوان",
+    "titlePlaceholder": {
+      "trip": "مثال: رحلة عائلية، الاستلام الساعة 11",
+      "activity": "مثال: درس سباحة",
+      "service": "مثال: جلسة تخاطب",
+      "doctor_visit": "مثال: موعد طبيب الأسنان"
+    },
+    "description": "تفاصيل للحضانة",
+    "descriptionHint": "أي شيء يجب أن يفعلوه أو يعرفوه: من يستلم، الدواء، موعد العودة.",
+    "when": "متى وأين",
+    "startsAt": "التاريخ والوقت",
+    "location": "المكان",
+    "locationPlaceholder": "مثال: عيادة السلام",
+    "repeat": "كل أسبوع؟",
+    "repeatHint": "لجلسة في نفس الأيام كل أسبوع؛ تظهر هذه الأيام مميزة للحضانة.",
+    "repeatsWeekly": "يتكرر كل أسبوع",
+    "days": "في",
+    "hours": "الساعة",
+    "addHour": "أضف وقتًا",
+    "told": "تُبلَّغ إدارة الحضانة ومعلمو طفلك فور الإرسال. يمكنك إلغاؤه من صفحته.",
+    "toldNamed": "تُبلَّغ إدارة الحضانة ومعلمو {{names}} فور الإرسال. يمكنك إلغاؤه من صفحته.",
+    "submit": "أرسل للحضانة",
+    "sent": "أُرسل للحضانة",
+    "sentHint": "أُبلغت الإدارة والمعلمون.",
+    "childrenLoadError": "تعذّر تحميل أطفالك.",
+    "noChildrenHint": "بعد تسجيل طفلك، يمكنك إبلاغ الحضانة بزياراته وجلساته من هنا.",
+    "yours": "أنت أبلغت الحضانة بهذا",
+    "yoursHint": "لا حاجة لرد. أُبلغت الحضانة ومعلمو {{names}}.",
+    "yoursBadge": "إبلاغك",
+    "cancel": "إلغاؤه",
+    "errors": {
+      "titleRequired": "اكتب ما هو.",
+      "startInvalid": "اختر التاريخ والوقت.",
+      "startInPast": "اختر وقتًا لم يأتِ بعد.",
+      "childRequired": "اختر طفلًا واحدًا على الأقل.",
+      "daysRequired": "اختر الأيام.",
+      "hoursRequired": "اختر وقتًا واحدًا على الأقل."
     }
   }
 }

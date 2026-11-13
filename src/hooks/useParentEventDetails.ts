@@ -27,6 +27,8 @@ export type ParentEventDetailsEvent = {
   status: string;
   cancelled_at: string | null;
   permission_deadline: string | null;
+  /** The family who made it (a family's urgent event), else null. */
+  parent_created_by: string | null;
   classNameAr: string | null;
   classNameEn: string | null;
 };
@@ -79,7 +81,7 @@ export function useParentEventDetails(eventId: string | undefined, parentId: str
           starts_at, ends_at, location, category, is_urgent,
           urgent_days_of_week, urgent_hours_of_day, urgent_repeats_weekly,
           is_paid, price,
-          target_scope, target_class_id, status, cancelled_at, permission_deadline,
+          target_scope, target_class_id, status, cancelled_at, permission_deadline, parent_created_by,
           classes (name_ar, name_en)
         `,
         )
@@ -100,8 +102,8 @@ export function useParentEventDetails(eventId: string | undefined, parentId: str
         classNameEn: names.classNameEn,
       };
 
-      const st = String(event.status ?? '').toLowerCase();
-      if (st !== 'active' || event.cancelled_at) {
+      // A cancelled or past event still opens (with its banner); a draft never reaches a family.
+      if (String(event.status ?? '').toLowerCase() === 'draft') {
         return null;
       }
 

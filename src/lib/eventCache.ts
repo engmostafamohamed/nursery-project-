@@ -22,3 +22,23 @@ export async function invalidateAllEventQueries(queryClient: QueryClient): Promi
     ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
   );
 }
+
+/**
+ * The family's side of the same: after an answer, a new urgent event or a cancelled one, every
+ * screen of the family that shows events (the list, the event page, the answers, the dashboard's
+ * schedule and feed, the invoices a paid yes makes) reads it again.
+ */
+export async function invalidateFamilyEventQueries(queryClient: QueryClient): Promise<void> {
+  await Promise.all(
+    [
+      ['parent-events-catalog'],
+      ['parent-event-details'],
+      ['parent-event-permissions'],
+      ['parent-permissions-page'],
+      ['parent-permissions-counts'],
+      ['parent-dashboard-schedule'],
+      ['parent-dashboard-feed'],
+      ['parent-invoices'],
+    ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+  );
+}

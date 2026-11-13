@@ -3,16 +3,30 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { StatusPill, type PillTone } from '@/components/ui/DataTable';
+import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import type { ParentEventDetailsEvent, ParentEventDetailsPermission } from '@/hooks/useParentEventDetails';
+import { localName } from '@/lib/bilingualName';
 import { getUserInitials } from '@/lib/utils';
 
+const ANSWER: Record<string, { tone: PillTone; icon: string }> = {
+  pending: { tone: 'warning', icon: 'pending_actions' },
+  granted: { tone: 'success', icon: 'task_alt' },
+  denied: { tone: 'error', icon: 'block' },
+};
+const INVOICE_TONE: Record<string, PillTone> = { paid: 'success', pending: 'warning', overdue: 'error', cancelled: 'neutral' };
+
+const priceOf = (event: ParentEventDetailsEvent) => (event.is_paid && event.price != null && event.price !== '' ? Number(event.price) : 0);
+
+/**
+ * The family's answer for each of its children: yes (with the price of a paid event on the button)
+ * or no (with a note), and a change of mind while the event is open.
+ */
 export function ParentEventDetailsPermissionList({
   event,
   permissions,
-  dateTimeFmt,
-  priceFmt,
+  money,
   deadlinePassed,
   actionsDisabled,
   onApprove,
@@ -22,8 +36,7 @@ export function ParentEventDetailsPermissionList({
 }: {
   event: ParentEventDetailsEvent;
   permissions: ParentEventDetailsPermission[];
-  dateTimeFmt: Intl.DateTimeFormat;
-  priceFmt: Intl.NumberFormat;
+  money: (amount: number) => string;
   deadlinePassed: boolean;
   actionsDisabled: boolean;
   onApprove: (permissionId: string) => void;
@@ -33,147 +46,89 @@ export function ParentEventDetailsPermissionList({
 }) {
   const { t, i18n } = useTranslation();
   const isAr = i18n.language.startsWith('ar');
-
-  // Single-click approve. For paid events surface the price on the button so the
-  // charge is clear before the (now single) click.
-  const priceNum = event.price != null && event.price !== '' ? Number(event.price) : 0;
-  const approveLabel =
-    event.is_paid && priceNum > 0
-      ? `${t('parent.events.details.approve')} · ${priceFmt.format(priceNum)}`
-      : t('parent.events.details.approve');
-
+  const locale = isAr ? 'ar-EG' : 'en-GB';
+  const respondedFmt = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true });
+  const price = priceOf(event);
+  const approveLabel = price > 0 ? `${t('parent.events.details.approve')} · ${money(price)}` : t('parent.events.details.approve');
   const sorted = useMemo(
-    () =>
-      [...permissions].sort((a, b) =>
-        (isAr ? a.childNameAr : a.childNameEn).localeCompare(isAr ? b.childNameAr : b.childNameEn, isAr ? 'ar' : 'en'),
-      ),
-    [permissions, isAr],
+    () => [...permissions].sort((a, b) => localName(a.childNameAr, a.childNameEn, isAr).localeCompare(localName(b.childNameAr, b.childNameEn, isAr), locale)),
+    [permissions, isAr, locale],
   );
 
   if (permissions.length === 0) {
-    if (String(event.status).toLowerCase() === 'draft') {
-      return <p className="text-sm text-on-surface-variant">{t('parent.events.details.noPermissionDraft')}</p>;
-    }
-    return <p className="text-sm text-on-surface-variant">{t('parent.events.details.noPermissionNotRequired')}</p>;
+    return <p className="p-4 text-sm text-on-surface-variant sm:p-5">{t('parent.events.details.noPermissionNotRequired')}</p>;
   }
 
   return (
-    <ul className="space-y-4">
+    <ul className="divide-y divide-outline-variant">
       {sorted.map((p) => {
-        const childName = (isAr ? p.childNameAr : p.childNameEn) || p.childNameEn || p.childNameAr;
+        const childName = localName(p.childNameAr, p.childNameEn, isAr);
         const pending = p.status === 'pending';
-        const granted = p.status === 'granted';
-        const denied = p.status === 'denied';
         const busy = busyId === p.id;
-        const approveDisabled = pending && (deadlinePassed || actionsDisabled);
-
+        const answer = ANSWER[p.status] ?? ANSWER.pending;
         return (
-          <li key={p.id} className="rounded-xl border border-outline-variant bg-surface-container-low p-3">
-            <div className="flex gap-3">
+          <li key={p.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:p-5" data-testid="event-answer">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
               <Avatar className="h-10 w-10 shrink-0">
-                {p.avatar_url ? <AvatarImage src={p.avatar_url} alt={childName} /> : null}
+                {p.avatar_url ? <AvatarImage src={p.avatar_url} alt="" /> : null}
                 <AvatarFallback>{getUserInitials(childName, null)}</AvatarFallback>
               </Avatar>
-              <div className="min-w-0 flex-1 space-y-2">
+              <div className="min-w-0 space-y-1">
+                <p className="truncate text-sm font-semibold text-on-surface">{childName}</p>
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm font-semibold text-on-surface">{childName}</p>
-                  <Badge
-                    className={
-                      pending
-                        ? 'border-warning/40 bg-warning/10 text-warning'
-                        : granted
-                          ? 'border-success/40 bg-success/10 text-success'
-                          : 'border-error/40 bg-error/10 text-error'
-                    }
-                  >
+                  <StatusPill tone={answer.tone} icon={answer.icon}>
                     {t(`parent.events.details.permissionStatus.${p.status}`, { defaultValue: p.status })}
-                  </Badge>
+                  </StatusPill>
+                  {!pending && p.responded_at ? (
+                    <span className="text-xs text-on-surface-variant">{respondedFmt.format(new Date(p.responded_at))}</span>
+                  ) : null}
                 </div>
-                {granted && p.responded_at ? (
-                  <p className="text-xs text-on-surface-variant">
-                    {t('parent.events.details.approvedOn', {
-                      date: dateTimeFmt.format(new Date(p.responded_at)),
-                    })}
-                  </p>
-                ) : null}
-                {denied && p.responded_at ? (
-                  <p className="text-xs text-on-surface-variant">
-                    {t('parent.events.details.declinedOn', {
-                      date: dateTimeFmt.format(new Date(p.responded_at)),
-                    })}
-                  </p>
-                ) : null}
-                {denied && p.parent_note ? (
+                {p.status === 'denied' && p.parent_note ? (
                   <p className="text-xs text-on-surface-variant">
                     {t('parent.events.details.yourNote')}: {p.parent_note}
                   </p>
                 ) : null}
-                {pending ? (
-                  <div className="flex w-full flex-col gap-2">
-                    <Button
-                      type="button"
-                      size="lg"
-                      className="w-full gap-2 bg-success text-white hover:bg-success/90"
-                      disabled={busy || approveDisabled}
-                      aria-busy={busy && busyAction === 'approve'}
-                      onClick={() => onApprove(p.id)}
-                    >
-                      {busy && busyAction === 'approve' ? (
-                        <>
-                          <span className="material-symbols-outlined animate-spin text-xl" aria-hidden>
-                            progress_activity
-                          </span>
-                          {t('parent.events.details.approving')}
-                        </>
-                      ) : (
-                        <>
-                          <span className="material-symbols-outlined text-xl" aria-hidden>
-                            check_circle
-                          </span>
-                          {approveLabel}
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="lg"
-                      className="w-full gap-2 border-error text-error hover:bg-error-container"
-                      disabled={busy || actionsDisabled}
-                      aria-busy={busy && busyAction === 'deny'}
-                      onClick={() => onDenyOpen(p)}
-                    >
-                      {busy && busyAction === 'deny' ? (
-                        <>
-                          <span className="material-symbols-outlined animate-spin text-xl" aria-hidden>
-                            progress_activity
-                          </span>
-                          {t('parent.events.details.denying')}
-                        </>
-                      ) : (
-                        <>
-                          <span className="material-symbols-outlined text-xl" aria-hidden>
-                            cancel
-                          </span>
-                          {t('parent.events.details.deny')}
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                ) : null}
-                {granted || denied ? (
+              </div>
+            </div>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              {pending ? (
+                <>
                   <Button
                     type="button"
                     variant="secondary"
-                    size="sm"
-                    className="w-full sm:w-auto"
-                    disabled={busy || actionsDisabled}
-                    onClick={() => (granted ? onDenyOpen(p) : onApprove(p.id))}
+                    className="flex-1 gap-1.5 bg-success text-white hover:bg-success/90 sm:flex-none"
+                    disabled={busy || deadlinePassed || actionsDisabled}
+                    aria-busy={busy && busyAction === 'approve'}
+                    onClick={() => onApprove(p.id)}
+                    data-testid="event-answer-yes"
                   >
-                    {t('parent.events.details.changeResponse')}
+                    <MaterialSymbol name={busy && busyAction === 'approve' ? 'progress_activity' : 'check_circle'} size="text-lg" className={busy && busyAction === 'approve' ? 'animate-spin' : undefined} />
+                    {busy && busyAction === 'approve' ? t('parent.events.details.approving') : approveLabel}
                   </Button>
-                ) : null}
-              </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1 gap-1.5 border-error/40 text-error hover:bg-error/10 sm:flex-none"
+                    disabled={busy || actionsDisabled}
+                    aria-busy={busy && busyAction === 'deny'}
+                    onClick={() => onDenyOpen(p)}
+                  >
+                    <MaterialSymbol name="cancel" size="text-lg" />
+                    {busy && busyAction === 'deny' ? t('parent.events.details.denying') : t('parent.events.details.deny')}
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={busy || actionsDisabled}
+                  onClick={() => (p.status === 'granted' ? onDenyOpen(p) : onApprove(p.id))}
+                >
+                  <MaterialSymbol name="swap_horiz" size="text-base" className="me-1" />
+                  {t('parent.events.details.changeResponse')}
+                </Button>
+              )}
             </div>
           </li>
         );
@@ -182,60 +137,48 @@ export function ParentEventDetailsPermissionList({
   );
 }
 
+/** A paid event: the price per child, and each child's invoice once the family said yes. */
 export function ParentEventDetailsPaymentBlock({
   event,
   permissions,
-  priceFmt,
+  money,
 }: {
   event: ParentEventDetailsEvent;
   permissions: ParentEventDetailsPermission[];
-  priceFmt: Intl.NumberFormat;
+  money: (amount: number) => string;
 }) {
   const { t, i18n } = useTranslation();
   const isAr = i18n.language.startsWith('ar');
-  const priceNum = event.price != null && event.price !== '' ? Number(event.price) : 0;
+  const price = priceOf(event);
   const granted = permissions.filter((p) => p.status === 'granted');
-  const grantedCount = granted.length;
-  const totalRevenue = priceNum > 0 ? priceNum * grantedCount : 0;
 
   return (
-    <div className="space-y-3 text-sm">
-      <p>{t('parent.events.details.pricePerChild', { amount: priceFmt.format(priceNum) })}</p>
-      {grantedCount > 1 ? (
-        <p className="font-medium text-on-surface">
-          {t('parent.events.details.totalApproved', {
-            total: priceFmt.format(totalRevenue),
-            count: grantedCount,
-          })}
-        </p>
+    <div className="space-y-3 p-4 text-sm sm:p-5">
+      <p className="text-on-surface">{t('parent.events.details.pricePerChild', { amount: money(price) })}</p>
+      {granted.length > 1 ? (
+        <p className="font-medium text-on-surface">{t('parent.events.details.totalApproved', { total: money(price * granted.length), count: granted.length })}</p>
       ) : null}
-      <ul className="space-y-2">
-        {granted.map((p) => {
-          const childName = (isAr ? p.childNameAr : p.childNameEn) || p.childNameEn || p.childNameAr;
-          return (
-            <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-outline-variant p-2">
-              <span className="text-on-surface">{childName}</span>
+      {granted.length ? (
+        <ul className="divide-y divide-outline-variant rounded-lg border border-outline-variant">
+          {granted.map((p) => (
+            <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+              <span className="text-on-surface">{localName(p.childNameAr, p.childNameEn, isAr)}</span>
               {p.invoice ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge className="border-outline-variant bg-surface-container text-on-surface">
-                    {t(`parent.events.details.invoiceStatus.${p.invoice.status}`, {
-                      defaultValue: p.invoice.status,
-                    })}
-                  </Badge>
-                  <Link
-                    to={`/parent/invoices/${p.invoice.id}`}
-                    className="text-sm font-medium text-secondary underline underline-offset-2"
-                  >
+                <span className="flex flex-wrap items-center gap-2">
+                  <StatusPill tone={INVOICE_TONE[p.invoice.status] ?? 'neutral'}>
+                    {t(`parent.events.details.invoiceStatus.${p.invoice.status}`, { defaultValue: p.invoice.status })}
+                  </StatusPill>
+                  <Link to={`/parent/invoices/${p.invoice.id}`} className="text-sm font-medium text-primary underline underline-offset-2">
                     {t('parent.events.details.viewInvoice')}
                   </Link>
-                </div>
+                </span>
               ) : (
                 <span className="text-xs text-on-surface-variant">{t('parent.events.details.noInvoiceYet')}</span>
               )}
             </li>
-          );
-        })}
-      </ul>
+          ))}
+        </ul>
+      ) : null}
       <p className="text-xs text-on-surface-variant">{t('parent.events.details.paymentInstructions')}</p>
     </div>
   );
