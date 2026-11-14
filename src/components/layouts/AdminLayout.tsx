@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -20,6 +20,7 @@ import { ThemeSwitcher } from '@/components/theme-switcher';
 import { useActiveNurseryId } from '@/hooks/useActiveNurseryId';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useAdminInAppNotifications } from '@/hooks/useAdminInAppNotifications';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useNotificationsCenter } from '@/hooks/useNotificationsCenter';
 import { ChatWidget } from '@/components/chat/ChatWidget';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -203,7 +204,26 @@ export function AdminLayout() {
   // sidebar — same as VS Code/Notion's collapsed-rail peek. It only affects the sidebar's own
   // width/content, never the page's content margin below, so nothing reflows while peeking.
   const [peeking, setPeeking] = useState(false);
-  const showExpanded = !collapsed || peeking;
+  // On a phone or tablet (below lg) the sidebar is a drawer over the page, opened from the menu
+  // button and closed by the backdrop, Escape or going to another page; it is always full there.
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const { pathname } = useLocation();
+  const [navPath, setNavPath] = useState(pathname);
+  if (navPath !== pathname) {
+    setNavPath(pathname);
+    setMobileNavOpen(false);
+  }
+  const drawerShut = !isDesktop && !mobileNavOpen;
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileNavOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [mobileNavOpen]);
+  const showExpanded = !isDesktop || !collapsed || peeking;
   const { data: notifications = [] } = useNotificationsCenter(user?.id);
   const { data: inAppNotifications = [] } = useAdminInAppNotifications(user?.id);
   const mediaPendingQuery = useQuery({
@@ -266,16 +286,27 @@ export function AdminLayout() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <OfflineIndicator />
+      {mobileNavOpen && !isDesktop ? (
+        <button
+          type="button"
+          className="no-print fixed inset-0 z-40 bg-black/40 lg:hidden"
+          aria-label={t('common.closeMenu')}
+          onClick={() => setMobileNavOpen(false)}
+        />
+      ) : null}
       <aside
-        onMouseEnter={() => setPeeking(true)}
+        id="admin-sidebar"
+        inert={drawerShut}
+        onMouseEnter={() => isDesktop && setPeeking(true)}
         onMouseLeave={() => setPeeking(false)}
-        onFocus={() => setPeeking(true)}
+        onFocus={() => isDesktop && setPeeking(true)}
         onBlur={(e) => {
           if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setPeeking(false);
         }}
         className={cn(
-          'no-print fixed start-0 top-0 z-40 flex h-dvh max-h-dvh flex-col overflow-hidden bg-primary p-4 shadow-lg transition-[width] duration-200',
+          'no-print fixed start-0 top-0 z-50 flex h-dvh max-h-dvh flex-col overflow-hidden bg-primary p-4 shadow-lg transition-[width,transform] duration-200 lg:z-40',
           showExpanded ? 'w-64' : 'w-20',
+          drawerShut && '-translate-x-full rtl:translate-x-full',
         )}
       >
         <div
@@ -291,17 +322,28 @@ export function AdminLayout() {
               <p className="text-xs text-white/70">{t('admin.nav.brandSubtitle')}</p>
             </div>
           ) : null}
-          <button
-            type="button"
-            onClick={toggleCollapsed}
-            title={t(collapsed ? 'admin.nav.expandSidebar' : 'admin.nav.collapseSidebar')}
-            aria-label={t(collapsed ? 'admin.nav.expandSidebar' : 'admin.nav.collapseSidebar')}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-          >
-            <span className="material-symbols-outlined text-lg" aria-hidden>
-              {collapsed ? 'left_panel_open' : 'left_panel_close'}
-            </span>
-          </button>
+          {isDesktop ? (
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              title={t(collapsed ? 'admin.nav.expandSidebar' : 'admin.nav.collapseSidebar')}
+              aria-label={t(collapsed ? 'admin.nav.expandSidebar' : 'admin.nav.collapseSidebar')}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              <span className="material-symbols-outlined text-lg" aria-hidden>
+                {collapsed ? 'left_panel_open' : 'left_panel_close'}
+              </span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setMobileNavOpen(false)}
+              aria-label={t('common.closeMenu')}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              <span className="material-symbols-outlined text-lg" aria-hidden>close</span>
+            </button>
+          )}
         </div>
         <nav
           className="admin-sidebar-scroll min-h-0 flex-1 space-y-1.5 overflow-y-auto overflow-x-hidden overscroll-y-contain pe-1"
@@ -312,6 +354,7 @@ export function AdminLayout() {
               key={item.key}
               to={item.to}
               end={NAV_LINK_END_PATHS.has(item.to)}
+              onClick={() => setMobileNavOpen(false)}
               title={!showExpanded ? t(`admin.nav.${item.key}`) : undefined}
               aria-label={!showExpanded ? t(`admin.nav.${item.key}`) : undefined}
               className={({ isActive }) =>
@@ -381,6 +424,7 @@ export function AdminLayout() {
                         key={item.key}
                         to={item.to}
                         end={NAV_LINK_END_PATHS.has(item.to)}
+                        onClick={() => setMobileNavOpen(false)}
                         title={!showExpanded ? t(`admin.nav.${item.key}`) : undefined}
                         aria-label={!showExpanded ? t(`admin.nav.${item.key}`) : undefined}
                         className={({ isActive }) =>
@@ -420,7 +464,10 @@ export function AdminLayout() {
               title={!showExpanded ? t('help.resources') : undefined}
               aria-label={!showExpanded ? t('help.resources') : undefined}
               className={cn('w-full min-h-11 border-white/30 bg-white/10 text-white hover:bg-white/20', !showExpanded && 'px-0')}
-              onClick={() => setHelpOpen(true)}
+              onClick={() => {
+                setMobileNavOpen(false);
+                setHelpOpen(true);
+              }}
             >
               <span className={cn('material-symbols-outlined text-base', showExpanded && 'me-2')} aria-hidden>
                 school
@@ -452,17 +499,30 @@ export function AdminLayout() {
         </div>
       </aside>
 
-      <div className={cn('min-h-screen transition-[margin] duration-200', collapsed ? 'ms-20' : 'ms-64')}>
+      <div className={cn('min-h-screen transition-[margin] duration-200', collapsed ? 'lg:ms-20' : 'lg:ms-64')}>
         <header className="no-print sticky top-0 z-30 border-b border-border bg-surface/80 backdrop-blur-xl">
-          <div className="flex items-center gap-3 px-8 py-4">
+          <div className="flex items-center gap-2 px-4 py-3 sm:gap-3 lg:px-8 lg:py-4">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="shrink-0 lg:hidden"
+              aria-label={t('common.openMenu')}
+              aria-controls="admin-sidebar"
+              aria-expanded={mobileNavOpen}
+              onClick={() => setMobileNavOpen(true)}
+            >
+              <span className="material-symbols-outlined" aria-hidden>menu</span>
+            </Button>
             <BackButton />
-            <div className="relative flex-1">
+            <div className="relative hidden flex-1 md:block">
               <span className="material-symbols-outlined absolute start-3 top-2.5 text-foreground-tertiary">search</span>
               <input
                 className="h-11 w-full rounded-full border border-border-subtle bg-surface-low ps-11 pe-3 text-sm outline-none"
                 placeholder={t('admin.search')}
               />
             </div>
+            <div className="flex-1 md:hidden" />
             <ThemeSwitcher />
             <LanguageToggle />
             <Button variant="outline" size="icon" aria-label={t('admin.notifications.drawerAria')} className="relative" onClick={() => setDrawerOpen(true)}>
@@ -476,7 +536,7 @@ export function AdminLayout() {
             <AdminUserMenu />
           </div>
         </header>
-        <main className="p-8 pb-28">
+        <main className="p-4 pb-28 sm:p-6 sm:pb-28 lg:p-8 lg:pb-28">
           <PWAInstallPrompt />
           <FeatureRouteGuard homePath="/admin">
             <Outlet />
