@@ -1,6 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 
+import { addCalendarDaysYmd, getNurseryCalendarDateString } from '@/lib/nurseryDay';
 import { supabase } from '@/lib/supabase';
+
+/** Check-ins from this many days back: the feed shows recent ones, and the window keeps the read fast. */
+const CHECK_IN_DAYS = 7;
 
 export type DashboardFeedItem =
   | {
@@ -71,6 +75,12 @@ async function fetchUserNamesMap(ids: string[]): Promise<Map<string, UserNames>>
   return map;
 }
 
+/** The parent billed for a payment's invoice (embedded as an object, or a one-item list). */
+function paymentParentId(row: unknown): string | undefined {
+  const invoice = (row as { invoices: { parent_id: string } | { parent_id: string }[] | null }).invoices;
+  return (Array.isArray(invoice) ? invoice[0] : invoice)?.parent_id ?? undefined;
+}
+
 /** canSeeMoney: payments join the feed only for people who see the nursery's money. */
 export function useAdminDashboardActivityFeed(nurseryId: string | undefined, canSeeMoney: boolean | undefined) {
   return useQuery({
@@ -78,10 +88,8 @@ export function useAdminDashboardActivityFeed(nurseryId: string | undefined, can
     queryFn: async (): Promise<DashboardFeedItem[]> => {
       if (!nurseryId) return [];
 
-      const childIdsRes = await supabase.from('children').select('id').eq('nursery_id', nurseryId);
-      if (childIdsRes.error) throw childIdsRes.error;
-      const childIds = (childIdsRes.data ?? []).map((r: { id: string }) => r.id);
-
+      // Check-ins and payments are filtered by the branch through the child and the invoice on the
+      // server: a list of every child or invoice id in the address grows past what the API accepts.
       const [
         childrenRecent,
         inquiriesRecent,
@@ -89,7 +97,7 @@ export function useAdminDashboardActivityFeed(nurseryId: string | undefined, can
         reportsRecent,
         eventsRecent,
         attRecent,
-        paymentsBlock,
+        paymentsRecent,
       ] = await Promise.all([
         supabase
           .from('children')
@@ -122,23 +130,23 @@ export function useAdminDashboardActivityFeed(nurseryId: string | undefined, can
           .eq('nursery_id', nurseryId)
           .order('created_at', { ascending: false })
           .limit(6),
-        childIds.length
+        supabase
+          .from('attendance_records')
+          .select('id, check_in, child_id, children!inner ( full_name_ar, full_name_en, nursery_id )')
+          .eq('children.nursery_id', nurseryId)
+          .gte('attendance_date', addCalendarDaysYmd(getNurseryCalendarDateString(), -CHECK_IN_DAYS))
+          .not('check_in', 'is', null)
+          .order('check_in', { ascending: false })
+          .limit(6),
+        canSeeMoney
           ? supabase
-              .from('attendance_records')
-              .select(
-                `
-              id,
-              check_in,
-              child_id,
-              children ( full_name_ar, full_name_en )
-            `,
-              )
-              .in('child_id', childIds)
-              .not('check_in', 'is', null)
-              .order('check_in', { ascending: false })
+              .from('payments')
+              .select('id, amount, paid_at, invoice_id, invoices!inner ( parent_id, nursery_id )')
+              .eq('status', 'completed')
+              .eq('invoices.nursery_id', nurseryId)
+              .order('paid_at', { ascending: false })
               .limit(6)
           : Promise.resolve({ data: [], error: null }),
-        canSeeMoney ? supabase.from('invoices').select('id').eq('nursery_id', nurseryId) : Promise.resolve({ data: [], error: null }),
       ]);
 
       if (childrenRecent.error) throw childrenRecent.error;
@@ -147,41 +155,7 @@ export function useAdminDashboardActivityFeed(nurseryId: string | undefined, can
       if (reportsRecent.error) throw reportsRecent.error;
       if (eventsRecent.error) throw eventsRecent.error;
       if (attRecent.error) throw attRecent.error;
-      if (paymentsBlock.error) throw paymentsBlock.error;
-
-      const invoiceIds = (paymentsBlock.data ?? []).map((r: { id: string }) => r.id);
-      let paymentsRecent: { data: unknown[] | null; error: { message: string } | null } = {
-        data: [],
-        error: null,
-      };
-      if (invoiceIds.length) {
-        paymentsRecent = await supabase
-          .from('payments')
-          .select('id, amount, paid_at, invoice_id')
-          .eq('status', 'completed')
-          .in('invoice_id', invoiceIds)
-          .order('paid_at', { ascending: false })
-          .limit(6);
-      }
       if (paymentsRecent.error) throw paymentsRecent.error;
-
-      const payInvoiceIds = [
-        ...new Set(
-          (paymentsRecent.data ?? []).map((row: unknown) => (row as { invoice_id: string }).invoice_id),
-        ),
-      ];
-      const invoiceParentMap = new Map<string, string>();
-      if (payInvoiceIds.length) {
-        const invParents = await supabase
-          .from('invoices')
-          .select('id, parent_id')
-          .in('id', payInvoiceIds);
-        if (invParents.error) throw invParents.error;
-        for (const row of invParents.data ?? []) {
-          const r = row as { id: string; parent_id: string };
-          invoiceParentMap.set(r.id, r.parent_id);
-        }
-      }
 
       const parentIds: string[] = [];
       const uploaderIds: string[] = [];
@@ -196,7 +170,7 @@ export function useAdminDashboardActivityFeed(nurseryId: string | undefined, can
         reportChildIds.push((row as { child_id: string }).child_id);
       }
       for (const row of paymentsRecent.data ?? []) {
-        const pid = invoiceParentMap.get((row as { invoice_id: string }).invoice_id);
+        const pid = paymentParentId(row);
         if (pid) parentIds.push(pid);
       }
 
@@ -249,8 +223,8 @@ export function useAdminDashboardActivityFeed(nurseryId: string | undefined, can
       }
 
       for (const row of paymentsRecent.data ?? []) {
-        const r = row as { id: string; amount: string | number; paid_at: string; invoice_id: string };
-        const par = invoiceParentMap.get(r.invoice_id);
+        const r = row as { id: string; amount: string | number; paid_at: string };
+        const par = paymentParentId(row);
         const names = par ? userMap.get(par) : undefined;
         items.push({
           kind: 'payment',
