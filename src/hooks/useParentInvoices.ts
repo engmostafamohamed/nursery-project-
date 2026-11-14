@@ -60,8 +60,8 @@ export function useParentInvoices({ parentId, childId, status, sort }: UseParent
       if (!parentId) return [] as ParentInvoiceItem[];
       const { data, error } = await supabase
         .from('invoices')
-        .select('id, generated_invoice_number, amount, invoice_type, status, due_date, created_at, line_items_json, payments ( amount, status, paid_at, method )')
-        .eq('parent_id', parentId);
+        .select('id, generated_invoice_number, amount, invoice_type, status, due_date, created_at, line_items_json, payments ( amount, status, paid_at, method )');
+      // (the family's invoices: the rules show both parents those of a child in their custody)
       if (error) throw error;
 
       const invoiceIds = ((data ?? []) as { id: string }[]).map((r) => r.id);

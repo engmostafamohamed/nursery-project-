@@ -78,7 +78,7 @@ export function useParentDashboardFeed(parentId: string | undefined, nurseryId: 
         supabase
           .from('invoices')
           .select('id, amount, due_date, status, updated_at, created_at')
-          .eq('parent_id', parentId)
+          // the family's invoices: the rules show both parents those of a child in their custody
           .eq('status', 'pending')
           .order('due_date', { ascending: true })
           .limit(8),

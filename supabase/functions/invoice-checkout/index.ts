@@ -218,7 +218,10 @@ Deno.serve(async (req) => {
     if (invoiceError) throw new Error(invoiceError.message);
     const invoice = invoiceData as InvoiceRow | null;
     if (!invoice) return errorResponse('payment_invoice_not_found', 404);
-    if (invoice.parent_id !== user.id) return errorResponse('payment_invoice_not_yours', 403);
+    // The parent billed, or the other parent of a child in both parents' custody (the database's rule).
+    const { data: mayPay, error: mayPayError } = await userClient.rpc('parent_can_pay_invoice', { p_invoice_id: invoice.id });
+    if (mayPayError) throw new Error(mayPayError.message);
+    if (mayPay !== true) return errorResponse('payment_invoice_not_yours', 403);
 
     const enabled = await enabledPaymentMethods(admin, invoice.nursery_id);
     if (!onlineCheckoutAvailable(enabled)) return errorResponse('payment_checkout_unavailable', 409);

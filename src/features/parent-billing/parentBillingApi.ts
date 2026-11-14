@@ -50,7 +50,7 @@ export type InvoicePayment = { id: string; amount: number; method: string; at: s
 export type InvoiceReminder = { type: string; sentAt: string };
 
 export type BillingInvoiceDetails = BillingInvoice & {
-  /** The parent the invoice is billed to (the reader). */
+  /** The parent the invoice is billed to (the reader, or the other parent of the family). */
   parent: { name_ar: string; name_en: string };
   children: InvoiceChild[];
   /** Completed payments, newest first. */
