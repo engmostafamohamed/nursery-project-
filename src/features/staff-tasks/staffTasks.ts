@@ -57,6 +57,8 @@ export type StaffTaskItem = {
   done_by: string | null;
   note: string | null;
   photo_path: string | null;
+  /** On a day she is away, whose task this is (the person covers her class). */
+  covering_for: string | null;
 };
 
 /** Where an item stands: done, late (past its due time), to do, or no longer due. */

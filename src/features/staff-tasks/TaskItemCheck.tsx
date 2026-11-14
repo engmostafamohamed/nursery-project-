@@ -99,6 +99,11 @@ export function TaskItemCheck({ item, userId, today, compact = false }: {
               </span>
             )}
             {earlierDay ? <StatusPill tone="warning" icon="history">{new Date(`${item.due_on}T00:00:00`).toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' })}</StatusPill> : null}
+            {item.covering ? (
+              <StatusPill tone="primary" icon="swap_horiz">
+                {t('staffTasks.cover.for', { name: localName(item.covering.name_ar, item.covering.name_en, isAr) })}
+              </StatusPill>
+            ) : null}
             {item.task.photo_required ? <StatusPill icon="photo_camera">{t('staffTasks.photoNeeded')}</StatusPill> : null}
             {item.task.completion === 'any' ? <StatusPill icon="group">{t('staffTasks.oneIsEnough')}</StatusPill> : null}
           </span>

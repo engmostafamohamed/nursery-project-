@@ -6,6 +6,7 @@ import { notificationText } from '@/lib/notificationText';
 import { missingArabicPlurals, missingTexts, textKeysIn } from '@/test/localeKeys';
 
 import { ASSIGN_TO, COMPLETION, REPEATS, TASK_CATEGORIES } from './staffTasks';
+import { TASK_TEMPLATES } from './staffTaskTemplates';
 import { STAFF_TASK_ERROR_CODES } from './staffTasksApi';
 
 const dir = path.resolve(__dirname);
@@ -13,7 +14,7 @@ const dir = path.resolve(__dirname);
 describe('staff task texts', () => {
   it('every text the screens name exists in English and Arabic', () => {
     const keys = textKeysIn([
-      ...['TaskItemCheck.tsx', 'MyTaskChecklist.tsx', 'MyTasksTodayCard.tsx', 'TaskBoard.tsx', 'TaskList.tsx', 'StaffTaskFormDialog.tsx'].map((f) => path.join(dir, f)),
+      ...['TaskItemCheck.tsx', 'MyTaskChecklist.tsx', 'MyTasksTodayCard.tsx', 'TaskBoard.tsx', 'TaskList.tsx', 'StaffTaskFormDialog.tsx', 'TaskTemplates.tsx', 'StaffTasksTodayRateCard.tsx', 'StaffTaskMonthsCard.tsx'].map((f) => path.join(dir, f)),
       path.resolve(dir, '../../pages/admin/AdminStaffTasksPage.tsx'),
     ]);
     expect(keys.length).toBeGreaterThan(60);
@@ -34,7 +35,10 @@ describe('staff task texts', () => {
         'admin.nav.staffTasks',
         'admin.nav.myTasks',
         'teacher.nav.tasks',
-        ...['staff_task_new', 'staff_task_due'].flatMap((k) => [`notificationTemplates.${k}.title`, `notificationTemplates.${k}.body`]),
+        'staff.tabs.tasks',
+        ...['done', 'todo', 'late'].map((k) => `staffTasks.tiles.${k}`),
+        ...TASK_TEMPLATES.flatMap((tpl) => ['title', 'when', 'instructions'].map((k) => `staffTasks.templates.${tpl.id}.${k}`)),
+        ...['staff_task_new', 'staff_task_due', 'staff_task_late'].flatMap((k) => [`notificationTemplates.${k}.title`, `notificationTemplates.${k}.body`]),
         ...['staff_tasks_today', 'staff_tasks_missed'].map((k) => `notificationTemplates.${k}.title`),
       ]),
     ).toEqual([]);
@@ -42,7 +46,7 @@ describe('staff task texts', () => {
 
   it('the counts have every Arabic plural form', () => {
     expect(
-      missingArabicPlurals(['staffTasks.check.covered', 'staffTasks.list.people', 'notificationTemplates.staff_tasks_today.body', 'notificationTemplates.staff_tasks_missed.body']),
+      missingArabicPlurals(['staffTasks.months.doneLate', 'staffTasks.check.covered', 'staffTasks.list.people', 'notificationTemplates.staff_tasks_today.body', 'notificationTemplates.staff_tasks_missed.body']),
     ).toEqual([]);
   });
 
@@ -56,5 +60,11 @@ describe('staff task texts', () => {
     const missed = notificationText({ template_key: 'staff_tasks_missed', template_params: { count: 1, date: '2026-11-14' } }, 'en');
     expect(missed.title).toBe('Tasks not done on 14 Nov 2026');
     expect(missed.body).toMatch(/^1 task was not done today/);
+    const late = notificationText(
+      { template_key: 'staff_task_late', template_params: { task, name: { ar: 'منى', en: 'Mona' }, time: '2026-11-14T05:00:00Z', tz: 'Africa/Cairo' } },
+      'en',
+    );
+    expect(late.title).toBe('Safety task late: Fire exits');
+    expect(late.body).toMatch(/^Mona has not done it; it was due at 7:00/);
   });
 });

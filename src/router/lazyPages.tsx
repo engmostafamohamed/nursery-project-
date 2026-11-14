@@ -133,11 +133,6 @@ export const DailyReportRatesPage = lazy(() =>
 export const AdminRolesPage = lazy(() =>
   import('@/pages/admin/settings/AdminRolesPage').then((m) => ({ default: m.AdminRolesPage })),
 );
-export const AdminTeacherRemindersPage = lazy(() =>
-  import('@/pages/admin/AdminTeacherRemindersPage').then((m) => ({
-    default: m.AdminTeacherRemindersPage,
-  })),
-);
 export const AdminPackagesPage = lazy(() =>
   import('@/pages/admin/AdminPackagesPage').then((m) => ({ default: m.AdminPackagesPage })),
 );

@@ -26,6 +26,7 @@ import { Fact, FactList } from '@/components/ui/FactList';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StaffAbsencesPanel } from '@/features/staff-absence/StaffAbsencesPanel';
+import { StaffTaskMonthsCard } from '@/features/staff-tasks/StaffTaskMonthsCard';
 import { staffStatusErrorKey } from '@/features/staff-status/staffStatusApi';
 import { usePersonAbsences } from '@/features/staff-absence/usePersonAbsences';
 import { useAdminBasePath } from '@/hooks/useAdminBasePath';
@@ -51,6 +52,7 @@ const TAB_ICON: Record<Tab, string> = {
   schedule: 'calendar_month',
   attendance: 'how_to_reg',
   absences: 'event_busy',
+  tasks: 'task_alt',
   documents: 'description',
   payroll: 'payments',
 };
@@ -234,6 +236,8 @@ export function AdminStaffProfilePage() {
       ) : null}
 
       {tab === 'absences' && selected.user_id ? <StaffAbsencesPanel userId={String(selected.user_id)} name={name} /> : null}
+
+      {tab === 'tasks' && selected.user_id ? <StaffTaskMonthsCard userId={String(selected.user_id)} name={name} /> : null}
 
       {tab === 'documents' && profileId && profile?.nursery_id ? (
         <StaffDocumentsSection

@@ -15,6 +15,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { SectionTitle } from '@/components/ui/SectionTitle';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatTile } from '@/components/ui/StatTile';
+import { StaffTasksTodayRateCard } from '@/features/staff-tasks/StaffTasksTodayRateCard';
 import { useAdminBasePath } from '@/hooks/useAdminBasePath';
 import { useActiveNurseryId } from '@/hooks/useActiveNurseryId';
 import { useAdminDashboardActivityFeed } from '@/hooks/useAdminDashboardActivityFeed';
@@ -48,6 +49,8 @@ export function AdminDashboardPage() {
   const permissionsReady = usePermissionsReady();
   const canSeeFinance = useCan('dashboard_finance');
   const canSeeMoney = permissionsReady ? canSeeFinance : undefined;
+  // Today's staff tasks for the people who manage the staff (the board is under that permission).
+  const canSeeStaff = useCan('staff');
 
   const { data: stats, isPending: statsPending } = useAdminDashboardEnhancedStats(nurseryId, canSeeMoney);
   const { data: charts, isPending: chartsPending } = useAdminDashboardCharts(nurseryId, canSeeMoney);
@@ -208,6 +211,8 @@ export function AdminDashboardPage() {
           <DashboardQuickActions basePath={adminBasePath} />
 
           {nurseryId ? <ReportRateCard nurseryId={nurseryId} to={adminPath('/daily-reports')} /> : null}
+
+          {nurseryId && canSeeStaff ? <StaffTasksTodayRateCard nurseryId={nurseryId} to={adminPath('/staff-tasks')} /> : null}
 
           <TableCard
             title={t('admin.dashboard.registrationControlTitle')}

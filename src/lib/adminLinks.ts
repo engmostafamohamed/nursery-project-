@@ -5,7 +5,7 @@
 import type { ClassProfileTab } from '@/features/classes/classProfile';
 
 /** A member of staff's page's tabs, in order (the first is the page without ?tab). */
-export const STAFF_TABS = ['personal', 'classes', 'schedule', 'attendance', 'absences', 'documents', 'payroll'] as const;
+export const STAFF_TABS = ['personal', 'classes', 'schedule', 'attendance', 'absences', 'tasks', 'documents', 'payroll'] as const;
 export type StaffTab = (typeof STAFF_TABS)[number];
 
 const withTab = (path: string, tab: string | undefined, first: string) => (tab && tab !== first ? `${path}?tab=${tab}` : path);

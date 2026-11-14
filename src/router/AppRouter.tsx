@@ -107,7 +107,8 @@ export function AppRouter() {
               <Route path="media" element={<P.AdminMediaLibraryPage />} />
               <Route path="profile" element={<P.AdminProfilePage />} />
               <Route path="settings" element={<P.AdminSettingsPage />} />
-              <Route path="teacher-reminders" element={<P.AdminTeacherRemindersPage />} />
+              {/* The teachers' monthly reminders are staff tasks now. */}
+              <Route path="teacher-reminders" element={<Navigate to="/admin/staff-tasks/list" replace />} />
               <Route path="reminders" element={<P.RemindersPage />} />
               <Route path="staff-tasks" element={<P.AdminStaffTasksPage view="board" />} />
               <Route path="staff-tasks/list" element={<P.AdminStaffTasksPage view="list" />} />
@@ -294,7 +295,7 @@ export function AppRouter() {
               <Route path="nursery/media" element={<P.AdminMediaLibraryPage />} />
               <Route path="nursery/profile" element={<P.AdminProfilePage />} />
               <Route path="nursery/settings" element={<P.AdminSettingsPage />} />
-              <Route path="nursery/teacher-reminders" element={<P.AdminTeacherRemindersPage />} />
+              <Route path="nursery/teacher-reminders" element={<Navigate to="/admin/staff-tasks/list" replace />} />
               <Route path="nursery/reminders" element={<P.RemindersPage />} />
               <Route path="nursery/packages" element={<P.AdminPackagesPage />} />
               <Route path="nursery/deals" element={<P.AdminDealsPage />} />

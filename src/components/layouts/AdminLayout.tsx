@@ -136,7 +136,6 @@ const moreNavGroups: { titleKey: string; items: NavItem[] }[] = [
       { to: '/admin/attendance/logs', key: 'attendanceLogs', icon: 'receipt_long', feature: 'dashboard_attendance' },
       { to: '/admin/loyalty', key: 'loyalty', icon: 'workspace_premium', feature: 'loyalty' },
       { to: '/admin/messages/broadcasts', key: 'broadcastHistory', icon: 'history', feature: 'broadcast_messages' },
-      { to: '/admin/teacher-reminders', key: 'teacherReminders', icon: 'notifications_active', feature: 'notifications' },
       { to: '/admin/reminders', key: 'reminders', icon: 'alarm' },
       { to: '/admin/settings/positions', key: 'rbacPositions', icon: 'work', xoOnly: true },
       { to: '/admin/settings/roles', key: 'rbacRoles', icon: 'shield_person', feature: 'roles_permissions' },

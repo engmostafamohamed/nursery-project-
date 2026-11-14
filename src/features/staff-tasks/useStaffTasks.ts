@@ -1,6 +1,6 @@
 import { useQuery, type QueryClient } from '@tanstack/react-query';
 
-import { fetchBoard, fetchClasses, fetchMyItems, fetchStaff, fetchTasks } from './staffTasksApi';
+import { fetchBoard, fetchClasses, fetchMonthRates, fetchMyItems, fetchStaff, fetchTasks } from './staffTasksApi';
 
 /** After any change, every staff-task screen reads again. */
 export const refreshStaffTasks = (queryClient: QueryClient) => queryClient.invalidateQueries({ queryKey: ['staff-tasks'] });
@@ -27,6 +27,10 @@ export function useTaskClasses(nurseryId: string | null | undefined) {
 }
 
 /** The signed-in person's items: the last week up to today (late ones can still be done). */
+export function useTaskMonths(userId: string | null | undefined) {
+  return useQuery({ queryKey: ['staff-tasks', 'months', userId], queryFn: () => fetchMonthRates(userId as string), enabled: Boolean(userId) });
+}
+
 export function useMyTasks(userId: string | undefined, fromDay: string, today: string) {
   return useQuery({
     queryKey: ['staff-tasks', 'mine', userId, fromDay, today],

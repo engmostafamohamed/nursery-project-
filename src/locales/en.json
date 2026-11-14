@@ -2107,7 +2107,6 @@
       "rbacPositions": "Positions",
       "rbacRoles": "Roles",
       "rbacFeatures": "Features",
-      "teacherReminders": "Teacher reminders",
       "reminders": "My reminders",
       "chat": "Chat",
       "more": "More",
@@ -6227,7 +6226,8 @@
       "attendance": "Attendance History",
       "absences": "Absences",
       "documents": "Documents",
-      "payroll": "Payroll"
+      "payroll": "Payroll",
+      "tasks": "Tasks"
     },
     "departments": {
       "teaching": "Teaching",
@@ -9082,6 +9082,10 @@
     "course_invoice_new": {
       "title": "Course bill: {{course}}",
       "body": "{{child}}'s {{course}} for {{month}}: {{amount}}, due {{due_date}}."
+    },
+    "staff_task_late": {
+      "title": "Safety task late: {{task}}",
+      "body": "{{name}} has not done it; it was due at {{time}}."
     }
   },
   "qr": {
@@ -9427,31 +9431,6 @@
     "deactivate": "Deactivate",
     "activated": "Package activated.",
     "deactivated": "Package deactivated. Children who already have it keep it until it ends."
-  },
-  "teacherReminders": {
-    "title": "Teacher monthly reminders",
-    "subtitle": "Configure reminders sent automatically to teachers at the start of every month.",
-    "addButton": "New reminder",
-    "addTitle": "New monthly reminder",
-    "editTitle": "Edit monthly reminder",
-    "formHint": "This message is sent to the selected teacher on day 1 of each month.",
-    "emptyTitle": "No reminders configured",
-    "emptyDescription": "Add a monthly reminder to notify a teacher at the start of each month.",
-    "fieldTeacher": "Teacher",
-    "selectTeacher": "Select a teacher",
-    "fieldTitleEn": "Title (English)",
-    "fieldTitleAr": "Title (Arabic)",
-    "fieldBodyEn": "Message (English)",
-    "fieldBodyAr": "Message (Arabic)",
-    "fieldActive": "Active",
-    "active": "Active",
-    "inactive": "Inactive",
-    "untitled": "Untitled reminder",
-    "errorNoTeacher": "Please select a teacher.",
-    "errorNoBody": "Please enter a message in at least one language.",
-    "saved": "Reminder saved.",
-    "saveFailed": "Could not save. Please try again.",
-    "deleted": "Reminder deleted."
   },
   "chatAdmin": {
     "parentOf": "Parent of {{children}}",
@@ -10018,10 +9997,6 @@
       "notify_parents_of_cover": {
         "label": "Tell parents about a backup teacher",
         "helper": "When a class’s teacher is away, tell its parents in the morning which teacher looks after the class that day."
-      },
-      "auto_monthly_teacher_reminders_enabled": {
-        "label": "Monthly teacher reminders",
-        "helper": "Send each teacher their configured reminders at the start of every month."
       },
       "parent_registration_enabled": {
         "label": "Parent registration form",
@@ -11988,6 +11963,59 @@
       "staff_task_photo_invalid": "The photo did not upload; try again.",
       "network": "No connection. Try again.",
       "failed": "Something went wrong. Try again."
+    },
+    "cover": {
+      "for": "Covering for {{name}}"
+    },
+    "templates": {
+      "title": "Ready-made tasks",
+      "hint": "Add a common task with one click: it goes to every teacher, and you can change it after.",
+      "add": "Add",
+      "already": "Added",
+      "added": "“{{task}}” added",
+      "addedHint": "Today's checklists are updated; change it in the list below.",
+      "opening": {
+        "title": "Opening checklist",
+        "when": "Every school day by 7:30 am · one person is enough",
+        "instructions": "Unlock the gate and the doors and check them.\nAir the rooms; turn on the lights and the air conditioning.\nCheck the toilets are clean and stocked.\nCheck the first-aid box.\nSet up the welcome desk and the sign-in sheet."
+      },
+      "closing": {
+        "title": "Closing checklist",
+        "when": "Every school day by 5:00 pm · one person is enough",
+        "instructions": "Make sure every child has been picked up.\nTurn off the lights, the air conditioning and the kitchen.\nClose the windows.\nLock the doors and the gate.\nWrite down anything broken or missing."
+      },
+      "weeklyClean": {
+        "title": "Weekly deep clean",
+        "when": "Every Thursday by 3:00 pm · each teacher, with a photo",
+        "instructions": "Disinfect the toys and the tables.\nWash the mats and the cushions.\nTidy the shelves and the children's cubbies.\nTake a photo of the room when done."
+      },
+      "fireDrill": {
+        "title": "Monthly fire drill",
+        "when": "On the 1st of each month by 11:00 am · each teacher, with a photo",
+        "instructions": "Sound the alarm at the agreed time.\nLead your class to the assembly point by the planned route.\nCount the children against the day's list.\nTake a photo at the assembly point and note how long it took."
+      }
+    },
+    "dashboard": {
+      "title": "Staff tasks today",
+      "subtitle": "How much of today's tasks is done, and what is late.",
+      "open": "Board",
+      "nothing": "No staff tasks today.",
+      "percent": "{{value}}%",
+      "counts": "{{done}} of {{total}} done"
+    },
+    "months": {
+      "title": "Tasks",
+      "hint": "{{name}}'s tasks month by month: done, missed and the rate.",
+      "loadError": "Could not load the tasks.",
+      "emptyTitle": "No tasks yet",
+      "emptyHint": "Tasks the admin gives this person show here each month.",
+      "rate": "Done this month",
+      "done": "Done",
+      "doneLate_one": "{{count}} after its time",
+      "doneLate_other": "{{count}} after their time",
+      "missed": "Missed",
+      "open": "Still to do",
+      "lastMonths": "The last six months"
     }
   },
   "termReports": {

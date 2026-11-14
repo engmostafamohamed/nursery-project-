@@ -67,7 +67,14 @@ export function TaskBoard({ nurseryId }: { nurseryId: string }) {
     const doer = localName(item.doer?.name_ar, item.doer?.name_en, isAr);
     return (
       <li key={item.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 sm:px-5" data-testid="board-row">
-        <span className="min-w-0 flex-1 text-sm font-medium text-on-surface">{name}</span>
+        <span className="min-w-0 flex-1 text-sm font-medium text-on-surface">
+          {name}
+          {item.covering ? (
+            <span className="ms-2 text-xs font-normal text-on-surface-variant">
+              {t('staffTasks.cover.for', { name: localName(item.covering.name_ar, item.covering.name_en, isAr) })}
+            </span>
+          ) : null}
+        </span>
         <StatusPill tone={STATE_PILL[state].tone} icon={STATE_PILL[state].icon}>
           {state === 'done'
             ? item.done_by && item.done_by !== item.assignee_id

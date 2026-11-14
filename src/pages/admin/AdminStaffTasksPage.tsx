@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { SectionTabs } from '@/components/ui/SectionTabs';
 import { TaskBoard } from '@/features/staff-tasks/TaskBoard';
 import { TaskList } from '@/features/staff-tasks/TaskList';
+import { TaskTemplates } from '@/features/staff-tasks/TaskTemplates';
 import { useSettings } from '@/lib/useSettings';
 
 /** Staff tasks for the admins: the day's board (done, to do, late) and the tasks they set up. */
@@ -22,7 +23,16 @@ export function AdminStaffTasksPage({ view }: { view: 'board' | 'list' }) {
           ]}
         />
       </PageHeader>
-      {nurseryId ? view === 'board' ? <TaskBoard nurseryId={nurseryId} /> : <TaskList nurseryId={nurseryId} /> : null}
+      {nurseryId ? (
+        view === 'board' ? (
+          <TaskBoard nurseryId={nurseryId} />
+        ) : (
+          <>
+            <TaskTemplates nurseryId={nurseryId} />
+            <TaskList nurseryId={nurseryId} />
+          </>
+        )
+      ) : null}
     </div>
   );
 }

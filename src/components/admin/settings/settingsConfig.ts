@@ -1,6 +1,7 @@
 import type { NurserySettingsRow } from '@/types/tables/nursery_settings';
 
-export type SettingsKey = Exclude<keyof NurserySettingsRow, 'id' | 'nursery_id' | 'created_at' | 'updated_at'>;
+// auto_monthly_teacher_reminders_enabled is kept in the table only: those reminders are staff tasks now.
+export type SettingsKey = Exclude<keyof NurserySettingsRow, 'id' | 'nursery_id' | 'created_at' | 'updated_at' | 'auto_monthly_teacher_reminders_enabled'>;
 export type SettingsTabId =
   | 'profile'
   | 'operations'
@@ -73,7 +74,6 @@ export const DEFAULT_SETTINGS: Record<SettingsKey, unknown> = {
   auto_payment_reminders_enabled: true,
   invoice_reminder_days_before: 3,
   auto_permission_reminders_enabled: true,
-  auto_monthly_teacher_reminders_enabled: true,
   notify_parents_of_cover: true,
   parent_registration_enabled: true,
   show_event_attendee_list: true,
@@ -185,7 +185,6 @@ export const SETTINGS_TABS: SettingsTabConfig[] = [
       { key: 'auto_payment_reminders_enabled', type: 'boolean' },
       { key: 'invoice_reminder_days_before', type: 'number', min: 0, max: 30 },
       { key: 'auto_permission_reminders_enabled', type: 'boolean' },
-      { key: 'auto_monthly_teacher_reminders_enabled', type: 'boolean' },
       { key: 'notify_parents_of_cover', type: 'boolean' },
     ],
   },

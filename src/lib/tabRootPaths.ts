@@ -106,7 +106,6 @@ const ADMIN_ROOTS = [
   '/admin/invoices',
   '/admin/health/alerts',
   '/admin/loyalty',
-  '/admin/teacher-reminders',
   '/admin/settings',
   '/admin/settings/positions',
   '/admin/settings/roles',

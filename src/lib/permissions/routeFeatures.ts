@@ -15,6 +15,7 @@ const ADMIN_ROUTES: ReadonlyArray<readonly [string, FeatureKey]> = [
   ['/admin/staff/onboarding', 'staff_onboarding'],
   ['/admin/staff/absences', 'staff'],
   ['/admin/staff-tasks', 'staff'],
+  ['/admin/teacher-reminders', 'staff'], // the old address: it opens the staff tasks
   ['/admin/health/medicines', 'health_alerts'],
   ['/admin/staff/new', 'staff_onboarding'],
   ['/admin/staff', 'staff'],
@@ -50,7 +51,6 @@ const ADMIN_ROUTES: ReadonlyArray<readonly [string, FeatureKey]> = [
   ['/admin/messages/broadcasts', 'broadcast_messages'],
   ['/admin/messages', 'messages'],
   ['/admin/chat', 'chat'],
-  ['/admin/teacher-reminders', 'notifications'],
   ['/admin/settings/team', 'class_team'],
   ['/admin/settings/roles', 'roles_permissions'],
   ['/admin/settings/positions', 'roles_permissions'],

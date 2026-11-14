@@ -17,15 +17,17 @@ export type BoardItem = StaffTaskItem & {
   task: Pick<StaffTask, 'id' | 'title_ar' | 'title_en' | 'instructions' | 'category' | 'completion' | 'photo_required' | 'due_time'>;
   assignee: Names | null;
   doer: Names | null;
+  covering: Names | null;
 };
 
 export type StaffPerson = Names & { id: string; role: string };
 export type ClassOption = { id: string; name_ar: string; name_en: string };
 
 const ITEM_COLUMNS =
-  'id, task_id, nursery_id, due_on, due_at, assignee_id, status, done_at, done_by, note, photo_path, ' +
+  'id, task_id, nursery_id, due_on, due_at, assignee_id, status, done_at, done_by, note, photo_path, covering_for, ' +
   'task:staff_tasks(id, title_ar, title_en, instructions, category, completion, photo_required, due_time), ' +
-  'assignee:users!staff_task_items_assignee_id_fkey(name_ar, name_en), doer:users!staff_task_items_done_by_fkey(name_ar, name_en)';
+  'assignee:users!staff_task_items_assignee_id_fkey(name_ar, name_en), doer:users!staff_task_items_done_by_fkey(name_ar, name_en), ' +
+  'covering:users!staff_task_items_covering_for_fkey(name_ar, name_en)';
 
 /** A nursery's items of a day (the admins' board). */
 export async function fetchBoard(nurseryId: string, day: string): Promise<BoardItem[]> {
@@ -108,6 +110,15 @@ export async function proofUrl(path: string): Promise<string> {
   const { data, error } = await supabase.storage.from('staff-task-photos').createSignedUrl(path, 3600);
   if (error) throw error;
   return data.signedUrl;
+}
+
+/** A person's months, newest first: done by them, missed, still open, done late, and the rate. */
+export type TaskMonth = { month: string; done: number; missed: number; open: number; done_late: number; rate: number | null };
+
+export async function fetchMonthRates(userId: string, months = 6): Promise<TaskMonth[]> {
+  const { data, error } = await supabase.rpc('staff_task_month_rates' as never, { p_user_id: userId, p_months: months } as never);
+  if (error) throw error;
+  return (data ?? []) as unknown as TaskMonth[];
 }
 
 /** Why the server refused. */
