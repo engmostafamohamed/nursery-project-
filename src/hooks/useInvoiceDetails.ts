@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { invoiceRawItems, parseInvoiceLineItems as parseLineItems, type InvoiceLineItem } from '@/lib/invoiceItems';
 import { supabase } from '@/lib/supabase';
+import { type InvoiceType } from '@/lib/invoiceDisplay';
 
 export type { InvoiceLineItem };
 
@@ -37,7 +38,7 @@ export type InvoiceDetailsData = {
   paidAmount: number;
   pendingAmount: number;
   balanceDue: number;
-  type: 'monthly' | 'event' | 'extra_hours' | 'other' | 'food_extras';
+  type: InvoiceType;
   status: 'pending' | 'paid' | 'overdue' | 'cancelled';
   /** True when a parent-submitted payment is awaiting finance confirmation. */
   inReview: boolean;
@@ -84,7 +85,7 @@ export function useInvoiceDetails(invoiceId: string | undefined) {
         nursery_id: string;
         parent_id: string;
         amount: string;
-        invoice_type: 'monthly' | 'event' | 'extra_hours' | 'other' | 'food_extras';
+        invoice_type: InvoiceType;
         status: 'pending' | 'paid' | 'cancelled';
         due_date: string;
         created_at: string;

@@ -43,6 +43,8 @@ export type ParentCourseInvoiceRow = {
   due_date: string | null;
   paid_at: string | null;
   invoice_number: string | null;
+  /** The family invoice it is paid through (null for a bill made before 14 Nov 2026 and settled). */
+  invoice_id: string | null;
 };
 
 export function useParentCourses(parentUserId: string | undefined) {
@@ -69,14 +71,14 @@ export function useParentCourses(parentUserId: string | undefined) {
         supabase.from('course_enrollments').select('id, course_id, child_id, status').in('child_id', childIds).eq('status', 'active'),
         supabase
           .from('course_invoices')
-          .select('id, course_id, enrollment_id, child_id, billing_month, amount, currency, status, due_date, paid_at, invoice_number')
+          .select('id, course_id, enrollment_id, child_id, billing_month, amount, currency, status, due_date, paid_at, invoice_number, invoice_id')
           .in('child_id', childIds)
           .order('billing_month', { ascending: false }),
       ]);
       if (enrollRes.error) throw enrollRes.error;
       if (invoicesRes.error) throw invoicesRes.error;
       const enrollments = (enrollRes.data ?? []) as Pick<CourseEnrollmentsRow, 'id' | 'course_id' | 'child_id' | 'status'>[];
-      const invoices = (invoicesRes.data ?? []) as Omit<CourseInvoicesRow, 'nursery_id' | 'notes' | 'created_at' | 'updated_at'>[];
+      const invoices = (invoicesRes.data ?? []) as (Omit<CourseInvoicesRow, 'nursery_id' | 'notes' | 'created_at' | 'updated_at'> & { invoice_id: string | null })[];
       if (enrollments.length === 0 && invoices.length === 0) return { enrollments: [], invoices: [] };
 
       const courseIds = [...new Set([...enrollments, ...invoices].map((e) => e.course_id))];

@@ -3204,7 +3204,8 @@
         "waiveError": "Could not update invoice.",
         "emptyInvoicesTitle": "No invoices yet",
         "emptyInvoicesDescription": "Generate invoices above to bill enrolled students.",
-        "notFound": "Course not found."
+        "notFound": "Course not found.",
+        "tabRequests": "Requests"
       },
       "invoiceStatus": {
         "pending": "Pending",
@@ -3605,7 +3606,8 @@
       "event": "Event",
       "food_extras": "Extras and purchases",
       "extra_hours": "Extra Hours",
-      "other": "Other"
+      "other": "Other",
+      "course": "Course"
     },
     "paymentMethods": {
       "cash": "Cash",
@@ -3642,7 +3644,8 @@
         "event": "Event",
         "food_extras": "Extras and purchases",
         "extra_hours": "Extra Hours",
-        "other": "Other"
+        "other": "Other",
+        "course": "Course"
       },
       "sort": {
         "created_desc": "Date (newest)",
@@ -5589,8 +5592,6 @@
     "courses": {
       "title": "Courses",
       "loadError": "Could not load courses.",
-      "tabCourses": "Enrolled courses",
-      "tabInvoices": "Invoices",
       "emptyTitle": "No courses enrolled",
       "emptyDescription": "Your children are not enrolled in any courses yet.",
       "emptyInvoicesTitle": "No invoices",
@@ -5608,11 +5609,42 @@
         "openBills": "Bills to pay",
         "openAmount": "To pay"
       },
-      "payHint": "Course bills are paid at the nursery office; they show as paid here once the office records it.",
+      "payHint": "Pay a bill here, online or by a transfer with its proof; paying at the nursery's office works too.",
       "when": "When",
       "teacher": "Teacher",
       "paidOn": "paid {{date}}",
-      "dueOn": "due {{date}}"
+      "dueOn": "due {{date}}",
+      "tabs": {
+        "courses": "Their courses",
+        "catalog": "Available courses",
+        "invoices": "Bills"
+      },
+      "pay": "Pay",
+      "viewInvoice": "Invoice",
+      "catalog": {
+        "hint": "The nursery's open courses. Ask to enrol a child; the nursery answers and you get a notice.",
+        "loadError": "Could not load the courses.",
+        "emptyTitle": "No open courses",
+        "emptyHint": "Courses the nursery opens show here.",
+        "full": "Full",
+        "open": "Places available",
+        "placesLeft_one": "{{count}} place left",
+        "placesLeft_other": "{{count}} places left",
+        "enrolled": "Enrolled",
+        "pending": "Waiting for the nursery",
+        "withdraw": "Withdraw",
+        "withdrawn": "Request withdrawn",
+        "ask": "Ask to enrol",
+        "askTitle": "Enrol in {{course}}",
+        "askHint": "The nursery reviews your request and tells you its answer.",
+        "child": "Child",
+        "forChild": "For {{name}}",
+        "note": "A note for the nursery (optional)",
+        "notePlaceholder": "e.g. She already swims a little",
+        "send": "Send request",
+        "sent": "Request sent",
+        "sentHint": "You get a notice when the nursery answers."
+      }
     }
   },
   "teacher": {
@@ -9086,6 +9118,18 @@
     "staff_task_late": {
       "title": "Safety task late: {{task}}",
       "body": "{{name}} has not done it; it was due at {{time}}."
+    },
+    "course_request_new": {
+      "title": "Course request: {{course}}",
+      "body": "{{child}}'s family asks to enrol in {{course}}. Approve or decline it."
+    },
+    "course_request_approved": {
+      "title": "Enrolled in {{course}}",
+      "body": "{{child}} is enrolled in {{course}}. {{note}}"
+    },
+    "course_request_declined": {
+      "title": "Course request declined",
+      "body": "The nursery could not enrol {{child}} in {{course}}. {{note}}"
     }
   },
   "qr": {
@@ -12031,5 +12075,41 @@
     "list": "The reports",
     "loadError": "Could not load the reports.",
     "of": "{{part}} of {{whole}}"
+  },
+  "courseRequests": {
+    "title": "Enrolment requests",
+    "waiting_one": "{{count}} waiting",
+    "waiting_other": "{{count}} waiting",
+    "hint": "Families ask to enrol a child here. Approving enrols the child; either way the family is told.",
+    "loadError": "Could not load the requests.",
+    "emptyTitle": "No requests",
+    "emptyHint": "Requests from families show here.",
+    "askedBy": "Asked by {{name}} on {{date}}",
+    "answerNote": "Your note: {{note}}",
+    "approve": "Approve",
+    "decline": "Decline",
+    "approved": "Approved: the child is enrolled",
+    "declined": "Request declined",
+    "familyTold": "The family is told.",
+    "declineTitle": "Decline {{name}}'s request?",
+    "declineHint": "The family sees your reason.",
+    "reason": "Reason (optional)",
+    "status": {
+      "pending": "Waiting",
+      "approved": "Approved",
+      "declined": "Declined",
+      "cancelled": "Withdrawn"
+    },
+    "errors": {
+      "forbidden": "You can't do this.",
+      "not_open": "This course is not open.",
+      "already_enrolled": "The child is already in this course.",
+      "already_requested": "A request is already waiting.",
+      "full": "The course is full.",
+      "note_too_long": "Keep the note shorter (300 letters).",
+      "request_closed": "This request was already answered.",
+      "network": "No connection. Try again.",
+      "failed": "Something went wrong. Try again."
+    }
   }
 }

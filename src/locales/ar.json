@@ -3296,13 +3296,13 @@
         "cancelled": "ملغي"
       },
       "days": {
-        "sun": "أحد",
-        "mon": "اثن",
-        "tue": "ثلا",
-        "wed": "أرب",
-        "thu": "خمي",
-        "fri": "جمع",
-        "sat": "سبت"
+        "sun": "الأحد",
+        "mon": "الاثنين",
+        "tue": "الثلاثاء",
+        "wed": "الأربعاء",
+        "thu": "الخميس",
+        "fri": "الجمعة",
+        "sat": "السبت"
       },
       "list": {
         "totalCount": "{{count}} كورس",
@@ -3387,7 +3387,8 @@
         "waiveError": "تعذّر تحديث الفاتورة.",
         "emptyInvoicesTitle": "لا توجد فواتير بعد",
         "emptyInvoicesDescription": "أنشئ الفواتير أعلاه لفوترة الطلاب المسجّلين.",
-        "notFound": "الكورس غير موجود."
+        "notFound": "الكورس غير موجود.",
+        "tabRequests": "الطلبات"
       },
       "invoiceStatus": {
         "pending": "معلّقة",
@@ -3808,7 +3809,8 @@
       "event": "فعالية",
       "food_extras": "الإضافات والمشتريات",
       "extra_hours": "ساعات إضافية",
-      "other": "أخرى"
+      "other": "أخرى",
+      "course": "دورة"
     },
     "paymentMethods": {
       "cash": "نقدًا",
@@ -3845,7 +3847,8 @@
         "event": "فعالية",
         "food_extras": "الإضافات والمشتريات",
         "extra_hours": "ساعات إضافية",
-        "other": "أخرى"
+        "other": "أخرى",
+        "course": "دورة"
       },
       "sort": {
         "created_desc": "التاريخ (الأحدث)",
@@ -5916,8 +5919,6 @@
     "courses": {
       "title": "الكورسات",
       "loadError": "تعذّر تحميل الكورسات.",
-      "tabCourses": "الكورسات المسجّلة",
-      "tabInvoices": "الفواتير",
       "emptyTitle": "لا توجد كورسات مسجّلة",
       "emptyDescription": "لم يتم تسجيل أطفالك في أي كورس بعد.",
       "emptyInvoicesTitle": "لا توجد فواتير",
@@ -5935,11 +5936,46 @@
         "openBills": "فواتير للدفع",
         "openAmount": "المطلوب"
       },
-      "payHint": "تُدفع فواتير الدورات في مكتب الحضانة، وتظهر هنا مدفوعة بعد أن يسجلها المكتب.",
+      "payHint": "ادفع الفاتورة من هنا، أونلاين أو بتحويل مع إثباته؛ ويمكن الدفع في مكتب الحضانة أيضًا.",
       "when": "الموعد",
       "teacher": "المعلم",
       "paidOn": "دُفعت {{date}}",
-      "dueOn": "تستحق {{date}}"
+      "dueOn": "تستحق {{date}}",
+      "tabs": {
+        "courses": "دوراتهم",
+        "catalog": "الدورات المتاحة",
+        "invoices": "الفواتير"
+      },
+      "pay": "ادفع",
+      "viewInvoice": "الفاتورة",
+      "catalog": {
+        "hint": "دورات الحضانة المفتوحة. اطلب تسجيل طفلك؛ ترد الحضانة وتصلك رسالة.",
+        "loadError": "تعذّر تحميل الدورات.",
+        "emptyTitle": "لا دورات مفتوحة",
+        "emptyHint": "تظهر هنا الدورات التي تفتحها الحضانة.",
+        "full": "مكتملة",
+        "open": "أماكن متاحة",
+        "placesLeft_zero": "لا أماكن",
+        "placesLeft_one": "مكان واحد متبقٍ",
+        "placesLeft_two": "مكانان متبقيان",
+        "placesLeft_few": "{{count}} أماكن متبقية",
+        "placesLeft_many": "{{count}} مكانًا متبقيًا",
+        "placesLeft_other": "{{count}} مكان متبقٍ",
+        "enrolled": "مسجّل",
+        "pending": "بانتظار الحضانة",
+        "withdraw": "سحب الطلب",
+        "withdrawn": "سُحب الطلب",
+        "ask": "اطلب التسجيل",
+        "askTitle": "التسجيل في {{course}}",
+        "askHint": "تراجع الحضانة طلبك وتخبرك بالرد.",
+        "child": "الطفل",
+        "forChild": "لـ {{name}}",
+        "note": "ملاحظة للحضانة (اختياري)",
+        "notePlaceholder": "مثلًا: تجيد السباحة قليلًا",
+        "send": "إرسال الطلب",
+        "sent": "أُرسل الطلب",
+        "sentHint": "تصلك رسالة عندما ترد الحضانة."
+      }
     }
   },
   "teacher": {
@@ -9617,6 +9653,18 @@
     "staff_task_late": {
       "title": "مهمة سلامة متأخرة: {{task}}",
       "body": "لم ينجزها {{name}} وكان موعدها {{time}}."
+    },
+    "course_request_new": {
+      "title": "طلب دورة: {{course}}",
+      "body": "أسرة {{child}} تطلب التسجيل في {{course}}. وافق أو ارفض."
+    },
+    "course_request_approved": {
+      "title": "تم التسجيل في {{course}}",
+      "body": "سُجّل {{child}} في {{course}}. {{note}}"
+    },
+    "course_request_declined": {
+      "title": "رُفض طلب الدورة",
+      "body": "تعذّر على الحضانة تسجيل {{child}} في {{course}}. {{note}}"
     }
   },
   "qr": {
@@ -12661,5 +12709,45 @@
     "list": "التقارير",
     "loadError": "تعذّر تحميل التقارير.",
     "of": "{{part}} من {{whole}}"
+  },
+  "courseRequests": {
+    "title": "طلبات التسجيل",
+    "waiting_zero": "لا طلبات",
+    "waiting_one": "طلب واحد ينتظر",
+    "waiting_two": "طلبان ينتظران",
+    "waiting_few": "{{count}} طلبات تنتظر",
+    "waiting_many": "{{count}} طلبًا ينتظر",
+    "waiting_other": "{{count}} طلب ينتظر",
+    "hint": "تطلب الأسر هنا تسجيل أطفالها. الموافقة تسجّل الطفل، وفي الحالتين تصل الأسرة رسالة.",
+    "loadError": "تعذّر تحميل الطلبات.",
+    "emptyTitle": "لا طلبات",
+    "emptyHint": "تظهر هنا طلبات الأسر.",
+    "askedBy": "طلبه {{name}} يوم {{date}}",
+    "answerNote": "ملاحظتك: {{note}}",
+    "approve": "موافقة",
+    "decline": "رفض",
+    "approved": "تمت الموافقة وسُجّل الطفل",
+    "declined": "رُفض الطلب",
+    "familyTold": "وصلت الأسرة رسالة.",
+    "declineTitle": "رفض طلب {{name}}؟",
+    "declineHint": "ترى الأسرة السبب.",
+    "reason": "السبب (اختياري)",
+    "status": {
+      "pending": "ينتظر",
+      "approved": "مقبول",
+      "declined": "مرفوض",
+      "cancelled": "مسحوب"
+    },
+    "errors": {
+      "forbidden": "لا يمكنك ذلك.",
+      "not_open": "هذه الدورة غير مفتوحة.",
+      "already_enrolled": "الطفل مسجّل في هذه الدورة.",
+      "already_requested": "يوجد طلب ينتظر بالفعل.",
+      "full": "الدورة مكتملة.",
+      "note_too_long": "اختصر الملاحظة (300 حرف).",
+      "request_closed": "تم الرد على هذا الطلب.",
+      "network": "لا يوجد اتصال. حاول مرة أخرى.",
+      "failed": "حدث خطأ. حاول مرة أخرى."
+    }
   }
 }

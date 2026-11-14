@@ -57,7 +57,9 @@ insert into public.course_invoices (course_id, enrollment_id, child_id, nursery_
   ('00000000-0000-4000-9d00-0000000000f1', '00000000-0000-4000-9d00-0000000000f2', '00000000-0000-4000-9d00-0000000000c1',
    '00000000-0000-4000-9d00-00000000000a', '2026-12-01', 400, 'EGP', 'pending', '2027-01-05');
 select is(pg_temp.told('course_invoice_new'),
-  'a.mother@test.local /parent/courses?tab=invoices, b.father@test.local /parent/courses?tab=invoices', 'a new course bill tells both parents');
+  (select 'a.mother@test.local /parent/invoices/' || invoice_id || ', b.father@test.local /parent/invoices/' || invoice_id
+     from public.course_invoices where enrollment_id = '00000000-0000-4000-9d00-0000000000f2'),
+  'a new course bill tells both parents, opening its invoice (20261114060000)');
 select is((select template_params - 'child' - 'course' from public.notifications where type = 'course_invoice_new' limit 1),
   '{"month": "2026-12", "amount": 400, "currency": "EGP", "due_date": "2027-01-05"}'::jsonb, 'with the month, the amount and the due day');
 select is((select template_params -> 'course' ->> 'en' from public.notifications where type = 'course_invoice_new' limit 1), 'Swimming', 'and the course');

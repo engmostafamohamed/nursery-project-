@@ -6,7 +6,8 @@
 
 import { localName as nameIn } from '@/lib/bilingualName';
 
-export type InvoiceType = 'monthly' | 'event' | 'extra_hours' | 'other' | 'food_extras';
+export type { InvoiceType } from '@/lib/invoiceDisplay';
+import type { InvoiceType } from '@/lib/invoiceDisplay';
 export type InvoiceStatus = 'pending' | 'overdue' | 'paid' | 'cancelled';
 
 export type BillingInvoice = {

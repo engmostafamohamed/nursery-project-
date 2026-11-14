@@ -2,9 +2,10 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
+import { type InvoiceType } from '@/lib/invoiceDisplay';
 
 export type AdminInvoiceStatusFilter = 'all' | 'pending' | 'paid' | 'overdue' | 'cancelled';
-export type AdminInvoiceTypeFilter = 'all' | 'monthly' | 'event' | 'extra_hours' | 'other' | 'food_extras';
+export type AdminInvoiceTypeFilter = 'all' | InvoiceType;
 export type AdminInvoiceSort =
   | 'created_desc'
   | 'created_asc'
@@ -34,7 +35,7 @@ export type AdminInvoiceItem = {
   paidAmount: number;
   balance: number;
   paidThisMonth: number;
-  type: 'monthly' | 'event' | 'extra_hours' | 'other' | 'food_extras';
+  type: InvoiceType;
   status: 'pending' | 'paid' | 'overdue' | 'cancelled';
   dueDate: string;
   createdAt: string;
@@ -93,7 +94,7 @@ export function useAdminInvoices(params: UseAdminInvoicesParams) {
         generated_invoice_number: string | null;
         parent_id: string;
         amount: string;
-        invoice_type: 'monthly' | 'event' | 'extra_hours' | 'other' | 'food_extras';
+        invoice_type: InvoiceType;
         status: 'pending' | 'paid' | 'cancelled';
         due_date: string;
         created_at: string;

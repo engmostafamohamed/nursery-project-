@@ -16,6 +16,11 @@ export const BILL_TONE: Record<string, PillTone> = { pending: 'warning', overdue
 
 export const isOpenBill = (b: Pick<ParentCourseInvoiceRow, 'status'>) => b.status === 'pending' || b.status === 'overdue';
 
+/** Places left in a course (null: no limit). */
+export function placesLeft(course: { max_students: number | null; enrolled: number }): number | null {
+  return course.max_students == null ? null : Math.max(course.max_students - course.enrolled, 0);
+}
+
 /** The tiles: active courses, what they cost a month, and the bills still to pay with their total. */
 export function courseTotals(courses: ParentCourseRow[], bills: ParentCourseInvoiceRow[]) {
   const open = bills.filter(isOpenBill);

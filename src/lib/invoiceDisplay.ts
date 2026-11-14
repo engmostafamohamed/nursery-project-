@@ -1,6 +1,8 @@
 import type { PillTone } from '@/lib/tones';
 
-export type InvoiceType = 'monthly' | 'event' | 'extra_hours' | 'other' | 'food_extras';
+/** Every kind of invoice, in the order the screens list them. */
+export const INVOICE_TYPES = ['monthly', 'event', 'extra_hours', 'food_extras', 'course', 'other'] as const;
+export type InvoiceType = (typeof INVOICE_TYPES)[number];
 
 /** The payment states shown in payment history (an invoice and the payments made on it). */
 export type PaymentState = 'paid' | 'partial' | 'unpaid' | 'in_review' | 'overdue' | 'cancelled';
@@ -11,6 +13,7 @@ const TYPE_ICON: Record<InvoiceType, string> = {
   extra_hours: 'more_time',
   other: 'receipt_long',
   food_extras: 'restaurant',
+  course: 'school',
 };
 
 /** One icon per invoice type, the same on every screen. Unknown types read as "other". */

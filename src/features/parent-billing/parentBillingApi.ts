@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 
 import type { BillingInvoice, InvoiceStatus, InvoiceType, LoyaltyOffer } from './parentBilling';
+import { INVOICE_TYPES } from '@/lib/invoiceDisplay';
 
 /*
  * Reading the parent's bills: get_parent_billing (every invoice) and get_parent_invoice (one, with
@@ -18,7 +19,7 @@ const str = (value: unknown): string => (typeof value === 'string' ? value : '')
 const strOrNull = (value: unknown): string | null => (typeof value === 'string' && value ? value : null);
 const list = (value: unknown): Json[] => (Array.isArray(value) ? (value as Json[]) : []);
 
-const TYPES: InvoiceType[] = ['monthly', 'event', 'extra_hours', 'other', 'food_extras'];
+const TYPES: readonly InvoiceType[] = INVOICE_TYPES;
 const STATUSES: InvoiceStatus[] = ['pending', 'overdue', 'paid', 'cancelled'];
 
 export function toBillingInvoice(row: Json): BillingInvoice {

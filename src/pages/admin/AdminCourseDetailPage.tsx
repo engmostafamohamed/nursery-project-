@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -22,10 +22,15 @@ import {
   type CourseEnrollmentRow,
   type CourseInvoiceRow,
 } from '@/hooks/useAdminCourseDetail';
+import { CourseRequestsPanel } from '@/features/course-requests/CourseRequestsPanel';
+import { useCourseRequests } from '@/features/course-requests/useCourseRequests';
 import { CourseSessionsPanel } from '@/features/course-sessions/CourseSessionsPanel';
 import { useNurseryChildrenPicker } from '@/hooks/useNurseryChildrenPicker';
 import { localName } from '@/lib/bilingualName';
 import { supabase } from '@/lib/supabase';
+
+const COURSE_TABS = ['roster', 'requests', 'sessions', 'invoices'] as const;
+type CourseTab = (typeof COURSE_TABS)[number];
 
 const INVOICE_STATUS_COLORS: Record<string, string> = {
   pending: 'border-outline-variant bg-surface-container-highest text-on-surface-variant',
@@ -135,7 +140,10 @@ export function AdminCourseDetailPage() {
   const isAr = i18n.language.startsWith('ar');
   const queryClient = useQueryClient();
 
-  const [tab, setTab] = useState<'roster' | 'sessions' | 'invoices'>('roster');
+  // A request's notice opens the requests (?tab=requests).
+  const [params] = useSearchParams();
+  const [tab, setTab] = useState<CourseTab>(() => COURSE_TABS.find((x) => x === params.get('tab')) ?? 'roster');
+  const waitingRequests = (useCourseRequests(courseId).data ?? []).filter((r) => r.status === 'pending').length;
   const [enrollModalOpen, setEnrollModalOpen] = useState(false);
   const [selectedChildId, setSelectedChildId] = useState('');
   const [enrolling, setEnrolling] = useState(false);
@@ -343,7 +351,7 @@ export function AdminCourseDetailPage() {
 
       {/* Tabs */}
       <div className="flex gap-2 border-b border-outline-variant">
-        {(['roster', 'sessions', 'invoices'] as const).map((tabKey) => (
+        {COURSE_TABS.map((tabKey) => (
           <button
             key={tabKey}
             type="button"
@@ -355,6 +363,9 @@ export function AdminCourseDetailPage() {
             onClick={() => setTab(tabKey)}
           >
             {t(`admin.courses.detail.tab${tabKey.charAt(0).toUpperCase()}${tabKey.slice(1)}`)}
+            {tabKey === 'requests' && waitingRequests ? (
+              <span className="ms-1.5 rounded-full bg-warning px-1.5 text-[10px] font-semibold text-white">{waitingRequests}</span>
+            ) : null}
           </button>
         ))}
       </div>
@@ -429,6 +440,8 @@ export function AdminCourseDetailPage() {
 
       {/* Sessions tab: cancelling a session (its time becomes extra time for the children who stay) */}
       {tab === 'sessions' && courseId ? <CourseSessionsPanel courseId={courseId} /> : null}
+
+      {tab === 'requests' && courseId ? <CourseRequestsPanel courseId={courseId} /> : null}
 
       {/* Invoices tab */}
       {tab === 'invoices' ? (

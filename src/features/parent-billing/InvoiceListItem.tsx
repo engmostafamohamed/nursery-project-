@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { formatDate } from '@/lib/datetime';
+import { invoiceTypeIcon } from '@/lib/invoiceDisplay';
 import { invoiceItemDescription, invoiceRawItems } from '@/lib/invoiceItems';
 import { formatMoneyAmount } from '@/lib/money';
 import { cn } from '@/lib/utils';
@@ -10,13 +11,6 @@ import { cn } from '@/lib/utils';
 import { InvoiceStatusBadge } from './InvoiceStatusBadge';
 import { invoiceState, isPayable, type BillingInvoice } from './parentBilling';
 
-const TYPE_ICON: Record<BillingInvoice['type'], string> = {
-  monthly: 'calendar_month',
-  event: 'celebration',
-  extra_hours: 'more_time',
-  other: 'receipt_long',
-  food_extras: 'restaurant',
-};
 
 /**
  * One invoice in the parent's list, kept short: what it is for, the amount, its state and a pay
@@ -63,7 +57,7 @@ export function InvoiceListItem({
         aria-label={t('parentBilling.list.openInvoice', { number: invoice.invoiceNumber })}
       >
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-          <MaterialSymbol name={TYPE_ICON[invoice.type]} size="text-xl" />
+          <MaterialSymbol name={invoiceTypeIcon(invoice.type)} size="text-xl" />
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-semibold text-on-surface">

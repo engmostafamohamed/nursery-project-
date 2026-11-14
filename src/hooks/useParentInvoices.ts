@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { invoiceItemDescription, invoiceRawItems } from '@/lib/invoiceItems';
 import { getNurseryCalendarDateString } from '@/lib/nurseryDay';
 import { supabase } from '@/lib/supabase';
+import { type InvoiceType } from '@/lib/invoiceDisplay';
 
 export type ParentInvoiceStatusFilter = 'all' | 'pending' | 'paid';
 export type ParentInvoiceSort = 'due_soon' | 'newest';
@@ -17,7 +18,7 @@ export type ParentInvoiceItem = {
   paidAmount: number;
   /** Still owed: amount less completed payments (0 once paid or cancelled). */
   balance: number;
-  type: 'monthly' | 'event' | 'extra_hours' | 'other' | 'food_extras';
+  type: InvoiceType;
   status: 'pending' | 'paid' | 'overdue' | 'cancelled';
   /** True when the parent has submitted a payment that finance has not yet confirmed. */
   inReview: boolean;
@@ -115,7 +116,7 @@ export function useParentInvoices({ parentId, childId, status, sort }: UseParent
         id: string;
         generated_invoice_number: string | null;
         amount: string;
-        invoice_type: 'monthly' | 'event' | 'extra_hours' | 'other' | 'food_extras';
+        invoice_type: InvoiceType;
         status: 'pending' | 'paid' | 'overdue' | 'cancelled';
         due_date: string;
         created_at: string;

@@ -4,6 +4,7 @@ import { assignExtraHoursPackage } from '@/lib/extraHoursPackage';
 import { supabase } from '@/lib/supabase';
 
 import type { BillingPeriodKind } from './useAdminTuitionBillingPeriods';
+import { type InvoiceType } from '@/lib/invoiceDisplay';
 
 export const childBillingKey = (childId: string | null | undefined) => ['admin-child-billing', childId] as const;
 
@@ -37,7 +38,7 @@ export type ChildBillingInvoice = {
   invoiceNumber: string;
   amount: number;
   status: 'pending' | 'paid' | 'overdue' | 'cancelled';
-  invoiceType: 'monthly' | 'event' | 'extra_hours' | 'other' | 'food_extras';
+  invoiceType: InvoiceType;
   dueDate: string;
   createdAt: string;
   /** Completed payments. */

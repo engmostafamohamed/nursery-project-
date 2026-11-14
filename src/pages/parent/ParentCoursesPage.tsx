@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
+import { Button } from '@/components/ui/button';
 import { StatusPill, TableCard, TableEmpty, TableLoading } from '@/components/ui/DataTable';
 import { FilterChips } from '@/components/ui/FilterChips';
 import { LoadError } from '@/components/ui/LoadError';
@@ -8,7 +9,9 @@ import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatTile } from '@/components/ui/StatTile';
 import { TONE_TINT } from '@/components/ui/toneClasses';
-import { BILL_TONE, COURSE_LOOK, courseTotals } from '@/features/parent-courses/parentCourses';
+import { CourseCatalog } from '@/features/course-requests/CourseCatalog';
+import { BILL_TONE, COURSE_LOOK, courseTotals, isOpenBill } from '@/features/parent-courses/parentCourses';
+import { useCourseCatalog } from '@/features/course-requests/useCourseRequests';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useParentCourses, type ParentCourseInvoiceRow, type ParentCourseRow } from '@/hooks/useParentCourses';
 import { localName } from '@/lib/bilingualName';
@@ -16,14 +19,16 @@ import { formatDate } from '@/lib/datetime';
 import { formatMoneyAmount } from '@/lib/money';
 import { cn } from '@/lib/utils';
 
-type Tab = 'courses' | 'invoices';
+type Tab = 'courses' | 'catalog' | 'invoices';
+const TABS: Tab[] = ['courses', 'catalog', 'invoices'];
 
-/** The children's courses and their bills; a bill's notice opens the bills (?tab=invoices). */
+/** The children's courses, the nursery's open courses to ask for (?tab=catalog), and the bills (?tab=invoices), each paid online. */
 export function ParentCoursesPage() {
   const { t } = useTranslation();
   const { user } = useAuthSession();
   const [params, setParams] = useSearchParams();
-  const tab: Tab = params.get('tab') === 'invoices' ? 'invoices' : 'courses';
+  const tab: Tab = TABS.find((x) => x === params.get('tab')) ?? 'courses';
+  const catalog = useCourseCatalog();
   const { data, isPending, isError, refetch } = useParentCourses(user?.id);
   const courses = data?.enrollments ?? [];
   const bills = data?.invoices ?? [];
@@ -49,17 +54,18 @@ export function ParentCoursesPage() {
       </PageHeader>
 
       <TableCard
-        title={tab === 'courses' ? t('parent.courses.tabCourses') : t('parent.courses.tabInvoices')}
-        description={tab === 'invoices' ? t('parent.courses.payHint') : undefined}
+        title={t(`parent.courses.tabs.${tab}`)}
+        description={tab === 'invoices' ? t('parent.courses.payHint') : tab === 'catalog' ? t('parent.courses.catalog.hint') : undefined}
         actions={
           <FilterChips
             label={t('parent.courses.title')}
             value={tab}
-            onChange={(next) => setParams(next === 'invoices' ? { tab: 'invoices' } : {}, { replace: true })}
-            options={[
-              { value: 'courses' as const, label: t('parent.courses.tabCourses'), count: courses.length },
-              { value: 'invoices' as const, label: t('parent.courses.tabInvoices'), count: bills.length },
-            ]}
+            onChange={(next) => setParams(next === 'courses' ? {} : { tab: next }, { replace: true })}
+            options={TABS.map((value) => ({
+              value,
+              label: t(`parent.courses.tabs.${value}`),
+              count: value === 'courses' ? courses.length : value === 'catalog' ? catalog.data?.length : bills.length,
+            }))}
           />
         }
       >
@@ -67,6 +73,8 @@ export function ParentCoursesPage() {
           <LoadError inset message={t('parent.courses.loadError')} onRetry={() => void refetch()} />
         ) : isPending ? (
           <TableLoading rows={3} />
+        ) : tab === 'catalog' ? (
+          <CourseCatalog money={money} />
         ) : tab === 'courses' ? (
           courses.length ? (
             <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-3">
@@ -151,6 +159,20 @@ function BillRow({ bill, money }: { bill: ParentCourseInvoiceRow; money: (n: num
       </div>
       <span className="text-sm font-semibold tabular-nums text-on-surface">{money(Number(bill.amount))}</span>
       <StatusPill tone={BILL_TONE[bill.status] ?? 'neutral'}>{t(`parent.courses.invoiceStatus.${bill.status}`)}</StatusPill>
+      {bill.invoice_id ? (
+        <Button asChild size="sm" variant={isOpenBill(bill) ? 'default' : 'ghost'}>
+          <Link
+            to={
+              isOpenBill(bill)
+                ? `/parent/invoices/${bill.invoice_id}/pay?returnTo=${encodeURIComponent('/parent/courses?tab=invoices')}`
+                : `/parent/invoices/${bill.invoice_id}`
+            }
+            data-testid="course-bill-action"
+          >
+            {isOpenBill(bill) ? t('parent.courses.pay') : t('parent.courses.viewInvoice')}
+          </Link>
+        </Button>
+      ) : null}
     </li>
   );
 }
