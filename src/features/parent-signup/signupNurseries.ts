@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { supabase } from '@/lib/supabase';
+import { WEEKDAY_KEYS, weekdayNumbers } from '@/lib/weekdays';
 
 /** Columns of the public signup_nursery_options view (readable before sign-in). */
 export type SignupNursery = {
@@ -37,21 +38,9 @@ export function nurseryArrivalTime(nursery: SignupNursery | null): string {
   return toTimeInputValue(nursery.opens_at) || toTimeInputValue(nursery.standard_start_time);
 }
 
-/** working_days is stored either as ['sun','mon'] or as ['0','1'] depending on who wrote it. */
-const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
-
+/** The nursery's working days as 'sun'…'sat' in calendar order, however they were stored. */
 export function nurseryWorkingDayKeys(nursery: SignupNursery | null): string[] {
-  if (!nursery || !Array.isArray(nursery.working_days)) return [];
-  const keys = nursery.working_days
-    .map((day) => {
-      const raw = String(day).trim().toLowerCase();
-      if (DAY_KEYS.includes(raw as (typeof DAY_KEYS)[number])) return raw;
-      const index = Number(raw);
-      return Number.isInteger(index) && index >= 0 && index <= 6 ? DAY_KEYS[index] : null;
-    })
-    .filter((day): day is string => day !== null);
-  // Keep calendar order regardless of how they were stored.
-  return DAY_KEYS.filter((day) => keys.includes(day));
+  return nursery ? weekdayNumbers(nursery.working_days).map((d) => WEEKDAY_KEYS[d]) : [];
 }
 
 export function nurseryLeadSources(nursery: SignupNursery | null): string[] {

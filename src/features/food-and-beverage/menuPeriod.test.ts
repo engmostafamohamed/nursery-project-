@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { addDays, maxDishes, openDaysBetween, periodBounds, requestedMenuDay, shiftPeriod, weeksOf, weekStartOf } from './menuPeriod';
+import { addDays, maxDishes, menuOpenDays, openDaysBetween, periodBounds, requestedMenuDay, shiftPeriod, weeksOf, weekStartOf } from './menuPeriod';
 
 describe('menu days', () => {
   it('a week runs Saturday to Friday, from any day of it', () => {
@@ -17,6 +17,15 @@ describe('menu days', () => {
     expect(openDaysBetween('2026-11-07', '2026-11-13', ['sat', 'sun'])).toEqual(['2026-11-07', '2026-11-08']);
     expect(openDaysBetween('2026-11-07', '2026-11-13', [])).toHaveLength(5);
     expect(openDaysBetween('2026-11-01', '2026-11-30', [])).toHaveLength(22); // November 2026 starts on a Sunday
+    // stored as numbers by the XO forms
+    expect(openDaysBetween('2026-11-07', '2026-11-13', ['6', '0'])).toEqual(['2026-11-07', '2026-11-08']);
+  });
+
+  it("are the server's open days when it sends them (its weekdays less its holidays)", () => {
+    const menu = { startsOn: '2026-11-07', endsOn: '2026-11-13', workingDays: ['sun', 'mon', 'tue', 'wed', 'thu'] };
+    expect(menuOpenDays({ ...menu, openDays: ['2026-11-08', '2026-11-10'] })).toEqual(['2026-11-08', '2026-11-10']);
+    expect(menuOpenDays({ ...menu, openDays: [] })).toEqual([]); // a whole week off
+    expect(menuOpenDays({ ...menu, openDays: null })).toHaveLength(5); // an older server
   });
 });
 

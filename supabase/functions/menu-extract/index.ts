@@ -11,7 +11,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
 
 import { corsHeaders, jsonResponse } from '../_shared/http.ts';
 import { menuExtractInstructions, MENU_OUTPUT_SCHEMA, MENU_SYSTEM_PROMPT, normalizeExtraction, type ExtractContext } from '../_shared/menuExtraction.ts';
-import { maxDishes, MENU_FILE_TYPES, openDaysBetween, type MenuPeriod } from '../_shared/menuRules.ts';
+import { maxDishes, MENU_FILE_TYPES, menuDays, type MenuPeriod } from '../_shared/menuRules.ts';
 
 const MODEL = Deno.env.get('ANTHROPIC_MENU_MODEL') || 'claude-opus-5-5';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -23,6 +23,8 @@ type PeriodRow = {
   starts_on: string;
   ends_on: string;
   working_days: string[];
+  /** The days the nursery is open in the period (weekdays less holidays). */
+  open_days?: string[];
   can_edit: boolean;
   menu: { file_path: string | null; file_type: string | null } | null;
 };
@@ -89,7 +91,7 @@ Deno.serve(async (req) => {
     period: period.period,
     startsOn: period.starts_on,
     endsOn: period.ends_on,
-    days: openDaysBetween(period.starts_on, period.ends_on, period.working_days ?? []),
+    days: menuDays(period),
     maxDishes: maxDishes(period.period),
   };
   if (!ctx.days.length) return fail('menu_extract_no_days', 400);

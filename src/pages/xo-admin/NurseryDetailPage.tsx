@@ -17,6 +17,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { confirm } from '@/components/ui/confirm';
 import { useNurseryDetail, useUpdateNursery, useUploadNurseryLogo, type NurseryWithSettings } from '@/hooks/useNurseryDetail';
 import { useAssignNurseryAdmin, useNurseryStats, useNurseryUsers } from '@/hooks/useNurseries';
+import { weekdayNumbers } from '@/lib/weekdays';
 
 type NurseryOverviewFormData = {
   name_ar: string;
@@ -61,7 +62,8 @@ function getOverviewDefaults(nursery: NurseryWithSettings): NurseryOverviewFormD
     city: nursery.city ?? '',
     opens_at: nursery.opens_at ?? '',
     closes_at: nursery.closes_at ?? '',
-    working_days: Array.isArray(nursery.working_days) ? nursery.working_days.map(String) : [],
+    // stored as 'sun' or '0' depending on who saved it; the form uses '0'–'6'
+    working_days: weekdayNumbers(nursery.working_days).map(String),
     language_pref: nursery.language_pref ?? 'both',
     subscription_plan: nursery.subscription_plan ?? '',
     subscription_status: nursery.subscription_status ?? '',

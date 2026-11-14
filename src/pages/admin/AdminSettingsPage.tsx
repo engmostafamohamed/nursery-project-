@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { SettingsCategoryForm } from '@/components/admin/settings/SettingsCategoryForm';
@@ -7,6 +8,7 @@ import { NurseryProfileForm } from '@/components/admin/settings/NurseryProfileFo
 import { ParentRegistrationTemplatesEditor } from '@/components/admin/settings/ParentRegistrationTemplatesEditor';
 import { TuitionPackagesEditor } from '@/components/admin/settings/TuitionPackagesEditor';
 import { TenantExportCard } from '@/components/admin/settings/TenantExportCard';
+import { DaysOffSettings } from '@/features/days-off/DaysOffSettings';
 import { HelpAiPreferencesCard } from '@/components/settings/HelpAiPreferencesCard';
 import { PushNotificationsCard } from '@/components/settings/PushNotificationsCard';
 import {
@@ -37,7 +39,16 @@ export function AdminSettingsPage() {
   const { user } = useAuthSession();
   const { data: profile } = useUserProfile(user?.id);
   const { settings, isLoading, updateSettings, isSaving } = useNurserySettings(profile?.nursery_id);
-  const [activeTab, setActiveTab] = useState<SettingsTabId>('operations');
+  // ?tab= opens a tab (a notice links to the days off); switching tabs keeps it in the address.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTabState] = useState<SettingsTabId>(() =>
+    SETTINGS_TABS.some((tab) => tab.id === tabParam) ? (tabParam as SettingsTabId) : 'operations',
+  );
+  const setActiveTab = (tabId: SettingsTabId) => {
+    setActiveTabState(tabId);
+    setSearchParams(tabId === 'operations' ? {} : { tab: tabId }, { replace: true });
+  };
   const [draft, setDraft] = useState<Partial<NurserySettingsRow>>({});
   const [confirmSwitchTab, setConfirmSwitchTab] = useState<SettingsTabId | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -178,6 +189,8 @@ export function AdminSettingsPage() {
       <section className="min-w-0 space-y-3">
         {activeTab === 'profile' ? (
           profile?.nursery_id ? <NurseryProfileForm nurseryId={profile.nursery_id} /> : null
+        ) : activeTab === 'daysOff' ? (
+          profile?.nursery_id ? <DaysOffSettings nurseryId={profile.nursery_id} /> : null
         ) : (
           <>
             {tabConfig.fields.length > 0 ? (

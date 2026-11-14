@@ -6,7 +6,7 @@ import { DishTile, DishWarning } from './DishTile';
 import { MenuBoard } from './MenuBoard';
 import { dishesOf, severityTone, type MenuDish } from './menu';
 import { localName } from '@/lib/bilingualName';
-import { openDaysBetween } from './menuPeriod';
+import { menuOpenDays } from './menuPeriod';
 import type { Menu } from './menuApi';
 
 /**
@@ -48,7 +48,7 @@ export function MenuView({ menu, today, audience }: { menu: Menu; today: string;
         </p>
       ) : null}
       <MenuBoard
-        days={openDaysBetween(menu.startsOn, menu.endsOn, menu.workingDays)}
+        days={menuOpenDays(menu)}
         today={today}
         renderCell={(day, meal) => {
           const dishes = dishesOf(menu.dishes, day, meal);

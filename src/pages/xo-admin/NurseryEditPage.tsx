@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
 import { NurseryForm, type NurseryFormValues } from '@/components/Nurseries/NurseryForm';
 import { useNursery, useUpdateNursery } from '@/hooks/useNurseries';
+import { weekdayNumbers } from '@/lib/weekdays';
 
 export function NurseryEditPage() {
   const { t } = useTranslation();
@@ -26,7 +27,8 @@ export function NurseryEditPage() {
       logoFileUrl: nursery.logo_url ?? '',
       opensAt: nursery.opens_at ?? '',
       closesAt: nursery.closes_at ?? '',
-      workingDays: (nursery.working_days ?? []).map((d) => Number(d)),
+      // stored as 'sun' or '0' depending on who saved it
+      workingDays: weekdayNumbers(nursery.working_days),
       departments: (nursery.departments ?? ['English', 'French']).map((d) => String(d)),
       subscriptionPlan: nursery.subscription_plan ?? 'starter',
       pricingModel: nursery.pricing_model ?? 'fixed',

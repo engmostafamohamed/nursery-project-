@@ -9130,6 +9130,22 @@
     "course_request_declined": {
       "title": "Course request declined",
       "body": "The nursery could not enrol {{child}} in {{course}}. {{note}}"
+    },
+    "nursery_holiday": {
+      "title": "Day off: {{name}}",
+      "body": "The nursery is closed on {{from_date}}."
+    },
+    "nursery_holiday_range": {
+      "title": "Days off: {{name}}",
+      "body": "The nursery is closed from {{from_date}} to {{to_date}}."
+    },
+    "nursery_holiday_cancelled": {
+      "title": "The nursery is open",
+      "body": "{{name}} is no longer a day off: the nursery is open from {{from_date}}."
+    },
+    "nursery_week_changed": {
+      "title": "The nursery's days changed",
+      "body": "The nursery now opens on {{days}}."
     }
   },
   "qr": {
@@ -9853,7 +9869,8 @@
       "cctv": "CCTV",
       "loyalty": "Loyalty Program",
       "localization": "Localization",
-      "branding": "Branding"
+      "branding": "Branding",
+      "daysOff": "Days off"
     },
     "actions": {
       "save": "Save Changes",
@@ -12108,6 +12125,114 @@
       "full": "The course is full.",
       "note_too_long": "Keep the note shorter (300 letters).",
       "request_closed": "This request was already answered.",
+      "network": "No connection. Try again.",
+      "failed": "Something went wrong. Try again."
+    }
+  },
+  "daysOff": {
+    "title": "Days off",
+    "hint": "Choose the weekly days off and the holidays. The system applies them everywhere by itself: attendance, staff tasks, the menu and the families' screens. Families and staff are told 2 days before each day off.",
+    "next": "Next day off: {{day}} ({{why}})",
+    "nextToday": "Closed today ({{why}})",
+    "weeklyOff": "weekly day off",
+    "listJoin": ", ",
+    "range": "{{from}} – {{to}}",
+    "days_one": "{{count}} day",
+    "days_other": "{{count}} days",
+    "loadError": "Could not load the days off.",
+    "week": {
+      "title": "Weekly days off",
+      "hint": "Tap a day to make it a day off or a working day. Every week follows it.",
+      "open": "Open",
+      "off": "Day off",
+      "summary_one": "Open {{count}} day a week",
+      "summary_other": "Open {{count}} days a week",
+      "offDays": "Days off: {{days}}",
+      "save": "Save the week",
+      "saved": "Week saved",
+      "savedHint": "Attendance and today's tasks follow; families and staff are told the new days."
+    },
+    "holidays": {
+      "title": "Holidays",
+      "count_one": "{{count}} holiday",
+      "count_other": "{{count}} holidays",
+      "hint": "Official holidays and the nursery's own closures. The nursery is closed on these days; families and staff are told 2 days before.",
+      "official": "Egypt's official holidays",
+      "add": "Add a day off",
+      "year": "Year",
+      "emptyTitle": "No holidays in {{year}}",
+      "emptyHint": "Add Egypt's official holidays in one click, or the nursery's own days off."
+    },
+    "holiday": {
+      "addTitle": "Add a day off",
+      "editTitle": "Change the day off",
+      "hint": "One day, or several days (up to two months).",
+      "runningHint": "This day off has started: its first day stays, and you can end it early (end it yesterday to open today).",
+      "nameAr": "Name (Arabic)",
+      "nameEn": "Name (English)",
+      "from": "First day",
+      "to": "Last day",
+      "toHint": "The same as the first day for one day.",
+      "pastNote": "This records a closure that already happened: those days stop counting as absences.",
+      "save": "Save",
+      "added": "Day off added",
+      "updated": "Day off changed",
+      "savedHint": "Attendance and staff tasks follow; families and staff are told 2 days before.",
+      "removeTitle": "Remove {{name}}?",
+      "removeHint": "The nursery will be open on those days.",
+      "remove": "Remove",
+      "removed": "Day off removed",
+      "removedTold": "Families and staff are told the nursery is open.",
+      "told": "Families told",
+      "official": "Official",
+      "edit": "Change {{name}}",
+      "state": {
+        "now": "Now",
+        "coming": "Coming",
+        "past": "Past"
+      }
+    },
+    "problems": {
+      "nameRequired": "Give it a name in Arabic or English.",
+      "nameTooLong": "Keep the name to 80 letters.",
+      "datesRequired": "Choose the first day.",
+      "datesInvalid": "The last day comes on or after the first.",
+      "tooLong": "A day off lasts two months at most."
+    },
+    "official": {
+      "title": "Egypt's official holidays {{year}}",
+      "hint": "Worked out by the system for the year. The coming ones are ticked; you can change any of them after adding.",
+      "lunar": "Follows the moon",
+      "lunarHint": "The announced day can differ by one day: check it and change it if needed.",
+      "past": "Already passed",
+      "already": "Added",
+      "add_one": "Add {{count}} holiday",
+      "add_other": "Add {{count}} holidays",
+      "added_one": "{{count}} holiday added",
+      "added_other": "{{count}} holidays added",
+      "copticChristmas": "Coptic Christmas",
+      "revolutionJan25": "25 January Revolution and Police Day",
+      "shamElNessim": "Sham el-Nessim",
+      "sinaiLiberation": "Sinai Liberation Day",
+      "labourDay": "Labour Day",
+      "revolutionJun30": "30 June Revolution",
+      "revolutionJul23": "23 July Revolution",
+      "armedForcesDay": "Armed Forces Day (6 October)",
+      "eidAlFitr": "Eid al-Fitr",
+      "eidAlAdha": "Arafat Day and Eid al-Adha",
+      "islamicNewYear": "Islamic New Year",
+      "prophetBirthday": "The Prophet's Birthday"
+    },
+    "errors": {
+      "forbidden": "You can't change the days off.",
+      "week_invalid": "The nursery opens at least one day a week.",
+      "name_required": "Give it a name in Arabic or English.",
+      "name_too_long": "Keep the name to 80 letters.",
+      "dates_invalid": "Check the dates: the last day comes on or after the first.",
+      "too_long": "A day off lasts two months at most.",
+      "duplicate": "There is already a day off on these dates.",
+      "not_found": "This day off was removed.",
+      "past": "Days that have passed stay as they were: an ended day off can't change, and a started one can only end early.",
       "network": "No connection. Try again.",
       "failed": "Something went wrong. Try again."
     }

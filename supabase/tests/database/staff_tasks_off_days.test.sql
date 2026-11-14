@@ -25,8 +25,8 @@ $$;
 --  April 2027 ends on Friday the 30th.)
 insert into public.nurseries (id, name_ar, name_en, working_days) values
   ('00000000-0000-4000-9d00-00000000000a', 'حضانة', 'Off Days Nursery', '["sun","mon","tue","wed","thu"]'::jsonb);
-insert into public.academic_calendars (nursery_id, year, holidays_json)
-values ('00000000-0000-4000-9d00-00000000000a', 2027, '["2027-01-03"]'::jsonb);
+insert into public.nursery_holidays (nursery_id, name_en, starts_on, ends_on)
+values ('00000000-0000-4000-9d00-00000000000a', 'Holiday', '2027-01-03', '2027-01-03');
 insert into auth.users (id, email) values ('00000000-0000-4000-9d00-000000000a01', 'offdays.teacher@test.local');
 update public.users set role = 'teacher', nursery_id = '00000000-0000-4000-9d00-00000000000a', name_en = 'Teacher', status = 'active'
  where id = '00000000-0000-4000-9d00-000000000a01';

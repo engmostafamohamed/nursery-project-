@@ -34,8 +34,8 @@ update public.users u
  where u.id = v.id::uuid;
 
 -- Three days ago is a holiday at the branch.
-insert into public.academic_calendars (nursery_id, year, holidays_json)
-values ('00000000-0000-4000-9910-00000000000a', extract(year from current_date - 3)::integer, jsonb_build_array((current_date - 3)::text));
+insert into public.nursery_holidays (nursery_id, name_en, starts_on, ends_on)
+values ('00000000-0000-4000-9910-00000000000a', 'Holiday', current_date - 3, current_date - 3);
 
 -- Two days for the nanny (no HR record, so no staff_id): one late and clocked by herself, one recorded by the admin.
 insert into public.staff_attendance (user_id, nursery_id, work_date, check_in_at, check_out_at, status, late_minutes, source, notes)

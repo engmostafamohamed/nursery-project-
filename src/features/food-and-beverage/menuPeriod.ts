@@ -5,10 +5,15 @@
  */
 import { addDays } from '@/lib/calendarDay';
 
-import { toUtcDate, type MenuPeriod } from '../../../supabase/functions/_shared/menuRules.ts';
+import { menuDays, toUtcDate, type MenuPeriod } from '../../../supabase/functions/_shared/menuRules.ts';
 
 export { maxDishes, MENU_PERIODS, openDaysBetween, type MenuPeriod } from '../../../supabase/functions/_shared/menuRules.ts';
 export { addDays };
+
+/** The days a loaded menu covers: the server's open days (weekdays less holidays), else its weekdays. */
+export function menuOpenDays(menu: { startsOn: string; endsOn: string; workingDays: readonly string[]; openDays: readonly string[] | null }): string[] {
+  return menuDays({ starts_on: menu.startsOn, ends_on: menu.endsOn, working_days: menu.workingDays, open_days: menu.openDays });
+}
 
 const toYmd = (date: Date) => date.toISOString().slice(0, 10);
 

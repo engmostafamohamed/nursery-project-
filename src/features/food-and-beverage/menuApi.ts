@@ -31,6 +31,8 @@ export type Menu = {
   startsOn: string;
   endsOn: string;
   workingDays: string[];
+  /** The days the nursery is open in the period (weekdays less holidays), from the server; null from an older one. */
+  openDays: string[] | null;
   canEdit: boolean;
   /** Null when there is no menu for the period (or, for a parent, none published yet). */
   info: MenuInfo | null;
@@ -57,6 +59,7 @@ export function toMenu(row: JsonRecord): Menu {
     startsOn: text(row.starts_on),
     endsOn: text(row.ends_on),
     workingDays: strings(row.working_days),
+    openDays: Array.isArray(row.open_days) ? strings(row.open_days).map((d) => d.slice(0, 10)) : null,
     canEdit: row.can_edit === true,
     info: row.menu && typeof row.menu === 'object' ? toMenuInfo(obj(row.menu)) : null,
     dishes: list(row.dishes).map((d) => ({

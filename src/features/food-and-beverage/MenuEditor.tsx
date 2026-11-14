@@ -15,7 +15,7 @@ import { MenuFileImport } from './MenuFileImport';
 import { dishesOf, severityTone, type Meal } from './menu';
 import { dishWarnings, toDrafts, toSavePayload, type DraftDish } from './menuDrafts';
 import { localName } from '@/lib/bilingualName';
-import { maxDishes, openDaysBetween } from './menuPeriod';
+import { maxDishes, menuOpenDays } from './menuPeriod';
 import { menuErrorKey } from './menuErrors';
 import { saveMenu, type Menu } from './menuApi';
 import { useMenuChange } from './useMenu';
@@ -81,7 +81,7 @@ export function MenuEditor({ nurseryId, menu, today, onDirtyChange }: { nurseryI
     <div className="space-y-4">
       <MenuFileImport nurseryId={nurseryId} menu={menu} hasDishes={drafts.length > 0} onImport={setDrafts} />
       <MenuBoard
-        days={openDaysBetween(menu.startsOn, menu.endsOn, menu.workingDays)}
+        days={menuOpenDays(menu)}
         today={today}
         renderCell={(day, meal) => (
           <>

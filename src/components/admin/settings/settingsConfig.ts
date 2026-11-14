@@ -5,6 +5,7 @@ export type SettingsKey = Exclude<keyof NurserySettingsRow, 'id' | 'nursery_id' 
 export type SettingsTabId =
   | 'profile'
   | 'operations'
+  | 'daysOff'
   | 'admissions'
   | 'eventsPermissions'
   | 'communication'
@@ -158,6 +159,13 @@ export const SETTINGS_TABS: SettingsTabConfig[] = [
       { key: 'absence_alert_time', type: 'time' },
       { key: 'end_of_day_checklist_time', type: 'time' },
     ],
+  },
+  {
+    // The weekly days off and the holidays live on nurseries / nursery_holidays: DaysOffSettings
+    // reads and saves them itself.
+    id: 'daysOff',
+    labelKey: 'settings.tabs.daysOff',
+    fields: [],
   },
   {
     id: 'admissions',
