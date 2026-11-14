@@ -12206,6 +12206,7 @@
       "lunarHint": "The announced day can differ by one day: check it and change it if needed.",
       "past": "Already passed",
       "already": "Added",
+      "add_zero": "Add",
       "add_one": "Add {{count}} holiday",
       "add_other": "Add {{count}} holidays",
       "added_one": "{{count}} holiday added",
