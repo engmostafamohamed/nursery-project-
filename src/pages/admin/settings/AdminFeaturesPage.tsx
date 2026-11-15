@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
+import { TablePagination } from '@/components/ui/DataTable';
+import { usePagination } from '@/hooks/usePagination';
 import { confirm } from '@/components/ui/confirm';
 
 import { Button } from '@/components/ui/button';
@@ -24,6 +26,8 @@ export function AdminFeaturesPage() {
   const isXo = profile?.role === 'xo_super_admin';
 
   const features = useFeatures();
+  const featureRows = useMemo(() => features.data ?? [], [features.data]);
+  const featurePager = usePagination(featureRows, 10, featureRows.length);
   const createFeat = useCreateFeature();
   const deleteFeat = useDeleteFeature();
 
@@ -136,7 +140,7 @@ export function AdminFeaturesPage() {
                 </tr>
               </thead>
               <tbody>
-                {(features.data ?? []).map((f) => (
+                {featurePager.pageItems.map((f) => (
                   <tr key={f.id} className="border-t border-outline-variant">
                     <td className="px-3 py-2 font-medium">{t(`rbac.features.${f.id}`, { defaultValue: (lang === 'ar' ? f.name_ar : f.name_en) ?? f.id })}</td>
                     <td className="px-3 py-2 font-mono text-xs text-on-surface-variant">{f.id}</td>
@@ -159,6 +163,7 @@ export function AdminFeaturesPage() {
                 ))}
               </tbody>
             </table>
+            <TablePagination pager={featurePager} pageSizeOptions={[10, 20, 50]} />
           </div>
         )}
       </div>

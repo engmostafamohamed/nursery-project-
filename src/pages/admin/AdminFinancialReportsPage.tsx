@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import { TablePagination } from '@/components/ui/DataTable';
+import { usePagination } from '@/hooks/usePagination';
 import { InvoiceStatusChart } from '@/components/admin/reports/InvoiceStatusChart';
 import { InvoiceTypesChart } from '@/components/admin/reports/InvoiceTypesChart';
 import { PaymentMethodsChart } from '@/components/admin/reports/PaymentMethodsChart';
@@ -40,6 +42,10 @@ export function AdminFinancialReportsPage() {
     limit: 50,
   });
   const d = reports.data;
+  const topParents = useMemo(() => d?.topPayingParents ?? [], [d?.topPayingParents]);
+  const topParentsPager = usePagination(topParents, 10, topParents.length);
+  const overdueRows = useMemo(() => d?.overdueInvoices ?? [], [d?.overdueInvoices]);
+  const overduePager = usePagination(overdueRows, 10, overdueRows.length);
   // The discounts report counts whole days in the nursery's calendar.
   const reportDay = (iso: string | undefined) => (iso ? localDateInputValue(new Date(iso)) : '');
 
@@ -164,7 +170,7 @@ export function AdminFinancialReportsPage() {
           <table className="w-full min-w-[700px] text-sm">
             <thead><tr className="text-on-surface-variant"><th className="px-2 py-2 text-start">{t('reports.financial.tables.parent')}</th><th className="px-2 py-2 text-start">{t('reports.financial.tables.totalPaid')}</th><th className="px-2 py-2 text-start">{t('reports.financial.tables.invoiceCount')}</th><th className="px-2 py-2 text-start">{t('reports.financial.tables.lastPayment')}</th></tr></thead>
             <tbody>
-              {(d?.topPayingParents ?? []).map((row) => (
+              {topParentsPager.pageItems.map((row) => (
                 <tr key={row.parentId} className="border-t border-outline-variant">
                   <td className="px-2 py-2">{row.parentName}</td>
                   <td className="px-2 py-2">{t('invoice.egpAmount', { amount: row.total.toFixed(2) })}</td>
@@ -174,6 +180,7 @@ export function AdminFinancialReportsPage() {
               ))}
             </tbody>
           </table>
+          <TablePagination pager={topParentsPager} pageSizeOptions={[10, 20, 50]} />
         </div>
       </section>
 
@@ -183,7 +190,7 @@ export function AdminFinancialReportsPage() {
           <table className="w-full min-w-[900px] text-sm">
             <thead><tr className="text-on-surface-variant"><th className="px-2 py-2 text-start">{t('invoice.table.invoiceNo')}</th><th className="px-2 py-2 text-start">{t('reports.financial.tables.parent')}</th><th className="px-2 py-2 text-start">{t('invoice.table.amount')}</th><th className="px-2 py-2 text-start">{t('reports.financial.tables.daysOverdue')}</th><th className="px-2 py-2 text-start">{t('invoice.table.actions')}</th></tr></thead>
             <tbody>
-              {(d?.overdueInvoices ?? []).map((row) => (
+              {overduePager.pageItems.map((row) => (
                 <tr key={row.id} className="border-t border-outline-variant">
                   <td className="px-2 py-2">{row.invoiceNumber}</td>
                   <td className="px-2 py-2">{row.parentName}</td>
@@ -199,6 +206,7 @@ export function AdminFinancialReportsPage() {
               ))}
             </tbody>
           </table>
+          <TablePagination pager={overduePager} pageSizeOptions={[10, 20, 50]} />
         </div>
       </section>
     </div>

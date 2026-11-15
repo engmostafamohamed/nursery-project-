@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
+import { TablePagination } from '@/components/ui/DataTable';
+import { usePagination } from '@/hooks/usePagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -18,6 +20,7 @@ export function StaffPayrollHistorySection({
   staffName?: string;
 }) {
   const { t, i18n } = useTranslation();
+  const pager = usePagination(rows, 10, rows.length);
 
   const nf = new Intl.NumberFormat(i18n.language?.startsWith('ar') ? 'ar-EG' : 'en-GB', {
     minimumFractionDigits: 2,
@@ -66,7 +69,7 @@ export function StaffPayrollHistorySection({
           </tr>
         </thead>
         <tbody>
-          {rows.map((r) => {
+          {pager.pageItems.map((r) => {
             const id = String(r.id ?? '');
             const start = String(r.pay_period_start ?? '').slice(0, 10);
             const end = String(r.pay_period_end ?? '').slice(0, 10);
@@ -111,6 +114,7 @@ export function StaffPayrollHistorySection({
           })}
         </tbody>
       </table>
+      <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} />
     </div>
   );
 }

@@ -6,9 +6,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { DataTable, StatusPill, TablePagination, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthSession } from '@/hooks/useAuthSession';
+import { usePagination } from '@/hooks/usePagination';
 import { useStaff } from '@/hooks/useStaff';
 import { useStaffSchedules } from '@/hooks/useStaffSchedules';
 import { usePayroll } from '@/hooks/usePayroll';
@@ -106,6 +108,15 @@ export function TeacherProfilePage() {
   const dayLabel = (dow: number) =>
     new Date(2024, 0, 7 + dow).toLocaleDateString(isAr ? 'ar-EG' : 'en-GB', { weekday: 'long' });
 
+  const payslipRows = useMemo(
+    () =>
+      [...payroll.staffRows].sort(
+        (a, b) => +new Date(String(b.pay_period_start)) - +new Date(String(a.pay_period_start)),
+      ),
+    [payroll.staffRows],
+  );
+  const payslipPager = usePagination(payslipRows, 10, payslipRows.length);
+
   if (staff.isLoading) {
     return (
       <div className="space-y-3">
@@ -126,9 +137,6 @@ export function TeacherProfilePage() {
   );
   const email = (u.email as string | null) ?? null;
 
-  const payslipRows = [...payroll.staffRows].sort(
-    (a, b) => +new Date(String(b.pay_period_start)) - +new Date(String(a.pay_period_start)),
-  );
 
   return (
     <div className="space-y-6 pb-8">
@@ -284,28 +292,36 @@ export function TeacherProfilePage() {
             description={t('payroll.emptyStaffDescription')}
           />
         ) : (
-          <div className="space-y-2">
-            {payslipRows.map((r) => (
-              <article
-                key={String(r.id)}
-                className="flex items-center justify-between rounded-xl border border-outline-variant bg-surface-container-lowest p-3"
-              >
-                <div>
-                  <p className="text-sm font-semibold text-on-surface">
-                    {new Date(String(r.pay_period_start)).toLocaleDateString(isAr ? 'ar-EG' : 'en-GB', {
-                      month: 'long',
-                      year: 'numeric',
-                    })}
-                  </p>
-                  <p className="text-xs text-on-surface-variant">
-                    {t('payroll.total')}: {t('invoice.egpAmount', { amount: nf.format(Number(r.total_amount ?? 0)) })}
-                  </p>
-                </div>
-                <Badge variant={String(r.payment_status) === 'paid' ? 'default' : 'secondary'}>
-                  {String(r.payment_status) === 'paid' ? t('payroll.status.paid') : t('payroll.status.pending')}
-                </Badge>
-              </article>
-            ))}
+          <div className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
+            <DataTable minWidth={520}>
+              <THead>
+                <Th>{t('payroll.payslipsTable.month')}</Th>
+                <Th align="end">{t('payroll.total')}</Th>
+                <Th>{t('payroll.payslipsTable.status')}</Th>
+              </THead>
+              <TBody>
+                {payslipPager.pageItems.map((r) => {
+                  const paid = String(r.payment_status) === 'paid';
+                  return (
+                    <Tr key={String(r.id)} data-testid="payslip-row">
+                      <Td className="whitespace-nowrap font-semibold text-on-surface">
+                        {new Date(String(r.pay_period_start)).toLocaleDateString(isAr ? 'ar-EG' : 'en-GB', {
+                          month: 'long',
+                          year: 'numeric',
+                        })}
+                      </Td>
+                      <Td align="end" className="whitespace-nowrap font-semibold tabular-nums text-on-surface">
+                        {t('invoice.egpAmount', { amount: nf.format(Number(r.total_amount ?? 0)) })}
+                      </Td>
+                      <Td>
+                        <StatusPill tone={paid ? 'success' : 'warning'}>{paid ? t('payroll.status.paid') : t('payroll.status.pending')}</StatusPill>
+                      </Td>
+                    </Tr>
+                  );
+                })}
+              </TBody>
+            </DataTable>
+            <TablePagination pager={payslipPager} pageSizeOptions={[10, 20, 50]} />
           </div>
         )
       ) : null}

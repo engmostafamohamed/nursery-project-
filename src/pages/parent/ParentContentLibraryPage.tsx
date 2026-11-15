@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { ContentLibraryTable } from '@/components/library/ContentLibraryTable';
 import { useContentLibrary } from '@/hooks/useContentLibrary';
 import { useSettings } from '@/lib/useSettings';
 import { Select } from '@/components/ui/select';
@@ -18,16 +19,7 @@ export function ParentContentLibraryPage() {
         <option value="all">{t('common.all')}</option>
         {(['parenting_tips', 'activities', 'recipes', 'health'] as const).map((c) => <option key={c} value={c}>{t(`library.categories.${c}`)}</option>)}
       </Select>
-      <section className="space-y-2 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
-        {library.items.map((item) => (
-          <article key={String(item.id)} className="rounded-lg border border-outline-variant bg-surface text-foreground p-3">
-            <p className="font-medium">{String(item.title)}</p>
-            <p className="text-xs text-on-surface-variant">{t(`library.categories.${String(item.category)}`)}</p>
-            <p className="mt-1 text-sm text-on-surface-variant">{String(item.content)}</p>
-            {item.media_url ? <a className="mt-1 block text-xs text-secondary underline" href={String(item.media_url)} target="_blank" rel="noreferrer">{t('library.openMedia')}</a> : null}
-          </article>
-        ))}
-      </section>
+      <ContentLibraryTable library={library} resetKey={category} />
     </div>
   );
 }

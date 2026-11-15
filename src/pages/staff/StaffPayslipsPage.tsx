@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { DataTable, StatusPill, TablePagination, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { useAuthSession } from '@/hooks/useAuthSession';
+import { usePagination } from '@/hooks/usePagination';
 import { usePayroll } from '@/hooks/usePayroll';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { downloadPayslipPdf } from '@/lib/exports';
+import { formatMoneyAmount } from '@/lib/money';
 
 export function StaffPayslipsPage() {
   const { t, i18n } = useTranslation();
@@ -20,6 +23,8 @@ export function StaffPayslipsPage() {
   const payroll = usePayroll(undefined, user?.id);
 
   const rows = payroll.staffRows.filter((r) => new Date(String(r.pay_period_start)).getFullYear() === year);
+  const pager = usePagination(rows, 10, `${year}|${rows.length}`);
+  const money = (n: number) => t('invoice.egpAmount', { amount: formatMoneyAmount(n) });
 
   return (
     <div className="space-y-4">
@@ -35,41 +40,59 @@ export function StaffPayslipsPage() {
       {!rows.length ? (
         <EmptyState icon="receipt_long" title={t('payroll.emptyStaffTitle')} description={t('payroll.emptyStaffDescription')} />
       ) : (
-        <div className="space-y-2">
-          {rows.map((r) => (
-            <article key={String(r.id)} className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-on-surface">
-                    {new Date(String(r.pay_period_start)).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
-                  </p>
-                  <p className="text-xs text-on-surface-variant">{t('payroll.total')}: EGP {Number(r.total_amount ?? 0).toFixed(2)}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs">{String(r.payment_status) === 'paid' ? t('payroll.status.paid') : t('payroll.status.pending')}</span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      downloadPayslipPdf({
-                        staffName,
-                        periodStart: String(r.pay_period_start ?? '—').slice(0, 10),
-                        periodEnd: String(r.pay_period_end ?? '—').slice(0, 10),
-                        baseSalary: Number(r.base_salary ?? 0),
-                        bonuses: Number(r.bonuses ?? 0),
-                        deductions: Number(r.deductions ?? 0),
-                        total: Number(r.total_amount ?? 0),
-                        statusLabel: String(r.payment_status) === 'paid' ? t('payroll.status.paid') : t('payroll.status.pending'),
-                        paymentDate: r.payment_date ? String(r.payment_date) : null,
-                      })
-                    }
-                  >
-                    {t('payroll.downloadPdf')}
-                  </Button>
-                </div>
-              </div>
-            </article>
-          ))}
+        <div className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
+          <DataTable minWidth={720}>
+            <THead>
+              <Th>{t('payroll.payslipsTable.month')}</Th>
+              <Th align="end">{t('payroll.payslipsTable.base')}</Th>
+              <Th align="end">{t('payroll.payslipsTable.bonuses')}</Th>
+              <Th align="end">{t('payroll.payslipsTable.deductions')}</Th>
+              <Th align="end">{t('payroll.total')}</Th>
+              <Th>{t('payroll.payslipsTable.status')}</Th>
+              <Th align="end"><span className="sr-only">{t('payroll.downloadPdf')}</span></Th>
+            </THead>
+            <TBody>
+              {pager.pageItems.map((r) => {
+                const paid = String(r.payment_status) === 'paid';
+                return (
+                  <Tr key={String(r.id)} data-testid="payslip-row">
+                    <Td className="whitespace-nowrap font-semibold text-on-surface">
+                      {new Date(String(r.pay_period_start)).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+                    </Td>
+                    <Td align="end" className="whitespace-nowrap tabular-nums text-on-surface-variant">{money(Number(r.base_salary ?? 0))}</Td>
+                    <Td align="end" className="whitespace-nowrap tabular-nums text-on-surface-variant">{money(Number(r.bonuses ?? 0))}</Td>
+                    <Td align="end" className="whitespace-nowrap tabular-nums text-on-surface-variant">{money(Number(r.deductions ?? 0))}</Td>
+                    <Td align="end" className="whitespace-nowrap font-semibold tabular-nums text-on-surface">{money(Number(r.total_amount ?? 0))}</Td>
+                    <Td>
+                      <StatusPill tone={paid ? 'success' : 'warning'}>{paid ? t('payroll.status.paid') : t('payroll.status.pending')}</StatusPill>
+                    </Td>
+                    <Td align="end">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          downloadPayslipPdf({
+                            staffName,
+                            periodStart: String(r.pay_period_start ?? '—').slice(0, 10),
+                            periodEnd: String(r.pay_period_end ?? '—').slice(0, 10),
+                            baseSalary: Number(r.base_salary ?? 0),
+                            bonuses: Number(r.bonuses ?? 0),
+                            deductions: Number(r.deductions ?? 0),
+                            total: Number(r.total_amount ?? 0),
+                            statusLabel: paid ? t('payroll.status.paid') : t('payroll.status.pending'),
+                            paymentDate: r.payment_date ? String(r.payment_date) : null,
+                          })
+                        }
+                      >
+                        {t('payroll.downloadPdf')}
+                      </Button>
+                    </Td>
+                  </Tr>
+                );
+              })}
+            </TBody>
+          </DataTable>
+          <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} />
         </div>
       )}
     </div>

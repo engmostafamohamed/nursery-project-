@@ -4,11 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import { StatusPill, TableEmpty, TableLoading } from '@/components/ui/DataTable';
+import { DataTable, StatusPill, TableEmpty, TableLoading, TablePagination, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
 import { LoadError } from '@/components/ui/LoadError';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { TONE_TINT } from '@/components/ui/toneClasses';
 import { useParentChildren } from '@/hooks/useParentChildren';
+import { usePagination } from '@/hooks/usePagination';
 import { localName } from '@/lib/bilingualName';
 import { cn } from '@/lib/utils';
 
@@ -22,18 +23,32 @@ export function CourseCatalog({ money }: { money: (n: number) => string }) {
   const { t } = useTranslation();
   const query = useCourseCatalog();
   const courses = query.data ?? [];
+  const pager = usePagination(courses, 10, 'catalog');
 
   if (query.isError) return <LoadError inset message={t('parent.courses.catalog.loadError')} onRetry={() => void query.refetch()} />;
   if (query.isPending) return <TableLoading rows={3} />;
   if (!courses.length) return <TableEmpty icon="school" title={t('parent.courses.catalog.emptyTitle')} description={t('parent.courses.catalog.emptyHint')} />;
   return (
-    <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-3">
-      {courses.map((c) => <CatalogCard key={c.id} course={c} money={money} />)}
-    </div>
+    <>
+      <DataTable minWidth={900}>
+        <THead>
+          <Th>{t('parent.courses.table.course')}</Th>
+          <Th>{t('parent.courses.when')}</Th>
+          <Th align="end">{t('parent.courses.table.price')}</Th>
+          <Th>{t('parent.courses.catalog.places')}</Th>
+          <Th>{t('parent.courses.catalog.yourChildren')}</Th>
+          <Th align="end"><span className="sr-only">{t('parent.courses.catalog.ask')}</span></Th>
+        </THead>
+        <TBody>
+          {pager.pageItems.map((c) => <CatalogRow key={c.id} course={c} money={money} />)}
+        </TBody>
+      </DataTable>
+      <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} />
+    </>
   );
 }
 
-function CatalogCard({ course, money }: { course: CatalogCourse; money: (n: number) => string }) {
+function CatalogRow({ course, money }: { course: CatalogCourse; money: (n: number) => string }) {
   const { t, i18n } = useTranslation();
   const isAr = i18n.language.startsWith('ar');
   const queryClient = useQueryClient();
@@ -64,62 +79,57 @@ function CatalogCard({ course, money }: { course: CatalogCourse; money: (n: numb
   };
 
   return (
-    <article className="flex flex-col gap-3 rounded-xl border border-outline-variant bg-surface p-4 shadow-sm" data-testid="catalog-course">
-      <div className="flex items-start gap-3">
-        <span className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-lg', TONE_TINT[look.tone])}>
-          <MaterialSymbol name={look.icon} size="text-xl" />
+    <Tr data-testid="catalog-course">
+      <Td className="min-w-[14rem]">
+        <span className="flex min-w-0 items-start gap-3">
+          <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg', TONE_TINT[look.tone])}>
+            <MaterialSymbol name={look.icon} size="text-lg" />
+          </span>
+          <span className="min-w-0">
+            <span className="block font-semibold text-on-surface">{title}</span>
+            {description ? <span className="line-clamp-1 block text-xs text-on-surface-variant" title={description}>{description}</span> : null}
+            {course.teacher ? <span className="block text-xs text-on-surface-variant">{localName(course.teacher.ar, course.teacher.en, isAr)}</span> : null}
+          </span>
         </span>
-        <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-on-surface">{title}</h3>
-          <p className="text-sm text-on-surface-variant">
-            <strong className="text-on-surface">{money(Number(course.price_per_month))}</strong> {t('admin.courses.list.perMonth')}
-          </p>
-        </div>
+      </Td>
+      <Td className="whitespace-nowrap text-on-surface-variant">{days ? (time ? `${days} · ${time}` : days) : '—'}</Td>
+      <Td align="end" className="whitespace-nowrap">
+        <strong className="text-on-surface">{money(Number(course.price_per_month))}</strong>{' '}
+        <span className="text-xs text-on-surface-variant">{t('admin.courses.list.perMonth')}</span>
+      </Td>
+      <Td>
         <StatusPill tone={full ? 'error' : left != null && left <= 3 ? 'warning' : 'success'}>
           {full ? t('parent.courses.catalog.full') : left == null ? t('parent.courses.catalog.open') : t('parent.courses.catalog.placesLeft', { count: left })}
         </StatusPill>
-      </div>
-      {description ? <p className="line-clamp-3 text-sm text-on-surface-variant">{description}</p> : null}
-      <dl className="space-y-1.5 text-sm text-on-surface-variant">
-        {days ? (
-          <div className="flex items-center gap-2">
-            <MaterialSymbol name="schedule" size="text-base" className="text-primary" />
-            <dt className="sr-only">{t('parent.courses.when')}</dt>
-            <dd>{time ? `${days} · ${time}` : days}</dd>
-          </div>
+      </Td>
+      <Td className="min-w-[12rem]">
+        <span className="space-y-1.5">
+          {children.map((c) => (
+            <span key={c.child_id} className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="min-w-0 truncate font-medium text-on-surface">{names.get(c.child_id)}</span>
+              {c.state === 'enrolled' ? (
+                <StatusPill tone="success" icon="task_alt">{t('parent.courses.catalog.enrolled')}</StatusPill>
+              ) : c.state === 'pending' ? (
+                <>
+                  <StatusPill tone="warning" icon="hourglass_top">{t('parent.courses.catalog.pending')}</StatusPill>
+                  <Button type="button" size="sm" variant="ghost" disabled={busy === c.request_id} onClick={() => c.request_id && void withdraw(c.request_id)}>
+                    {t('parent.courses.catalog.withdraw')}
+                  </Button>
+                </>
+              ) : null}
+            </span>
+          ))}
+        </span>
+      </Td>
+      <Td align="end">
+        {canAsk.length ? (
+          <Button type="button" size="sm" variant={full ? 'outline' : 'default'} disabled={full} onClick={() => setAsking(true)} data-testid="catalog-ask">
+            <MaterialSymbol name="how_to_reg" size="text-base" className="me-1" />
+            {t('parent.courses.catalog.ask')}
+          </Button>
         ) : null}
-        {course.teacher ? (
-          <div className="flex items-center gap-2">
-            <MaterialSymbol name="person" size="text-base" className="text-primary" />
-            <dt className="sr-only">{t('parent.courses.teacher')}</dt>
-            <dd>{localName(course.teacher.ar, course.teacher.en, isAr)}</dd>
-          </div>
-        ) : null}
-      </dl>
-      <ul className="mt-auto space-y-2 border-t border-outline-variant pt-3">
-        {children.map((c) => (
-          <li key={c.child_id} className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="min-w-0 flex-1 truncate font-medium text-on-surface">{names.get(c.child_id)}</span>
-            {c.state === 'enrolled' ? (
-              <StatusPill tone="success" icon="task_alt">{t('parent.courses.catalog.enrolled')}</StatusPill>
-            ) : c.state === 'pending' ? (
-              <>
-                <StatusPill tone="warning" icon="hourglass_top">{t('parent.courses.catalog.pending')}</StatusPill>
-                <Button type="button" size="sm" variant="ghost" disabled={busy === c.request_id} onClick={() => c.request_id && void withdraw(c.request_id)}>
-                  {t('parent.courses.catalog.withdraw')}
-                </Button>
-              </>
-            ) : null}
-          </li>
-        ))}
-      </ul>
-      {canAsk.length ? (
-        <Button type="button" variant={full ? 'outline' : 'default'} disabled={full} onClick={() => setAsking(true)} data-testid="catalog-ask">
-          <MaterialSymbol name="how_to_reg" size="text-base" className="me-1" />
-          {t('parent.courses.catalog.ask')}
-        </Button>
-      ) : null}
-      {asking ? <CourseRequestDialog courseId={course.id} courseTitle={title} kids={canAsk} onClose={() => setAsking(false)} /> : null}
-    </article>
+        {asking ? <CourseRequestDialog courseId={course.id} courseTitle={title} kids={canAsk} onClose={() => setAsking(false)} /> : null}
+      </Td>
+    </Tr>
   );
 }

@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
+import { TablePagination } from '@/components/ui/DataTable';
+import { usePagination } from '@/hooks/usePagination';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/button';
 import type { NurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
@@ -29,6 +31,7 @@ export function FinancialDashboardRecentTransactions({
   fallbackName: string;
 }) {
   const { t } = useTranslation();
+  const pager = usePagination(rows, 10, rows.length);
 
   return (
     <section>
@@ -52,7 +55,7 @@ export function FinancialDashboardRecentTransactions({
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
+              {pager.pageItems.map((r) => (
                 <tr key={r.id} className="border-t border-outline-variant">
                   <td className="px-3 py-2">{new Date(r.paid_at).toLocaleString()}</td>
                   <td className="px-3 py-2">
@@ -73,6 +76,7 @@ export function FinancialDashboardRecentTransactions({
               ))}
             </tbody>
           </table>
+          <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} />
         </div>
       )}
     </section>

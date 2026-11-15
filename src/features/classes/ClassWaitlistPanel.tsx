@@ -2,7 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
-import { DataTable, StatusPill, TableCard, TableEmpty, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
+import { DataTable, StatusPill, TableCard, TableEmpty, TablePagination, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
+import { usePagination } from '@/hooks/usePagination';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 
 import type { ClassProfile, WaitlistEntry } from './classProfile';
@@ -12,6 +13,7 @@ import type { ClassFormat } from './useClassFormat';
 export function ClassWaitlistPanel({ profile, format, base }: { profile: ClassProfile; format: ClassFormat; base: string }) {
   const { t } = useTranslation();
   const entries = profile.waitlist;
+  const pager = usePagination(entries, 10, entries.length);
 
   return (
     <TableCard
@@ -26,13 +28,14 @@ export function ClassWaitlistPanel({ profile, format, base }: { profile: ClassPr
           </Link>
         </Button>
       }
+      pagination={entries.length ? <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} /> : null}
     >
       {!entries.length ? (
         <TableEmpty icon="hourglass_empty" title={t('classProfile.waitlist.emptyTitle')} description={t('classProfile.waitlist.emptyDescription')} />
       ) : (
         <>
           <ul className="divide-y divide-outline-variant md:hidden">
-            {entries.map((entry) => (
+            {pager.pageItems.map((entry) => (
               <li key={entry.id} className="flex items-start gap-3 px-4 py-3">
                 <Position entry={entry} />
                 <div className="min-w-0 flex-1 space-y-1">
@@ -55,7 +58,7 @@ export function ClassWaitlistPanel({ profile, format, base }: { profile: ClassPr
                 <Th>{t('classProfile.waitlist.colStatus')}</Th>
               </THead>
               <TBody>
-                {entries.map((entry) => (
+                {pager.pageItems.map((entry) => (
                   <Tr key={entry.id}>
                     <Td>
                       <Position entry={entry} />

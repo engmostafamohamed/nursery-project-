@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
-import { Badge } from '@/components/ui/badge';
+import { InboxTable } from '@/components/inbox/InboxTable';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthSession } from '@/hooks/useAuthSession';
@@ -26,18 +26,6 @@ type InboxItem = {
   unread: boolean;
   actionLink: string;
 };
-
-function relativeTime(iso: string, lang: string): string {
-  const diffSec = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
-  const rtf = new Intl.RelativeTimeFormat(lang === 'ar' ? 'ar-EG' : 'en', { numeric: 'auto' });
-  if (Math.abs(diffSec) < 60) return rtf.format(-diffSec, 'second');
-  const mins = Math.round(diffSec / 60);
-  if (Math.abs(mins) < 60) return rtf.format(-mins, 'minute');
-  const hours = Math.round(mins / 60);
-  if (Math.abs(hours) < 24) return rtf.format(-hours, 'hour');
-  const days = Math.round(hours / 24);
-  return rtf.format(-days, 'day');
-}
 
 const ICONS: Record<InboxKind, string> = {
   chat: 'chat',
@@ -249,30 +237,9 @@ export function AdminInboxPage() {
           description={t('admin.inbox.emptyDescription')}
         />
       ) : (
-        <div className="space-y-2">
-          {items.map((it) => (
-            <Link
-              key={it.id}
-              to={it.actionLink}
-              className="flex items-start gap-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 transition-colors hover:bg-surface-container-low"
-            >
-              <span className="material-symbols-outlined mt-0.5 shrink-0 text-xl text-primary" aria-hidden>
-                {ICONS[it.kind]}
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  {it.unread ? (
-                    <span className="h-2 w-2 shrink-0 rounded-full bg-primary" aria-hidden />
-                  ) : null}
-                  <p className="text-sm font-semibold text-on-surface">{it.title}</p>
-                  <Badge className="text-[10px]">{t(`admin.inbox.kinds.${it.kind}`)}</Badge>
-                </div>
-                <p className="mt-1 text-sm text-on-surface-variant">{it.preview}</p>
-                <p className="mt-2 text-xs text-on-surface-variant">{relativeTime(it.sentAt, i18n.language)}</p>
-              </div>
-            </Link>
-          ))}
-        </div>
+        <InboxTable
+          items={items.map((it) => ({ ...it, icon: ICONS[it.kind], kindLabel: t(`admin.inbox.kinds.${it.kind}`) }))}
+        />
       )}
     </div>
   );

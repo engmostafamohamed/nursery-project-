@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { DataTable, TablePagination, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
 import {
   Dialog,
   DialogContent,
@@ -15,6 +16,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { usePagination } from '@/hooks/usePagination';
+import { formatDate } from '@/lib/datetime';
 import { supabase } from '@/lib/supabase';
 
 export type StaffDocMeta = {
@@ -52,6 +55,7 @@ export function StaffDocumentsSection({ nurseryId, staffProfileId, documents: ra
   const [labelAr, setLabelAr] = useState('');
   const [labelEn, setLabelEn] = useState('');
   const [removeId, setRemoveId] = useState<string | null>(null);
+  const pager = usePagination(documents, 10, documents.length);
 
   const upload = useMutation({
     mutationFn: async (file: File) => {
@@ -157,27 +161,37 @@ export function StaffDocumentsSection({ nurseryId, staffProfileId, documents: ra
         </div>
       </div>
 
-      <ul className="space-y-2">
-        {documents.map((d) => (
-          <li
-            key={d.id}
-            className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2"
-          >
-            <span className="text-sm">
-              {i18n.language?.startsWith('ar') ? d.label_ar || d.label_en : d.label_en || d.label_ar}
-            </span>
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => void openDoc(d.path)}>
-                <MaterialSymbol name="open_in_new" size="text-base" />
-                {t('staff.documents.open')}
-              </Button>
-              <Button type="button" variant="outline" size="sm" onClick={() => setRemoveId(d.id)}>
-                {t('staff.documents.remove')}
-              </Button>
-            </div>
-          </li>
-        ))}
-      </ul>
+      <div className="overflow-hidden rounded-xl border border-outline-variant">
+        <DataTable minWidth={520}>
+          <THead>
+            <Th>{t('staff.documents.table.document')}</Th>
+            <Th>{t('staff.documents.table.added')}</Th>
+            <Th align="end">{t('staff.documents.table.actions')}</Th>
+          </THead>
+          <TBody>
+            {pager.pageItems.map((d) => (
+              <Tr key={d.id} data-testid="staff-document-row">
+                <Td className="min-w-[12rem] font-medium text-on-surface">
+                  {i18n.language?.startsWith('ar') ? d.label_ar || d.label_en : d.label_en || d.label_ar}
+                </Td>
+                <Td className="whitespace-nowrap text-on-surface-variant">{d.created_at ? formatDate(d.created_at) : '—'}</Td>
+                <Td align="end">
+                  <span className="flex items-center justify-end gap-2">
+                    <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => void openDoc(d.path)}>
+                      <MaterialSymbol name="open_in_new" size="text-base" />
+                      {t('staff.documents.open')}
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => setRemoveId(d.id)}>
+                      {t('staff.documents.remove')}
+                    </Button>
+                  </span>
+                </Td>
+              </Tr>
+            ))}
+          </TBody>
+        </DataTable>
+        <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} />
+      </div>
 
       <Dialog open={Boolean(removeId)} onOpenChange={() => setRemoveId(null)}>
         <DialogContent>

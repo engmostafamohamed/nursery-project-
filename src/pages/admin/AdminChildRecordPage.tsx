@@ -10,12 +10,14 @@ import { AdmissionJourneyCard } from '@/components/admissions/AdmissionJourney';
 import { ChildAttendanceHistory } from '@/components/attendance/ChildAttendanceHistory';
 import { ChildQrCodeCard, type ChildQrInput } from '@/components/qr/ChildQrCodeCard';
 import { Button } from '@/components/ui/button';
+import { DataTable, StatusPill, TablePagination, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
 import { useAdminBasePath } from '@/hooks/useAdminBasePath';
 import { useAdmissionTimelines } from '@/hooks/useAdmissionTimelines';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useNurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
+import { usePagination } from '@/hooks/usePagination';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { STEP_DATE_TIME } from '@/lib/admissionTimeline';
 import { rangeFromSearch } from '@/lib/attendanceKpiDetails';
@@ -806,31 +808,34 @@ export function AdminChildRecordPage() {
       ) : null}
 
       {tab === 'emergency' ? (
-        <div className="grid gap-5 xl:grid-cols-2">
+        <div className="space-y-5">
           <Section icon="emergency" title={tk('emergencyTitle', 'Emergency contacts')}>
             {emergencyContacts.length === 0 && !text(family, 'emergency_contact') ? (
               <p className="text-sm text-on-surface-variant">{tk('emergencyEmpty', 'No emergency contacts on file.')}</p>
             ) : (
-              <div className="grid gap-3 md:grid-cols-2">
-                {emergencyContacts.map((c, index) => (
-                  <ContactCard
-                    key={`emergency-${index}`}
-                    icon="contact_emergency"
-                    name={show(text(c, 'name') || text(c, 'full_name'))}
-                    subtitle={showCode(text(c, 'relationship') || text(c, 'relation'))}
-                    phone={show(text(c, 'phone') || text(c, 'mobile'))}
-                    badge={{ label: `#${index + 1}`, tone: 'neutral' }}
-                  />
-                ))}
-                {text(family, 'emergency_contact') ? (
-                  <ContactCard
-                    icon="diversity_1"
-                    name={tk('familyEmergencyContact', 'Family emergency contact')}
-                    subtitle={tk('fromParentAccount', 'From the parent account')}
-                    phone={show(text(family, 'emergency_contact'))}
-                  />
-                ) : null}
-              </div>
+              <ContactsTable
+                testId="emergency-contacts"
+                statusLabel={tk('contactsTable.order', 'Order')}
+                rows={[
+                  ...emergencyContacts.map((c, index): ContactRowData => ({
+                    key: `emergency-${index}`,
+                    icon: 'contact_emergency',
+                    name: show(text(c, 'name') || text(c, 'full_name')),
+                    subtitle: showCode(text(c, 'relationship') || text(c, 'relation')),
+                    phone: show(text(c, 'phone') || text(c, 'mobile')),
+                    badge: { label: `#${index + 1}`, tone: 'neutral' },
+                  })),
+                  ...(text(family, 'emergency_contact')
+                    ? [{
+                        key: 'family-emergency',
+                        icon: 'diversity_1',
+                        name: tk('familyEmergencyContact', 'Family emergency contact'),
+                        subtitle: tk('fromParentAccount', 'From the parent account'),
+                        phone: show(text(family, 'emergency_contact')),
+                      }]
+                    : []),
+                ]}
+              />
             )}
           </Section>
 
@@ -838,42 +843,40 @@ export function AdminChildRecordPage() {
             {parents.length === 0 && applicationPickups.length === 0 && pickups.length === 0 ? (
               <p className="text-sm text-on-surface-variant">{tk('pickupEmpty', 'No pickup authorization records yet.')}</p>
             ) : (
-              <div className="grid gap-3 md:grid-cols-2">
-                {parents.map((p) => (
-                  <ContactCard
-                    key={`parent-${p.parent_id}`}
-                    icon="family_restroom"
-                    name={parentName(p)}
-                    subtitle={showCode(p.parent_type ?? p.relationship ?? tk('relationParent', 'Parent'))}
-                    phone={show(p.user?.phone)}
-                    badge={{ label: tk('allowed', 'Allowed'), tone: 'success' }}
-                  />
-                ))}
-                {applicationPickups.map((row, index) => (
-                  <ContactCard
-                    key={`app-pickup-${index}`}
-                    icon="person"
-                    name={show(text(row, 'name'))}
-                    subtitle={showCode(text(row, 'relation') || tk('relationGuardian', 'Guardian'))}
-                    phone={show(text(row, 'phone'))}
-                    badge={{ label: showCode(text(row, 'authorization') || 'anytime'), tone: 'success' }}
-                  />
-                ))}
-                {pickups.map((row) => {
-                  const allowed = Boolean(row.active ?? row.can_pickup);
-                  return (
-                    <ContactCard
-                      key={`pickup-${row.id}`}
-                      icon="person"
-                      name={show(row.name)}
-                      subtitle={showCode(row.relation ?? tk('relationGuardian', 'Guardian'))}
-                      phone={show(row.mobile_phone ?? row.phone)}
-                      extra={row.national_id ? `${tk('nationalId', 'National ID')}: ${row.national_id}` : undefined}
-                      badge={{ label: allowed ? tk('allowed', 'Allowed') : tk('notAllowed', 'Not allowed'), tone: allowed ? 'success' : 'error' }}
-                    />
-                  );
-                })}
-              </div>
+              <ContactsTable
+                testId="pickup-contacts"
+                statusLabel={tk('contactsTable.pickup', 'Pickup')}
+                rows={[
+                  ...parents.map((p): ContactRowData => ({
+                    key: `parent-${p.parent_id}`,
+                    icon: 'family_restroom',
+                    name: parentName(p),
+                    subtitle: showCode(p.parent_type ?? p.relationship ?? tk('relationParent', 'Parent')),
+                    phone: show(p.user?.phone),
+                    badge: { label: tk('allowed', 'Allowed'), tone: 'success' },
+                  })),
+                  ...applicationPickups.map((row, index): ContactRowData => ({
+                    key: `app-pickup-${index}`,
+                    icon: 'person',
+                    name: show(text(row, 'name')),
+                    subtitle: showCode(text(row, 'relation') || tk('relationGuardian', 'Guardian')),
+                    phone: show(text(row, 'phone')),
+                    badge: { label: showCode(text(row, 'authorization') || 'anytime'), tone: 'success' },
+                  })),
+                  ...pickups.map((row): ContactRowData => {
+                    const allowed = Boolean(row.active ?? row.can_pickup);
+                    return {
+                      key: `pickup-${row.id}`,
+                      icon: 'person',
+                      name: show(row.name),
+                      subtitle: showCode(row.relation ?? tk('relationGuardian', 'Guardian')),
+                      phone: show(row.mobile_phone ?? row.phone),
+                      extra: row.national_id ? `${tk('nationalId', 'National ID')}: ${row.national_id}` : undefined,
+                      badge: { label: allowed ? tk('allowed', 'Allowed') : tk('notAllowed', 'Not allowed'), tone: allowed ? 'success' : 'error' },
+                    };
+                  }),
+                ]}
+              />
             )}
           </Section>
         </div>
@@ -996,45 +999,51 @@ function PersonCard({ icon, title, rows, empty }: { icon: string; title: string;
   );
 }
 
-function ContactCard({
-  icon,
-  name,
-  subtitle,
-  phone,
-  extra,
-  badge,
-}: {
+type ContactRowData = {
+  key: string;
   icon: string;
   name: string;
   subtitle: string;
   phone: string;
   extra?: string;
   badge?: { label: string; tone: 'success' | 'error' | 'neutral' };
-}) {
-  const toneClass = {
-    success: 'border-success/30 bg-success/10 text-success',
-    error: 'border-error/30 bg-error/10 text-error',
-    neutral: 'border-outline-variant bg-surface text-on-surface-variant',
-  };
+};
+
+/** People to call or who may collect the child, as a table with a pager: who, relation, phone, a note, and the status column. */
+function ContactsTable({ rows, statusLabel, testId }: { rows: ContactRowData[]; statusLabel: string; testId: string }) {
+  const { t } = useTranslation();
+  const tk = (key: string, defaultValue: string) => t(`admin.children.childRecord.${key}`, { defaultValue });
+  const pager = usePagination(rows, 10, rows.length);
   return (
-    <div className="flex items-start gap-3 rounded-lg border border-outline-variant bg-surface-container-lowest p-4">
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-        <span className="material-symbols-outlined text-xl" aria-hidden>{icon}</span>
-      </span>
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-on-surface">{name}</p>
-            <p className="mt-0.5 text-xs text-on-surface-variant">{subtitle}</p>
-          </div>
-          {badge ? <span className={cn('rounded-full border px-2.5 py-1 text-[11px] font-semibold', toneClass[badge.tone])}>{badge.label}</span> : null}
-        </div>
-        <p className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-on-surface">
-          <span className="material-symbols-outlined text-base text-on-surface-variant" aria-hidden>call</span>
-          {phone}
-        </p>
-        {extra ? <p className="mt-1 text-xs text-on-surface-variant">{extra}</p> : null}
-      </div>
+    <div className="overflow-hidden rounded-lg border border-outline-variant" data-testid={testId}>
+      <DataTable minWidth={640}>
+        <THead>
+          <Th>{tk('contactsTable.name', 'Name')}</Th>
+          <Th>{tk('contactsTable.relation', 'Relation')}</Th>
+          <Th>{tk('contactsTable.phone', 'Phone')}</Th>
+          <Th>{tk('contactsTable.note', 'Note')}</Th>
+          <Th>{statusLabel}</Th>
+        </THead>
+        <TBody>
+          {pager.pageItems.map((row) => (
+            <Tr key={row.key}>
+              <Td className="min-w-[11rem]">
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <span className="material-symbols-outlined text-base" aria-hidden>{row.icon}</span>
+                  </span>
+                  <span className="truncate font-semibold text-on-surface">{row.name}</span>
+                </span>
+              </Td>
+              <Td className="text-on-surface-variant">{row.subtitle}</Td>
+              <Td className="whitespace-nowrap font-medium tabular-nums text-on-surface"><span dir="ltr">{row.phone}</span></Td>
+              <Td className="text-xs text-on-surface-variant">{row.extra ?? '—'}</Td>
+              <Td>{row.badge ? <StatusPill tone={row.badge.tone}>{row.badge.label}</StatusPill> : <span className="text-on-surface-variant">—</span>}</Td>
+            </Tr>
+          ))}
+        </TBody>
+      </DataTable>
+      <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} />
     </div>
   );
 }

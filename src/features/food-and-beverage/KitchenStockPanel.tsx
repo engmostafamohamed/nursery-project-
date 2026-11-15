@@ -4,12 +4,13 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { confirm } from '@/components/ui/confirm';
-import { DataTable, IconAction, StatusPill, TableCard, TableEmpty, TableLoading, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
+import { DataTable, IconAction, StatusPill, TableCard, TableEmpty, TableLoading, TablePagination, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
 import { FilterBar, SearchInput } from '@/components/ui/FilterBar';
 import { FilterField } from '@/components/ui/FilterField';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Select } from '@/components/ui/select';
 import { StatTile } from '@/components/ui/StatTile';
+import { usePagination } from '@/hooks/usePagination';
 import { ChargeDialog } from '@/features/kitchen-sales/ChargeDialog';
 import { useMoney } from '@/features/kitchen-sales/kitchenLook';
 import { useKitchenSales } from '@/features/kitchen-sales/useKitchenSales';
@@ -68,6 +69,9 @@ export function KitchenStockPanel({ nurseryId, data, loading, thisMonth, onNewIt
       return inCategory && matches && (attention === 'all' || f.out || f.low || f.expired || f.expiringSoon);
     });
   }, [data?.items, today, search, category, attention]);
+  const pager = usePagination(shown, 10, `${search}|${category}|${attention}|${shown.length}`);
+  const movements = useMemo(() => data?.movements ?? [], [data?.movements]);
+  const movementPager = usePagination(movements, 10, movements.length);
 
   const drop = async (item: KitchenItem) => {
     const ok = await confirm({ title: t('fnb.kitchen.deleteTitle', { name: item.name }), description: t('fnb.kitchen.deleteBody'), confirmText: t('common.delete'), icon: 'delete' });
@@ -111,6 +115,7 @@ export function KitchenStockPanel({ nurseryId, data, loading, thisMonth, onNewIt
       <TableCard
         title={attention === 'attention' ? t('fnb.kitchen.needsAttention') : t('fnb.kitchen.allItems')}
         count={t('fnb.kitchen.itemCount', { count: shown.length })}
+        pagination={shown.length ? <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} /> : null}
         filters={
           <FilterBar onClear={() => { setSearch(''); setCategory('all'); setAttention('all'); }} canClear={Boolean(search) || category !== 'all' || attention !== 'all'}>
             <FilterField label={t('common.search')} className="sm:flex-[2]">
@@ -162,7 +167,7 @@ export function KitchenStockPanel({ nurseryId, data, loading, thisMonth, onNewIt
               <Th align="end">{t('health.dashboard.columns.actions')}</Th>
             </THead>
             <TBody>
-              {shown.map((item) => {
+              {pager.pageItems.map((item) => {
                 const f = stockFlags(item, today);
                 return (
                   <Tr key={item.id} data-testid="stock-row">
@@ -232,30 +237,42 @@ export function KitchenStockPanel({ nurseryId, data, loading, thisMonth, onNewIt
 
       {data?.movements.length ? (
         <TableCard title={t('fnb.kitchen.history')} count={t('fnb.kitchen.historyCount', { count: data.movements.length })}>
-          <ul className="divide-y divide-outline-variant" data-testid="stock-history">
-            {data.movements.map((m) => {
-              const look = KIND_LOOK[m.kind];
-              const d = details(m);
-              return (
-                <li key={m.id} className="flex items-center gap-3 px-4 py-3 text-sm sm:px-5">
-                  <MaterialSymbol name={look.icon} size="text-xl" className={look.tone} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-on-surface">
-                      {t(`fnb.kitchen.kinds.${m.kind}`)} · <span className="font-medium">{m.itemName}</span>{' '}
+          <>
+          <DataTable minWidth={760}>
+            <THead>
+              <Th>{t('stock.history.when')}</Th>
+              <Th>{t('fnb.kitchen.columns.item')}</Th>
+              <Th align="end">{t('stock.history.change')}</Th>
+              <Th>{t('stock.history.details')}</Th>
+            </THead>
+            <TBody>
+              {movementPager.pageItems.map((m) => {
+                const look = KIND_LOOK[m.kind];
+                const d = details(m);
+                return (
+                  <Tr key={m.id} data-testid="stock-history-row">
+                    <Td className="whitespace-nowrap text-xs text-on-surface-variant">{formatDateTime(m.at)}</Td>
+                    <Td>
+                      <span className="inline-flex items-center gap-1.5 text-sm text-on-surface">
+                        <MaterialSymbol name={look.icon} size="text-lg" className={look.tone} />
+                        {t(`fnb.kitchen.kinds.${m.kind}`)} · <span className="font-medium">{m.itemName}</span>
+                      </span>
+                      {d.to ? <span className="block text-xs text-on-surface-variant">{d.to}</span> : null}
+                    </Td>
+                    <Td align="end" className="whitespace-nowrap">
                       <span className={cn('font-semibold tabular-nums', m.change >= 0 ? 'text-success' : 'text-error')} dir="ltr">
                         {m.change >= 0 ? '+' : ''}{m.change} {m.unit}
                       </span>
-                      {d.to ? <span className="text-on-surface-variant"> · {d.to}</span> : null}
-                    </span>
-                    <span className="block text-xs text-on-surface-variant">
-                      {[t('fnb.kitchen.leftAfter', { quantity: m.quantityAfter, unit: m.unit }), d.value, d.by, m.note].filter(Boolean).join(' · ')}
-                    </span>
-                  </span>
-                  <span className="shrink-0 text-xs text-on-surface-variant">{formatDateTime(m.at)}</span>
-                </li>
-              );
-            })}
-          </ul>
+                      <span className="block text-[11px] text-on-surface-variant">{t('fnb.kitchen.leftAfter', { quantity: m.quantityAfter, unit: m.unit })}</span>
+                    </Td>
+                    <Td className="text-xs text-on-surface-variant">{[d.value, d.by, m.note].filter(Boolean).join(' · ') || '—'}</Td>
+                  </Tr>
+                );
+              })}
+            </TBody>
+          </DataTable>
+          <TablePagination pager={movementPager} pageSizeOptions={[10, 20, 50]} />
+          </>
         </TableCard>
       ) : null}
 

@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
+import { TablePagination } from '@/components/ui/DataTable';
+import { usePagination } from '@/hooks/usePagination';
 import { pickParentDisplayName } from '@/lib/financialDashboardHelpers';
 import type { NurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
 
@@ -22,6 +24,7 @@ export function FinancialDashboardTopParents({
   fallbackName: string;
 }) {
   const { t } = useTranslation();
+  const pager = usePagination(rows, 10, rows.length);
 
   return (
     <section className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
@@ -38,7 +41,7 @@ export function FinancialDashboardTopParents({
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
+              {pager.pageItems.map((row) => (
                 <tr key={row.parentId} className="border-t border-outline-variant">
                   <td className="px-2 py-2">
                     {pickParentDisplayName(langPref, row.parentNameAr, row.parentNameEn, fallbackName)}
@@ -48,6 +51,7 @@ export function FinancialDashboardTopParents({
               ))}
             </tbody>
           </table>
+          <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} />
         </div>
       )}
     </section>

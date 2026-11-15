@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
+import { CommunityPostsTable } from '@/components/community/CommunityPostsTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -18,7 +19,6 @@ export function AdminCommunityPage() {
   const [content, setContent] = useState('');
   const [postType, setPostType] = useState<'announcement' | 'tip' | 'question'>('announcement');
   const [pinned, setPinned] = useState(true);
-  const [commentDraft, setCommentDraft] = useState<Record<string, string>>({});
 
   return (
     <div className="space-y-4">
@@ -49,41 +49,7 @@ export function AdminCommunityPage() {
         </div>
       </section>
 
-      <section className="space-y-2 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
-        {community.posts.map((post) => (
-          <article key={String(post.id)} className="rounded-lg border border-outline-variant bg-surface text-foreground p-3">
-            <div className="flex items-center justify-between gap-2">
-              <p className="font-medium">{String(post.title)}</p>
-              <div className="flex gap-2">
-                <span className="text-xs text-on-surface-variant">{t(`community.postTypes.${String(post.post_type)}`)}</span>
-                {post.pinned ? <span className="text-xs text-secondary">{t('community.pinned')}</span> : null}
-                <Button size="sm" variant="outline" onClick={() => void community.updatePost({ id: String(post.id), updates: { pinned: !post.pinned } })}>{t('community.togglePin')}</Button>
-              </div>
-            </div>
-            <p className="mt-1 text-sm text-on-surface-variant">{String(post.content)}</p>
-            <div className="mt-2 space-y-1">
-              {((post.comments as Array<Record<string, unknown>>) ?? []).map((c) => <p key={String(c.id)} className="text-xs text-on-surface-variant">- {String(c.content)}</p>)}
-            </div>
-            <div className="mt-2 flex gap-2">
-              <Input
-                placeholder={t('community.addComment')}
-                value={commentDraft[String(post.id)] ?? ''}
-                onChange={(e) => setCommentDraft((d) => ({ ...d, [String(post.id)]: e.target.value }))}
-              />
-              <Button
-                size="sm"
-                onClick={() => {
-                  const value = commentDraft[String(post.id)] ?? '';
-                  if (!value.trim()) return;
-                  void community.addComment({ post_id: String(post.id), content: value }).then(() => setCommentDraft((d) => ({ ...d, [String(post.id)]: '' })));
-                }}
-              >
-                {t('community.comment')}
-              </Button>
-            </div>
-          </article>
-        ))}
-      </section>
+      <CommunityPostsTable community={community} canPin />
     </div>
   );
 }

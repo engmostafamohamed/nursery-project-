@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -8,9 +8,11 @@ import { confirm } from '@/components/ui/confirm';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { DataTable, IconAction, TablePagination, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
 import { useAuthSession } from '@/hooks/useAuthSession';
+import { usePagination } from '@/hooks/usePagination';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import {
   adminCoursesListQueryKey,
@@ -41,83 +43,57 @@ const STATUS_COLORS: Record<string, string> = {
 const CATEGORIES: Array<'all' | CourseCategory> = ['all', 'sport', 'art', 'music', 'academic', 'language', 'other'];
 const STATUSES: Array<'all' | CourseStatus> = ['all', 'active', 'paused', 'completed', 'cancelled'];
 
-function CourseCard({
+/** One course in the admin's courses table: name and kind, teacher, status, places taken, price, start, and its actions. */
+function CourseRow({
   course,
   locale,
   t,
   onDelete,
+  busy,
 }: {
   course: AdminCoursesListRow;
   locale: string;
   t: ReturnType<typeof useTranslation>['t'];
   onDelete: (id: string) => void;
+  busy: boolean;
 }) {
+  const navigate = useNavigate();
   const isAr = locale.startsWith('ar');
   const title = localName(course.title_ar, course.title_en, isAr);
   const teacher = localName(course.teacher_name_ar, course.teacher_name_en, isAr);
-
   const priceFmt = new Intl.NumberFormat(locale, { style: 'currency', currency: 'EGP' });
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="font-semibold text-on-surface">{title}</p>
-          {teacher ? (
-            <p className="mt-0.5 text-xs text-on-surface-variant">
-              <span className="material-symbols-outlined me-1 align-middle text-sm text-primary" aria-hidden>
-                person
-              </span>
-              {teacher}
-            </p>
-          ) : null}
-        </div>
-        <div className="flex shrink-0 flex-wrap gap-1">
-          <Badge className={`${CATEGORY_COLORS[course.category] ?? ''} border-transparent text-xs`}>
-            {t(`admin.courses.categories.${course.category}`)}
-          </Badge>
-          <Badge className={`${STATUS_COLORS[course.status] ?? ''} text-xs`}>
-            {t(`admin.courses.status.${course.status}`)}
-          </Badge>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-4 text-sm text-on-surface-variant">
-        <span className="flex items-center gap-1">
-          <span className="material-symbols-outlined text-base text-primary" aria-hidden>group</span>
-          {t('admin.courses.list.enrolledCount', { count: course.enrollment_count })}
-          {course.max_students ? ` / ${course.max_students}` : ''}
+    <Tr onClick={() => navigate(`/admin/courses/${course.id}`)} className={busy ? 'pointer-events-none opacity-50' : undefined} data-testid="admin-course-row">
+      <Td className="min-w-[13rem]">
+        <span className="block font-semibold text-on-surface">{title}</span>
+        <Badge className={`${CATEGORY_COLORS[course.category] ?? ''} mt-1 border-transparent text-xs`}>
+          {t(`admin.courses.categories.${course.category}`)}
+        </Badge>
+      </Td>
+      <Td className="text-on-surface-variant">{teacher || '—'}</Td>
+      <Td>
+        <Badge className={`${STATUS_COLORS[course.status] ?? ''} text-xs`}>{t(`admin.courses.status.${course.status}`)}</Badge>
+      </Td>
+      <Td className="whitespace-nowrap text-on-surface">
+        {t('admin.courses.list.enrolledCount', { count: course.enrollment_count })}
+        {course.max_students ? ` / ${course.max_students}` : ''}
+      </Td>
+      <Td align="end" className="whitespace-nowrap">
+        <span className="font-semibold text-on-surface">{priceFmt.format(course.price_per_month)}</span>{' '}
+        <span className="text-xs text-on-surface-variant">{t('admin.courses.list.perMonth')}</span>
+      </Td>
+      <Td className="whitespace-nowrap text-on-surface-variant">
+        {course.starts_on ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(course.starts_on + 'T00:00:00')) : '—'}
+      </Td>
+      <Td align="end">
+        <span className="flex items-center justify-end gap-0.5">
+          <IconAction icon="visibility" label={t('admin.courses.list.viewDetails')} to={`/admin/courses/${course.id}`} />
+          <IconAction icon="edit" label={t('admin.courses.list.edit')} to={`/admin/courses/${course.id}/edit`} />
+          <IconAction icon="delete" label={t('admin.courses.list.delete')} onClick={() => onDelete(course.id)} danger />
         </span>
-        <span className="flex items-center gap-1">
-          <span className="material-symbols-outlined text-base text-primary" aria-hidden>payments</span>
-          {priceFmt.format(course.price_per_month)}
-          {' '}{t('admin.courses.list.perMonth')}
-        </span>
-        {course.starts_on ? (
-          <span className="flex items-center gap-1">
-            <span className="material-symbols-outlined text-base text-primary" aria-hidden>calendar_today</span>
-            {new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(course.starts_on + 'T00:00:00'))}
-          </span>
-        ) : null}
-      </div>
-
-      <div className="flex flex-wrap gap-2 border-t border-outline-variant/40 pt-3">
-        <Button asChild size="sm" variant="default">
-          <Link to={`/admin/courses/${course.id}`}>{t('admin.courses.list.viewDetails')}</Link>
-        </Button>
-        <Button asChild size="sm" variant="outline">
-          <Link to={`/admin/courses/${course.id}/edit`}>{t('admin.courses.list.edit')}</Link>
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="ms-auto text-error hover:bg-error/5"
-          onClick={() => onDelete(course.id)}
-        >
-          {t('admin.courses.list.delete')}
-        </Button>
-      </div>
-    </div>
+      </Td>
+    </Tr>
   );
 }
 
@@ -149,6 +125,7 @@ export function AdminCoursesListPage() {
     }
     return list;
   }, [courses, categoryFilter, statusFilter, search]);
+  const pager = usePagination(filtered, 10, `${filtered.length}`);
 
   const handleDelete = async (courseId: string) => {
     if (!(await confirm({ description: t('admin.courses.list.deleteConfirm'), variant: 'danger' }))) return;
@@ -263,12 +240,24 @@ export function AdminCoursesListPage() {
           description={t('admin.courses.list.emptyFilterDescription')}
         />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {filtered.map((course) => (
-            <div key={course.id} className={deleting === course.id ? 'pointer-events-none opacity-50' : ''}>
-              <CourseCard course={course} locale={locale} t={t} onDelete={handleDelete} />
-            </div>
-          ))}
+        <div className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
+          <DataTable minWidth={980}>
+            <THead>
+              <Th>{t('admin.courses.list.table.course')}</Th>
+              <Th>{t('admin.courses.list.table.teacher')}</Th>
+              <Th>{t('admin.courses.list.table.status')}</Th>
+              <Th>{t('admin.courses.list.table.places')}</Th>
+              <Th align="end">{t('admin.courses.list.table.price')}</Th>
+              <Th>{t('admin.courses.list.table.starts')}</Th>
+              <Th align="end">{t('admin.courses.list.table.actions')}</Th>
+            </THead>
+            <TBody>
+              {pager.pageItems.map((course) => (
+                <CourseRow key={course.id} course={course} locale={locale} t={t} onDelete={handleDelete} busy={deleting === course.id} />
+              ))}
+            </TBody>
+          </DataTable>
+          <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} />
         </div>
       )}
     </div>

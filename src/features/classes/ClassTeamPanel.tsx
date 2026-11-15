@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
-import { DataTable, IconAction, StatusPill, TableCard, TableEmpty, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
+import { DataTable, IconAction, StatusPill, TableCard, TableEmpty, TablePagination, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { usePagination } from '@/hooks/usePagination';
 import { NameStack } from '@/components/ui/NameStack';
 import { TeamChangesTable, type TeamChangeRow } from '@/features/class-team/TeamChangesTable';
 import { COVER_LOOK, REASON_ICON } from '@/features/staff-absence/absenceLook';
@@ -34,6 +35,7 @@ const RING: Record<ReturnType<typeof clockState>, string> = {
  * the Teams page (Classes section).
  */
 export function ClassTeamPanel({ profile, names, format, base }: { profile: ClassProfile; names: BilingualNames; format: ClassFormat; base: string }) {
+  const teamPager = usePagination(profile.team, 10, profile.team.length);
   const { t } = useTranslation();
   const navigate = useNavigate();
   const cover = coverStatus(classCover(profile));
@@ -76,6 +78,7 @@ export function ClassTeamPanel({ profile, names, format, base }: { profile: Clas
             </Button>
           </>
         }
+        pagination={profile.team.length ? <TablePagination pager={teamPager} pageSizeOptions={[10, 20, 50]} /> : null}
       >
         {cover !== 'normal' ? (
           <div
@@ -103,7 +106,7 @@ export function ClassTeamPanel({ profile, names, format, base }: { profile: Clas
               <Th align="end">{t('classProfile.team.cols.actions')}</Th>
             </THead>
             <TBody>
-              {profile.team.map((member) => (
+              {teamPager.pageItems.map((member) => (
                 <MemberRow
                   key={member.id}
                   member={member}

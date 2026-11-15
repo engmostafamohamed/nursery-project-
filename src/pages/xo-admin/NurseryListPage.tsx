@@ -26,11 +26,9 @@ import { StatTile } from '@/components/ui/StatTile';
 import { useActiveNurseryId } from '@/hooks/useActiveNurseryId';
 import { useNurseriesAnalytics, type NurseryFilters, type NurseryWithAnalytics } from '@/hooks/useNurseriesAnalytics';
 import { usePagination } from '@/hooks/usePagination';
-import { cn } from '@/lib/utils';
 
 type SortKey = 'name' | 'created' | 'children' | 'users' | 'invoices' | 'status';
 type SortDir = 'asc' | 'desc';
-type ViewMode = 'grid' | 'table';
 type StatusValue = NonNullable<NurseryFilters['subscriptionStatus']>;
 
 const STATUS_TONE: Record<string, PillTone> = {
@@ -84,7 +82,6 @@ export function NurseryListPage() {
     searchQuery: '',
   });
   const [searchInput, setSearchInput] = useState('');
-  const [view, setView] = useState<ViewMode>('grid');
   const [sortKey, setSortKey] = useState<SortKey>('created');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const dateLocale = i18n.language.startsWith('ar') ? 'ar-EG' : 'en-GB';
@@ -153,7 +150,7 @@ export function NurseryListPage() {
   }, [nurseries, sortKey, sortDir]);
 
   // One page size for both views (12 fills the 2- and 3-column grid evenly).
-  const pager = usePagination(sorted, 12, `${status}|${plan}|${searchInput}|${sortKey}|${sortDir}|${view}`);
+  const pager = usePagination(sorted, 10, `${status}|${plan}|${searchInput}|${sortKey}|${sortDir}`);
 
   const onSort = (key: SortKey) => {
     if (key === sortKey) {
@@ -262,25 +259,6 @@ export function NurseryListPage() {
       <TableCard
         title={t('nurseries.list.title')}
         count={isLoading ? undefined : String(sorted.length)}
-        actions={
-          <div className="inline-flex rounded-lg border border-outline-variant bg-surface p-0.5" role="group">
-            {(['grid', 'table'] as const).map((option) => (
-              <button
-                key={option}
-                type="button"
-                aria-pressed={view === option}
-                onClick={() => setView(option)}
-                className={cn(
-                  'inline-flex h-8 items-center gap-1 rounded-md px-3 text-xs font-semibold transition-colors',
-                  view === option ? 'bg-primary text-primary-foreground' : 'text-on-surface-variant hover:bg-surface-high',
-                )}
-              >
-                <span className="material-symbols-outlined text-base" aria-hidden>{option === 'grid' ? 'grid_view' : 'table_rows'}</span>
-                {option === 'grid' ? t('xoAdmin.nurseryList.viewGrid') : t('xoAdmin.nurseryList.viewTable')}
-              </button>
-            ))}
-          </div>
-        }
         filters={
           <FilterBar onClear={clearFilters} canClear={filtersActive}>
             <FilterField label={t('common.search')} className="sm:flex-[2]">
@@ -313,7 +291,7 @@ export function NurseryListPage() {
             </FilterField>
           </FilterBar>
         }
-        pagination={isLoading || error || !sorted.length ? null : <TablePagination pager={pager} pageSizeOptions={[12, 24, 48]} />}
+        pagination={isLoading || error || !sorted.length ? null : <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} />}
       >
         {error ? (
           <TableEmpty
@@ -343,54 +321,6 @@ export function NurseryListPage() {
               </div>
             }
           />
-        ) : view === 'grid' ? (
-          <div className="grid gap-3 p-4 sm:p-5 md:grid-cols-2 xl:grid-cols-3">
-            {pager.pageItems.map((n) => (
-              <article key={n.id} className="flex flex-col rounded-xl border border-outline-variant bg-surface p-4 shadow-sm transition hover:border-primary/40 hover:shadow-md">
-                <div className="flex items-start gap-3">
-                  <NurseryAvatar n={n} />
-                  <div className="min-w-0 flex-1">
-                    <button
-                      type="button"
-                      className="block w-full truncate text-start text-sm font-semibold text-on-surface hover:text-primary"
-                      title={`${n.name_ar} / ${n.name_en}`}
-                      onClick={() => openNurseryDashboard(n.id)}
-                    >
-                      {n.name_en || n.name_ar || '—'}
-                    </button>
-                    <p className="truncate text-xs text-on-surface-variant" dir="rtl">
-                      {n.name_ar || '—'}
-                    </p>
-                    <p className="mt-1 flex items-center gap-1 truncate text-xs text-on-surface-variant">
-                      <span className="material-symbols-outlined text-sm" aria-hidden>place</span>
-                      {n.city || t('nurseries.list.cityUnknown')}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                  {statusPill(n)}
-                  {planPill(n)}
-                  {trialPill(n)}
-                </div>
-
-                <dl className="mt-4 grid grid-cols-3 gap-2 rounded-lg bg-surface-container-lowest p-2 text-center">
-                  {[
-                    { label: t('xoAdmin.nurseryList.colChildren'), value: n.childCount ?? 0 },
-                    { label: t('xoAdmin.nurseryList.colUsers'), value: n.userCount ?? 0 },
-                    { label: t('xoAdmin.nurseryList.colInvoices'), value: n.invoiceCount ?? 0 },
-                  ].map((stat) => (
-                    <div key={stat.label}>
-                      <dt className="text-[11px] text-on-surface-variant">{stat.label}</dt>
-                      <dd className="text-sm font-semibold tabular-nums text-on-surface">{stat.value}</dd>
-                    </div>
-                  ))}
-                </dl>
-
-                <div className="mt-3 border-t border-outline-variant pt-3">{rowActions(n)}</div>
-              </article>
-            ))}
-          </div>
         ) : (
           <DataTable minWidth={960}>
             <THead>

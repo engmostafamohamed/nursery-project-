@@ -4,9 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-import { AdminNotificationListItem } from '@/components/admin/AdminNotificationListItem';
+import { NotificationRow } from '@/components/notifications/NotificationRow';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { DataTable, TablePagination, TBody, Th, THead } from '@/components/ui/DataTable';
 import {
   Dialog,
   DialogContent,
@@ -18,6 +19,7 @@ import {
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
 import { useAuthSession } from '@/hooks/useAuthSession';
+import { usePagination } from '@/hooks/usePagination';
 import {
   adminInAppNotificationsQueryKey,
   useAdminInAppNotifications,
@@ -26,6 +28,7 @@ import {
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import {
   formatNotificationRelativeTime,
+  adminNotificationMaterialIcon,
   resolveAdminNotificationPath,
 } from '@/lib/adminNotificationUtils';
 import { notificationText } from '@/lib/notificationText';
@@ -69,6 +72,7 @@ export function AdminNotificationsPage() {
     if (tab === 'unread') return data.filter((n) => !n.read);
     return data;
   }, [data, tab]);
+  const pager = usePagination(visible, 10, tab);
 
   const markAllRead = async () => {
     if (!userId) return;
@@ -198,28 +202,39 @@ export function AdminNotificationsPage() {
           />
         ) : null}
 
-        {!isPending && visible.length > 0
-          ? visible.map((item) => {
-              const timeStr = formatNotificationRelativeTime(item.sent_at, i18n.language);
-              const rowAria = `${titleFor(item)}. ${item.read ? t('admin.notifications.statusRead') : t('admin.notifications.statusUnread')}. ${timeStr}`;
-              return (
-                <AdminNotificationListItem
-                  key={item.id}
-                  item={item}
-                  title={titleFor(item)}
-                  body={bodyFor(item)}
-                  lang={i18n.language}
-                  rowAriaLabel={rowAria}
-                  onRowClick={() => void onRowClick(item)}
-                  onDeleteClick={(e) => {
-                    e.stopPropagation();
-                    setDeleteTarget(item);
-                  }}
-                  deleteLabel={t('admin.notifications.delete')}
-                />
-              );
-            })
-          : null}
+        {!isPending && visible.length > 0 ? (
+          <div className="overflow-hidden rounded-xl border border-outline-variant bg-surface">
+            <DataTable minWidth={640}>
+              <THead>
+                <Th><span className="sr-only">{t('admin.notifications.table.kind')}</span></Th>
+                <Th>{t('admin.notifications.table.notification')}</Th>
+                <Th>{t('admin.notifications.table.when')}</Th>
+                <Th>{t('admin.notifications.table.status')}</Th>
+                <Th align="end"><span className="sr-only">{t('admin.notifications.delete')}</span></Th>
+              </THead>
+              <TBody>
+                {pager.pageItems.map((item) => (
+                  <NotificationRow
+                    key={item.id}
+                    icon={adminNotificationMaterialIcon(item.type)}
+                    photoUrl={null}
+                    urgent={false}
+                    read={item.read}
+                    title={titleFor(item)}
+                    body={bodyFor(item)}
+                    time={formatNotificationRelativeTime(item.sent_at, i18n.language)}
+                    onOpen={() => void onRowClick(item)}
+                    onDelete={() => setDeleteTarget(item)}
+                    deleteLabel={t('admin.notifications.delete')}
+                    readLabel={t('admin.notifications.statusRead')}
+                    unreadLabel={t('admin.notifications.statusUnread')}
+                  />
+                ))}
+              </TBody>
+            </DataTable>
+            <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} />
+          </div>
+        ) : null}
       </div>
 
       <Dialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>

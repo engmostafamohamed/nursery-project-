@@ -1,8 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
-import { StatusPill } from '@/components/ui/DataTable';
+import { DataTable, StatusPill, TablePagination, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { usePagination } from '@/hooks/usePagination';
 import { cn } from '@/lib/utils';
 
 import { dayLabel, MEAL_LOOK } from './mealLook';
@@ -33,6 +34,8 @@ export function FoodAlertList({
   const isArabic = i18n.language.startsWith('ar');
   const locale = isArabic ? 'ar-EG' : 'en-GB';
   const days = alertsByDayAndChild(alerts.conflicts);
+  const rows = days.flatMap(({ day, children }) => children.map((child) => ({ day, child })));
+  const pager = usePagination(rows, 10, `${rows.length}`);
 
   return (
     <div className="space-y-5">
@@ -44,20 +47,23 @@ export function FoodAlertList({
           <p className="text-sm font-medium text-success">{t('fnb.alerts.none')}</p>
         </div>
       ) : (
-        days.map(({ day, children }) => (
-          <section key={day} aria-labelledby={`alerts-${day}`} className="space-y-2">
-            <h3 id={`alerts-${day}`} className="flex items-center gap-2 text-sm font-semibold text-on-surface">
-              <MaterialSymbol name="calendar_today" size="text-base" className="text-on-surface-variant" />
-              {dayLabel(day, locale, { weekday: 'long', day: 'numeric', month: 'long' })}
-              <span className="rounded-full bg-error/10 px-2 py-0.5 text-xs font-semibold text-error">{children.length}</span>
-            </h3>
-            <ul className="grid gap-3 lg:grid-cols-2">
-              {children.map((child) => (
-                <ChildAlertCard key={child.childId} child={child} isArabic={isArabic} />
+        <div className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
+          <DataTable minWidth={980}>
+            <THead>
+              <Th>{t('fnb.alerts.table.day')}</Th>
+              <Th>{t('fnb.alerts.table.child')}</Th>
+              <Th>{t('fnb.alerts.table.severity')}</Th>
+              <Th>{t('fnb.alerts.table.dishes')}</Th>
+              <Th>{t('fnb.alerts.table.whatToDo')}</Th>
+            </THead>
+            <TBody>
+              {pager.pageItems.map(({ day, child }) => (
+                <ChildAlertRow key={`${day}-${child.childId}`} day={day} child={child} isArabic={isArabic} locale={locale} />
               ))}
-            </ul>
-          </section>
-        ))
+            </TBody>
+          </DataTable>
+          <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} />
+        </div>
       )}
 
       {showUnmatched && alerts.unmatched.length ? <UnmatchedAllergies items={alerts.unmatched} childHref={childHref} linkState={childLinkState} isArabic={isArabic} /> : null}
@@ -65,7 +71,8 @@ export function FoodAlertList({
   );
 }
 
-function ChildAlertCard({ child, isArabic }: { child: ChildAlert; isArabic: boolean }) {
+/** One child on one day, as a table row: the day, who, how bad, the dishes and why, and what to do if they react. */
+function ChildAlertRow({ day, child, isArabic, locale }: { day: string; child: ChildAlert; isArabic: boolean; locale: string }) {
   const { t } = useTranslation();
   const tone = severityTone(child.worstSeverity);
   const name = localName(child.childNameAr, child.childNameEn, isArabic);
@@ -73,53 +80,53 @@ function ChildAlertCard({ child, isArabic }: { child: ChildAlert; isArabic: bool
   const urgent = child.eatsNurseryMeals;
 
   return (
-    <li
-      data-testid="food-alert"
-      className={cn(
-        'overflow-hidden rounded-2xl border bg-surface shadow-sm',
-        urgent ? (tone === 'error' ? 'border-error/40' : 'border-warning/40') : 'border-outline-variant',
-      )}
-    >
-      <div className="flex items-center gap-3 p-3">
-        <span
-          aria-hidden
-          className={cn(
-            'flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-base font-bold',
-            !urgent ? 'bg-surface-high text-on-surface-variant' : tone === 'error' ? 'bg-error/15 text-error' : 'bg-warning/15 text-warning',
-          )}
-        >
-          {name.charAt(0)}
+    <Tr data-testid="food-alert" className={cn(urgent && tone === 'error' && 'bg-error/5')}>
+      <Td className="whitespace-nowrap font-medium text-on-surface">{dayLabel(day, locale, { weekday: 'short', day: 'numeric', month: 'short' })}</Td>
+      <Td className="min-w-[11rem]">
+        <span className="flex min-w-0 items-center gap-2.5">
+          <span
+            aria-hidden
+            className={cn(
+              'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold',
+              !urgent ? 'bg-surface-high text-on-surface-variant' : tone === 'error' ? 'bg-error/15 text-error' : 'bg-warning/15 text-warning',
+            )}
+          >
+            {name.charAt(0)}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate font-semibold text-on-surface">{name}</span>
+            {child.classNameAr || child.classNameEn ? (
+              <span className="block truncate text-xs text-on-surface-variant">{localName(child.classNameAr, child.classNameEn, isArabic)}</span>
+            ) : null}
+          </span>
         </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold text-on-surface">{name}</p>
-          {child.classNameAr || child.classNameEn ? (
-            <p className="truncate text-xs text-on-surface-variant">{localName(child.classNameAr, child.classNameEn, isArabic)}</p>
-          ) : null}
-        </div>
-        <div className="flex flex-wrap justify-end gap-1">
+      </Td>
+      <Td>
+        <span className="flex flex-col items-start gap-1">
           {child.worstSeverity ? <StatusPill tone={tone} icon="warning">{t(`fnb.severity.${child.worstSeverity}`, { defaultValue: child.worstSeverity })}</StatusPill> : null}
           {!urgent ? <StatusPill tone="neutral" icon="lunch_dining">{t('fnb.ownFood')}</StatusPill> : null}
           {first.weekStatus === 'draft' ? <StatusPill tone="neutral">{t('fnb.status.draft')}</StatusPill> : null}
-        </div>
-      </div>
-      <ul className="space-y-1.5 border-t border-outline-variant px-3 py-2.5">
-        {child.items.map((c) => {
-          const look = MEAL_LOOK[c.meal];
-          return (
-            <li key={`${c.dishId}-${c.allergen}`} className="flex items-center gap-2 text-sm">
-              <span className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-lg', look.tint)} aria-hidden>
-                <MaterialSymbol name={look.icon} size="text-base" />
-              </span>
-              <span className="min-w-0 flex-1 text-on-surface">
-                {t('fnb.alerts.item', { meal: t(`fnb.meals.${c.meal}`), dish: c.dishName, allergen: t(`fnb.allergens.${c.allergen}`) })}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
-      {first.reaction || first.treatment ? (
-        <div className="flex items-start gap-2 bg-surface-container-lowest px-3 py-2.5 text-xs">
-          <MaterialSymbol name="medical_services" size="text-base" className="mt-px text-error" />
+        </span>
+      </Td>
+      <Td className="min-w-[15rem]">
+        <ul className="space-y-1">
+          {child.items.map((c) => {
+            const look = MEAL_LOOK[c.meal];
+            return (
+              <li key={`${c.dishId}-${c.allergen}`} className="flex items-center gap-2 text-sm">
+                <span className={cn('flex h-6 w-6 shrink-0 items-center justify-center rounded-md', look.tint)} aria-hidden>
+                  <MaterialSymbol name={look.icon} size="text-sm" />
+                </span>
+                <span className="min-w-0 text-on-surface">
+                  {t('fnb.alerts.item', { meal: t(`fnb.meals.${c.meal}`), dish: c.dishName, allergen: t(`fnb.allergens.${c.allergen}`) })}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </Td>
+      <Td className="min-w-[13rem] max-w-[20rem] text-xs">
+        {first.reaction || first.treatment ? (
           <dl className="space-y-0.5">
             {first.treatment ? (
               <div>
@@ -134,9 +141,11 @@ function ChildAlertCard({ child, isArabic }: { child: ChildAlert; isArabic: bool
               </div>
             ) : null}
           </dl>
-        </div>
-      ) : null}
-    </li>
+        ) : (
+          <span className="text-on-surface-variant">—</span>
+        )}
+      </Td>
+    </Tr>
   );
 }
 

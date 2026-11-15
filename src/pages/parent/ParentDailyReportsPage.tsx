@@ -17,7 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { MealPlate } from '@/components/daily-reports/MealPlate';
 import { ParentReportDetailModal } from '@/components/parent/ParentReportDetailModal';
 import { Button } from '@/components/ui/button';
-import { TableCard, TableEmpty, TablePagination } from '@/components/ui/DataTable';
+import { DataTable, TableCard, TableEmpty, TableLoading, TablePagination, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -33,7 +33,6 @@ import { childNameOf, classNameOf } from '@/lib/dailyReportCard';
 import { formatActivityTag, formatMoodLabel } from '@/lib/dailyReportDisplay';
 import { mealAmountName, moodName, napDurationText, questionName } from '@/lib/dailyReportLabels';
 import { CHART_CURSOR, CHART_GRID_STROKE, CHART_SERIES, CHART_TOOLTIP_STYLE, chartColor, chartDirection } from '@/lib/chartTheme';
-import { dayHeading, groupByDay } from '@/lib/dayGroups';
 import { senderParts } from '@/lib/familyMessages';
 import { supabase } from '@/lib/supabase';
 import { cn, getUserInitials } from '@/lib/utils';
@@ -53,7 +52,8 @@ function formatDateLabel(value: string, locale: string, options?: Intl.DateTimeF
   );
 }
 
-function ReportCard({
+/** One report as a table row: the day, the child, the mood, the plates and the nap, a line of its notes, who sent it. */
+function ReportRow({
   report,
   locale,
   onOpen,
@@ -78,90 +78,76 @@ function ReportCard({
   const sender = report.sender ? senderParts(report.sender, locale) : null;
 
   return (
-    <article className="group flex overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm transition hover:border-primary/40 hover:shadow-md">
-      <button type="button" className="flex w-full flex-col p-4 text-start outline-none focus-visible:bg-surface-container-lowest" onClick={() => onOpen(report)}>
-        <div className="flex w-full items-start justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-semibold text-primary" aria-hidden>
-              {report.avatarUrl ? <img src={report.avatarUrl} alt="" className="h-full w-full object-cover" /> : getUserInitials(name, null)}
-            </span>
-            <div className="min-w-0">
-              <p className="truncate text-base font-semibold text-on-surface" title={name}>{name}</p>
-              <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-on-surface-variant">
-                {className_ ? (
-                  <span className="inline-flex items-center gap-1">
-                    <MaterialSymbol name="school" size="text-sm" />
-                    {className_}
-                  </span>
-                ) : null}
-                {report.childCode ? <span dir="ltr" className="tabular-nums">{report.childCode}</span> : null}
-              </p>
-            </div>
-          </div>
-          {mood && moodStyle ? (
-            <span className={cn('inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold', moodStyle.pill)}>
-              <MaterialSymbol name={moodStyle.icon} size="text-base" />
-              {moodName(t, mood)}
-            </span>
-          ) : null}
-        </div>
-
-        {/* The day at a glance: the three plates and the nap */}
-        <div className="mt-4 flex w-full items-end justify-between gap-2 rounded-lg bg-surface-container-lowest px-3 py-3">
-          <div className="flex items-end gap-1">
-            {MEALS.map((meal, i) => (
-              <MealPlate
-                key={meal}
-                meal={meal}
-                amount={a.meals[meal].amount}
-                size={64}
-                delayMs={i * 120}
-                label={t('dailyReport.sheet.mealLabel', { meal: questionName(t, meal), amount: a.meals[meal].amount ? mealAmountName(t, a.meals[meal].amount) : t('dailyReport.sheet.noAnswer') })}
-              />
-            ))}
-          </div>
-          <p className="flex shrink-0 items-center gap-1 text-xs font-semibold text-on-surface">
-            <MaterialSymbol name="bedtime" size="text-base" className="text-primary" />
-            {napMinutes ? napDurationText(t, napMinutes) : a.nap.napped === false ? t('dailyReport.sheet.noNap') : '—'}
-          </p>
-        </div>
-
-        <div className="mt-3 w-full flex-1">
-          {notes ? (
-            <p className="flex gap-2 rounded-lg border-s-4 border-primary/40 bg-surface-container-lowest px-3 py-2 text-sm text-on-surface">
-              <MaterialSymbol name="format_quote" size="text-base" className="mt-0.5 shrink-0 text-primary" />
-              <span className="line-clamp-2">{notes}</span>
-            </p>
-          ) : activities.length ? (
-            <ul className="flex flex-wrap gap-1.5">
-              {activities.slice(0, 4).map((activity) => (
-                <li key={activity} className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
-                  {activity}
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
-        {sender ? (
-          <p className="mt-3 flex w-full min-w-0 items-center gap-1.5 text-xs text-on-surface-variant" title={senderLine(report.sender!)}>
-            <MaterialSymbol name="send" size="text-sm" className="shrink-0 text-primary rtl:rotate-180" />
-            <span className="truncate">
-              {t('dailyReport.sheet.fromSender', { name: sender.name ?? t('familyMessages.unknownSender'), role: senderLine(report.sender!) })}
-            </span>
-          </p>
-        ) : null}
-        <div className="mt-3 flex w-full items-center justify-between gap-3 border-t border-outline-variant pt-3">
-          <p className="flex items-center gap-1 text-xs text-on-surface-variant">
-            <MaterialSymbol name="schedule" size="text-sm" />
-            {publishedTime ? t('parent.reports.publishedAtTime', { time: publishedTime }) : formatDateLabel(report.reportDate, locale)}
-          </p>
-          <span className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-primary">
-            {t('parent.reports.viewFull')}
-            <MaterialSymbol name="chevron_right" size="text-base" className="transition group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5" />
+    <Tr onClick={() => onOpen(report)} data-testid="report-row">
+      <Td className="whitespace-nowrap">
+        <span className="block font-medium text-on-surface">{formatDateLabel(report.reportDate, locale, { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+        {publishedTime ? <span className="block text-xs text-on-surface-variant">{t('parent.reports.publishedAtTime', { time: publishedTime })}</span> : null}
+      </Td>
+      <Td>
+        <span className="flex min-w-0 items-center gap-2.5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-xs font-semibold text-primary" aria-hidden>
+            {report.avatarUrl ? <img src={report.avatarUrl} alt="" className="h-full w-full object-cover" /> : getUserInitials(name, null)}
           </span>
-        </div>
-      </button>
-    </article>
+          <span className="min-w-0">
+            <span className="block truncate font-semibold text-on-surface" title={name}>{name}</span>
+            <span className="block truncate text-xs text-on-surface-variant">
+              {[className_, report.childCode].filter(Boolean).join(' · ')}
+            </span>
+          </span>
+        </span>
+      </Td>
+      <Td>
+        {mood && moodStyle ? (
+          <span className={cn('inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold', moodStyle.pill)}>
+            <MaterialSymbol name={moodStyle.icon} size="text-base" />
+            {moodName(t, mood)}
+          </span>
+        ) : (
+          <span className="text-on-surface-variant">—</span>
+        )}
+      </Td>
+      <Td>
+        <span className="flex items-end gap-1">
+          {MEALS.map((meal, i) => (
+            <MealPlate
+              key={meal}
+              className="w-8 shrink-0"
+              meal={meal}
+              amount={a.meals[meal].amount}
+              size={32}
+              delayMs={i * 80}
+              label={t('dailyReport.sheet.mealLabel', { meal: questionName(t, meal), amount: a.meals[meal].amount ? mealAmountName(t, a.meals[meal].amount) : t('dailyReport.sheet.noAnswer') })}
+            />
+          ))}
+        </span>
+      </Td>
+      <Td className="whitespace-nowrap">
+        <span className="inline-flex items-center gap-1 text-on-surface">
+          <MaterialSymbol name="bedtime" size="text-base" className="text-primary" />
+          {napMinutes ? napDurationText(t, napMinutes) : a.nap.napped === false ? t('dailyReport.sheet.noNap') : '—'}
+        </span>
+      </Td>
+      <Td className="min-w-[12rem] max-w-[18rem]">
+        {notes ? (
+          <span className="line-clamp-2 text-on-surface" title={notes}>{notes}</span>
+        ) : activities.length ? (
+          <span className="line-clamp-2 text-on-surface">{activities.slice(0, 3).join(t('parent.reports.listJoin'))}</span>
+        ) : (
+          <span className="text-on-surface-variant">—</span>
+        )}
+        {sender ? (
+          <span className="mt-0.5 block truncate text-xs text-on-surface-variant" title={senderLine(report.sender!)}>
+            {t('parent.reports.fromName', { name: sender.name ?? t('familyMessages.unknownSender') })}
+          </span>
+        ) : null}
+      </Td>
+      <Td align="end">
+        <span className="inline-flex text-primary" title={t('parent.reports.viewFull')}>
+          <MaterialSymbol name="chevron_right" size="text-xl" className="rtl:rotate-180" />
+          <span className="sr-only">{t('parent.reports.viewFull')}</span>
+        </span>
+      </Td>
+    </Tr>
   );
 }
 
@@ -267,8 +253,7 @@ export function ParentDailyReportsPage() {
 
   const latestReport = reports.reports[0];
   const uniqueChildrenWithReports = new Set(reports.reports.map((report) => report.childId)).size;
-  const pager = usePagination(reports.reports, 6, `${childId}|${fromDate}|${toDate}|${sort}|${reports.reports.length}`);
-  const reportGroups = groupByDay(pager.pageItems, (report) => report.reportDate);
+  const pager = usePagination(reports.reports, 10, `${childId}|${fromDate}|${toDate}|${sort}|${reports.reports.length}`);
 
   return (
     <div className="w-full max-w-none space-y-5 pb-28">
@@ -454,35 +439,29 @@ export function ParentDailyReportsPage() {
             </span>
           ) : null
         }
-        pagination={reports.isLoading || !reports.reports.length ? null : <TablePagination pager={pager} pageSizeOptions={[6, 12, 24]} />}
+        pagination={reports.isLoading || !reports.reports.length ? null : <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} />}
       >
         {reports.isLoading ? (
-          <div className="grid gap-3 p-4 sm:p-5 lg:grid-cols-2">
-            {Array.from({ length: 4 }, (_, index) => (
-              <Skeleton key={index} className="h-56 rounded-xl" />
-            ))}
-          </div>
+          <TableLoading rows={6} />
         ) : !reports.reports.length ? (
           <TableEmpty icon="description" title={t('parent.reports.emptyTitle')} description={t('parent.reports.emptyDescription')} />
         ) : (
-          <div className="divide-y divide-outline-variant">
-            {reportGroups.map((group) => (
-              <section key={group.key} className="space-y-3 p-4 sm:p-5">
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-on-surface">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <MaterialSymbol name="calendar_today" size="text-sm" />
-                  </span>
-                  {dayHeading(group.key, i18n.language.startsWith('ar') ? 'ar-EG' : 'en-GB', { today: t('common.today'), yesterday: t('common.yesterday') })}
-                  <span className="rounded-full bg-surface-high px-2 py-0.5 text-xs font-medium text-on-surface-variant">{group.items.length}</span>
-                </h3>
-                <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
-                  {group.items.map((report) => (
-                    <ReportCard key={report.id} report={report} locale={i18n.language} onOpen={openReport} />
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
+          <DataTable minWidth={860}>
+            <THead>
+              <Th>{t('parent.reports.table.date')}</Th>
+              <Th>{t('parent.reports.table.child')}</Th>
+              <Th>{t('parent.reports.table.mood')}</Th>
+              <Th>{t('parent.reports.table.meals')}</Th>
+              <Th>{t('parent.reports.table.nap')}</Th>
+              <Th>{t('parent.reports.table.notes')}</Th>
+              <Th align="end"><span className="sr-only">{t('parent.reports.viewFull')}</span></Th>
+            </THead>
+            <TBody>
+              {pager.pageItems.map((report) => (
+                <ReportRow key={report.id} report={report} locale={i18n.language} onOpen={openReport} />
+              ))}
+            </TBody>
+          </DataTable>
         )}
       </TableCard>
 

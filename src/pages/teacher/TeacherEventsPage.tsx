@@ -5,7 +5,7 @@ import { EventsCalendar } from '@/components/events/EventsCalendar';
 import { EventsViewToggle, type EventsView } from '@/components/events/EventsViewToggle';
 import { SelectedDayChip } from '@/components/events/SelectedDayChip';
 import { Button } from '@/components/ui/button';
-import { TableCard, TableEmpty, TablePagination } from '@/components/ui/DataTable';
+import { DataTable, TableCard, TableEmpty, TablePagination, TBody, Th, THead } from '@/components/ui/DataTable';
 import { FilterChips } from '@/components/ui/FilterChips';
 import { LoadError } from '@/components/ui/LoadError';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
@@ -13,7 +13,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { StatTile } from '@/components/ui/StatTile';
 import { EventRosterDialog } from '@/features/events/EventRosterDialog';
 import { EVENT_CATEGORIES } from '@/features/events/events';
-import { TeacherEventCard } from '@/features/events/TeacherEventCard';
+import { TeacherEventRow } from '@/features/events/TeacherEventRow';
 import { filterTeacherEvents, TEACHER_EVENT_TABS, teacherEventsOverview, whenOf, type TeacherEventTab } from '@/features/events/teacherEvents';
 import { useTeacherEvents } from '@/features/events/useTeacherEvents';
 import { useAuthSession } from '@/hooks/useAuthSession';
@@ -58,7 +58,7 @@ export function TeacherEventsPage() {
   }, [events]);
   const pickedDay = view === 'calendar' ? dayKey : null;
   const shown = useMemo(() => filterTeacherEvents(events, { tab, category, dayKey: pickedDay }, now), [events, tab, category, pickedDay, now]);
-  const pager = usePagination(shown, 6, `${tab}|${category}|${pickedDay}|${view}`);
+  const pager = usePagination(shown, 10, `${tab}|${category}|${pickedDay}|${view}`);
   const openEvent = openId ? events.find((e) => e.id === openId) ?? null : null;
 
   const filtersActive = tab !== 'all' || category !== 'all' || Boolean(pickedDay);
@@ -135,7 +135,7 @@ export function TeacherEventsPage() {
             </div>
           )
         }
-        pagination={shown.length === 0 ? null : <TablePagination pager={pager} pageSizeOptions={[6, 12, 24]} />}
+        pagination={shown.length === 0 ? null : <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} />}
       >
         {view === 'calendar' ? (
           <div className="border-b border-outline-variant p-4 sm:p-5">
@@ -172,11 +172,21 @@ export function TeacherEventsPage() {
             }
           />
         ) : (
-          <div className="grid gap-3 p-4 sm:p-5 xl:grid-cols-2">
-            {pager.pageItems.map((event) => (
-              <TeacherEventCard key={event.id} event={event} when={whenOf(event, now)} locale={locale} onOpen={() => setOpenId(event.id)} />
-            ))}
-          </div>
+          <DataTable minWidth={860}>
+            <THead>
+              <Th><span className="sr-only">{t('parent.events.table.day')}</span></Th>
+              <Th>{t('parent.events.table.event')}</Th>
+              <Th>{t('parent.events.table.when')}</Th>
+              <Th>{t('parent.events.table.where')}</Th>
+              <Th>{t('teacher.events.table.children')}</Th>
+              <Th align="end"><span className="sr-only">{t('teacher.events.whoIsGoing')}</span></Th>
+            </THead>
+            <TBody>
+              {pager.pageItems.map((event) => (
+                <TeacherEventRow key={event.id} event={event} when={whenOf(event, now)} locale={locale} onOpen={() => setOpenId(event.id)} />
+              ))}
+            </TBody>
+          </DataTable>
         )}
       </TableCard>
 

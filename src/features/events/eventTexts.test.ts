@@ -51,7 +51,7 @@ describe('event texts', () => {
   it('every text the event screens name exists in English and Arabic', () => {
     const keys = textKeysIn([
       ...[
-        'AdminEventCard.tsx',
+        'AdminEventRow.tsx',
         'AdminEventsFilters.tsx',
         'CancelEventDialog.tsx',
         'EventAudienceFields.tsx',
@@ -63,7 +63,7 @@ describe('event texts', () => {
         'EventUrgentFields.tsx',
         'UnbilledApprovalsNotice.tsx',
         'useEventActions.tsx',
-        'TeacherEventCard.tsx',
+        'TeacherEventRow.tsx',
         'EventRosterDialog.tsx',
         'FamilyEventForm.tsx',
         'FamilyEventNotice.tsx',

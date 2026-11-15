@@ -1,12 +1,13 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
-import { DataTable, TableCard, TableEmpty, TableLoading, TBody, THead, Td, Th, Tr } from '@/components/ui/DataTable';
+import { DataTable, TableCard, TableEmpty, TableLoading, TablePagination, TBody, THead, Td, Th, Tr } from '@/components/ui/DataTable';
 import { LoadError } from '@/components/ui/LoadError';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { StatTile } from '@/components/ui/StatTile';
 import { useAdminLinks } from '@/hooks/useAdminBasePath';
 import { useMoney } from '@/hooks/useMoney';
+import { usePagination } from '@/hooks/usePagination';
 import { localName } from '@/lib/bilingualName';
 
 import { discountErrorKey } from './discountLook';
@@ -31,6 +32,9 @@ export function DiscountsReport({ nurseryId, from, to }: { nurseryId: string | n
   const links = useAdminLinks();
   const report = useDiscountReport(nurseryId, from, to);
   const r = report.data;
+  const partnerPager = usePagination(r?.byPartner ?? [], 10, r?.byPartner.length ?? 0);
+  const dealPager = usePagination(r?.byDeal ?? [], 10, r?.byDeal.length ?? 0);
+  const monthPager = usePagination(r?.byMonth ?? [], 10, r?.byMonth.length ?? 0);
 
   return (
     <TableCard title={t('discounts.report.title')} description={t('discounts.report.subtitle')}>
@@ -56,6 +60,7 @@ export function DiscountsReport({ nurseryId, from, to }: { nurseryId: string | n
                 {r.byPartner.length === 0 ? (
                   <p className="px-4 py-4 text-sm text-on-surface-variant">{t('discounts.report.noneInRange')}</p>
                 ) : (
+                  <>
                   <DataTable minWidth={420}>
                     <THead>
                       <Th>{t('discounts.page.columns.partner')}</Th>
@@ -63,7 +68,7 @@ export function DiscountsReport({ nurseryId, from, to }: { nurseryId: string | n
                       <Th align="end">{t('discounts.report.amount')}</Th>
                     </THead>
                     <TBody>
-                      {r.byPartner.map((row) => (
+                      {partnerPager.pageItems.map((row) => (
                         <Tr key={row.partnerId}>
                           <Td>
                             <Link to={links.partnerPage(row.partnerId)} className="inline-flex items-center gap-2 font-medium text-on-surface hover:text-primary hover:underline">
@@ -77,6 +82,8 @@ export function DiscountsReport({ nurseryId, from, to }: { nurseryId: string | n
                       ))}
                     </TBody>
                   </DataTable>
+                  <TablePagination pager={partnerPager} pageSizeOptions={[10, 20, 50]} />
+                  </>
                 )}
               </div>
 
@@ -85,6 +92,7 @@ export function DiscountsReport({ nurseryId, from, to }: { nurseryId: string | n
                 {r.byDeal.length === 0 ? (
                   <p className="px-4 py-4 text-sm text-on-surface-variant">{t('discounts.report.noneInRange')}</p>
                 ) : (
+                  <>
                   <DataTable minWidth={420}>
                     <THead>
                       <Th>{t('deals.columns.deal')}</Th>
@@ -92,7 +100,7 @@ export function DiscountsReport({ nurseryId, from, to }: { nurseryId: string | n
                       <Th align="end">{t('discounts.report.amount')}</Th>
                     </THead>
                     <TBody>
-                      {r.byDeal.map((row) => (
+                      {dealPager.pageItems.map((row) => (
                         <Tr key={row.dealId}>
                           <Td className="font-medium">{localName(row.nameAr, row.nameEn, isArabic) || '—'}</Td>
                           <Td align="end" className="tabular-nums">{row.families}</Td>
@@ -101,6 +109,8 @@ export function DiscountsReport({ nurseryId, from, to }: { nurseryId: string | n
                       ))}
                     </TBody>
                   </DataTable>
+                  <TablePagination pager={dealPager} pageSizeOptions={[10, 20, 50]} />
+                  </>
                 )}
               </div>
 
@@ -116,7 +126,7 @@ export function DiscountsReport({ nurseryId, from, to }: { nurseryId: string | n
                       <Th align="end">{t('discounts.report.total')}</Th>
                     </THead>
                     <TBody>
-                      {r.byMonth.map((row) => (
+                      {monthPager.pageItems.map((row) => (
                         <Tr key={row.month}>
                           <Td>{monthLabel(row.month, isArabic)}</Td>
                           <Td align="end" className="tabular-nums">{money(row.partnership)}</Td>
@@ -127,6 +137,7 @@ export function DiscountsReport({ nurseryId, from, to }: { nurseryId: string | n
                       ))}
                     </TBody>
                   </DataTable>
+                  <TablePagination pager={monthPager} pageSizeOptions={[10, 20, 50]} />
                 </div>
               ) : null}
             </div>

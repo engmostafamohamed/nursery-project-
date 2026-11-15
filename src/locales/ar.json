@@ -335,7 +335,6 @@
       "details": "إلى أو من",
       "worth": "القيمة",
       "empty": "لم تحدث أي حركة هذا الشهر.",
-      "showing": "يُعرض {{shown}} من {{total}}",
       "more_zero": "لا مزيد",
       "more_one": "عرض حركة أخرى",
       "more_two": "عرض حركتين أخريين",
@@ -668,7 +667,11 @@
       "reason": "السبب",
       "reasonPlaceholder": "مثال: سُجّلت لطفل آخر بالخطأ",
       "cancelConfirm": "إلغاء العملية",
-      "cancelled": "أُلغيت العملية ورجعت الكمية للمخزون."
+      "cancelled": "أُلغيت العملية ورجعت الكمية للمخزون.",
+      "openTable": {
+        "who": "الموظف",
+        "open": "الرصيد المفتوح"
+      }
     },
     "extras": {
       "todayTitle": "إضافات الأطفال اليوم",
@@ -1059,7 +1062,13 @@
     "remove": "حذف",
     "search": "بحث",
     "noResults": "لا توجد نتائج",
-    "fileUnavailable": "الملف غير متاح"
+    "fileUnavailable": "الملف غير متاح",
+    "inboxTable": {
+      "kind": "النوع",
+      "message": "الرسالة",
+      "when": "متى",
+      "open": "فتح"
+    }
   },
   "validation": {
     "pleaseComplete": "يرجى إكمال {{count}} حقول مطلوبة أدناه."
@@ -1802,8 +1811,6 @@
       "kpiTrial": "تجريبية",
       "kpiSuspended": "موقوفة",
       "kpiCancelled": "ملغاة",
-      "viewGrid": "بطاقات",
-      "viewTable": "جدول",
       "colNursery": "الحضانة",
       "colStatus": "الحالة",
       "colPlan": "الخطة",
@@ -1994,7 +2001,6 @@
         "showAll_few": "عرض الكل ({{formatted}})",
         "showAll_many": "عرض الكل ({{formatted}})",
         "showAll_other": "عرض الكل ({{formatted}})",
-        "showFewer": "عرض أقل",
         "citiesTitle": "الحضانات حسب المدينة",
         "cityCount_zero": "لا توجد مدن",
         "cityCount_one": "مدينة واحدة",
@@ -2339,6 +2345,12 @@
         "markReadFailed": "تعذر تمييز الإشعار كمقروء.\nCould not mark as read.",
         "markAllFailed": "تعذر تمييز الكل كمقروء.\nCould not mark all as read.",
         "deleteFailed": "تعذر حذف الإشعار.\nCould not delete notification."
+      },
+      "table": {
+        "kind": "النوع",
+        "notification": "الإشعار",
+        "when": "الوقت",
+        "status": "الحالة"
       }
     },
     "dashboard": {
@@ -2832,7 +2844,15 @@
         "pickupBody": "الأشخاص المسموح لهم باستلام الطفل بخلاف الوالدين.",
         "fromParentAccount": "من حساب ولي الأمر",
         "documentsTitle": "المستندات",
-        "documentsBody": "الملفات المرفوعة مع طلب التسجيل."
+        "documentsBody": "الملفات المرفوعة مع طلب التسجيل.",
+        "contactsTable": {
+          "name": "الاسم",
+          "relation": "صلة القرابة",
+          "phone": "الهاتف",
+          "note": "ملاحظة",
+          "order": "الترتيب",
+          "pickup": "الاستلام"
+        }
       },
       "avatarLabel": "صورة الملف",
       "avatarChoose": "رفع صورة",
@@ -3018,7 +3038,12 @@
         "deleteError": "تعذر حذف الفعالية. حاول مرة أخرى.",
         "noNurseryTitle": "لا يوجد حضانة مرتبطة",
         "noNurseryDescription": "حسابك غير مرتبط بحضانة. تواصل مع الدعم إذا كان ذلك غير متوقع.",
-        "urgentBadge": "عاجل"
+        "urgentBadge": "عاجل",
+        "table": {
+          "for": "لمن",
+          "replies": "ردود الأسر",
+          "actions": "إجراءات"
+        }
       },
       "edit": {
         "title": "تعديل الفعالية",
@@ -3222,7 +3247,16 @@
         "delete": "حذف",
         "deleteConfirm": "هل تريد حذف هذا الكورس؟ لا يمكن التراجع.",
         "deleteSuccess": "تم حذف الكورس.",
-        "deleteError": "تعذّر حذف الكورس."
+        "deleteError": "تعذّر حذف الكورس.",
+        "table": {
+          "course": "الدورة",
+          "teacher": "المعلم",
+          "status": "الحالة",
+          "places": "الأماكن",
+          "price": "السعر",
+          "starts": "تبدأ",
+          "actions": "إجراءات"
+        }
       },
       "form": {
         "createTitle": "كورس جديد",
@@ -3332,7 +3366,14 @@
       "inReview": "دفعات قيد المراجعة",
       "invoices": "الفواتير",
       "noInvoices": "لا توجد فواتير لهذا الطفل بعد.",
-      "payments": "المدفوعات المستلمة"
+      "payments": "المدفوعات المستلمة",
+      "table": {
+        "invoice": "الفاتورة",
+        "amount": "المبلغ",
+        "status": "الحالة",
+        "paidOn": "تاريخ الدفع",
+        "method": "طريقة الدفع"
+      }
     },
     "extraHoursLedger": {
       "title": "سجل الساعات الإضافية",
@@ -3855,6 +3896,10 @@
           "completed": "مكتملة",
           "failed": "فاشلة",
           "refunded": "مستردة"
+        },
+        "table": {
+          "amount": "المبلغ",
+          "status": "الحالة"
         }
       },
       "activity": {
@@ -4363,7 +4408,13 @@
     "parentTitle": "تقارير الفترة",
     "parentSubtitle": "تقارير التقييم الفصلية لطفلك.",
     "parentEmptyTitle": "لا توجد تقارير بعد",
-    "parentEmptyDesc": "ستظهر تقارير الفترة هنا بمجرد إرسالها من الحضانة."
+    "parentEmptyDesc": "ستظهر تقارير الفترة هنا بمجرد إرسالها من الحضانة.",
+    "table": {
+      "child": "الطفل",
+      "term": "الفصل الدراسي",
+      "status": "الحالة",
+      "actions": "إجراءات"
+    }
   },
   "parentBilling": {
     "notFoundHint": "ربما حُذفت، أو أن الرابط غير صحيح.",
@@ -4405,6 +4456,13 @@
         "all": "كل الفواتير",
         "open": "مطلوب دفعها",
         "paid": "مدفوعة"
+      },
+      "namesJoin": "، ",
+      "table": {
+        "invoice": "الفاتورة",
+        "number": "الرقم",
+        "status": "الحالة",
+        "amount": "المبلغ"
       }
     },
     "actions": {
@@ -4713,7 +4771,14 @@
       "unmatchedCount_two": "طفلان",
       "unmatchedCount_few": "{{count}} أطفال",
       "unmatchedCount_many": "{{count}} طفلًا",
-      "unmatchedCount_other": "{{count}} طفل"
+      "unmatchedCount_other": "{{count}} طفل",
+      "table": {
+        "day": "اليوم",
+        "child": "الطفل",
+        "severity": "الخطورة",
+        "dishes": "الأطباق الممنوعة",
+        "whatToDo": "عند حدوث رد فعل"
+      }
     },
     "report": {
       "title": "تنبيه حساسية في وجبات اليوم",
@@ -4811,7 +4876,21 @@
       "billingNote": "سيُضاف {{amount}} إلى كل فاتورة شهرية، بدءًا من الفاتورة القادمة.",
       "noTuitionNote": "هذا الطفل ليس لديه خطة رسوم دراسية، فلا توجد فاتورة شهرية تُضاف إليها الوجبات. فوترها يدويًا، أو أعطِ الطفل خطة رسوم.",
       "childSaved": "تم حفظ خطة وجبات الطفل.",
-      "childStopped": "تم إيقاف خطة وجبات الطفل."
+      "childStopped": "تم إيقاف خطة وجبات الطفل.",
+      "table": {
+        "planCount_zero": "لا خطط",
+        "planCount_one": "خطة واحدة",
+        "planCount_two": "خطتان",
+        "planCount_few": "{{count}} خطط",
+        "planCount_many": "{{count}} خطة",
+        "planCount_other": "{{count}} خطة",
+        "noPlans": "لا توجد خطط وجبات بعد",
+        "meals": "الوجبات",
+        "children": "الأطفال",
+        "monthly": "السعر الشهري",
+        "status": "الحالة",
+        "active": "مفعّلة"
+      }
     },
     "kitchen": {
       "title": "مخزون المطبخ",
@@ -5397,6 +5476,12 @@
         "markReadFailed": "تعذر تمييز الإشعار كمقروء.\nCould not mark as read.",
         "markAllFailed": "تعذر تمييز الكل كمقروء.\nCould not mark all as read.",
         "deleteFailed": "تعذر حذف الإشعار.\nCould not delete notification."
+      },
+      "table": {
+        "kind": "النوع",
+        "notification": "الإشعار",
+        "when": "الوقت",
+        "status": "الحالة"
       }
     },
     "profile": {
@@ -5530,6 +5615,17 @@
         "button": "إنشاء حدث عاجل",
         "back": "العودة للفعاليات",
         "noChildren": "لا يوجد أطفال نشطون مرتبطون بحسابك."
+      },
+      "free": "مجانية",
+      "listJoin": "، ",
+      "table": {
+        "day": "اليوم",
+        "event": "الفعالية",
+        "when": "الموعد",
+        "where": "المكان",
+        "price": "السعر",
+        "permission": "الموافقة",
+        "open": "فتح"
       }
     },
     "permissions": {
@@ -5816,7 +5912,17 @@
       "activities": {
         "tags": "الوسوم",
         "freeText": "ملاحظات"
-      }
+      },
+      "listJoin": "، ",
+      "table": {
+        "date": "التاريخ",
+        "child": "الطفل",
+        "mood": "المزاج",
+        "meals": "الوجبات",
+        "nap": "النوم",
+        "notes": "ملاحظات"
+      },
+      "fromName": "من {{name}}"
     },
     "courses": {
       "title": "الكورسات",
@@ -5876,7 +5982,18 @@
         "notePlaceholder": "مثلًا: تجيد السباحة قليلًا",
         "send": "إرسال الطلب",
         "sent": "أُرسل الطلب",
-        "sentHint": "تصلك رسالة عندما ترد الحضانة."
+        "sentHint": "تصلك رسالة عندما ترد الحضانة.",
+        "places": "الأماكن",
+        "yourChildren": "أطفالك"
+      },
+      "table": {
+        "course": "الدورة",
+        "child": "الطفل",
+        "price": "السعر",
+        "month": "الشهر",
+        "due": "الاستحقاق",
+        "amount": "المبلغ",
+        "status": "الحالة"
       }
     }
   },
@@ -5949,7 +6066,13 @@
       "stillHere": "ما زال في الحضانة",
       "loadError": "تعذّر تحميل أطفالك.",
       "noMatch": "لا يوجد طفل يطابق هذه الفلاتر.",
-      "noChildren": "لا يوجد أطفال في فصولك بعد."
+      "noChildren": "لا يوجد أطفال في فصولك بعد.",
+      "classesTable": {
+        "class": "الفصل",
+        "myRole": "دوري",
+        "team": "الفريق",
+        "actions": "إجراءات"
+      }
     },
     "home": {
       "fallbackName": "المعلم",
@@ -6236,6 +6359,9 @@
         "checkedInAt": "حضر {{time}}",
         "notCheckedIn": "لم يُسجَّل حضوره",
         "openScanner": "فتح ماسح QR"
+      },
+      "table": {
+        "children": "أطفالك"
       }
     },
     "courses": {
@@ -6646,7 +6772,12 @@
       "openFailed": "تعذر فتح الملف.",
       "openFailedAr": "Could not open file.",
       "deleteTitle": "إزالة هذا المستند؟",
-      "deleteDescription": "يُحذف الملف من التخزين. لا يمكن التراجع."
+      "deleteDescription": "يُحذف الملف من التخزين. لا يمكن التراجع.",
+      "table": {
+        "document": "المستند",
+        "added": "تاريخ الإضافة",
+        "actions": "إجراءات"
+      }
     },
     "deactivateConfirmTitle": "تعطيل هذا الموظف؟",
     "deactivateConfirmDescription": "يفقد الوصول فورًا ولا يستطيع تسجيل الدخول، وتبقى سجلاته.",
@@ -6709,6 +6840,13 @@
     "status": {
       "pending": "معلق",
       "paid": "مدفوع"
+    },
+    "payslipsTable": {
+      "month": "الشهر",
+      "base": "الراتب الأساسي",
+      "bonuses": "المكافآت",
+      "deductions": "الخصومات",
+      "status": "الحالة"
     }
   },
   "admissions": {
@@ -6790,6 +6928,15 @@
       "waitlisted": "قائمة انتظار",
       "enrolled": "تم التسجيل",
       "declined": "مرفوض"
+    },
+    "waitlistTable": {
+      "class": "الفصل",
+      "position": "الدور",
+      "parent": "ولي الأمر",
+      "phone": "الهاتف",
+      "actions": "إجراءات",
+      "moveUp": "تقديم",
+      "moveDown": "تأخير"
     }
   },
   "applications": {
@@ -7171,6 +7318,18 @@
       "birthday": "عيد ميلاد",
       "bonus": "مكافأة",
       "manual": "تعديل يدوي"
+    },
+    "table": {
+      "rank": "الترتيب",
+      "parent": "ولي الأمر",
+      "emptyTitle": "لم تُمنح نقاط بعد"
+    },
+    "historyTable": {
+      "what": "النشاط",
+      "points": "النقاط",
+      "kind": "النوع",
+      "date": "التاريخ",
+      "emptyTitle": "لا يوجد نشاط نقاط بعد"
     }
   },
   "survey": {
@@ -7337,7 +7496,15 @@
       "avgRating": "متوسط {{value}}",
       "textResponses": "الردود المكتوبة"
     },
-    "sent": "تم إرسال النموذج بنجاح."
+    "sent": "تم إرسال النموذج بنجاح.",
+    "table": {
+      "survey": "الاستبيان",
+      "status": "الحالة",
+      "questions": "الأسئلة",
+      "deadline": "آخر موعد",
+      "actions": "إجراءات",
+      "open": "فتح"
+    }
   },
   "inventory": {
     "adminTitle": "المخزون",
@@ -7372,6 +7539,23 @@
       "announcement": "إعلان",
       "tip": "نصيحة",
       "question": "سؤال"
+    },
+    "table": {
+      "post": "المنشور",
+      "kind": "النوع",
+      "comments": "التعليقات",
+      "date": "تاريخ النشر",
+      "actions": "إجراءات",
+      "commentCount_zero": "لا تعليقات",
+      "commentCount_one": "تعليق واحد",
+      "commentCount_two": "تعليقان",
+      "commentCount_few": "{{count}} تعليقات",
+      "commentCount_many": "{{count}} تعليقًا",
+      "commentCount_other": "{{count}} تعليق",
+      "showComments": "التعليقات",
+      "noComments": "لا توجد تعليقات بعد.",
+      "emptyTitle": "لا توجد منشورات بعد",
+      "emptyDescription": "ستظهر هنا منشورات الحضانة والأسر."
     }
   },
   "library": {
@@ -7388,6 +7572,15 @@
       "activities": "أنشطة",
       "recipes": "وصفات",
       "health": "صحة"
+    },
+    "table": {
+      "item": "المحتوى",
+      "category": "التصنيف",
+      "date": "تاريخ الإضافة",
+      "actions": "إجراءات",
+      "read": "قراءة",
+      "emptyTitle": "لا يوجد محتوى في المكتبة بعد",
+      "emptyDescription": "ستظهر هنا النصائح والأنشطة والوصفات والملاحظات الصحية."
     }
   },
   "calendar": {
@@ -10971,7 +11164,11 @@
         "file": "الملف",
         "fileHint": "ملف PDF أو صورة (JPG أو PNG أو WebP)، حتى 10 ميجابايت.",
         "uploading": "جارٍ الرفع…",
-        "openFailed": "تعذّر فتح المستند. حاول مرة أخرى."
+        "openFailed": "تعذّر فتح المستند. حاول مرة أخرى.",
+        "table": {
+          "document": "المستند",
+          "added": "تاريخ الإضافة"
+        }
       },
       "request": {
         "title": "اطلب من الحضانة التحديث",

@@ -2,8 +2,9 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
-import { DataTable, IconAction, StatusPill, TableCard, TableEmpty, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
+import { DataTable, IconAction, StatusPill, TableCard, TableEmpty, TablePagination, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { usePagination } from '@/hooks/usePagination';
 import { TEAM_STATUS_LOOK } from '@/features/class-team/teamLook';
 import { roleName } from '@/features/class-team/useClassTeamEditing';
 import { lead, pickName, teamStatus, type TeamClass, type TeamTeacher } from '@/lib/classTeam';
@@ -22,6 +23,7 @@ export function StaffClassesTable({ personName, teamClasses, staff, classHref, t
 }) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const pager = usePagination(teamClasses, 10, teamClasses.length);
   const nameOf = (id: string | null) => {
     const person = id ? staff.find((s) => s.id === id) : undefined;
     return person ? pickName(person, i18n.language) : '—';
@@ -40,6 +42,7 @@ export function StaffClassesTable({ personName, teamClasses, staff, classHref, t
           </Link>
         </Button>
       }
+      pagination={teamClasses.length ? <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} /> : null}
     >
       {teamClasses.length ? (
         <DataTable minWidth={760}>
@@ -52,7 +55,7 @@ export function StaffClassesTable({ personName, teamClasses, staff, classHref, t
             <Th align="end">{t('classTeam.table.actions')}</Th>
           </THead>
           <TBody>
-            {teamClasses.map(({ cls, role }) => {
+            {pager.pageItems.map(({ cls, role }) => {
               const name = pickName(cls, i18n.language);
               const status = teamStatus(cls);
               const look = TEAM_STATUS_LOOK[status];

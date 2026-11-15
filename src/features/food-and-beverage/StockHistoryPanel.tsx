@@ -1,14 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@/components/ui/button';
-import { DataTable, TableCard, TableEmpty, TableLoading, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
+import { DataTable, TableCard, TableEmpty, TableLoading, TablePagination, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
 import { FilterBar, SearchInput } from '@/components/ui/FilterBar';
 import { FilterField } from '@/components/ui/FilterField';
 import { LoadError } from '@/components/ui/LoadError';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Select } from '@/components/ui/select';
 import { StatTile } from '@/components/ui/StatTile';
+import { usePagination } from '@/hooks/usePagination';
 import { useMoney } from '@/features/kitchen-sales/kitchenLook';
 import { MonthSwitcher } from '@/features/kitchen-sales/MonthSwitcher';
 import { formatDateTime } from '@/lib/datetime';
@@ -20,7 +20,6 @@ import { localName } from '@/lib/bilingualName';
 import { KIND_LOOK, useMovementDetails } from './stockLook';
 import { useStockHistory } from './useMealPlansAndKitchen';
 
-const PAGE = 50;
 
 /**
  * A month of the stock: what came in (deliveries and what they cost), what went out (issued to the
@@ -37,10 +36,9 @@ export function StockHistoryPanel({ nurseryId, scope, thisMonth }: { nurseryId: 
   const [section, setSection] = useState<StockSection | 'all'>('all');
   const [search, setSearch] = useState('');
   // A busy month has hundreds of movements: they show a page at a time.
-  const [limit, setLimit] = useState(PAGE);
   const query = useStockHistory(nurseryId, scope, month);
   const data = query.data;
-  const filterBy = <T,>(set: (v: T) => void) => (v: T) => { set(v); setLimit(PAGE); };
+  const filterBy = <T,>(set: (v: T) => void) => (v: T) => set(v);
 
   const shown = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -49,6 +47,7 @@ export function StockHistoryPanel({ nurseryId, scope, thisMonth }: { nurseryId: 
       && (section === 'all' || (m.category ? sectionOf(m.category) === section : false))
       && (!term || m.itemName.toLowerCase().includes(term)));
   }, [data?.movements, kind, section, search]);
+  const pager = usePagination(shown, 10, `${month}|${kind}|${section}|${search}|${shown.length}`);
   const s = data?.summary;
   const outValue = s ? s.issuedValue + s.usedValue : 0;
   const topClassValue = Math.max(1, ...(data?.byClass ?? []).map((c) => c.value));
@@ -125,7 +124,7 @@ export function StockHistoryPanel({ nurseryId, scope, thisMonth }: { nurseryId: 
         title={t('stock.history.title')}
         count={t('fnb.kitchen.historyCount', { count: shown.length })}
         filters={
-          <FilterBar onClear={() => { setKind('all'); setSection('all'); setSearch(''); setLimit(PAGE); }} canClear={kind !== 'all' || section !== 'all' || Boolean(search)}>
+          <FilterBar onClear={() => { setKind('all'); setSection('all'); setSearch(''); }} canClear={kind !== 'all' || section !== 'all' || Boolean(search)}>
             <FilterField label={t('common.search')} className="sm:flex-[2]">
               <SearchInput value={search} onChange={filterBy(setSearch)} placeholder={t('stock.searchPlaceholder')} />
             </FilterField>
@@ -161,7 +160,7 @@ export function StockHistoryPanel({ nurseryId, scope, thisMonth }: { nurseryId: 
               <Th align="end">{t('stock.history.worth')}</Th>
             </THead>
             <TBody>
-              {shown.slice(0, limit).map((m) => {
+              {pager.pageItems.map((m) => {
                 const look = KIND_LOOK[m.kind];
                 const d = details(m);
                 return (
@@ -192,15 +191,7 @@ export function StockHistoryPanel({ nurseryId, scope, thisMonth }: { nurseryId: 
               })}
             </TBody>
           </DataTable>
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-outline-variant px-4 py-3 text-xs text-on-surface-variant sm:px-5">
-            <span>{t('stock.history.showing', { shown: Math.min(limit, shown.length), total: shown.length })}</span>
-            {shown.length > limit ? (
-              <Button type="button" variant="outline" size="sm" onClick={() => setLimit((l) => l + PAGE)} data-testid="history-more">
-                <MaterialSymbol name="expand_more" size="text-base" className="me-1" />
-                {t('stock.history.more', { count: Math.min(PAGE, shown.length - limit) })}
-              </Button>
-            ) : null}
-          </div>
+          <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} />
           </>
         )}
       </TableCard>

@@ -1,10 +1,11 @@
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
-import { DataTable, StatusPill, TBody, THead, Td, Th, Tr } from '@/components/ui/DataTable';
+import { DataTable, StatusPill, TablePagination, TBody, THead, Td, Th, Tr } from '@/components/ui/DataTable';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { SignedFileLink } from '@/components/ui/SignedFileLink';
 import { useMoney } from '@/hooks/useMoney';
+import { usePagination } from '@/hooks/usePagination';
 import { localName } from '@/lib/bilingualName';
 
 import { familyChildren, familyName, useBeneficiaryPeriod } from './discountLook';
@@ -30,8 +31,10 @@ export function BeneficiariesTable({
   const isArabic = i18n.language.startsWith('ar');
   const money = useMoney();
   const period = useBeneficiaryPeriod();
+  const pager = usePagination(rows, 10, rows.length);
 
   return (
+    <>
     <DataTable minWidth={720}>
       <THead>
         <Th>{t('discounts.detail.columns.family')}</Th>
@@ -40,7 +43,7 @@ export function BeneficiariesTable({
         {canManage ? <Th align="end">{t('discounts.detail.columns.actions')}</Th> : null}
       </THead>
       <TBody>
-        {rows.map((b) => {
+        {pager.pageItems.map((b) => {
           const name = familyName(b.family, isArabic);
           const decidedBy = b.decidedBy ? localName(b.decidedBy.ar, b.decidedBy.en, isArabic) : '';
           return (
@@ -93,5 +96,7 @@ export function BeneficiariesTable({
         })}
       </TBody>
     </DataTable>
+    <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} />
+    </>
   );
 }

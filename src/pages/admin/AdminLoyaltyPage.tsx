@@ -4,8 +4,10 @@ import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { DataTable, TableEmpty, TablePagination, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
 import { Input } from '@/components/ui/input';
 import { useLoyalty } from '@/hooks/useLoyalty';
+import { usePagination } from '@/hooks/usePagination';
 import { useSettings } from '@/lib/useSettings';
 
 export function AdminLoyaltyPage() {
@@ -15,6 +17,7 @@ export function AdminLoyaltyPage() {
   const [parentId, setParentId] = useState('');
   const [points, setPoints] = useState(0);
   const [reason, setReason] = useState('');
+  const pager = usePagination(loyalty.leaderboard, 10, loyalty.leaderboard.length);
 
   if (!settings.loyalty_enabled) {
     return <p className="text-sm text-on-surface-variant">{t('loyalty.disabledDescription')}</p>;
@@ -32,16 +35,31 @@ export function AdminLoyaltyPage() {
         <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3"><p className="text-xs">{t('loyalty.avgPointsPerParent')}</p><p className="text-lg font-bold">{loyalty.adminStats.averagePointsPerParent.toFixed(1)}</p></div>
       </div>
 
-      <section className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
-        <h2 className="mb-2 text-sm font-semibold">{t('loyalty.leaderboard')}</h2>
-        <div className="space-y-2">
-          {loyalty.leaderboard.slice(0, 10).map((p) => (
-            <article key={p.parentId} className="rounded-lg border border-outline-variant bg-surface text-foreground p-2 text-sm">
-              <p className="font-medium">{p.parentName}</p>
-              <p className="text-xs text-on-surface-variant">{t('loyalty.currentPoints')}: {p.balance}</p>
-            </article>
-          ))}
-        </div>
+      <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
+        <h2 className="border-b border-outline-variant px-4 py-3 text-sm font-semibold text-on-surface">{t('loyalty.leaderboard')}</h2>
+        {loyalty.leaderboard.length ? (
+          <>
+            <DataTable minWidth={480}>
+              <THead>
+                <Th className="w-16">{t('loyalty.table.rank')}</Th>
+                <Th>{t('loyalty.table.parent')}</Th>
+                <Th align="end">{t('loyalty.currentPoints')}</Th>
+              </THead>
+              <TBody>
+                {pager.pageItems.map((p, i) => (
+                  <Tr key={p.parentId} data-testid="loyalty-leader">
+                    <Td className="font-semibold tabular-nums text-on-surface-variant">{pager.startIndex + i}</Td>
+                    <Td className="font-medium text-on-surface">{p.parentName}</Td>
+                    <Td align="end" className="font-semibold tabular-nums text-on-surface">{p.balance}</Td>
+                  </Tr>
+                ))}
+              </TBody>
+            </DataTable>
+            <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} />
+          </>
+        ) : (
+          <TableEmpty icon="workspace_premium" title={t('loyalty.table.emptyTitle')} />
+        )}
       </section>
 
       <section className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">

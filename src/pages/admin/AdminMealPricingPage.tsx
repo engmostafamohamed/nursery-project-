@@ -7,7 +7,6 @@ import { FilterBar, SearchInput } from '@/components/ui/FilterBar';
 import { FilterField } from '@/components/ui/FilterField';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { SectionTitle } from '@/components/ui/SectionTitle';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatTile } from '@/components/ui/StatTile';
@@ -20,7 +19,6 @@ import { useMealPlansData } from '@/features/food-and-beverage/useMealPlansAndKi
 import { usePagination } from '@/hooks/usePagination';
 import { formatDate } from '@/lib/datetime';
 import { formatMoneyAmount } from '@/lib/money';
-import { cn } from '@/lib/utils';
 import { useSettings } from '@/lib/useSettings';
 
 const FILTERS: ChildPlanFilter[] = ['all', 'charged', 'included', 'none', 'not_billed'];
@@ -56,6 +54,8 @@ export function AdminMealPricingPage() {
     );
   }, [children, filter, classId, search]);
   const pager = usePagination(shown, 20, `${filter}|${classId}|${search}`);
+  const plans = useMemo(() => data?.plans ?? [], [data?.plans]);
+  const planPager = usePagination(plans, 10, plans.length);
 
   return (
     <div className="space-y-5">
@@ -85,49 +85,47 @@ export function AdminMealPricingPage() {
         )}
       </PageHeader>
 
-      <section>
-        <SectionTitle icon="menu_book">{t('fnb.plans.offered')}</SectionTitle>
+      <TableCard
+        title={t('fnb.plans.offered')}
+        count={data ? t('fnb.plans.table.planCount', { count: data.plans.length }) : undefined}
+        pagination={data?.plans.length ? <TablePagination pager={planPager} pageSizeOptions={[10, 20, 50]} /> : null}
+      >
         {!data ? (
-          <Skeleton className="h-32 rounded-xl" />
+          <TableLoading />
+        ) : !data.plans.length ? (
+          <TableEmpty icon="menu_book" title={t('fnb.plans.table.noPlans')} />
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {data.plans.map((plan) => (
-              <article key={plan.id} data-testid="meal-plan-card" className={cn('flex flex-col gap-3 rounded-2xl border bg-surface p-4 shadow-sm', plan.active ? 'border-outline-variant' : 'border-dashed border-outline-variant opacity-70')}>
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <h3 className="truncate font-semibold text-on-surface">{localName(plan.nameAr, plan.nameEn, isArabic)}</h3>
-                    <p className="text-xs text-on-surface-variant">{t('fnb.plans.childrenOnPlan', { count: plan.children })}</p>
-                  </div>
-                  {plan.active ? null : <StatusPill tone="neutral">{t('fnb.plans.inactive')}</StatusPill>}
-                </div>
-                <MealIcons meals={plan.meals} />
-                <div className="mt-auto flex items-end justify-between gap-2">
-                  <p>
-                    <span className="text-2xl font-bold text-on-surface">{money(plan.monthlyPrice)}</span>
+          <DataTable minWidth={760}>
+            <THead>
+              <Th>{t('fnb.plans.columns.plan')}</Th>
+              <Th>{t('fnb.plans.table.meals')}</Th>
+              <Th>{t('fnb.plans.table.children')}</Th>
+              <Th align="end">{t('fnb.plans.table.monthly')}</Th>
+              <Th>{t('fnb.plans.table.status')}</Th>
+              <Th align="end">{t('health.dashboard.columns.actions')}</Th>
+            </THead>
+            <TBody>
+              {planPager.pageItems.map((plan) => (
+                <Tr key={plan.id} data-testid="meal-plan-card" onClick={data.canEdit ? () => setPlanDialog({ plan }) : undefined} className={plan.active ? undefined : 'opacity-70'}>
+                  <Td className="min-w-[12rem] font-semibold text-on-surface">{localName(plan.nameAr, plan.nameEn, isArabic)}</Td>
+                  <Td><MealIcons meals={plan.meals} compact /></Td>
+                  <Td className="whitespace-nowrap text-on-surface-variant">{t('fnb.plans.childrenOnPlan', { count: plan.children })}</Td>
+                  <Td align="end" className="whitespace-nowrap">
+                    <span className="font-semibold tabular-nums text-on-surface">{money(plan.monthlyPrice)}</span>
                     <span className="text-xs text-on-surface-variant"> / {t('fnb.plans.month')}</span>
-                  </p>
-                  {data.canEdit ? (
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setPlanDialog({ plan })}>
-                      <MaterialSymbol name="edit" size="text-base" className="me-1" />
-                      {t('common.edit')}
-                    </Button>
-                  ) : null}
-                </div>
-              </article>
-            ))}
-            {data.canEdit ? (
-              <button
-                type="button"
-                onClick={() => setPlanDialog({ plan: null })}
-                className="flex min-h-[9rem] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-outline-variant text-sm font-medium text-on-surface-variant outline-none transition-colors hover:border-primary hover:bg-primary/5 hover:text-primary focus-visible:ring-2 focus-visible:ring-primary"
-              >
-                <MaterialSymbol name="add_circle" size="text-2xl" />
-                {t('fnb.plans.add')}
-              </button>
-            ) : null}
-          </div>
+                  </Td>
+                  <Td>
+                    {plan.active ? <StatusPill tone="success">{t('fnb.plans.table.active')}</StatusPill> : <StatusPill tone="neutral">{t('fnb.plans.inactive')}</StatusPill>}
+                  </Td>
+                  <Td align="end">
+                    {data.canEdit ? <IconAction icon="edit" label={t('common.edit')} onClick={() => setPlanDialog({ plan })} /> : null}
+                  </Td>
+                </Tr>
+              ))}
+            </TBody>
+          </DataTable>
         )}
-      </section>
+      </TableCard>
 
       <TableCard
         title={t('fnb.plans.childrenTitle')}

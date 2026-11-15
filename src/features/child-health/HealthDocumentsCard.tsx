@@ -2,6 +2,8 @@ import { useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
+import { DataTable, TablePagination, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
+import { usePagination } from '@/hooks/usePagination';
 import { Button } from '@/components/ui/button';
 import { invalidFieldClass } from '@/components/ui/FieldError';
 import { FormField, FormProblem } from '@/components/ui/FormField';
@@ -47,6 +49,8 @@ export function HealthDocumentsCard({ profile }: { profile: ChildHealthProfile }
     }
   };
 
+  const pager = usePagination(profile.documents, 10, profile.documents.length);
+
   const open = async (path: string) => {
     const url = await getSignedUrlForHealthDocument(path);
     if (url) window.open(url, '_blank', 'noopener,noreferrer');
@@ -59,22 +63,36 @@ export function HealthDocumentsCard({ profile }: { profile: ChildHealthProfile }
         {profile.documents.length === 0 ? (
           <EmptyNote icon="description" text={t('health.empty.documents')} />
         ) : (
-          <ul className="space-y-2" data-testid="health-documents">
-            {profile.documents.map((d) => (
-              <li key={d.id} className="flex items-center gap-3 rounded-xl border border-outline-variant p-3">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-high text-on-surface-variant" aria-hidden>
-                  <MaterialSymbol name={d.storagePath.endsWith('.pdf') ? 'picture_as_pdf' : 'image'} size="text-lg" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-on-surface">{(isArabic ? d.labelAr : d.labelEn) || d.labelAr || d.labelEn}</p>
-                  <p className="text-xs text-on-surface-variant">{formatDay(d.createdAt, isArabic)}</p>
-                </div>
-                <Button type="button" variant="outline" size="sm" onClick={() => void open(d.storagePath)}>
-                  {t('health.parent.openDoc')}
-                </Button>
-              </li>
-            ))}
-          </ul>
+          <div className="overflow-hidden rounded-xl border border-outline-variant" data-testid="health-documents">
+            <DataTable minWidth={520}>
+              <THead>
+                <Th>{t('health.profile.documents.table.document')}</Th>
+                <Th>{t('health.profile.documents.table.added')}</Th>
+                <Th align="end"><span className="sr-only">{t('health.parent.openDoc')}</span></Th>
+              </THead>
+              <TBody>
+                {pager.pageItems.map((d) => (
+                  <Tr key={d.id}>
+                    <Td className="min-w-[12rem]">
+                      <span className="flex min-w-0 items-center gap-3">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-high text-on-surface-variant" aria-hidden>
+                          <MaterialSymbol name={d.storagePath.endsWith('.pdf') ? 'picture_as_pdf' : 'image'} size="text-lg" />
+                        </span>
+                        <span className="truncate font-medium text-on-surface">{(isArabic ? d.labelAr : d.labelEn) || d.labelAr || d.labelEn}</span>
+                      </span>
+                    </Td>
+                    <Td className="whitespace-nowrap text-on-surface-variant">{formatDay(d.createdAt, isArabic)}</Td>
+                    <Td align="end">
+                      <Button type="button" variant="outline" size="sm" onClick={() => void open(d.storagePath)}>
+                        {t('health.parent.openDoc')}
+                      </Button>
+                    </Td>
+                  </Tr>
+                ))}
+              </TBody>
+            </DataTable>
+            <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} />
+          </div>
         )}
 
         {canUpload ? (

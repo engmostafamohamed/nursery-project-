@@ -112,6 +112,8 @@ export function TeacherHomePage() {
   const rows = useMemo(() => filterClassChildren(all, filters), [all, filters]);
   const pager = usePagination(rows, 20, JSON.stringify(filters));
   const absent = useMemo(() => all.filter((c) => inState(c, 'absent')), [all]);
+  const myClasses = useMemo(() => classes.data ?? [], [classes.data]);
+  const classPager = usePagination(myClasses, 10, myClasses.length);
 
   // Today's photos this teacher took.
   const mediaQuery = useQuery({
@@ -277,54 +279,59 @@ export function TeacherHomePage() {
         </div>
       ) : null}
 
-      <div className="grid gap-5 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
         {/* My classes and their team */}
         <section className="space-y-3 xl:col-span-2">
           <h2 className="flex items-center gap-2 text-base font-semibold text-on-surface">
             <MaterialSymbol name="school" className="text-primary" />
             {t('teacher.dashboard.myClasses')}
           </h2>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {(classes.data ?? []).map((cls) => {
-              const kids = all.filter((c) => c.class_id === cls.class_id);
-              const present = kids.filter((c) => c.day_status === 'in_nursery' || c.day_status === 'picked_up').length;
-              return (
-                <article key={cls.class_id} className="space-y-3 rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
-                  <header className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <h3 className="truncate font-semibold text-on-surface">{name(cls)}</h3>
-                      <p className="text-xs text-on-surface-variant">{t('teacher.dashboard.classToday', { present, total: cls.children_count })}</p>
-                    </div>
-                    <StatusPill tone={cls.my_role === 'lead' ? 'primary' : 'neutral'}>{placeName(t, cls.my_role)}</StatusPill>
-                  </header>
-                  <ul className="flex flex-wrap gap-1.5">
-                    {cls.team.map((member) => (
-                      <li key={member.user_id} className="inline-flex items-center gap-1.5 rounded-full bg-surface-container-lowest px-2.5 py-1 text-xs text-on-surface">
-                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">
-                          {getUserInitials(name(member), null)}
+          <div className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
+            <DataTable minWidth={680}>
+              <THead>
+                <Th>{t('teacher.dashboard.classesTable.class')}</Th>
+                <Th>{t('teacher.dashboard.classesTable.myRole')}</Th>
+                <Th>{t('teacher.dashboard.classesTable.team')}</Th>
+                <Th align="end">{t('teacher.dashboard.classesTable.actions')}</Th>
+              </THead>
+              <TBody>
+                {classPager.pageItems.map((cls) => {
+                  const kids = all.filter((c) => c.class_id === cls.class_id);
+                  const present = kids.filter((c) => c.day_status === 'in_nursery' || c.day_status === 'picked_up').length;
+                  return (
+                    <Tr key={cls.class_id} data-testid="teacher-class-row">
+                      <Td className="min-w-[10rem]">
+                        <span className="block font-semibold text-on-surface">{name(cls)}</span>
+                        <span className="block text-xs text-on-surface-variant">{t('teacher.dashboard.classToday', { present, total: cls.children_count })}</span>
+                      </Td>
+                      <Td>
+                        <StatusPill tone={cls.my_role === 'lead' ? 'primary' : 'neutral'}>{placeName(t, cls.my_role)}</StatusPill>
+                      </Td>
+                      <Td className="min-w-[12rem]">
+                        <span className="flex flex-wrap gap-1.5">
+                          {cls.team.map((member) => (
+                            <span key={member.user_id} className="inline-flex items-center gap-1.5 rounded-full bg-surface-container-lowest px-2.5 py-1 text-xs text-on-surface">
+                              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">
+                                {getUserInitials(name(member), null)}
+                              </span>
+                              {name(member)}
+                              <span className="text-on-surface-variant">· {placeName(t, member.role)}</span>
+                            </span>
+                          ))}
                         </span>
-                        {name(member)}
-                        <span className="text-on-surface-variant">· {placeName(t, member.role)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="flex flex-wrap gap-2">
-                    <Button asChild size="sm" variant="outline">
-                      <Link to={`/teacher/family-messages?class=${cls.class_id}`}>
-                        <MaterialSymbol name="outgoing_mail" className="me-1 text-base" />
-                        {t('teacher.dashboard.messageClass')}
-                      </Link>
-                    </Button>
-                    <Button asChild size="sm" variant="ghost">
-                      <Link to={`/teacher/media/upload?class=${cls.class_id}`}>
-                        <MaterialSymbol name="add_a_photo" className="me-1 text-base" />
-                        {t('teacher.dashboard.actions.photos')}
-                      </Link>
-                    </Button>
-                  </div>
-                </article>
-              );
-            })}
+                      </Td>
+                      <Td align="end">
+                        <span className="flex items-center justify-end gap-0.5">
+                          <IconAction icon="outgoing_mail" label={t('teacher.dashboard.messageClass')} to={`/teacher/family-messages?class=${cls.class_id}`} />
+                          <IconAction icon="add_a_photo" label={t('teacher.dashboard.actions.photos')} to={`/teacher/media/upload?class=${cls.class_id}`} />
+                        </span>
+                      </Td>
+                    </Tr>
+                  );
+                })}
+              </TBody>
+            </DataTable>
+            <TablePagination pager={classPager} pageSizeOptions={[10, 20, 50]} />
           </div>
         </section>
 

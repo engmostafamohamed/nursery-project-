@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { DataTable, StatusPill, TableCard, TableEmpty, TBody, Td, Th, THead, Tr, type PillTone } from '@/components/ui/DataTable';
+import { DataTable, StatusPill, TableCard, TableEmpty, TablePagination, TBody, Td, Th, THead, Tr, type PillTone } from '@/components/ui/DataTable';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SearchInput } from '@/components/ui/FilterBar';
@@ -15,6 +15,7 @@ import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { StatTile } from '@/components/ui/StatTile';
 import type { AdminEventAttendanceRow, AdminEventDetailRow } from '@/hooks/useAdminEventDetails';
 import { useMoney } from '@/hooks/useMoney';
+import { usePagination } from '@/hooks/usePagination';
 import { localName } from '@/lib/bilingualName';
 import { localizedNames, templateNotificationRow } from '@/lib/notificationText';
 import { supabase } from '@/lib/supabase';
@@ -87,6 +88,7 @@ export function AdminEventDetailsAttendanceSection({ event, rows, isLoading, onR
       return `${r.child_name_ar} ${r.child_name_en} ${r.parent_name_ar} ${r.parent_name_en}`.toLowerCase().includes(q);
     });
   }, [rows, filter, search]);
+  const pager = usePagination(filteredRows, 10, `${filter}|${search}|${filteredRows.length}`);
 
   const toggle = (next: Filter) => setFilter((current) => (current === next ? 'all' : next));
   const answerText = (status: string) => t(`admin.events.details.permissionStatus.${status}`, { defaultValue: status });
@@ -226,6 +228,7 @@ export function AdminEventDetailsAttendanceSection({ event, rows, isLoading, onR
             <SearchInput value={search} onChange={setSearch} placeholder={t('admin.events.details.searchPlaceholder')} className="sm:max-w-sm" />
           </div>
         }
+        pagination={filteredRows.length ? <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} /> : null}
       >
         {filteredRows.length === 0 ? (
           <TableEmpty icon="filter_alt_off" title={t('admin.events.details.noMatches')} />
@@ -241,7 +244,7 @@ export function AdminEventDetailsAttendanceSection({ event, rows, isLoading, onR
               {event.is_paid ? <Th>{t('admin.events.details.table.payment')}</Th> : null}
             </THead>
             <TBody>
-              {filteredRows.map((r) => (
+              {pager.pageItems.map((r) => (
                 <Tr key={r.permission_id} data-testid="event-family-row">
                   <Td>
                     <div className="flex items-center gap-2">

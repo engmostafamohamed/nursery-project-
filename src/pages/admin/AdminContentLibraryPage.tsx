@@ -6,6 +6,7 @@ import { ActionGate } from '@/components/shared/ActionGate';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import { ContentLibraryTable } from '@/components/library/ContentLibraryTable';
 import { useContentLibrary } from '@/hooks/useContentLibrary';
 import { useSettings } from '@/lib/useSettings';
 
@@ -44,15 +45,7 @@ export function AdminContentLibraryPage() {
         </Button>
       </section>
       </ActionGate>
-      <section className="space-y-2 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
-        {library.items.map((item) => (
-          <article key={String(item.id)} className="rounded-lg border border-outline-variant bg-surface text-foreground p-3">
-            <p className="font-medium">{String(item.title)}</p>
-            <p className="text-xs text-on-surface-variant">{t(`library.categories.${String(item.category)}`)}</p>
-            <p className="mt-1 text-sm text-on-surface-variant">{String(item.content)}</p>
-          </article>
-        ))}
-      </section>
+      <ContentLibraryTable library={library} />
     </div>
   );
 }

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@/components/ui/button';
-import { DataTable, TableCard, TBody, Td, Th, THead, Tr, type ThSort } from '@/components/ui/DataTable';
+import { DataTable, TableCard, TablePagination, TBody, Td, Th, THead, Tr, type ThSort } from '@/components/ui/DataTable';
+import { usePagination } from '@/hooks/usePagination';
 import { cn } from '@/lib/utils';
 
 import { PanelEmpty } from './chartParts';
@@ -20,20 +20,17 @@ const VALUE: Record<SortKey, (r: NurseryRow) => number> = {
   overdue: (r) => r.overdue_count,
 };
 
-const COLLAPSED_ROWS = 8;
-
 /** Every nursery side by side; any column sorts it, and a row opens that nursery's dashboard. */
 export function NurseryPerformanceTable({ rows, onOpen }: { rows: NurseryRow[]; onOpen: (id: string) => void }) {
   const { t } = useTranslation();
   const f = useDashboardFormat();
   const [sort, setSort] = useState<{ key: SortKey; direction: 'asc' | 'desc' }>({ key: 'children', direction: 'desc' });
-  const [showAll, setShowAll] = useState(false);
 
   const sorted = [...rows].sort((a, b) => {
     const diff = VALUE[sort.key](a) - VALUE[sort.key](b);
     return (sort.direction === 'asc' ? diff : -diff) || f.nurseryName(a).localeCompare(f.nurseryName(b));
   });
-  const visible = showAll ? sorted : sorted.slice(0, COLLAPSED_ROWS);
+  const pager = usePagination(sorted, 10, `${sort.key}|${sort.direction}|${rows.length}`);
 
   const sortBy = (key: SortKey): ThSort => ({
     active: sort.key === key,
@@ -46,20 +43,7 @@ export function NurseryPerformanceTable({ rows, onOpen }: { rows: NurseryRow[]; 
       title={t('xoAdmin.dashboard.network.tableTitle')}
       count={f.int(rows.length)}
       description={t('xoAdmin.dashboard.network.tableHint')}
-      pagination={
-        rows.length > COLLAPSED_ROWS ? (
-          <div className="border-t border-outline-variant px-4 py-2 sm:px-5">
-            <Button type="button" variant="ghost" size="sm" onClick={() => setShowAll((v) => !v)} aria-expanded={showAll}>
-              <span className="material-symbols-outlined me-1 text-base" aria-hidden>
-                {showAll ? 'expand_less' : 'expand_more'}
-              </span>
-              {showAll
-                ? t('xoAdmin.dashboard.network.showFewer')
-                : t('xoAdmin.dashboard.network.showAll', { count: rows.length, formatted: f.int(rows.length) })}
-            </Button>
-          </div>
-        ) : undefined
-      }
+      pagination={rows.length ? <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} /> : undefined}
     >
       {rows.length === 0 ? (
         <PanelEmpty>{t('xoAdmin.dashboard.empty')}</PanelEmpty>
@@ -75,7 +59,7 @@ export function NurseryPerformanceTable({ rows, onOpen }: { rows: NurseryRow[]; 
             <Th align="end" sort={sortBy('overdue')}>{t('xoAdmin.dashboard.network.col.overdue')}</Th>
           </THead>
           <TBody>
-            {visible.map((row) => {
+            {pager.pageItems.map((row) => {
               const rate = ratePercent(row.present_30, row.expected_30);
               const ratio = childrenPerTeacher(row);
               return (

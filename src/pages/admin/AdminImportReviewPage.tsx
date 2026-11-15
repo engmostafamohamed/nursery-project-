@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AlertTriangle } from 'lucide-react';
+import { TablePagination } from '@/components/ui/DataTable';
+import { usePagination } from '@/hooks/usePagination';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +34,8 @@ export function AdminImportReviewPage() {
   const [loading, setLoading] = useState(true);
   const [job, setJob] = useState<ImportJob | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const allMappings = useMemo(() => job?.ai_detected_format.mappings ?? [], [job]);
+  const mappingPager = usePagination(allMappings, 10, allMappings.length);
 
   useEffect(() => {
     loadImportJob();
@@ -199,7 +203,7 @@ export function AdminImportReviewPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border-subtle">
-              {mappings.map((mapping, idx) => (
+              {mappingPager.pageItems.map((mapping, idx) => (
                 <tr key={idx} className="hover:bg-surface-low transition-colors">
                   <td className="px-4 py-3 text-sm text-foreground">
                     {mapping.excelColumn}
@@ -226,6 +230,7 @@ export function AdminImportReviewPage() {
               ))}
             </tbody>
           </table>
+          <TablePagination pager={mappingPager} pageSizeOptions={[10, 20, 50]} />
         </div>
       </Card>
 

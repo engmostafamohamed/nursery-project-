@@ -5,13 +5,13 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { EventsCalendar } from '@/components/events/EventsCalendar';
 import { EventsViewToggle, type EventsView } from '@/components/events/EventsViewToggle';
 import { Button } from '@/components/ui/button';
-import { TableCard, TableEmpty, TablePagination } from '@/components/ui/DataTable';
+import { DataTable, TableCard, TableEmpty, TablePagination, TBody, Th, THead } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatTile } from '@/components/ui/StatTile';
-import { AdminEventCard } from '@/features/events/AdminEventCard';
+import { AdminEventRow } from '@/features/events/AdminEventRow';
 import { NO_EVENT_FILTERS, type AdminEventsFilterState } from '@/features/events/adminEventFilters';
 import { AdminEventsFilters } from '@/features/events/AdminEventsFilters';
 import { countBy, eventsOverview, upcomingFirst, type EventStage } from '@/features/events/events';
@@ -86,7 +86,7 @@ export function AdminEventsListPage() {
     () => (view === 'calendar' && filters.day ? matching.filter((e) => localDateKeyFromIso(e.starts_at) === filters.day) : matching),
     [matching, view, filters.day],
   );
-  const pager = usePagination(shown, 6, `${filters.status}|${filters.category}|${filters.date}|${search}|${filters.day}|${view}`);
+  const pager = usePagination(shown, 10, `${filters.status}|${filters.category}|${filters.date}|${search}|${filters.day}|${view}`);
 
   const toggleStatus = (status: AdminEventsFilterState['status'], date: AdminEventsFilterState['date'] = 'all') =>
     setFilters((f) => (f.status === status && f.date === date ? { ...f, status: 'all', date: 'all' } : { ...f, status, date }));
@@ -165,7 +165,7 @@ export function AdminEventsListPage() {
             <AdminEventsFilters value={filters} onChange={setFilters} statusCounts={statusCounts} categoryCounts={categoryCounts} locale={locale} />
           )
         }
-        pagination={noEvents || noMatch ? null : <TablePagination pager={pager} pageSizeOptions={[6, 12, 24]} />}
+        pagination={noEvents || noMatch ? null : <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} />}
       >
         {eventsQuery.isError ? (
           <p className="px-4 py-3 text-sm text-error sm:px-5" role="alert">{t('admin.events.list.loadError')}</p>
@@ -200,11 +200,21 @@ export function AdminEventsListPage() {
             }
           />
         ) : (
-          <div className="grid gap-3 p-4 sm:p-5 xl:grid-cols-2">
+          <DataTable minWidth={1000}>
+            <THead>
+              <Th><span className="sr-only">{t('parent.events.table.day')}</span></Th>
+              <Th>{t('parent.events.table.event')}</Th>
+              <Th>{t('parent.events.table.when')}</Th>
+              <Th>{t('admin.events.list.table.for')}</Th>
+              <Th>{t('parent.events.table.price')}</Th>
+              <Th>{t('admin.events.list.table.replies')}</Th>
+              <Th align="end">{t('admin.events.list.table.actions')}</Th>
+            </THead>
+            <TBody>
             {pager.pageItems.map((event) => {
               const target = { id: event.id, title: titleOf(event) };
               return (
-                <AdminEventCard
+                <AdminEventRow
                   key={event.id}
                   event={event}
                   title={target.title}
@@ -222,7 +232,8 @@ export function AdminEventsListPage() {
                 />
               );
             })}
-          </div>
+            </TBody>
+          </DataTable>
         )}
       </TableCard>
 

@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { ExtraHoursLedger } from '@/components/financial/ExtraHoursLedger';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { DataTable, TablePagination, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
 import {
   Dialog,
   DialogContent,
@@ -23,6 +24,7 @@ import { FamilyDiscountsCard } from '@/features/discounts/FamilyDiscountsCard';
 import { useAdminChildBilling } from '@/hooks/useAdminChildBilling';
 import type { BillingPeriodKind } from '@/hooks/useAdminTuitionBillingPeriods';
 import { useExtraHoursLedger } from '@/hooks/useExtraHoursLedger';
+import { usePagination } from '@/hooks/usePagination';
 import { formatDate } from '@/lib/datetime';
 import { summarizeInvoices } from '@/lib/familyFinance';
 import { extraHoursAssignErrorKey } from '@/lib/extraHoursPackage';
@@ -77,6 +79,8 @@ export function ChildBillingTab({
         .sort((a, b) => (b.paidAt ?? '').localeCompare(a.paidAt ?? '')),
     [invoiceRows],
   );
+  const paymentPager = usePagination(paymentsMade, 10, paymentsMade.length);
+  const invoicePager = usePagination(invoiceRows, 10, invoiceRows.length);
   const money = (amount: number) => t('invoice.egpAmount', { amount: formatMoneyAmount(amount) });
 
   if (query.isLoading) {
@@ -248,35 +252,45 @@ export function ChildBillingTab({
         {invoiceRows.length === 0 ? (
           <p className="mt-2 text-sm text-on-surface-variant">{t('financial.childHistory.noInvoices')}</p>
         ) : (
-          <ul className="mt-2 divide-y divide-outline-variant">
-            {invoiceRows.map((invoice) => (
-              <li key={invoice.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
-                <span className="min-w-0">
-                  <Link className="font-medium text-primary underline" to={`/admin/invoices/${invoice.id}`}>
-                    {invoice.invoiceNumber}
-                  </Link>
-                  <span className="block text-xs text-on-surface-variant">
-                    {t(`invoice.types.${invoice.invoiceType}`)} · {formatDate(invoice.dueDate)}
-                  </span>
-                </span>
-                <span className="flex items-center gap-2">
-                  <span className="text-end">
-                    <span className="block font-medium tabular-nums text-on-surface">{money(invoice.amount)}</span>
-                    {invoice.balance > 0 && invoice.paidAmount > 0 ? (
-                      <span className="block text-[11px] text-on-surface-variant">{t('parent.paymentRecord.remaining', { amount: money(invoice.balance) })}</span>
-                    ) : null}
-                  </span>
-                  <Badge
-                    variant={
-                      invoice.status === 'paid' ? 'success' : invoice.inReview ? 'secondary' : invoice.status === 'cancelled' ? 'outline' : 'error'
-                    }
-                  >
-                    {invoice.inReview && invoice.status !== 'paid' ? t('parent.paymentRecord.pending') : t(`invoice.status.${invoice.status}`)}
-                  </Badge>
-                </span>
-              </li>
-            ))}
-          </ul>
+          <div className="mt-3 overflow-hidden rounded-lg border border-outline-variant">
+            <DataTable minWidth={640}>
+              <THead>
+                <Th>{t('financial.childHistory.table.invoice')}</Th>
+                <Th align="end">{t('financial.childHistory.table.amount')}</Th>
+                <Th>{t('financial.childHistory.table.status')}</Th>
+              </THead>
+              <TBody>
+                {invoicePager.pageItems.map((invoice) => (
+                  <Tr key={invoice.id} data-testid="child-invoice-row">
+                    <Td className="min-w-[12rem]">
+                      <Link className="font-medium text-primary underline" to={`/admin/invoices/${invoice.id}`}>
+                        {invoice.invoiceNumber}
+                      </Link>
+                      <span className="block text-xs text-on-surface-variant">
+                        {t(`invoice.types.${invoice.invoiceType}`)} · {formatDate(invoice.dueDate)}
+                      </span>
+                    </Td>
+                    <Td align="end" className="whitespace-nowrap">
+                      <span className="block font-medium tabular-nums text-on-surface">{money(invoice.amount)}</span>
+                      {invoice.balance > 0 && invoice.paidAmount > 0 ? (
+                        <span className="block text-[11px] text-on-surface-variant">{t('parent.paymentRecord.remaining', { amount: money(invoice.balance) })}</span>
+                      ) : null}
+                    </Td>
+                    <Td>
+                      <Badge
+                        variant={
+                          invoice.status === 'paid' ? 'success' : invoice.inReview ? 'secondary' : invoice.status === 'cancelled' ? 'outline' : 'error'
+                        }
+                      >
+                        {invoice.inReview && invoice.status !== 'paid' ? t('parent.paymentRecord.pending') : t(`invoice.status.${invoice.status}`)}
+                      </Badge>
+                    </Td>
+                  </Tr>
+                ))}
+              </TBody>
+            </DataTable>
+            <TablePagination pager={invoicePager} pageSizeOptions={[10, 20, 50]} />
+          </div>
         )}
       </div>
 
@@ -285,20 +299,27 @@ export function ChildBillingTab({
         {paymentsMade.length === 0 ? (
           <p className="mt-2 text-sm text-on-surface-variant">{t('parent.paymentRecord.noPaymentsMade')}</p>
         ) : (
-          <ul className="mt-2 divide-y divide-outline-variant">
-            {paymentsMade.map((payment, index) => (
-              <li key={`${payment.invoice.id}-${index}`} className="flex items-center justify-between gap-2 py-2 text-sm">
-                <span className="min-w-0">
-                  <span className="block font-medium text-on-surface">{payment.paidAt ? formatDate(payment.paidAt) : '—'}</span>
-                  <span className="block text-xs text-on-surface-variant">
-                    {payment.method ? t(`payment.manualMethods.${payment.method}.label`, { defaultValue: payment.method }) : '—'} ·{' '}
-                    {payment.invoice.invoiceNumber}
-                  </span>
-                </span>
-                <span className="font-semibold tabular-nums text-success">{money(payment.amount)}</span>
-              </li>
-            ))}
-          </ul>
+          <div className="mt-3 overflow-hidden rounded-lg border border-outline-variant">
+            <DataTable minWidth={560}>
+              <THead>
+                <Th>{t('financial.childHistory.table.paidOn')}</Th>
+                <Th>{t('financial.childHistory.table.method')}</Th>
+                <Th>{t('financial.childHistory.table.invoice')}</Th>
+                <Th align="end">{t('financial.childHistory.table.amount')}</Th>
+              </THead>
+              <TBody>
+                {paymentPager.pageItems.map((payment, index) => (
+                  <Tr key={`${payment.invoice.id}-${index}`} data-testid="child-payment-row">
+                    <Td className="whitespace-nowrap font-medium text-on-surface">{payment.paidAt ? formatDate(payment.paidAt) : '—'}</Td>
+                    <Td className="text-on-surface-variant">{payment.method ? t(`payment.manualMethods.${payment.method}.label`, { defaultValue: payment.method }) : '—'}</Td>
+                    <Td className="whitespace-nowrap text-on-surface-variant">{payment.invoice.invoiceNumber}</Td>
+                    <Td align="end" className="whitespace-nowrap font-semibold tabular-nums text-success">{money(payment.amount)}</Td>
+                  </Tr>
+                ))}
+              </TBody>
+            </DataTable>
+            <TablePagination pager={paymentPager} pageSizeOptions={[10, 20, 50]} />
+          </div>
         )}
       </div>
 

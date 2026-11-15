@@ -5,9 +5,9 @@ import { Link } from 'react-router-dom';
 import { EventsCalendar } from '@/components/events/EventsCalendar';
 import { EventsViewToggle } from '@/components/events/EventsViewToggle';
 import { SelectedDayChip } from '@/components/events/SelectedDayChip';
-import { ParentEventsEventCard } from '@/components/parent/ParentEventsEventCard';
+import { ParentEventRow } from '@/components/parent/ParentEventRow';
 import { Button } from '@/components/ui/button';
-import { TableCard, TableEmpty, TablePagination } from '@/components/ui/DataTable';
+import { DataTable, TableCard, TableEmpty, TablePagination, TBody, Th, THead } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FilterBar, SearchInput } from '@/components/ui/FilterBar';
 import { FilterChips } from '@/components/ui/FilterChips';
@@ -110,7 +110,7 @@ export function ParentEventsPage() {
     return list;
   }, [events, permissions, tab, category, debouncedSearch, selectedDateKey, sortMode, nowMs]);
 
-  const pager = usePagination(filtered, 6, `${tab}|${category}|${debouncedSearch}|${selectedDateKey}|${sortMode}`);
+  const pager = usePagination(filtered, 10, `${tab}|${category}|${debouncedSearch}|${selectedDateKey}|${sortMode}`);
   const filtersActive = tab !== 'all' || category !== 'all' || sortMode !== 'starts_at' || Boolean(search.trim()) || Boolean(selectedDateKey);
   const clearFilters = () => {
     setTab('all');
@@ -243,7 +243,7 @@ export function ParentEventsPage() {
             </div>
           )
         }
-        pagination={showEmptyAll || showEmptyFilters ? null : <TablePagination pager={pager} pageSizeOptions={[6, 12, 24]} />}
+        pagination={showEmptyAll || showEmptyFilters ? null : <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} />}
       >
         {viewMode === 'calendar' ? (
           <div className="border-b border-outline-variant p-4 sm:p-5">
@@ -274,18 +274,29 @@ export function ParentEventsPage() {
             }
           />
         ) : (
-          <div className="grid gap-3 p-4 sm:p-5 xl:grid-cols-2">
-            {pager.pageItems.map((e) => (
-              <ParentEventsEventCard
-                key={e.id}
-                event={e}
-                permissions={permissions}
-                dateTimeFmt={dateTimeFmt}
-                deadlineFmt={deadlineFmt}
-                priceFmt={priceFmt}
-              />
-            ))}
-          </div>
+          <DataTable minWidth={860}>
+            <THead>
+              <Th><span className="sr-only">{t('parent.events.table.day')}</span></Th>
+              <Th>{t('parent.events.table.event')}</Th>
+              <Th>{t('parent.events.table.when')}</Th>
+              <Th>{t('parent.events.table.where')}</Th>
+              <Th>{t('parent.events.table.price')}</Th>
+              <Th>{t('parent.events.table.permission')}</Th>
+              <Th align="end"><span className="sr-only">{t('parent.events.table.open')}</span></Th>
+            </THead>
+            <TBody>
+              {pager.pageItems.map((e) => (
+                <ParentEventRow
+                  key={e.id}
+                  event={e}
+                  permissions={permissions}
+                  dateTimeFmt={dateTimeFmt}
+                  deadlineFmt={deadlineFmt}
+                  priceFmt={priceFmt}
+                />
+              ))}
+            </TBody>
+          </DataTable>
         )}
       </TableCard>
     </div>

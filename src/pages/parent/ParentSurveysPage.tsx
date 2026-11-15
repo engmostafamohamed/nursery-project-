@@ -5,8 +5,10 @@ import { toast } from 'sonner';
 import { FormRenderer } from '@/components/surveys/FormRenderer';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Badge } from '@/components/ui/badge';
+import { DataTable, TablePagination, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
 import { formatDate } from '@/lib/datetime';
 import { cn } from '@/lib/utils';
+import { usePagination } from '@/hooks/usePagination';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useSurveys } from '@/hooks/useSurveys';
 import { useSettings } from '@/lib/useSettings';
@@ -46,6 +48,7 @@ export function ParentSurveysPage() {
       return aDeadline - bDeadline;
     });
   }, [surveys.parentPendingSurveys]);
+  const pager = usePagination(pending, 10, `${pending.length}`);
 
   const openSurvey = (s: SurveyRow) => {
     setActive(s);
@@ -121,21 +124,29 @@ export function ParentSurveysPage() {
           <p className="text-xs text-on-surface-variant">{t('survey.noActive')}</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {pending.map((s) => (
-            <SurveyListItem
-              key={s.id}
-              survey={s}
-              onOpen={() => openSurvey(s)}
-            />
-          ))}
+        <div className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
+          <DataTable minWidth={640}>
+            <THead>
+              <Th>{t('survey.table.survey')}</Th>
+              <Th>{t('survey.table.questions')}</Th>
+              <Th>{t('survey.table.deadline')}</Th>
+              <Th align="end"><span className="sr-only">{t('survey.table.open')}</span></Th>
+            </THead>
+            <TBody>
+              {pager.pageItems.map((s) => (
+                <PendingSurveyRow key={s.id} survey={s} onOpen={() => openSurvey(s)} />
+              ))}
+            </TBody>
+          </DataTable>
+          <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} />
         </div>
       )}
     </div>
   );
 }
 
-function SurveyListItem({ survey: s, onOpen }: { survey: SurveyRow; onOpen: () => void }) {
+/** One survey to answer, as a table row: its kind (urgent when a permission is due soon), title, questions and deadline. */
+function PendingSurveyRow({ survey: s, onOpen }: { survey: SurveyRow; onOpen: () => void }) {
   const { t } = useTranslation();
   const sType = s.type as SurveyType;
   const urgent = sType === 'permission' && deadlineUrgent(s.deadline);
@@ -143,53 +154,19 @@ function SurveyListItem({ survey: s, onOpen }: { survey: SurveyRow; onOpen: () =
   const questionCount = (s.questions_json ?? []).filter((q) => q.type !== 'section_header').length;
 
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className={cn(
-        'w-full rounded-2xl border p-4 text-start transition-all hover:shadow-md active:scale-[0.99]',
-        urgent
-          ? 'border-error/50 bg-error/5 ring-1 ring-error/20'
-          : 'border-outline-variant bg-surface-container-lowest hover:border-primary/40',
-      )}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1 space-y-1.5">
-          <div className="flex flex-wrap items-center gap-2">
-            {urgent && (
-              <Badge className="border-error bg-error/10 text-error text-[10px]">
-                {t('survey.urgentBadge')}
-              </Badge>
-            )}
-            <Badge className="text-[10px]">
-              {t(`survey.typeOptions.${sType}`)}
-            </Badge>
-          </div>
-          <h2 className="text-sm font-semibold text-on-surface">{s.title}</h2>
-          <div className="flex flex-wrap gap-3 text-xs text-on-surface-variant">
-            {questionCount > 0 && (
-              <span className="flex items-center gap-1">
-                <MaterialSymbol name="help_outline" size="text-xs" />
-                {t('survey.questionCount', { count: questionCount })}
-              </span>
-            )}
-            {s.deadline && (
-              <span
-                className={cn(
-                  'flex items-center gap-1',
-                  passed ? 'text-error' : urgent ? 'text-error' : '',
-                )}
-              >
-                <MaterialSymbol name="schedule" size="text-xs" />
-                {formatDate(s.deadline)}
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="shrink-0 rounded-full bg-primary/10 p-2 text-primary">
-          <MaterialSymbol name="chevron_right" size="text-base" />
-        </div>
-      </div>
-    </button>
+    <Tr onClick={onOpen} className={cn(urgent && 'bg-error/5')} data-testid="parent-survey-row">
+      <Td className="min-w-[14rem]">
+        <span className="block font-semibold text-on-surface">{s.title}</span>
+        <span className="mt-1 flex flex-wrap gap-1.5">
+          {urgent ? <Badge className="border-error bg-error/10 text-[10px] text-error">{t('survey.urgentBadge')}</Badge> : null}
+          <Badge className="text-[10px]">{t(`survey.typeOptions.${sType}`)}</Badge>
+        </span>
+      </Td>
+      <Td className="whitespace-nowrap text-on-surface-variant">{questionCount > 0 ? t('survey.questionCount', { count: questionCount }) : '—'}</Td>
+      <Td className={cn('whitespace-nowrap', passed || urgent ? 'text-error' : 'text-on-surface-variant')}>{s.deadline ? formatDate(s.deadline) : '—'}</Td>
+      <Td align="end">
+        <MaterialSymbol name="chevron_right" size="text-xl" className="text-primary rtl:rotate-180" />
+      </Td>
+    </Tr>
   );
 }

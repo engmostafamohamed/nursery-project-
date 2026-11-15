@@ -5,10 +5,11 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { confirm } from '@/components/ui/confirm';
-import { DataTable, IconAction, StatusPill, TableCard, TableEmpty, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
+import { DataTable, IconAction, StatusPill, TableCard, TableEmpty, TablePagination, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
 import { LoadError } from '@/components/ui/LoadError';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { usePagination } from '@/hooks/usePagination';
 import { localName } from '@/lib/bilingualName';
 import { URGENT_EVENT_DAY_KEYS } from '@/lib/eventUrgentSchedule';
 
@@ -75,6 +76,7 @@ export function TaskList({ nurseryId }: { nurseryId: string }) {
   };
 
   const tasks = query.data ?? [];
+  const pager = usePagination(tasks, 10, tasks.length);
 
   return (
     <>
@@ -82,6 +84,7 @@ export function TaskList({ nurseryId }: { nurseryId: string }) {
         title={t('staffTasks.list.title')}
         count={tasks.length ? String(tasks.length) : undefined}
         description={t('staffTasks.list.hint')}
+        pagination={tasks.length ? <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} /> : null}
         actions={
           <Button type="button" onClick={() => setEditing('new')} data-testid="staff-task-new">
             <MaterialSymbol name="add_task" size="text-base" className="me-1" />
@@ -110,7 +113,7 @@ export function TaskList({ nurseryId }: { nurseryId: string }) {
               <Th align="end">{t('staffTasks.list.actions')}</Th>
             </THead>
             <TBody>
-              {tasks.map((task) => (
+              {pager.pageItems.map((task) => (
                 <Tr key={task.id} data-testid="staff-task-row">
                   <Td>
                     <div className="flex items-center gap-2">

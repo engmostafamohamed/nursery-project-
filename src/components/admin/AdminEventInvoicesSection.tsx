@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 
+import { TablePagination } from '@/components/ui/DataTable';
+import { usePagination } from '@/hooks/usePagination';
 import { supabase } from '@/lib/supabase';
 
 type InvoiceRow = {
@@ -96,6 +98,8 @@ export function AdminEventInvoicesSection({ eventId }: Props) {
       pending: invoices.filter((row) => row.status === 'pending').length,
     };
   }, [invoicesQuery.data]);
+  const invoiceRows = useMemo(() => invoicesQuery.data ?? [], [invoicesQuery.data]);
+  const pager = usePagination(invoiceRows, 10, invoiceRows.length);
 
   return (
     <div className="space-y-2 rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
@@ -123,7 +127,7 @@ export function AdminEventInvoicesSection({ eventId }: Props) {
               </tr>
             </thead>
             <tbody>
-              {invoicesQuery.data.map((invoice) => {
+              {pager.pageItems.map((invoice) => {
                 const parentName = i18n.language === 'ar' ? invoice.parent_name_ar : invoice.parent_name_en;
                 const childName = i18n.language === 'ar' ? invoice.child_name_ar : invoice.child_name_en;
                 return (
@@ -143,6 +147,7 @@ export function AdminEventInvoicesSection({ eventId }: Props) {
               })}
             </tbody>
           </table>
+          <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} />
         </div>
       )}
     </div>

@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
-import { StatusPill, TableCard, TableEmpty, TableLoading } from '@/components/ui/DataTable';
+import { DataTable, StatusPill, TableCard, TableEmpty, TableLoading, TablePagination, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
 import { FilterChips } from '@/components/ui/FilterChips';
 import { LoadError } from '@/components/ui/LoadError';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
@@ -13,6 +13,7 @@ import { CourseCatalog } from '@/features/course-requests/CourseCatalog';
 import { BILL_TONE, COURSE_LOOK, courseTotals, isOpenBill } from '@/features/parent-courses/parentCourses';
 import { useCourseCatalog } from '@/features/course-requests/useCourseRequests';
 import { useAuthSession } from '@/hooks/useAuthSession';
+import { usePagination } from '@/hooks/usePagination';
 import { useParentCourses, type ParentCourseInvoiceRow, type ParentCourseRow } from '@/hooks/useParentCourses';
 import { localName } from '@/lib/bilingualName';
 import { formatDate } from '@/lib/datetime';
@@ -34,6 +35,8 @@ export function ParentCoursesPage() {
   const bills = data?.invoices ?? [];
   const totals = courseTotals(courses, bills);
   const money = (amount: number) => t('invoice.egpAmount', { amount: formatMoneyAmount(amount) });
+  const coursePager = usePagination(courses, 10, 'courses');
+  const billPager = usePagination(bills, 10, 'bills');
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-4 pb-28">
@@ -56,6 +59,11 @@ export function ParentCoursesPage() {
       <TableCard
         title={t(`parent.courses.tabs.${tab}`)}
         description={tab === 'invoices' ? t('parent.courses.payHint') : tab === 'catalog' ? t('parent.courses.catalog.hint') : undefined}
+        pagination={
+          tab === 'courses' && courses.length ? <TablePagination pager={coursePager} pageSizeOptions={[10, 20, 50]} />
+          : tab === 'invoices' && bills.length ? <TablePagination pager={billPager} pageSizeOptions={[10, 20, 50]} />
+          : null
+        }
         actions={
           <FilterChips
             label={t('parent.courses.title')}
@@ -77,16 +85,35 @@ export function ParentCoursesPage() {
           <CourseCatalog money={money} />
         ) : tab === 'courses' ? (
           courses.length ? (
-            <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-3">
-              {courses.map((c) => <CourseCard key={c.enrollment_id} course={c} money={money} />)}
-            </div>
+            <DataTable minWidth={760}>
+              <THead>
+                <Th>{t('parent.courses.table.course')}</Th>
+                <Th>{t('parent.courses.table.child')}</Th>
+                <Th>{t('parent.courses.when')}</Th>
+                <Th>{t('parent.courses.teacher')}</Th>
+                <Th align="end">{t('parent.courses.table.price')}</Th>
+              </THead>
+              <TBody>
+                {coursePager.pageItems.map((c) => <CourseRow key={c.enrollment_id} course={c} money={money} />)}
+              </TBody>
+            </DataTable>
           ) : (
             <TableEmpty icon="school" title={t('parent.courses.emptyTitle')} description={t('parent.courses.emptyDescription')} />
           )
         ) : bills.length ? (
-          <ul className="divide-y divide-outline-variant">
-            {bills.map((b) => <BillRow key={b.id} bill={b} money={money} />)}
-          </ul>
+          <DataTable minWidth={760}>
+            <THead>
+              <Th>{t('parent.courses.table.course')}</Th>
+              <Th>{t('parent.courses.table.month')}</Th>
+              <Th>{t('parent.courses.table.due')}</Th>
+              <Th align="end">{t('parent.courses.table.amount')}</Th>
+              <Th>{t('parent.courses.table.status')}</Th>
+              <Th align="end"><span className="sr-only">{t('parent.courses.pay')}</span></Th>
+            </THead>
+            <TBody>
+              {billPager.pageItems.map((b) => <BillRow key={b.id} bill={b} money={money} />)}
+            </TBody>
+          </DataTable>
         ) : (
           <TableEmpty icon="receipt_long" title={t('parent.courses.emptyInvoicesTitle')} description={t('parent.courses.emptyInvoicesDescription')} />
         )}
@@ -95,8 +122,8 @@ export function ParentCoursesPage() {
   );
 }
 
-/** One course a child takes: what, who teaches it, when, and what it costs a month. */
-function CourseCard({ course, money }: { course: ParentCourseRow; money: (n: number) => string }) {
+/** One course a child takes, as a table row: what, for which child, when, who teaches it, and its monthly price. */
+function CourseRow({ course, money }: { course: ParentCourseRow; money: (n: number) => string }) {
   const { t, i18n } = useTranslation();
   const isAr = i18n.language.startsWith('ar');
   const look = COURSE_LOOK[course.category] ?? COURSE_LOOK.other;
@@ -105,74 +132,67 @@ function CourseCard({ course, money }: { course: ParentCourseRow; money: (n: num
   const time = [course.schedule_time_start?.slice(0, 5), course.schedule_time_end?.slice(0, 5)].filter(Boolean).join('–');
 
   return (
-    <article className="flex flex-col gap-3 rounded-xl border border-outline-variant bg-surface p-4 shadow-sm" data-testid="parent-course">
-      <div className="flex items-start gap-3">
-        <span className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-lg', TONE_TINT[look.tone])}>
-          <MaterialSymbol name={look.icon} size="text-xl" />
+    <Tr data-testid="parent-course">
+      <Td className="min-w-[13rem]">
+        <span className="flex min-w-0 items-center gap-3">
+          <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg', TONE_TINT[look.tone])}>
+            <MaterialSymbol name={look.icon} size="text-lg" />
+          </span>
+          <span className="min-w-0">
+            <span className="block font-semibold text-on-surface">{localName(course.course_title_ar, course.course_title_en, isAr)}</span>
+            <StatusPill tone={look.tone} className="mt-1">{t(`admin.courses.categories.${course.category || 'other'}`)}</StatusPill>
+          </span>
         </span>
-        <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-on-surface">{localName(course.course_title_ar, course.course_title_en, isAr)}</h3>
-          <p className="text-sm text-on-surface-variant">{localName(course.child_name_ar, course.child_name_en, isAr)}</p>
-        </div>
-        <StatusPill tone={look.tone}>{t(`admin.courses.categories.${course.category || 'other'}`)}</StatusPill>
-      </div>
-      <dl className="space-y-1.5 text-sm text-on-surface-variant">
-        {days ? (
-          <div className="flex items-center gap-2">
-            <MaterialSymbol name="schedule" size="text-base" className="text-primary" />
-            <dt className="sr-only">{t('parent.courses.when')}</dt>
-            <dd>{time ? `${days} · ${time}` : days}</dd>
-          </div>
-        ) : null}
-        {teacher ? (
-          <div className="flex items-center gap-2">
-            <MaterialSymbol name="person" size="text-base" className="text-primary" />
-            <dt className="sr-only">{t('parent.courses.teacher')}</dt>
-            <dd>{teacher}</dd>
-          </div>
-        ) : null}
-      </dl>
-      <p className="mt-auto border-t border-outline-variant pt-3 text-sm">
+      </Td>
+      <Td className="text-on-surface">{localName(course.child_name_ar, course.child_name_en, isAr)}</Td>
+      <Td className="whitespace-nowrap text-on-surface-variant">{days ? (time ? `${days} · ${time}` : days) : '—'}</Td>
+      <Td className="text-on-surface-variant">{teacher || '—'}</Td>
+      <Td align="end" className="whitespace-nowrap">
         <strong className="text-on-surface">{money(Number(course.price_per_month))}</strong>{' '}
-        <span className="text-on-surface-variant">{t('admin.courses.list.perMonth')}</span>
-      </p>
-    </article>
+        <span className="text-xs text-on-surface-variant">{t('admin.courses.list.perMonth')}</span>
+      </Td>
+    </Tr>
   );
 }
 
-/** One course bill: the course and child, the month, the amount, when it is due, and its state. */
+/** One course bill, as a table row: the course and child, the month, when it is due or was paid, the amount, its state and the pay or invoice link. */
 function BillRow({ bill, money }: { bill: ParentCourseInvoiceRow; money: (n: number) => string }) {
   const { t, i18n } = useTranslation();
   const isAr = i18n.language.startsWith('ar');
   return (
-    <li className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5" data-testid="parent-course-bill">
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-on-surface">{localName(bill.course_title_ar, bill.course_title_en, isAr)}</p>
-        <p className="text-xs text-on-surface-variant">
-          {localName(bill.child_name_ar, bill.child_name_en, isAr)} · {formatDate(`${bill.billing_month}T00:00:00`, { month: 'long', year: 'numeric' })}
-          {bill.status === 'paid' && bill.paid_at
-            ? ` · ${t('parent.courses.paidOn', { date: formatDate(bill.paid_at, { day: 'numeric', month: 'short' }) })}`
-            : bill.due_date
-              ? ` · ${t('parent.courses.dueOn', { date: formatDate(bill.due_date, { day: 'numeric', month: 'short', year: 'numeric' }) })}`
-              : ''}
-        </p>
-      </div>
-      <span className="text-sm font-semibold tabular-nums text-on-surface">{money(Number(bill.amount))}</span>
-      <StatusPill tone={BILL_TONE[bill.status] ?? 'neutral'}>{t(`parent.courses.invoiceStatus.${bill.status}`)}</StatusPill>
-      {bill.invoice_id ? (
-        <Button asChild size="sm" variant={isOpenBill(bill) ? 'default' : 'ghost'}>
-          <Link
-            to={
-              isOpenBill(bill)
-                ? `/parent/invoices/${bill.invoice_id}/pay?returnTo=${encodeURIComponent('/parent/courses?tab=invoices')}`
-                : `/parent/invoices/${bill.invoice_id}`
-            }
-            data-testid="course-bill-action"
-          >
-            {isOpenBill(bill) ? t('parent.courses.pay') : t('parent.courses.viewInvoice')}
-          </Link>
-        </Button>
-      ) : null}
-    </li>
+    <Tr data-testid="parent-course-bill">
+      <Td className="min-w-[12rem]">
+        <span className="block font-semibold text-on-surface">{localName(bill.course_title_ar, bill.course_title_en, isAr)}</span>
+        <span className="block text-xs text-on-surface-variant">{localName(bill.child_name_ar, bill.child_name_en, isAr)}</span>
+      </Td>
+      <Td className="whitespace-nowrap text-on-surface">{formatDate(`${bill.billing_month}T00:00:00`, { month: 'long', year: 'numeric' })}</Td>
+      <Td className="whitespace-nowrap text-on-surface-variant">
+        {bill.status === 'paid' && bill.paid_at
+          ? t('parent.courses.paidOn', { date: formatDate(bill.paid_at, { day: 'numeric', month: 'short' }) })
+          : bill.due_date
+            ? t('parent.courses.dueOn', { date: formatDate(bill.due_date, { day: 'numeric', month: 'short', year: 'numeric' }) })
+            : '—'}
+      </Td>
+      <Td align="end" className="whitespace-nowrap font-semibold tabular-nums text-on-surface">{money(Number(bill.amount))}</Td>
+      <Td>
+        <StatusPill tone={BILL_TONE[bill.status] ?? 'neutral'}>{t(`parent.courses.invoiceStatus.${bill.status}`)}</StatusPill>
+      </Td>
+      <Td align="end">
+        {bill.invoice_id ? (
+          <Button asChild size="sm" variant={isOpenBill(bill) ? 'default' : 'ghost'}>
+            <Link
+              to={
+                isOpenBill(bill)
+                  ? `/parent/invoices/${bill.invoice_id}/pay?returnTo=${encodeURIComponent('/parent/courses?tab=invoices')}`
+                  : `/parent/invoices/${bill.invoice_id}`
+              }
+              data-testid="course-bill-action"
+            >
+              {isOpenBill(bill) ? t('parent.courses.pay') : t('parent.courses.viewInvoice')}
+            </Link>
+          </Button>
+        ) : null}
+      </Td>
+    </Tr>
   );
 }

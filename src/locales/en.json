@@ -279,7 +279,6 @@
       "details": "To or from",
       "worth": "Worth",
       "empty": "Nothing moved this month.",
-      "showing": "Showing {{shown}} of {{total}}",
       "more_one": "Show {{count}} more",
       "more_other": "Show {{count}} more",
       "toClass": "to {{name}}",
@@ -580,7 +579,11 @@
       "reason": "Why",
       "reasonPlaceholder": "e.g. Recorded for the wrong child",
       "cancelConfirm": "Cancel charge",
-      "cancelled": "The charge was cancelled and the stock put back."
+      "cancelled": "The charge was cancelled and the stock put back.",
+      "openTable": {
+        "who": "Staff member",
+        "open": "Open balance"
+      }
     },
     "extras": {
       "todayTitle": "Children’s extras today",
@@ -935,7 +938,13 @@
     "remove": "Remove",
     "search": "Search",
     "noResults": "No results",
-    "fileUnavailable": "File unavailable"
+    "fileUnavailable": "File unavailable",
+    "inboxTable": {
+      "kind": "Kind",
+      "message": "Message",
+      "when": "When",
+      "open": "Open"
+    }
   },
   "validation": {
     "pleaseComplete": "Please complete {{count}} required fields below."
@@ -1662,8 +1671,6 @@
       "kpiTrial": "Trial",
       "kpiSuspended": "Suspended",
       "kpiCancelled": "Cancelled",
-      "viewGrid": "Grid",
-      "viewTable": "Table",
       "colNursery": "Nursery",
       "colStatus": "Status",
       "colPlan": "Plan",
@@ -1822,7 +1829,6 @@
         "teacherCount_other": "{{formatted}} teachers",
         "showAll_one": "Show all {{formatted}}",
         "showAll_other": "Show all {{formatted}}",
-        "showFewer": "Show fewer",
         "citiesTitle": "Nurseries by city",
         "cityCount_one": "{{formatted}} city",
         "cityCount_other": "{{formatted}} cities",
@@ -2152,6 +2158,12 @@
         "markReadFailed": "Could not mark as read.\nتعذر تمييز الإشعار كمقروء.",
         "markAllFailed": "Could not mark all as read.\nتعذر تمييز الكل كمقروء.",
         "deleteFailed": "Could not delete notification.\nتعذر حذف الإشعار."
+      },
+      "table": {
+        "kind": "Type",
+        "notification": "Notification",
+        "when": "When",
+        "status": "Status"
       }
     },
     "dashboard": {
@@ -2637,7 +2649,15 @@
         "pickupBody": "People allowed to collect the child, besides the parents.",
         "fromParentAccount": "From the parent account",
         "documentsTitle": "Documents",
-        "documentsBody": "Files uploaded with the registration application."
+        "documentsBody": "Files uploaded with the registration application.",
+        "contactsTable": {
+          "name": "Name",
+          "relation": "Relation",
+          "phone": "Phone",
+          "note": "Note",
+          "order": "Order",
+          "pickup": "Pickup"
+        }
       },
       "avatarLabel": "Profile photo",
       "avatarChoose": "Upload photo",
@@ -2828,7 +2848,12 @@
         "deleteError": "Could not delete event. Please try again.",
         "noNurseryTitle": "No nursery assigned",
         "noNurseryDescription": "Your account is not linked to a nursery. Contact support if this is unexpected.",
-        "urgentBadge": "Urgent"
+        "urgentBadge": "Urgent",
+        "table": {
+          "for": "For",
+          "replies": "Families",
+          "actions": "Actions"
+        }
       },
       "edit": {
         "title": "Edit event",
@@ -3027,7 +3052,16 @@
         "delete": "Delete",
         "deleteConfirm": "Delete this course? This cannot be undone.",
         "deleteSuccess": "Course deleted.",
-        "deleteError": "Could not delete course."
+        "deleteError": "Could not delete course.",
+        "table": {
+          "course": "Course",
+          "teacher": "Teacher",
+          "status": "Status",
+          "places": "Places",
+          "price": "Price",
+          "starts": "Starts",
+          "actions": "Actions"
+        }
       },
       "form": {
         "createTitle": "New course",
@@ -3133,7 +3167,14 @@
       "inReview": "Payments in review",
       "invoices": "Invoices",
       "noInvoices": "No invoices for this child yet.",
-      "payments": "Payments received"
+      "payments": "Payments received",
+      "table": {
+        "invoice": "Invoice",
+        "amount": "Amount",
+        "status": "Status",
+        "paidOn": "Paid on",
+        "method": "Method"
+      }
     },
     "extraHoursLedger": {
       "title": "Extra hours history",
@@ -3640,6 +3681,10 @@
           "completed": "Completed",
           "failed": "Failed",
           "refunded": "Refunded"
+        },
+        "table": {
+          "amount": "Amount",
+          "status": "Status"
         }
       },
       "activity": {
@@ -4144,7 +4189,13 @@
     "parentTitle": "Term reports",
     "parentSubtitle": "Your child's quarterly evaluation reports.",
     "parentEmptyTitle": "No reports yet",
-    "parentEmptyDesc": "Term reports will appear here once the nursery sends them."
+    "parentEmptyDesc": "Term reports will appear here once the nursery sends them.",
+    "table": {
+      "child": "Child",
+      "term": "Term",
+      "status": "Status",
+      "actions": "Actions"
+    }
   },
   "parentBilling": {
     "notFoundHint": "It may have been removed, or the link is wrong.",
@@ -4178,6 +4229,13 @@
         "all": "All invoices",
         "open": "To pay",
         "paid": "Paid"
+      },
+      "namesJoin": ", ",
+      "table": {
+        "invoice": "Invoice",
+        "number": "Number",
+        "status": "Status",
+        "amount": "Amount"
       }
     },
     "actions": {
@@ -4458,7 +4516,14 @@
       "unmatchedTitle": "Allergies not checked against the menu",
       "unmatchedHint": "These are not foods we recognise (for example medicines or dust). If one of them is a food, open the child and choose the menu foods it covers.",
       "unmatchedCount_one": "{{count}} child",
-      "unmatchedCount_other": "{{count}} children"
+      "unmatchedCount_other": "{{count}} children",
+      "table": {
+        "day": "Day",
+        "child": "Child",
+        "severity": "Severity",
+        "dishes": "Dishes to avoid",
+        "whatToDo": "If they react"
+      }
     },
     "report": {
       "title": "Allergy alert for today’s meals",
@@ -4544,7 +4609,17 @@
       "billingNote": "{{amount}} will be added to each monthly invoice, from the next one.",
       "noTuitionNote": "This child has no tuition plan, so there is no monthly invoice to add the meals to. Bill them by hand, or give the child a tuition plan.",
       "childSaved": "The child’s meal plan was saved.",
-      "childStopped": "The child’s meal plan was stopped."
+      "childStopped": "The child’s meal plan was stopped.",
+      "table": {
+        "planCount_one": "{{count}} plan",
+        "planCount_other": "{{count}} plans",
+        "noPlans": "No meal plans yet",
+        "meals": "Meals",
+        "children": "Children",
+        "monthly": "Monthly price",
+        "status": "Status",
+        "active": "Active"
+      }
     },
     "kitchen": {
       "title": "Kitchen stock",
@@ -5090,6 +5165,12 @@
         "markReadFailed": "Could not mark as read.\nتعذر تمييز الإشعار كمقروء.",
         "markAllFailed": "Could not mark all as read.\nتعذر تمييز الكل كمقروء.",
         "deleteFailed": "Could not delete notification.\nتعذر حذف الإشعار."
+      },
+      "table": {
+        "kind": "Type",
+        "notification": "Notification",
+        "when": "When",
+        "status": "Status"
       }
     },
     "profile": {
@@ -5219,6 +5300,17 @@
         "button": "Create urgent event",
         "back": "Back to events",
         "noChildren": "No active children are linked to your account."
+      },
+      "free": "Free",
+      "listJoin": ", ",
+      "table": {
+        "day": "Day",
+        "event": "Event",
+        "when": "When",
+        "where": "Where",
+        "price": "Price",
+        "permission": "Permission",
+        "open": "Open"
       }
     },
     "permissions": {
@@ -5477,7 +5569,17 @@
       "activities": {
         "tags": "Tags",
         "freeText": "Notes"
-      }
+      },
+      "listJoin": ", ",
+      "table": {
+        "date": "Date",
+        "child": "Child",
+        "mood": "Mood",
+        "meals": "Meals",
+        "nap": "Nap",
+        "notes": "Notes"
+      },
+      "fromName": "From {{name}}"
     },
     "courses": {
       "title": "Courses",
@@ -5533,7 +5635,18 @@
         "notePlaceholder": "e.g. She already swims a little",
         "send": "Send request",
         "sent": "Request sent",
-        "sentHint": "You get a notice when the nursery answers."
+        "sentHint": "You get a notice when the nursery answers.",
+        "places": "Places",
+        "yourChildren": "Your children"
+      },
+      "table": {
+        "course": "Course",
+        "child": "Child",
+        "price": "Price",
+        "month": "Month",
+        "due": "Due",
+        "amount": "Amount",
+        "status": "Status"
       }
     }
   },
@@ -5606,7 +5719,13 @@
       "stillHere": "still here",
       "loadError": "Couldn't load your children.",
       "noMatch": "No child matches these filters.",
-      "noChildren": "No children in your classes yet."
+      "noChildren": "No children in your classes yet.",
+      "classesTable": {
+        "class": "Class",
+        "myRole": "My role",
+        "team": "Team",
+        "actions": "Actions"
+      }
     },
     "home": {
       "fallbackName": "Teacher",
@@ -5885,6 +6004,9 @@
         "checkedInAt": "Checked in {{time}}",
         "notCheckedIn": "Not checked in",
         "openScanner": "Open the QR scanner"
+      },
+      "table": {
+        "children": "Your children"
       }
     },
     "courses": {
@@ -6286,7 +6408,12 @@
       "openFailed": "Could not open file.",
       "openFailedAr": "تعذر فتح الملف.",
       "deleteTitle": "Remove this document?",
-      "deleteDescription": "This deletes the file from storage. You cannot undo this action."
+      "deleteDescription": "This deletes the file from storage. You cannot undo this action.",
+      "table": {
+        "document": "Document",
+        "added": "Added",
+        "actions": "Actions"
+      }
     },
     "deactivateConfirmTitle": "Deactivate this staff member?",
     "deactivateConfirmDescription": "They lose access at once and can no longer sign in; their records stay.",
@@ -6350,6 +6477,13 @@
     "status": {
       "pending": "Pending",
       "paid": "Paid"
+    },
+    "payslipsTable": {
+      "month": "Month",
+      "base": "Base salary",
+      "bonuses": "Bonuses",
+      "deductions": "Deductions",
+      "status": "Status"
     }
   },
   "admissions": {
@@ -6427,6 +6561,15 @@
       "waitlisted": "Waitlisted",
       "enrolled": "Enrolled",
       "declined": "Declined"
+    },
+    "waitlistTable": {
+      "class": "Class",
+      "position": "Place",
+      "parent": "Parent",
+      "phone": "Phone",
+      "actions": "Actions",
+      "moveUp": "Move up",
+      "moveDown": "Move down"
     }
   },
   "applications": {
@@ -6792,6 +6935,18 @@
       "birthday": "Birthday",
       "bonus": "Bonus",
       "manual": "Manual adjustment"
+    },
+    "table": {
+      "rank": "Rank",
+      "parent": "Parent",
+      "emptyTitle": "No points awarded yet"
+    },
+    "historyTable": {
+      "what": "Activity",
+      "points": "Points",
+      "kind": "Kind",
+      "date": "Date",
+      "emptyTitle": "No points activity yet"
     }
   },
   "survey": {
@@ -6958,7 +7113,15 @@
       "avgRating": "Avg {{value}}",
       "textResponses": "Written responses"
     },
-    "sent": "Form sent successfully."
+    "sent": "Form sent successfully.",
+    "table": {
+      "survey": "Survey",
+      "status": "Status",
+      "questions": "Questions",
+      "deadline": "Deadline",
+      "actions": "Actions",
+      "open": "Open"
+    }
   },
   "inventory": {
     "adminTitle": "Inventory",
@@ -6993,6 +7156,19 @@
       "announcement": "Announcement",
       "tip": "Tip",
       "question": "Question"
+    },
+    "table": {
+      "post": "Post",
+      "kind": "Kind",
+      "comments": "Comments",
+      "date": "Posted",
+      "actions": "Actions",
+      "commentCount_one": "{{count}} comment",
+      "commentCount_other": "{{count}} comments",
+      "showComments": "Comments",
+      "noComments": "No comments yet.",
+      "emptyTitle": "No posts yet",
+      "emptyDescription": "Posts from the nursery and families will show here."
     }
   },
   "library": {
@@ -7009,6 +7185,15 @@
       "activities": "Activities",
       "recipes": "Recipes",
       "health": "Health"
+    },
+    "table": {
+      "item": "Content",
+      "category": "Category",
+      "date": "Added",
+      "actions": "Actions",
+      "read": "Read",
+      "emptyTitle": "Nothing in the library yet",
+      "emptyDescription": "Tips, activities, recipes and health notes will show here."
     }
   },
   "calendar": {
@@ -10381,7 +10566,11 @@
         "file": "File",
         "fileHint": "A PDF or a photo (JPG, PNG or WebP), up to 10 MB.",
         "uploading": "Uploading…",
-        "openFailed": "The document could not be opened. Try again."
+        "openFailed": "The document could not be opened. Try again.",
+        "table": {
+          "document": "Document",
+          "added": "Added"
+        }
       },
       "request": {
         "title": "Ask the nursery to update",

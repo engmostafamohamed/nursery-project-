@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { DataTable, IconAction, StatusPill, TableCard, TableEmpty, TableLoading, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
+import { DataTable, IconAction, StatusPill, TableCard, TableEmpty, TableLoading, TablePagination, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
 import { FilterBar, SearchInput } from '@/components/ui/FilterBar';
 import { FilterField } from '@/components/ui/FilterField';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Select } from '@/components/ui/select';
 import { StatTile } from '@/components/ui/StatTile';
+import { usePagination } from '@/hooks/usePagination';
 import { formatDay } from '@/lib/datetime';
 
 import { CancelChargeDialog } from './CancelChargeDialog';
@@ -33,6 +34,9 @@ export function KitchenSalesPanel({ nurseryId, thisMonth }: { nurseryId: string;
   const data = query.data;
   const totals = useMemo(() => salesTotals(data?.charges ?? []), [data?.charges]);
   const shown = useMemo(() => filterCharges(data?.charges ?? [], who, search), [data?.charges, who, search]);
+  const pager = usePagination(shown, 10, `${who}|${search}|${shown.length}`);
+  const staffOpenRows = useMemo(() => data?.staffOpen ?? [], [data?.staffOpen]);
+  const staffOpenPager = usePagination(staffOpenRows, 10, staffOpenRows.length);
   const name = (ar: string | null, en: string | null) => (isArabic ? ar || en : en || ar) || '—';
 
   return (
@@ -51,6 +55,7 @@ export function KitchenSalesPanel({ nurseryId, thisMonth }: { nurseryId: string;
       <TableCard
         title={t('kitchenSales.sales.title')}
         count={t('kitchenSales.sales.count', { count: shown.length })}
+        pagination={shown.length ? <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} /> : null}
         filters={
           <FilterBar onClear={() => { setWho('all'); setSearch(''); }} canClear={who !== 'all' || Boolean(search)}>
             <FilterField label={t('common.search')} className="sm:flex-[2]">
@@ -85,7 +90,7 @@ export function KitchenSalesPanel({ nurseryId, thisMonth }: { nurseryId: string;
               <Th align="end">{t('health.dashboard.columns.actions')}</Th>
             </THead>
             <TBody>
-              {shown.map((c) => {
+              {pager.pageItems.map((c) => {
                 const look = BILLING_LOOK[c.billing];
                 return (
                   <Tr key={c.id} className={c.billing === 'cancelled' ? 'opacity-60' : undefined}>
@@ -130,17 +135,28 @@ export function KitchenSalesPanel({ nurseryId, thisMonth }: { nurseryId: string;
 
       {data?.staffOpen.length ? (
         <TableCard title={t('kitchenSales.sales.staffOpenTitle')} description={t('kitchenSales.sales.staffOpenHint')}>
-          <ul className="divide-y divide-outline-variant" data-testid="staff-open">
-            {data.staffOpen.map((s) => (
-              <li key={s.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm sm:px-5">
-                <span className="flex items-center gap-2">
-                  <MaterialSymbol name="badge" size="text-lg" className="text-on-surface-variant" />
-                  <span className="font-medium text-on-surface">{name(s.nameAr, s.nameEn)}</span>
-                </span>
-                <span className="font-semibold tabular-nums text-warning">{money(s.open)}</span>
-              </li>
-            ))}
-          </ul>
+          <div data-testid="staff-open">
+            <DataTable minWidth={420}>
+              <THead>
+                <Th>{t('kitchenSales.sales.openTable.who')}</Th>
+                <Th align="end">{t('kitchenSales.sales.openTable.open')}</Th>
+              </THead>
+              <TBody>
+                {staffOpenPager.pageItems.map((s) => (
+                  <Tr key={s.id}>
+                    <Td>
+                      <span className="flex items-center gap-2">
+                        <MaterialSymbol name="badge" size="text-lg" className="text-on-surface-variant" />
+                        <span className="font-medium text-on-surface">{name(s.nameAr, s.nameEn)}</span>
+                      </span>
+                    </Td>
+                    <Td align="end" className="font-semibold tabular-nums text-warning">{money(s.open)}</Td>
+                  </Tr>
+                ))}
+              </TBody>
+            </DataTable>
+            <TablePagination pager={staffOpenPager} pageSizeOptions={[10, 20, 50]} />
+          </div>
         </TableCard>
       ) : null}
 

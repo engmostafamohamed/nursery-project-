@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
-import { TableCard, TableEmpty, TableLoading, TablePagination } from '@/components/ui/DataTable';
+import { DataTable, TableCard, TableEmpty, TableLoading, TablePagination, TBody, Th, THead } from '@/components/ui/DataTable';
 import { FilterBar, SearchInput } from '@/components/ui/FilterBar';
 import { FilterChips } from '@/components/ui/FilterChips';
 import { FilterField } from '@/components/ui/FilterField';
@@ -13,7 +13,7 @@ import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FamilyDiscountsCard } from '@/features/discounts/FamilyDiscountsCard';
 import { BalanceHero } from '@/features/parent-billing/BalanceHero';
-import { InvoiceListItem } from '@/features/parent-billing/InvoiceListItem';
+import { InvoiceRow } from '@/features/parent-billing/InvoiceRow';
 import { billingSummary, isPayable, localName, type BillingInvoice } from '@/features/parent-billing/parentBilling';
 import { useParentBilling } from '@/features/parent-billing/useParentBilling';
 import { useAuthSession } from '@/hooks/useAuthSession';
@@ -185,9 +185,17 @@ export function ParentInvoicesPage() {
             }
           />
         ) : (
-          <div className="space-y-2 p-3 sm:p-4">
+          <DataTable minWidth={760}>
+            <THead>
+              <Th>{t('parentBilling.list.table.invoice')}</Th>
+              <Th>{t('parentBilling.list.table.number')}</Th>
+              <Th>{t('parentBilling.list.table.status')}</Th>
+              <Th align="end">{t('parentBilling.list.table.amount')}</Th>
+              <Th align="end"><span className="sr-only">{t('parentBilling.list.pay')}</span></Th>
+            </THead>
+            <TBody>
             {pager.pageItems.map((invoice) => (
-              <InvoiceListItem
+              <InvoiceRow
                 key={invoice.id}
                 invoice={invoice}
                 highlighted={invoice.id === highlightId}
@@ -196,7 +204,8 @@ export function ParentInvoicesPage() {
                 onPay={() => pay(invoice.id)}
               />
             ))}
-          </div>
+            </TBody>
+          </DataTable>
         )}
       </TableCard>
 

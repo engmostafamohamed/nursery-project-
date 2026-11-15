@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import { TablePagination } from '@/components/ui/DataTable';
+import { usePagination } from '@/hooks/usePagination';
 import { InvoiceLineItemsBuilder, type BuilderLineItem } from '@/components/admin/InvoiceLineItemsBuilder';
 import { PendingPaymentAttempts } from '@/components/admin/PendingPaymentAttempts';
 import { InvoicePaymentHistory } from '@/components/financial/InvoicePaymentHistory';
@@ -78,6 +80,8 @@ export function AdminInvoiceDetailsPage() {
   const qs = isPreview ? '?preview=true' : '';
   const detailsQuery = useInvoiceDetails(invoiceId);
   const details = detailsQuery.data;
+  const lineItems = useMemo(() => details?.lineItems ?? [], [details?.lineItems]);
+  const linePager = usePagination(lineItems, 10, lineItems.length);
   const attemptsQuery = usePaymentAttempts(invoiceId);
   const [editOpen, setEditOpen] = useState(false);
   const [editingDueDate, setEditingDueDate] = useState('');
@@ -341,7 +345,7 @@ export function AdminInvoiceDetailsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-outline-variant">
-                  {(details?.lineItems ?? []).map((item, idx) => (
+                  {linePager.pageItems.map((item, idx) => (
                     <tr key={`${idx}-${item.description}`} className="bg-surface">
                       <td className="px-4 py-3 font-medium text-on-surface">{item.description}</td>
                       <td className="px-4 py-3 text-on-surface-variant">{item.quantity}</td>
@@ -351,6 +355,7 @@ export function AdminInvoiceDetailsPage() {
                   ))}
                 </tbody>
               </table>
+              <TablePagination pager={linePager} pageSizeOptions={[10, 20, 50]} />
             </div>
             <div className="grid gap-2 border-t border-outline-variant bg-surface-container-lowest p-4 text-sm sm:ms-auto sm:w-80">
               <div className="flex justify-between gap-3">

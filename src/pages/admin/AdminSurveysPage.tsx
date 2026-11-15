@@ -7,8 +7,10 @@ import { FormBuilder } from '@/components/surveys/FormBuilder';
 import { FormRenderer } from '@/components/surveys/FormRenderer';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { DataTable, IconAction, TablePagination, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { cn } from '@/lib/utils';
+import { usePagination } from '@/hooks/usePagination';
 import { useCanAction } from '@/hooks/usePermissions';
 import { useSettings } from '@/lib/useSettings';
 import type { SendAudience } from '@/components/surveys/FormBuilder';
@@ -47,6 +49,7 @@ export function AdminSurveysPage() {
     statusFilter === 'all'
       ? surveys.surveys
       : surveys.surveys.filter((s) => s.status === statusFilter);
+  const pager = usePagination(filtered, 10, `${filtered.length}`);
 
   const handleCreate = async (data: {
     title: string;
@@ -269,22 +272,35 @@ export function AdminSurveysPage() {
           )}
         </div>
       ) : (
-        <div className="space-y-3">
-          {filtered.map((s) => (
-            <SurveyCard
-              key={s.id}
-              survey={s}
-              responseCount={surveys.responseCounts.get(s.id) ?? 0}
-              canUpdate={canUpdate}
-              canDelete={canDelete}
-              onEdit={() => setPanel({ kind: 'edit', survey: s })}
-              onPreview={() => setPanel({ kind: 'preview', survey: s })}
-              onAnalytics={() => setPanel({ kind: 'analytics', survey: s })}
-              onActivate={() => void handleActivate(s)}
-              onClose={() => void handleClose(s.id)}
-              onDelete={() => void handleDelete(s.id)}
-            />
-          ))}
+        <div className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
+          <DataTable minWidth={900}>
+            <THead>
+              <Th>{t('survey.table.survey')}</Th>
+              <Th>{t('survey.table.status')}</Th>
+              <Th>{t('survey.table.questions')}</Th>
+              <Th>{t('survey.responses')}</Th>
+              <Th>{t('survey.table.deadline')}</Th>
+              <Th align="end">{t('survey.table.actions')}</Th>
+            </THead>
+            <TBody>
+              {pager.pageItems.map((s) => (
+                <SurveyRow
+                  key={s.id}
+                  survey={s}
+                  responseCount={surveys.responseCounts.get(s.id) ?? 0}
+                  canUpdate={canUpdate}
+                  canDelete={canDelete}
+                  onEdit={() => setPanel({ kind: 'edit', survey: s })}
+                  onPreview={() => setPanel({ kind: 'preview', survey: s })}
+                  onAnalytics={() => setPanel({ kind: 'analytics', survey: s })}
+                  onActivate={() => void handleActivate(s)}
+                  onClose={() => void handleClose(s.id)}
+                  onDelete={() => void handleDelete(s.id)}
+                />
+              ))}
+            </TBody>
+          </DataTable>
+          <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} />
         </div>
       )}
     </div>
@@ -304,7 +320,7 @@ type SurveyCardProps = {
   onDelete: () => void;
 };
 
-function SurveyCard({
+function SurveyRow({
   survey: s,
   responseCount,
   canUpdate,
@@ -317,97 +333,30 @@ function SurveyCard({
   onDelete,
 }: SurveyCardProps) {
   const { t } = useTranslation();
-  const [menuOpen, setMenuOpen] = useState(false);
-
   const questionCount = (s.questions_json ?? []).filter((q) => q.type !== 'section_header').length;
 
   return (
-    <article className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1 space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-sm font-semibold text-on-surface">
-              {s.title || '—'}
-            </h2>
-            <Badge className={cn('text-[10px] border', STATUS_COLORS[s.status])}>
-              {t(`survey.status.${s.status}`)}
-            </Badge>
-            <Badge className="text-[10px]">
-              {t(`survey.typeOptions.${s.type}`)}
-            </Badge>
-          </div>
-          <div className="flex flex-wrap gap-3 text-xs text-on-surface-variant">
-            <span className="flex items-center gap-1">
-              <MaterialSymbol name="help" size="text-xs" />
-              {t('survey.questionCount', { count: questionCount })}
-            </span>
-            <span className="flex items-center gap-1">
-              <MaterialSymbol name="people" size="text-xs" />
-              {t('survey.responses')}: {responseCount}
-            </span>
-            {s.deadline && (
-              <span className="flex items-center gap-1">
-                <MaterialSymbol name="schedule" size="text-xs" />
-                {new Date(s.deadline).toLocaleString()}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="relative shrink-0">
-          <button
-            type="button"
-            onClick={() => setMenuOpen((o) => !o)}
-            className="rounded-xl p-2 text-on-surface-variant hover:bg-surface-high"
-          >
-            <MaterialSymbol name="more_vert" size="text-base" />
-          </button>
-          {menuOpen && (
-            <>
-              <div
-                className="fixed inset-0 z-10"
-                onClick={() => setMenuOpen(false)}
-              />
-              <div className="absolute end-0 top-10 z-20 w-52 rounded-2xl border border-outline-variant bg-surface shadow-lg py-1">
-                {[
-                  ...(canUpdate ? [{ icon: 'edit', label: t('survey.edit'), action: onEdit }] : []),
-                  { icon: 'visibility', label: t('survey.preview'), action: onPreview },
-                  { icon: 'bar_chart', label: t('survey.analytics.title'), action: onAnalytics },
-                  ...(canUpdate && s.status === 'draft'
-                    ? [{ icon: 'play_arrow', label: t('survey.activate'), action: onActivate }]
-                    : []),
-                  ...(canUpdate && s.status === 'active'
-                    ? [{ icon: 'stop', label: t('survey.close'), action: onClose }]
-                    : []),
-                ].map(({ icon, label, action }) => (
-                  <button
-                    key={label}
-                    type="button"
-                    onClick={() => { setMenuOpen(false); action(); }}
-                    className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-on-surface hover:bg-surface-high"
-                  >
-                    <MaterialSymbol name={icon} size="text-sm" className="text-on-surface-variant" />
-                    {label}
-                  </button>
-                ))}
-                {canDelete && (
-                  <>
-                    <div className="my-1 border-t border-outline-variant" />
-                    <button
-                      type="button"
-                      onClick={() => { setMenuOpen(false); onDelete(); }}
-                      className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-error hover:bg-error/5"
-                    >
-                      <MaterialSymbol name="delete" size="text-sm" />
-                      {t('survey.delete')}
-                    </button>
-                  </>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    </article>
+    <Tr onClick={onPreview} data-testid="survey-row">
+      <Td className="min-w-[14rem]">
+        <span className="block font-semibold text-on-surface">{s.title || '—'}</span>
+        <Badge className="mt-1 text-[10px]">{t(`survey.typeOptions.${s.type}`)}</Badge>
+      </Td>
+      <Td>
+        <Badge className={cn('border text-[10px]', STATUS_COLORS[s.status])}>{t(`survey.status.${s.status}`)}</Badge>
+      </Td>
+      <Td className="whitespace-nowrap text-on-surface-variant">{t('survey.questionCount', { count: questionCount })}</Td>
+      <Td className="whitespace-nowrap font-semibold tabular-nums text-on-surface">{responseCount}</Td>
+      <Td className="whitespace-nowrap text-on-surface-variant">{s.deadline ? new Date(s.deadline).toLocaleString() : '—'}</Td>
+      <Td align="end">
+        <span className="flex items-center justify-end gap-0.5">
+          {canUpdate ? <IconAction icon="edit" label={t('survey.edit')} onClick={onEdit} /> : null}
+          <IconAction icon="visibility" label={t('survey.preview')} onClick={onPreview} />
+          <IconAction icon="bar_chart" label={t('survey.analytics.title')} onClick={onAnalytics} />
+          {canUpdate && s.status === 'draft' ? <IconAction icon="play_arrow" label={t('survey.activate')} onClick={onActivate} /> : null}
+          {canUpdate && s.status === 'active' ? <IconAction icon="stop" label={t('survey.close')} onClick={onClose} /> : null}
+          {canDelete ? <IconAction icon="delete" label={t('survey.delete')} onClick={onDelete} danger /> : null}
+        </span>
+      </Td>
+    </Tr>
   );
 }

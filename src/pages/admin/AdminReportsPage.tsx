@@ -1,13 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { DataTable, StatusPill, TablePagination, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
 import { Select } from '@/components/ui/select';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useNurseryChildrenPicker } from '@/hooks/useNurseryChildrenPicker';
+import { usePagination } from '@/hooks/usePagination';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import {
   fetchReportGrades,
@@ -28,6 +30,8 @@ export function AdminReportsPage() {
 
   const tpl = useQuarterlyTemplate(nurseryId);
   const reports = useAdminQuarterlyReports(nurseryId);
+  const reportRows = useMemo(() => reports.query.data ?? [], [reports.query.data]);
+  const reportPager = usePagination(reportRows, 10, reportRows.length);
   const { data: children = [] } = useNurseryChildrenPicker(nurseryId);
 
   const [view, setView] = useState<View>('home');
@@ -96,59 +100,60 @@ export function AdminReportsPage() {
                 description={t('reports.noReportsDesc')}
               />
             ) : (
-              <div className="space-y-2">
-                {(reports.query.data ?? []).map((r) => (
-                  <div
-                    key={r.id}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-outline-variant bg-surface-container-lowest p-3"
-                  >
-                    <div>
-                      <p className="text-sm font-medium text-on-surface">
-                        {localName(r.childNameAr, r.childNameEn, isAr)} ·{' '}
-                        {r.term_label}
-                      </p>
-                      <span
-                        className={
-                          'mt-1 inline-block rounded-full border px-2 py-0.5 text-xs ' +
-                          (r.status === 'sent'
-                            ? 'border-success/30 bg-success/10 text-success'
-                            : 'border-warning/30 bg-warning/10 text-warning')
-                        }
-                      >
-                        {r.status === 'sent' ? t('reports.statusSent') : t('reports.statusDraft')}
-                      </span>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setEditing(r);
-                          setView('editor');
-                        }}
-                      >
-                        {r.status === 'sent' ? t('common.edit') : t('reports.continue')}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        disabled={reports.deleteReport.isPending}
-                        onClick={async () => {
-                          try {
-                            await reports.deleteReport.mutateAsync(r.id);
-                            toast.success(t('reports.deleted'));
-                          } catch {
-                            toast.error(t('reports.saveFailed'));
-                          }
-                        }}
-                      >
-                        {t('common.delete')}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+              <div className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
+                <DataTable minWidth={640}>
+                  <THead>
+                    <Th>{t('reports.table.child')}</Th>
+                    <Th>{t('reports.table.term')}</Th>
+                    <Th>{t('reports.table.status')}</Th>
+                    <Th align="end">{t('reports.table.actions')}</Th>
+                  </THead>
+                  <TBody>
+                    {reportPager.pageItems.map((r) => (
+                      <Tr key={r.id} data-testid="term-report-row">
+                        <Td className="min-w-[11rem] font-medium text-on-surface">{localName(r.childNameAr, r.childNameEn, isAr)}</Td>
+                        <Td className="whitespace-nowrap text-on-surface-variant">{r.term_label}</Td>
+                        <Td>
+                          <StatusPill tone={r.status === 'sent' ? 'success' : 'warning'}>
+                            {r.status === 'sent' ? t('reports.statusSent') : t('reports.statusDraft')}
+                          </StatusPill>
+                        </Td>
+                        <Td align="end">
+                          <span className="flex items-center justify-end gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setEditing(r);
+                                setView('editor');
+                              }}
+                            >
+                              {r.status === 'sent' ? t('common.edit') : t('reports.continue')}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              disabled={reports.deleteReport.isPending}
+                              onClick={async () => {
+                                try {
+                                  await reports.deleteReport.mutateAsync(r.id);
+                                  toast.success(t('reports.deleted'));
+                                } catch {
+                                  toast.error(t('reports.saveFailed'));
+                                }
+                              }}
+                            >
+                              {t('common.delete')}
+                            </Button>
+                          </span>
+                        </Td>
+                      </Tr>
+                    ))}
+                  </TBody>
+                </DataTable>
+                <TablePagination pager={reportPager} pageSizeOptions={[10, 20, 50]} />
               </div>
             )}
           </div>
