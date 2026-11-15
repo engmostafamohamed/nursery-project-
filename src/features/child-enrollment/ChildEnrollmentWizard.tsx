@@ -1,171 +1,255 @@
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect, useState } from 'react';
-import { FormProvider, useForm } from 'react-hook-form';
+import { useQueryClient } from '@tanstack/react-query';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import { ApplicationReviewSummary } from '@/components/parent/ApplicationReviewSummary';
+import { ApplicationSteps } from '@/components/parent/ApplicationSteps';
 import { Button } from '@/components/ui/button';
-import { useAuthSession } from '@/hooks/useAuthSession';
-import { useNurseryLanguagePref } from '@/hooks/useNurseryLanguagePref';
-import { useUserProfile } from '@/hooks/useUserProfile';
+import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { ApplicationInfoStep } from '@/features/child-application/ApplicationInfoStep';
+import { PanelHeader } from '@/features/child-application/ApplicationPanelHeader';
+import { childFormFromApplication, parentFormFromApplication } from '@/features/child-application/applicationForm';
+import { applicationReviewSections } from '@/features/child-application/applicationReview';
+import { stepCardClassName } from '@/features/child-application/applicationStyles';
+import { FieldValidationContext, type FieldValidation } from '@/features/child-application/fieldValidation';
+import { nationalityOptions } from '@/lib/nationalities';
 
-import { CHILD_ENROLLMENT_STORAGE_KEY, getDefaultChildEnrollmentValues } from './childEnrollmentDefaults';
-import { emptyChildEnrollmentFiles, type ChildEnrollmentFileBundle } from './childEnrollmentFiles';
-import { ChildEnrollmentStepPanels } from './ChildEnrollmentStepPanels';
-import { submitChildEnrollment } from './submitChildEnrollment';
-import type { ChildEnrollmentFormValues } from './childEnrollmentTypes';
-import { childEnrollmentFullSchema, validateChildStep } from './childEnrollmentValidation';
-import { useWizardDraft } from '../staff-onboarding/useWizardDraft';
+import {
+  CLASS_STEP,
+  DOCUMENTS_STEP,
+  ENROLLMENT_STEP_ICONS,
+  enrollmentPayload,
+  enrollmentStepOf,
+  enrollmentStepProblems,
+  FAMILY_STEP,
+  familyName,
+  firstIncompleteStep,
+  formsForFamily,
+  REVIEW_STEP,
+  STEP_COUNT,
+  type EnrollmentFamily,
+  type EnrollmentFiles,
+} from './childEnrollment';
+import { enrollChild, enrollmentErrorKey, uploadEnrollmentFiles } from './childEnrollmentApi';
+import { EnrollmentClassStep } from './EnrollmentClassStep';
+import { EnrollmentDocumentsStep } from './EnrollmentDocumentsStep';
+import { FamilyPicker } from './FamilyPicker';
 
-const TOTAL = 7;
+const newId = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(16)}-0000-4000-8000-${Math.random().toString(16).slice(2, 14).padEnd(12, '0')}`;
 
-export function ChildEnrollmentWizard() {
-  const { t } = useTranslation();
+/**
+ * The admin adds a child the way a family applies: the family is picked first (an existing parent
+ * account), then the application's own steps are answered for them — the same fields and checks —
+ * then the documents, a review of every answer, and the class. Saving adds the child to the family
+ * in one go; the family and the class's teachers are told.
+ */
+export function ChildEnrollmentWizard({ nurseryId }: { nurseryId: string }) {
+  const { t, i18n } = useTranslation();
+  const isAr = i18n.language.startsWith('ar');
   const navigate = useNavigate();
-  const { user } = useAuthSession();
-  const { data: profile } = useUserProfile(user?.id);
-  const nurseryId = profile?.nursery_id;
-  const { data: nurseryLang } = useNurseryLanguagePref(nurseryId);
-  const [step, setStep] = useState(0);
-  const [submitting, setSubmitting] = useState(false);
-  const [files, setFiles] = useState<ChildEnrollmentFileBundle>(() => emptyChildEnrollmentFiles());
+  const queryClient = useQueryClient();
+  const contentRef = useRef<HTMLDivElement>(null);
+  // The child's id is chosen now, so its files go to its own folder and a retry reuses them.
+  const [childId] = useState(newId);
+  const [step, setStep] = useState(FAMILY_STEP);
+  const [family, setFamily] = useState<EnrollmentFamily | null>(null);
+  const [parentForm, setParentForm] = useState(() => parentFormFromApplication({}, {}, null));
+  const [childForm, setChildForm] = useState(() => childFormFromApplication({}));
+  const [files, setFiles] = useState<EnrollmentFiles>({});
+  const [classId, setClassId] = useState('');
+  // Steps the admin tried to leave: their problems show under the fields.
+  const [shownSteps, setShownSteps] = useState<ReadonlySet<number>>(() => new Set());
+  const [saving, setSaving] = useState(false);
 
-  const form = useForm<ChildEnrollmentFormValues>({
-    resolver: zodResolver(childEnrollmentFullSchema),
-    defaultValues: getDefaultChildEnrollmentValues(),
-    mode: 'onChange',
-  });
+  const labels = useMemo(() => [
+    t('childEnrollment.steps.family'),
+    t('applications.steps.parentInfo'),
+    t('signup.steps.family'),
+    t('applications.steps.childInfo'),
+    t('signup.steps.enrollment'),
+    t('signup.steps.health'),
+    t('signup.steps.emergency'),
+    t('signup.steps.dailyCare'),
+    t('signup.steps.pickups'),
+    t('signup.steps.medicationConsents'),
+    t('applications.steps.documents'),
+    t('applications.steps.review'),
+    t('childEnrollment.steps.class'),
+  ], [t]);
+  // The application's own step names (step n is applicationLabels[n - 1]), for its steps and review.
+  const applicationLabels = labels.slice(1);
 
-  const extraLen = form.watch('extraPickups')?.length ?? 0;
-  useEffect(() => {
-    setFiles((prev) => {
-      if (prev.pickupPhotos.length === extraLen) return prev;
-      const nextPhotos = [...prev.pickupPhotos];
-      while (nextPhotos.length < extraLen) nextPhotos.push(null);
-      while (nextPhotos.length > extraLen) nextPhotos.pop();
-      return { ...prev, pickupPhotos: nextPhotos };
-    });
-  }, [extraLen]);
+  const problems = enrollmentStepProblems(step, family, parentForm, childForm, files);
+  const firstOpen = firstIncompleteStep(family, parentForm, childForm, files);
+  const lastReachable = firstOpen ?? STEP_COUNT;
+  const childName = [childForm.first_name, childForm.middle_name, childForm.last_name].map((p) => p.trim()).filter(Boolean).join(' ');
 
-  const { saveDraft, clearDraft } = useWizardDraft(form, CHILD_ENROLLMENT_STORAGE_KEY, true);
-
-  useEffect(() => {
-    if (nurseryLang) {
-      form.setValue('nurseryLanguagePref', nurseryLang);
-    }
-  }, [nurseryLang, form]);
-
-  useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem('xo_ai_prefill');
-      if (!raw) return;
-      const data = JSON.parse(raw) as Record<string, unknown>;
-      if (data.type !== 'enrollment') return;
-      sessionStorage.removeItem('xo_ai_prefill');
-      if (typeof data.full_name_en === 'string' && data.full_name_en) {
-        form.setValue('fullNameEn', data.full_name_en);
-      }
-      if (typeof data.full_name_ar === 'string' && data.full_name_ar) {
-        form.setValue('fullNameAr', data.full_name_ar);
-      }
-      if (typeof data.dob === 'string' && data.dob) {
-        form.setValue('dob', data.dob);
-      }
-    } catch {
-      /* ignore */
-    }
-  }, [form]);
-
-  const next = () => {
-    saveDraft();
-    const values = form.getValues();
-    if (!validateChildStep(step, values, files)) {
-      toast.error(t('childEnrollment.validation.stepError'));
-      return;
-    }
-    if (step < TOTAL - 1) setStep((s) => s + 1);
+  const validation: FieldValidation = {
+    errorFor: (name) => {
+      const key = problems[name];
+      return key && shownSteps.has(step) ? t(key) : undefined;
+    },
+    onFieldFocus: () => undefined,
+    onFieldBlur: () => undefined,
   };
 
-  const back = () => {
-    saveDraft();
-    setStep((s) => Math.max(0, s - 1));
+  const openStep = (next: number) => {
+    setStep(Math.min(Math.max(next, FAMILY_STEP), STEP_COUNT));
+    contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  const onSubmit = form.handleSubmit(async (values) => {
-    if (!nurseryId) {
-      toast.error(t('admin.children.missingNursery'));
+  const goNext = () => {
+    if (Object.keys(problems).length) {
+      setShownSteps((prev) => new Set(prev).add(step));
+      toast.error(t('childEnrollment.fixStep'));
+      window.setTimeout(() => contentRef.current?.querySelector<HTMLElement>('[data-field-invalid], [aria-invalid="true"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
       return;
     }
-    if (!files.birthCertificate) {
-      toast.error(t('childEnrollment.validation.birthCertRequired'));
+    openStep(step + 1);
+  };
+
+  const pickFamily = (next: EnrollmentFamily | null) => {
+    setFamily(next);
+    if (next) {
+      const forms = formsForFamily(next);
+      setParentForm(forms.parentForm);
+      setChildForm(forms.childForm);
+    }
+  };
+
+  const save = async () => {
+    if (!family) return;
+    if (firstOpen !== null) {
+      setShownSteps((prev) => new Set(prev).add(firstOpen));
+      openStep(firstOpen);
+      toast.error(t('childEnrollment.fixStep'));
       return;
     }
-    if (!files.vaccinationCard) {
-      toast.error(t('childEnrollment.validation.vaccinationCardRequired'));
-      return;
-    }
-    if (values.custodyStatus === 'court_order' && !files.courtOrder) {
-      toast.error(t('childEnrollment.validation.custodyDocRequired'));
-      return;
-    }
-    setSubmitting(true);
+    setSaving(true);
     try {
-      const { childId } = await submitChildEnrollment(values, nurseryId, files);
-      clearDraft();
-      setFiles(emptyChildEnrollmentFiles());
-      toast.success(t('childEnrollment.success', { id: childId }));
-      navigate('/admin/children');
-    } catch (err: unknown) {
-      const msg = String(err);
-      if (msg.includes('birthCertificateFileRequired')) {
-        toast.error(t('childEnrollment.validation.birthCertFile'));
-      } else if (msg.includes('courtOrderFileRequired')) {
-        toast.error(t('childEnrollment.validation.custodyDocRequired'));
-      } else if (msg.includes('vaccinationCardRequired')) {
-        toast.error(t('childEnrollment.validation.vaccinationCardRequired'));
-      } else {
-        toast.error(t('childEnrollment.submitError'), { description: msg });
-      }
+      const { documents, avatarUrl } = await uploadEnrollmentFiles(nurseryId, childId, files);
+      const payload = enrollmentPayload(family, parentForm, childForm);
+      const id = await enrollChild({
+        nurseryId,
+        parentId: family.id,
+        childId,
+        parentInfo: payload.parentInfo,
+        childInfo: { ...payload.childInfo, avatar_url: avatarUrl },
+        documents,
+        classId: classId || null,
+      });
+      toast.success(t('childEnrollment.saved', { name: childName }), { description: t('childEnrollment.savedHint') });
+      void queryClient.invalidateQueries({ predicate: (q) => typeof q.queryKey[0] === 'string' && /child|class|dashboard|attendance/.test(q.queryKey[0]) });
+      navigate(`/admin/children/${id}`);
+    } catch (error) {
+      toast.error(t(enrollmentErrorKey(error)));
     } finally {
-      setSubmitting(false);
+      setSaving(false);
     }
-  });
+  };
 
-  if (!nurseryId) {
-    return <p className="text-sm text-error">{t('admin.children.missingNursery')}</p>;
-  }
+  const nationalities = nationalityOptions(isAr);
+  const latestDocs = Object.fromEntries(Object.entries(files).filter(([, f]) => f).map(([type, f]) => [type, { file_url: f!.name }]));
 
   return (
-    <FormProvider {...form}>
-      <form onSubmit={onSubmit} className="space-y-6">
-        <div className="flex gap-1">
-          {Array.from({ length: TOTAL }, (_, i) => (
-            <div
-              key={String(i)}
-              className={`h-2 flex-1 rounded-full ${i <= step ? 'bg-primary' : 'bg-surface-container'}`}
+    <FieldValidationContext.Provider value={validation}>
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[260px_minmax(0,1fr)]">
+        <ApplicationSteps
+          step={step}
+          lastReachableStep={Math.max(lastReachable, step)}
+          labels={labels}
+          icons={ENROLLMENT_STEP_ICONS}
+          onStepClick={(n) => (n <= Math.max(lastReachable, step) ? openStep(n) : undefined)}
+          groups={[
+            { label: t('childEnrollment.stepper.family'), from: FAMILY_STEP, to: FAMILY_STEP },
+            { label: t('applications.stepper.detailsGroup'), from: FAMILY_STEP + 1, to: DOCUMENTS_STEP },
+            { label: t('childEnrollment.stepper.review'), from: REVIEW_STEP, to: CLASS_STEP },
+          ]}
+        />
+
+        <div ref={contentRef} className="min-w-0 scroll-mt-24 space-y-4" data-testid="enrollment-step" data-step={step}>
+          {step === FAMILY_STEP ? (
+            <div className={stepCardClassName()}>
+              <PanelHeader icon="family_restroom" title={labels[0]} body={t('childEnrollment.family.hint')} />
+              <FamilyPicker nurseryId={nurseryId} value={family} onChange={pickFamily} invalid={Boolean(validation.errorFor('family'))} />
+              {validation.errorFor('family') ? <p className="text-xs font-medium text-error" data-field-invalid="true">{validation.errorFor('family')}</p> : null}
+            </div>
+          ) : null}
+
+          {step > FAMILY_STEP && step < DOCUMENTS_STEP ? (
+            <ApplicationInfoStep
+              step={step - 1}
+              parentForm={parentForm}
+              childForm={childForm}
+              setParentField={(field, value) => setParentForm((prev) => ({ ...prev, [field]: value }))}
+              setChildField={(field, value) => setChildForm((prev) => ({ ...prev, [field]: value }))}
+              labels={applicationLabels}
             />
-          ))}
-        </div>
-        <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 md:p-6">
-          <h2 className="mb-4 text-base font-semibold text-on-surface">{t(`childEnrollment.steps.${step}`)}</h2>
-          <ChildEnrollmentStepPanels step={step} files={files} onFilesChange={setFiles} />
-        </div>
-        <div className="flex flex-wrap justify-between gap-2">
-          <Button type="button" variant="outline" onClick={back} disabled={step === 0 || submitting}>
-            {t('common.previous')}
-          </Button>
-          {step < TOTAL - 1 ? (
-            <Button type="button" onClick={() => next()} disabled={submitting}>
-              {t('common.next')}
+          ) : null}
+
+          {step === DOCUMENTS_STEP ? (
+            <>
+              <EnrollmentDocumentsStep title={labels[DOCUMENTS_STEP - 1]} files={files} onChange={setFiles} />
+              {validation.errorFor(Object.keys(problems)[0] ?? '') ? (
+                <p className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning" data-field-invalid="true">
+                  {t('childEnrollment.documents.missing', { count: Object.keys(problems).length })}
+                </p>
+              ) : null}
+            </>
+          ) : null}
+
+          {step === REVIEW_STEP ? (
+            <div className={stepCardClassName()}>
+              <PanelHeader icon="task_alt" title={labels[REVIEW_STEP - 1]} body={t('childEnrollment.reviewHint')} />
+              <ApplicationReviewSummary
+                sections={applicationReviewSections({
+                  parentForm,
+                  childForm,
+                  latestDocs,
+                  stepLabels: applicationLabels,
+                  nationalities,
+                  isArabic: isAr,
+                  t,
+                })}
+                editable
+                onOpenStep={(applicationStep) => openStep(enrollmentStepOf(applicationStep))}
+              />
+            </div>
+          ) : null}
+
+          {step === CLASS_STEP ? (
+            <EnrollmentClassStep
+              title={labels[CLASS_STEP - 1]}
+              nurseryId={nurseryId}
+              childName={childName}
+              familyLabel={family ? familyName(family, isAr) : ''}
+              classId={classId}
+              onClassChange={setClassId}
+            />
+          ) : null}
+
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-outline-variant bg-surface px-4 py-3 shadow-sm">
+            <Button type="button" variant="outline" disabled={step === FAMILY_STEP || saving} onClick={() => openStep(step - 1)}>
+              <MaterialSymbol name="arrow_back" size="text-base" className="me-1 rtl:rotate-180" />
+              {t('common.previous')}
             </Button>
-          ) : (
-            <Button type="submit" disabled={submitting}>
-              {submitting ? t('common.saving') : t('childEnrollment.submit')}
-            </Button>
-          )}
+            <span className="text-xs text-on-surface-variant">{t('childEnrollment.stepOf', { step, total: STEP_COUNT })}</span>
+            {step < CLASS_STEP ? (
+              <Button type="button" onClick={goNext} disabled={saving} data-testid="enrollment-next">
+                {t('common.next')}
+                <MaterialSymbol name="arrow_forward" size="text-base" className="ms-1 rtl:rotate-180" />
+              </Button>
+            ) : (
+              <Button type="button" onClick={() => void save()} disabled={saving} data-testid="enrollment-save">
+                <MaterialSymbol name={saving ? 'progress_activity' : 'how_to_reg'} size="text-base" className={saving ? 'me-1 animate-spin' : 'me-1'} />
+                {saving ? t('common.saving') : t('childEnrollment.save')}
+              </Button>
+            )}
+          </div>
         </div>
-      </form>
-    </FormProvider>
+      </div>
+    </FieldValidationContext.Provider>
   );
 }

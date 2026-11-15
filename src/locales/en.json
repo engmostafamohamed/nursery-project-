@@ -1159,181 +1159,71 @@
     }
   },
   "childEnrollment": {
-    "pageTitle": "Child enrollment",
-    "pageDescription": "Register a new child with medical, family, and consent records.",
-    "noCreatePermission": "You don't have permission to enroll new children.",
-    "submit": "Submit enrollment",
-    "success": "Child enrolled. Record ID: {{id}}",
-    "submitError": "Could not complete enrollment.",
-    "mobileWithCountry": "Mobile (with country code)",
-    "mobilePlaceholder": "+201012345678 or 01012345678",
-    "validation": {
-      "stepError": "Please complete the required fields in this step.",
-      "birthCertFile": "Birth certificate file is required.",
-      "birthCertRequired": "Birth certificate is required to complete enrollment.",
-      "courtFile": "Court order document is required for this custody type.",
-      "custodyDocRequired": "Court order document required for this custody status.",
-      "vaccinationCardRequired": "Vaccination card is required.",
-      "parentMobile": "Enter at least one parent mobile in a valid format.",
-      "parentRequired": "At least one parent contact is required.",
-      "ageRangeChild": "Child must be between 3 months and 6 years old."
-    },
+    "pageTitle": "Add a child",
+    "pageDescription": "Add a child to a family that has an account, with the same steps as the family's application.",
+    "noCreatePermission": "You don't have permission to add children.",
+    "listJoin": ", ",
     "steps": {
-      "0": "Child basics",
-      "1": "Medical & safety",
-      "2": "Family information",
-      "3": "Authorized pickup",
-      "4": "Developmental & social",
-      "5": "Legal & custody",
-      "6": "Consents & vaccinations"
+      "family": "The family",
+      "class": "Class and save"
     },
-    "step1": {
-      "nameAr": "Full name (Arabic)",
-      "nameEn": "Full name (English)",
-      "dob": "Date of birth",
-      "gender": "Gender",
-      "nationality": "Nationality",
-      "birthCertNumber": "Birth certificate number",
-      "photo": "Child photo",
-      "birthCertificateFile": "Birth certificate (upload)",
-      "birthCertHint": "Upload a clear copy before continuing to the next step.",
-      "ageDisplay": "Age: {{years}} years, {{months}} months"
+    "stepper": {
+      "family": "Family",
+      "review": "Review and save"
     },
-    "step2": {
-      "bloodType": "Blood type",
-      "select": "Select",
-      "hasAllergies": "Child has allergies",
-      "addAllergy": "Add allergy",
-      "allergen": "Allergen",
-      "reaction": "Reaction type",
-      "severity": "Severity",
-      "protocol": "Treatment protocol",
-      "hasConditions": "Has chronic conditions",
-      "addCondition": "Add condition",
-      "conditionName": "Condition",
-      "treatment": "Treatment protocol",
-      "triggers": "Trigger factors",
-      "emergency": "Emergency response",
-      "hasMedications": "Takes medications",
-      "addMedication": "Add medication",
-      "medName": "Medication name",
-      "dosage": "Dosage",
-      "times": "Administration times",
-      "dietary": "Dietary restrictions",
-      "specialNeeds": "Special needs",
-      "pedName": "Pediatrician name",
-      "pedPhone": "Pediatrician phone",
-      "pedClinic": "Clinic / hospital",
-      "allergenOther": "Specify allergen",
-      "notes": "Notes (optional)"
+    "family": {
+      "hint": "Pick the family first: their details are copied into the next steps, and you can change them there.",
+      "required": "Pick the child's family.",
+      "searchPlaceholder": "Search by the father's or mother's name, the username or a mobile",
+      "searchHint": "Type two letters or more. A mobile can be written with or without +20.",
+      "searching": "Searching…",
+      "noResults": "No family matches. The family signs up first, or check the spelling.",
+      "searchError": "Could not search the families. Try again.",
+      "childCount_one": "{{count}} child",
+      "childCount_other": "{{count}} children",
+      "children_one": "Has one child here: {{names}}",
+      "children_other": "Has {{count}} children here: {{names}}",
+      "noChildren": "No children here yet.",
+      "change": "Change family"
     },
-    "allergens": {
-      "peanuts": "Peanuts",
-      "tree_nuts": "Tree nuts",
-      "milk": "Milk / dairy",
-      "eggs": "Eggs",
-      "soy": "Soy",
-      "wheat": "Wheat / gluten",
-      "shellfish": "Shellfish",
-      "fish": "Fish",
-      "other": "Other"
+    "documents": {
+      "hint": "The application's documents and the child's photo. They are uploaded when you save.",
+      "required": "Required",
+      "tooLarge": "The file is larger than 10 MB.",
+      "photoOnly": "The child's photo must be an image.",
+      "missing_one": "{{count}} required document is missing.",
+      "missing_other": "{{count}} required documents are missing."
     },
-    "severity": {
-      "mild": "Mild",
-      "moderate": "Moderate",
-      "severe": "Severe",
-      "life_threatening": "Life-threatening"
+    "class": {
+      "hint": "Choose the child's class, or leave it for later.",
+      "child": "Child",
+      "family": "Family",
+      "label": "Class",
+      "none": "Choose later",
+      "later": "You can put the child in a class later from the children's page.",
+      "seats": "{{count}} of {{capacity}}",
+      "after": {
+        "linked": "The child is added to the family's account (and the other parent's).",
+        "told": "The family gets a notice in the app.",
+        "teachers": "The class's teachers are told when a class is chosen."
+      }
     },
-    "step3": {
-      "father": "Father",
-      "mother": "Mother",
-      "address": "Home address",
-      "emergency": "Emergency contact (third person)",
-      "fullName": "Full name",
-      "nationalId": "National ID",
-      "mobile": "Mobile (with country code)",
-      "email": "Email",
-      "occupation": "Occupation",
-      "workplace": "Workplace",
-      "street": "Street address",
-      "district": "District",
-      "city": "City",
-      "governorate": "Governorate",
-      "emergencyName": "Name",
-      "emergencyRel": "Relationship",
-      "emergencyMobile": "Mobile"
-    },
-    "step4": {
-      "defaultParents": "Father and mother are automatically authorized for pickup when their mobile numbers are provided.",
-      "addPerson": "Add person",
-      "fullName": "Full name",
-      "relationship": "Relationship to child",
-      "nationalId": "National ID",
-      "mobile": "Mobile (with country code)",
-      "canPickup": "Can pick up",
-      "canDropoff": "Can drop off",
-      "canMedical": "Can authorize medical",
-      "photo": "Verification photo",
-      "remove": "Remove"
-    },
-    "step5": {
-      "prevNursery": "Previous nursery (if any)",
-      "homeLang": "Language spoken at home",
-      "toilet": "Toilet training",
-      "toiletOpts": {
-        "trained": "Trained",
-        "in_progress": "In progress",
-        "not_started": "Not started",
-        "other": "Other"
-      },
-      "nap": "Nap duration (minutes)",
-      "temperament": "Temperament / notes",
-      "comfort": "Comfort items",
-      "anxiety": "Separation anxiety",
-      "religion": "Religious denomination",
-      "holidays": "Religious holidays observed",
-      "cultural": "Cultural practices to respect"
-    },
-    "step6": {
-      "custody": "Custody status",
-      "custodyBoth": "Both parents",
-      "custodyFather": "Father",
-      "custodyMother": "Mother",
-      "custodyGuardian": "Guardian",
-      "custodyCourt": "Court order",
-      "courtDoc": "Court order document",
-      "marriageCert": "Marriage certificate",
-      "birthCertUpload": "Birth certificate (scan)"
-    },
-    "step7": {
-      "consentsTitle": "Parental consents",
-      "consent": {
-        "photoClassroom": "Photos — classroom display",
-        "photoWebsite": "Photos — website",
-        "photoSocial": "Photos — social media",
-        "photoPromo": "Photos — promotional materials",
-        "fieldTrips": "Field trips",
-        "emergencyMedical": "Emergency medical treatment",
-        "ambulance": "Ambulance transport",
-        "hospital": "Hospital admission",
-        "surgery": "Surgical procedures",
-        "dataPrivacy": "Data privacy (PDPL)",
-        "behaviorPolicy": "Behavior policy",
-        "pickupPolicy": "Pickup policy",
-        "liability": "Liability waiver"
-      },
-      "vaccines": "Vaccination dates",
-      "vaccinationCard": "Vaccination card upload",
-      "signatureName": "Parent / guardian full name (signature)",
-      "signatureDate": "Date"
-    },
-    "parentPicker": {
-      "searchPlaceholder": "Search an existing parent by name, email or phone",
-      "hint": "Pick an existing parent of your nursery to attach this child to their account, or leave blank to create a new parent.",
-      "noResults": "No matching parent in this nursery.",
-      "linkedTo": "Attaching this child to the existing account: {{email}}",
-      "unlink": "Change",
-      "noResultsInNursery": "No parent matches in {{nursery}}. Parents registered at another nursery cannot be linked here."
+    "fixStep": "Some fields need your attention.",
+    "reviewHint": "Check every answer before saving. Edit opens its step.",
+    "stepOf": "Step {{step}} of {{total}}",
+    "save": "Add the child",
+    "saved": "{{name}} is added",
+    "savedHint": "The family is told.",
+    "errors": {
+      "forbidden": "You can't add children.",
+      "family_not_found": "This family's account is not active.",
+      "child_exists": "This child was already saved. Open the children's page.",
+      "class_not_found": "This class was removed. Choose another.",
+      "name_required": "The child's first and last names are needed.",
+      "dob_invalid": "Check the date of birth.",
+      "document_invalid": "A document could not be attached. Try again.",
+      "network": "No connection. Try again.",
+      "failed": "Something went wrong. Try again."
     }
   },
   "nav": {
@@ -6804,8 +6694,19 @@
       "parent_id": "Parent ID",
       "proof_of_address": "Proof of Address",
       "medical_report": "Medical Report",
-      "other": "Other"
-    }
+      "other": "Other",
+      "child_photo": "Child's photo"
+    },
+    "newChildInfoHint": "Parent and family data is already copied. Add the new child details here.",
+    "replaceDocumentHint": "Choose a new file to replace this document.",
+    "documentLockedHint": "This document is locked after submission.",
+    "documentsHelp": "Upload a PDF or image file.",
+    "documentUploadedBadge": "Uploaded",
+    "requiredBadge": "Required",
+    "optionalBadge": "Optional",
+    "uploadedReplaceDocument": "Uploaded - Replace file",
+    "uploadDocument": "Upload file",
+    "removeDocument": "Remove"
   },
   "import": {
     "title": "Bulk CSV Import",
@@ -9146,6 +9047,10 @@
     "nursery_week_changed": {
       "title": "The nursery's days changed",
       "body": "The nursery now opens on {{days}}."
+    },
+    "child_enrolled": {
+      "title": "{{child}} is enrolled",
+      "body": "The nursery added {{child}} to your family. You can follow their day in the app."
     }
   },
   "qr": {

@@ -1283,181 +1283,83 @@
     }
   },
   "childEnrollment": {
-    "pageTitle": "تسجيل طفل",
-    "pageDescription": "سجّل طفلًا جديدًا مع السجلات الطبية والعائلية والموافقات.",
-    "noCreatePermission": "ليس لديك صلاحية لتسجيل أطفال جدد.",
-    "submit": "إرسال التسجيل",
-    "success": "تم تسجيل الطفل. رقم السجل: {{id}}",
-    "submitError": "تعذر إكمال التسجيل.",
-    "mobileWithCountry": "الجوال (مع رمز الدولة)",
-    "mobilePlaceholder": "+201012345678 أو 01012345678",
-    "validation": {
-      "stepError": "يرجى استكمال الحقول المطلوبة في هذه الخطوة.",
-      "birthCertFile": "مطلوب ملف شهادة الميلاد.",
-      "birthCertRequired": "شهادة الميلاد مطلوبة لإكمال التسجيل.",
-      "courtFile": "مطلوب مستند أمر المحكمة لهذا الوضع.",
-      "custodyDocRequired": "مستند أمر المحكمة مطلوب لهذه الحالة.",
-      "vaccinationCardRequired": "بطاقة التطعيم مطلوبة.",
-      "parentMobile": "أدخل رقم جوال لأحد الوالدين بصيغة صحيحة.",
-      "parentRequired": "مطلوب رقم جوال لأحد الوالدين على الأقل.",
-      "ageRangeChild": "يجب أن يكون عمر الطفل بين 3 أشهر و6 سنوات."
-    },
+    "pageTitle": "إضافة طفل",
+    "pageDescription": "أضف طفلًا لأسرة لها حساب، بنفس خطوات طلب الالتحاق.",
+    "noCreatePermission": "ليس لديك صلاحية إضافة الأطفال.",
+    "listJoin": "، ",
     "steps": {
-      "0": "بيانات الطفل",
-      "1": "طبي وسلامة",
-      "2": "العائلة",
-      "3": "المستلمون المعتمدون",
-      "4": "التطور والاجتماع",
-      "5": "قانوني وحضانة",
-      "6": "الموافقات والتطعيمات"
+      "family": "الأسرة",
+      "class": "الفصل والحفظ"
     },
-    "step1": {
-      "nameAr": "الاسم الكامل (عربي)",
-      "nameEn": "الاسم الكامل (إنجليزي)",
-      "dob": "تاريخ الميلاد",
-      "gender": "النوع",
-      "nationality": "الجنسية",
-      "birthCertNumber": "رقم شهادة الميلاد",
-      "photo": "صورة الطفل",
-      "birthCertificateFile": "شهادة الميلاد (رفع)",
-      "birthCertHint": "ارفع نسخة واضحة قبل الانتقال للخطوة التالية.",
-      "ageDisplay": "العمر: {{years}} سنة و {{months}} شهرًا"
+    "stepper": {
+      "family": "الأسرة",
+      "review": "المراجعة والحفظ"
     },
-    "step2": {
-      "bloodType": "فصيلة الدم",
-      "select": "اختر",
-      "hasAllergies": "لدى الطفل حساسية",
-      "addAllergy": "إضافة حساسية",
-      "allergen": "المادة المسببة",
-      "reaction": "نوع التفاعل",
-      "severity": "الشدة",
-      "protocol": "بروتوكول العلاج",
-      "hasConditions": "لديه أمراض مزمنة",
-      "addCondition": "إضافة حالة",
-      "conditionName": "الحالة",
-      "treatment": "بروتوكول العلاج",
-      "triggers": "عوامل تفجير",
-      "emergency": "الاستجابة الطارئة",
-      "hasMedications": "يتناول أدوية",
-      "addMedication": "إضافة دواء",
-      "medName": "اسم الدواء",
-      "dosage": "الجرعة",
-      "times": "أوقات الإعطاء",
-      "dietary": "قيود غذائية",
-      "specialNeeds": "احتياجات خاصة",
-      "pedName": "اسم طبيب الأطفال",
-      "pedPhone": "هاتف طبيب الأطفال",
-      "pedClinic": "العيادة / المستشفى",
-      "allergenOther": "حدد المادة",
-      "notes": "ملاحظات (اختياري)"
+    "family": {
+      "hint": "اختر الأسرة أولًا: تُنسخ بياناتها في الخطوات التالية، ويمكنك تعديلها هناك.",
+      "required": "اختر أسرة الطفل.",
+      "searchPlaceholder": "ابحث باسم الأب أو الأم أو اسم المستخدم أو رقم الموبايل",
+      "searchHint": "اكتب حرفين أو أكثر. يمكن كتابة الموبايل بـ +20 أو من غيرها.",
+      "searching": "جارٍ البحث…",
+      "noResults": "لا توجد أسرة مطابقة. تسجّل الأسرة أولًا، أو راجع الكتابة.",
+      "searchError": "تعذّر البحث في الأسر. حاول مرة أخرى.",
+      "childCount_zero": "لا أطفال",
+      "childCount_one": "طفل واحد",
+      "childCount_two": "طفلان",
+      "childCount_few": "{{count}} أطفال",
+      "childCount_many": "{{count}} طفلًا",
+      "childCount_other": "{{count}} طفل",
+      "children_zero": "لا أطفال هنا",
+      "children_one": "لديها طفل واحد هنا: {{names}}",
+      "children_two": "لديها طفلان هنا: {{names}}",
+      "children_few": "لديها {{count}} أطفال هنا: {{names}}",
+      "children_many": "لديها {{count}} طفلًا هنا: {{names}}",
+      "children_other": "لديها {{count}} طفل هنا: {{names}}",
+      "noChildren": "لا أطفال لها هنا بعد.",
+      "change": "تغيير الأسرة"
     },
-    "allergens": {
-      "peanuts": "فول سوداني",
-      "tree_nuts": "مكسرات شجرية",
-      "milk": "حليب / ألبان",
-      "eggs": "بيض",
-      "soy": "صويا",
-      "wheat": "قمح / غلوتين",
-      "shellfish": "محار",
-      "fish": "سمك",
-      "other": "أخرى"
+    "documents": {
+      "hint": "مستندات طلب الالتحاق وصورة الطفل. تُرفع عند الحفظ.",
+      "required": "مطلوب",
+      "tooLarge": "الملف أكبر من 10 ميجابايت.",
+      "photoOnly": "صورة الطفل يجب أن تكون صورة.",
+      "missing_zero": "لا مستندات ناقصة",
+      "missing_one": "مستند مطلوب واحد ناقص.",
+      "missing_two": "مستندان مطلوبان ناقصان.",
+      "missing_few": "{{count}} مستندات مطلوبة ناقصة.",
+      "missing_many": "{{count}} مستندًا مطلوبًا ناقصًا.",
+      "missing_other": "{{count}} مستند مطلوب ناقص."
     },
-    "severity": {
-      "mild": "خفيف",
-      "moderate": "متوسط",
-      "severe": "شديد",
-      "life_threatening": "مهدد للحياة"
+    "class": {
+      "hint": "اختر فصل الطفل، أو اتركه لوقت لاحق.",
+      "child": "الطفل",
+      "family": "الأسرة",
+      "label": "الفصل",
+      "none": "الاختيار لاحقًا",
+      "later": "يمكنك وضع الطفل في فصل لاحقًا من صفحة الأطفال.",
+      "seats": "{{count}} من {{capacity}}",
+      "after": {
+        "linked": "يُضاف الطفل لحساب الأسرة (وحساب الوالد الآخر).",
+        "told": "تصل الأسرة رسالة في التطبيق.",
+        "teachers": "يُبلَّغ معلمو الفصل عند اختيار فصل."
+      }
     },
-    "step3": {
-      "father": "الأب",
-      "mother": "الأم",
-      "address": "عنوان المنزل",
-      "emergency": "جهة طوارئ (شخص ثالث)",
-      "fullName": "الاسم الكامل",
-      "nationalId": "الرقم القومي",
-      "mobile": "الجوال (مع رمز الدولة)",
-      "email": "البريد",
-      "occupation": "المهنة",
-      "workplace": "جهة العمل",
-      "street": "الشارع",
-      "district": "الحي",
-      "city": "المدينة",
-      "governorate": "المحافظة",
-      "emergencyName": "الاسم",
-      "emergencyRel": "صلة القرابة",
-      "emergencyMobile": "الجوال"
-    },
-    "step4": {
-      "defaultParents": "يُضاف الأب والأم تلقائيًا للاستلام عند إدخال أرقام جوالهم.",
-      "addPerson": "إضافة شخص",
-      "fullName": "الاسم الكامل",
-      "relationship": "صلة القرابة بالطفل",
-      "nationalId": "الرقم القومي",
-      "mobile": "الجوال (مع رمز الدولة)",
-      "canPickup": "يستطيع الاستلام",
-      "canDropoff": "يستطيع التوصيل",
-      "canMedical": "يستطيع تفويض طبي",
-      "photo": "صورة للتحقق",
-      "remove": "إزالة"
-    },
-    "step5": {
-      "prevNursery": "حضانة سابقة (إن وجدت)",
-      "homeLang": "اللغة في المنزل",
-      "toilet": "تدريب الحمام",
-      "toiletOpts": {
-        "trained": "مدرّب",
-        "in_progress": "قيد التدريب",
-        "not_started": "لم يبدأ",
-        "other": "أخرى"
-      },
-      "nap": "مدة القيلولة (دقائق)",
-      "temperament": "الطباع / ملاحظات",
-      "comfort": "أشياء مريحة للطفل",
-      "anxiety": "قلق الانفصال",
-      "religion": "المذهب / الطائفة",
-      "holidays": "الأعياد الدينية",
-      "cultural": "ممارسات ثقافية يجب احترامها"
-    },
-    "step6": {
-      "custody": "وضع الحضانة",
-      "custodyBoth": "الأبوان معًا",
-      "custodyFather": "الأب",
-      "custodyMother": "الأم",
-      "custodyGuardian": "وصي",
-      "custodyCourt": "أمر محكمة",
-      "courtDoc": "مستند أمر المحكمة",
-      "marriageCert": "شهادة الزواج",
-      "birthCertUpload": "شهادة الميلاد (مسح ضوئي)"
-    },
-    "step7": {
-      "consentsTitle": "موافقات أولياء الأمور",
-      "consent": {
-        "photoClassroom": "صور — عرض في الفصل",
-        "photoWebsite": "صور — الموقع",
-        "photoSocial": "صور — وسائل التواصل",
-        "photoPromo": "صور — مواد ترويجية",
-        "fieldTrips": "رحلات ميدانية",
-        "emergencyMedical": "علاج طارئ",
-        "ambulance": "نقل بالإسعاف",
-        "hospital": "دخول مستشفى",
-        "surgery": "إجراءات جراحية",
-        "dataPrivacy": "خصوصية البيانات (قانون حماية البيانات)",
-        "behaviorPolicy": "سياسة السلوك",
-        "pickupPolicy": "سياسة الاستلام",
-        "liability": "إخلاء مسؤولية"
-      },
-      "vaccines": "تواريخ التطعيم",
-      "vaccinationCard": "رفع بطاقة التطعيم",
-      "signatureName": "الاسم الكامل لولي الأمر / الوصي (توقيع)",
-      "signatureDate": "التاريخ"
-    },
-    "parentPicker": {
-      "searchPlaceholder": "ابحث عن ولي أمر موجود بالاسم أو البريد أو الموبايل",
-      "hint": "اختر ولي أمر موجود في حضانتك لربط الطفل بحسابه، أو اتركه فارغًا لإنشاء ولي أمر جديد.",
-      "noResults": "لا يوجد ولي أمر مطابق في هذه الحضانة.",
-      "linkedTo": "سيتم ربط الطفل بالحساب الموجود: {{email}}",
-      "unlink": "تغيير",
-      "noResultsInNursery": "لا يوجد ولي أمر مطابق في حضانة {{nursery}}. أولياء الأمور المسجّلين في حضانة أخرى لا يمكن ربطهم هنا."
+    "fixStep": "بعض الحقول تحتاج مراجعتك.",
+    "reviewHint": "راجع كل الإجابات قبل الحفظ. زر التعديل يفتح خطوتها.",
+    "stepOf": "الخطوة {{step}} من {{total}}",
+    "save": "إضافة الطفل",
+    "saved": "تمت إضافة {{name}}",
+    "savedHint": "وصلت الأسرة رسالة.",
+    "errors": {
+      "forbidden": "لا يمكنك إضافة الأطفال.",
+      "family_not_found": "حساب هذه الأسرة غير مفعّل.",
+      "child_exists": "تم حفظ هذا الطفل من قبل. افتح صفحة الأطفال.",
+      "class_not_found": "حُذف هذا الفصل. اختر فصلًا آخر.",
+      "name_required": "يلزم الاسم الأول واسم العائلة للطفل.",
+      "dob_invalid": "راجع تاريخ الميلاد.",
+      "document_invalid": "تعذّر إرفاق أحد المستندات. حاول مرة أخرى.",
+      "network": "لا يوجد اتصال. حاول مرة أخرى.",
+      "failed": "حدث خطأ. حاول مرة أخرى."
     }
   },
   "nav": {
@@ -7171,8 +7073,19 @@
       "parent_id": "هوية ولي الأمر",
       "proof_of_address": "إثبات العنوان",
       "medical_report": "تقرير طبي",
-      "other": "أخرى"
-    }
+      "other": "أخرى",
+      "child_photo": "صورة الطفل"
+    },
+    "newChildInfoHint": "تم نسخ بيانات الوالدين والأسرة. أضف بيانات الطفل الجديد هنا.",
+    "replaceDocumentHint": "اختر ملفًا جديدًا ليحل محل هذا المستند.",
+    "documentLockedHint": "هذا المستند مقفل بعد الإرسال.",
+    "documentsHelp": "ارفع ملف PDF أو صورة.",
+    "documentUploadedBadge": "مرفوع",
+    "requiredBadge": "مطلوب",
+    "optionalBadge": "اختياري",
+    "uploadedReplaceDocument": "مرفوع - استبدال الملف",
+    "uploadDocument": "رفع ملف",
+    "removeDocument": "حذف"
   },
   "import": {
     "title": "استيراد CSV جماعي",
@@ -9681,6 +9594,10 @@
     "nursery_week_changed": {
       "title": "تغيّرت أيام عمل الحضانة",
       "body": "أيام عمل الحضانة الآن: {{days}}."
+    },
+    "child_enrolled": {
+      "title": "تم تسجيل {{child}}",
+      "body": "أضافت الحضانة {{child}} إلى أسرتك. يمكنك متابعة يومه في التطبيق."
     }
   },
   "qr": {
