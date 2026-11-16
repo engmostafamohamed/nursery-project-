@@ -2280,7 +2280,40 @@
         "empty": "No children in this group.",
         "lateTotals": "Total: {{hours}} extra hr · {{amount}} EGP"
       },
-      "classCapacity": "Class capacity"
+      "classCapacity": "Class capacity",
+      "table": {
+        "child": "Child",
+        "status": "Status",
+        "in": "Checked in",
+        "out": "Checked out",
+        "extra": "Extra time",
+        "actions": "Actions"
+      },
+      "actions": {
+        "checkIn": "Check in",
+        "checkOut": "Check out",
+        "undo": "Undo the check-in",
+        "undoConfirm": "Undo this check-in? The day goes back to showing the child as not arrived.",
+        "checkedIn": "Checked in.",
+        "checkedOut": "Checked out.",
+        "checkedOutLate": "Checked out · {{hours}} extra hour(s), EGP {{fee}}.",
+        "undone": "The check-in was undone.",
+        "excuse": "Record an excuse",
+        "removeExcuse": "Withdraw the excuse",
+        "removeExcuseConfirm": "Withdraw this excuse? The day counts as a plain absence again.",
+        "excuseRemoved": "The excuse was withdrawn.",
+        "resolveReview": "Mark as reviewed",
+        "reviewResolved": "Marked as reviewed."
+      },
+      "excuse": {
+        "title": "Why is {{name}} away?",
+        "hint": "The day will count as an excused absence.",
+        "reason": "Reason",
+        "note": "Note (optional)",
+        "notePlaceholder": "Anything the family told you…",
+        "save": "Save the excuse",
+        "saved": "The excuse was recorded."
+      }
     },
     "attendanceAnalytics": {
       "title": "Attendance analytics",
@@ -5825,7 +5858,11 @@
       "emptyTitle": "No children found",
       "emptyDescription": "No active children are assigned for attendance yet.",
       "alertAllergy": "Allergy",
-      "alertMedication": "Medication"
+      "alertMedication": "Medication",
+      "pageHint": "Check the children in and out, and see who is still expected.",
+      "table": {
+        "alerts": "Health alerts"
+      }
     },
     "classesHub": {
       "title": "My classes",

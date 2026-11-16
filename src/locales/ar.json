@@ -2475,7 +2475,40 @@
         "empty": "لا يوجد أطفال في هذه الفئة.",
         "lateTotals": "الإجمالي: {{hours}} ساعة إضافية · {{amount}} جنيه"
       },
-      "classCapacity": "سعة الفصل"
+      "classCapacity": "سعة الفصل",
+      "table": {
+        "child": "الطفل",
+        "status": "الحالة",
+        "in": "الحضور",
+        "out": "الانصراف",
+        "extra": "الوقت الإضافي",
+        "actions": "إجراءات"
+      },
+      "actions": {
+        "checkIn": "تسجيل حضور",
+        "checkOut": "تسجيل انصراف",
+        "undo": "تراجع عن الحضور",
+        "undoConfirm": "التراجع عن تسجيل الحضور؟ سيعود اليوم ليظهر أن الطفل لم يحضر.",
+        "checkedIn": "تم تسجيل الحضور.",
+        "checkedOut": "تم تسجيل الانصراف.",
+        "checkedOutLate": "تم الانصراف · {{hours}} ساعة إضافية، {{fee}} جنيه.",
+        "undone": "تم التراجع عن تسجيل الحضور.",
+        "excuse": "تسجيل عذر",
+        "removeExcuse": "سحب العذر",
+        "removeExcuseConfirm": "سحب هذا العذر؟ سيُحتسب اليوم غيابًا عاديًا.",
+        "excuseRemoved": "تم سحب العذر.",
+        "resolveReview": "تمت المراجعة",
+        "reviewResolved": "تم وضع علامة المراجعة."
+      },
+      "excuse": {
+        "title": "سبب غياب {{name}}؟",
+        "hint": "سيُحتسب اليوم غيابًا بعذر.",
+        "reason": "السبب",
+        "note": "ملاحظة (اختياري)",
+        "notePlaceholder": "ما أبلغت به الأسرة…",
+        "save": "حفظ العذر",
+        "saved": "تم تسجيل العذر."
+      }
     },
     "attendanceAnalytics": {
       "title": "تحليلات الحضور",
@@ -6184,7 +6217,11 @@
       "emptyTitle": "لا يوجد أطفال",
       "emptyDescription": "لا يوجد أطفال نشطون مخصصون للحضور حالياً.",
       "alertAllergy": "حساسية",
-      "alertMedication": "دواء"
+      "alertMedication": "دواء",
+      "pageHint": "سجّل حضور الأطفال وانصرافهم، وتابع من لم يصل بعد.",
+      "table": {
+        "alerts": "تنبيهات صحية"
+      }
     },
     "classesHub": {
       "title": "فصولي",
