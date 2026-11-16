@@ -13,7 +13,9 @@ import { cn } from '@/lib/utils';
 import { usePagination } from '@/hooks/usePagination';
 import { useCanAction } from '@/hooks/usePermissions';
 import { useSettings } from '@/lib/useSettings';
-import type { SendAudience } from '@/components/surveys/FormBuilder';
+import { confirm } from '@/components/ui/confirm';
+import { statusAfterSave, tellsFamilies } from '@/features/surveys/surveyFlow';
+import type { SaveIntent, SendAudience } from '@/components/surveys/FormBuilder';
 import type { FormQuestion, SurveyRow, SurveyStatus, SurveyType } from '@/types/survey';
 import { formatQueryError } from '@/lib/utils';
 import { useSurveys } from '@/hooks/useSurveys';
@@ -51,13 +53,16 @@ export function AdminSurveysPage() {
       : surveys.surveys.filter((s) => s.status === statusFilter);
   const pager = usePagination(filtered, 10, `${filtered.length}`);
 
-  const handleCreate = async (data: {
+  type BuilderData = {
     title: string;
     type: SurveyType;
     questions: FormQuestion[];
     deadline: string | null;
     audience: SendAudience;
-  }) => {
+    intent: SaveIntent;
+  };
+
+  const handleCreate = async (data: BuilderData) => {
     if (!nurseryId) return;
     setSaving(true);
     try {
@@ -68,8 +73,9 @@ export function AdminSurveysPage() {
         questions: data.questions,
         deadline: data.deadline,
         targetClassIds: data.audience.mode === 'classes' ? data.audience.classIds : null,
+        status: statusAfterSave('new', data.intent) === 'active' ? 'active' : 'draft',
       });
-      toast.success(t('survey.sent'));
+      toast.success(data.intent === 'send' ? t('survey.sent') : t('survey.draftSaved'));
       setPanel({ kind: 'list' });
     } catch (err) {
       toast.error(t('survey.createFailed'), { description: formatQueryError(err) });
@@ -78,14 +84,13 @@ export function AdminSurveysPage() {
     }
   };
 
-  const handleEdit = async (
-    id: string,
-    data: { title: string; type: SurveyType; questions: FormQuestion[]; deadline: string | null; audience: SendAudience },
-  ) => {
+  /** Editing keeps the survey's status and stays quiet; only sending a draft tells the families. */
+  const handleEdit = async (current: SurveyRow, data: BuilderData) => {
     setSaving(true);
     try {
+      const sending = tellsFamilies(data.intent);
       await surveys.updateSurvey({
-        id,
+        id: current.id,
         updates: {
           title: data.title,
           title_ar: data.title,
@@ -93,15 +98,17 @@ export function AdminSurveysPage() {
           type: data.type,
           questions_json: data.questions,
           deadline: data.deadline,
-          status: 'active',
+          target_class_ids: data.audience.mode === 'classes' && data.audience.classIds.length ? data.audience.classIds : null,
+          status: statusAfterSave(current.status, data.intent),
         },
         surveyType: data.type,
         title: data.title,
         deadline: data.deadline,
         nurseryId: nurseryId ?? undefined,
         targetClassIds: data.audience.mode === 'classes' ? data.audience.classIds : null,
+        notifyParents: sending,
       });
-      toast.success(t('survey.sent'));
+      toast.success(sending ? t('survey.sent') : data.intent === 'draft' ? t('survey.draftSaved') : t('survey.changesSaved'));
       setPanel({ kind: 'list' });
     } catch (err) {
       toast.error(t('survey.createFailed'), { description: formatQueryError(err) });
@@ -123,6 +130,8 @@ export function AdminSurveysPage() {
         title: s.title,
         deadline: s.deadline,
         nurseryId: nurseryId ?? undefined,
+        targetClassIds: s.target_class_ids ?? null,
+        notifyParents: true,
       });
       toast.success(
         s.type === 'permission' && s.deadline
@@ -148,6 +157,7 @@ export function AdminSurveysPage() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!(await confirm({ description: t('survey.deleteConfirm'), variant: 'danger' }))) return;
     try {
       await surveys.deleteSurvey(id);
       toast.success(t('survey.deleted'));
@@ -180,8 +190,10 @@ export function AdminSurveysPage() {
           initialType={s.type}
           initialDeadline={s.deadline ? new Date(s.deadline).toISOString().slice(0, 16) : ''}
           initialQuestions={s.questions_json ?? []}
+          initialAudience={s.target_class_ids?.length ? { mode: 'classes', classIds: s.target_class_ids } : { mode: 'all', classIds: [] }}
+          currentStatus={s.status}
           nurseryId={nurseryId}
-          onSave={(data) => handleEdit(s.id, data)}
+          onSave={(data) => handleEdit(s, data)}
           onCancel={() => setPanel({ kind: 'list' })}
           saving={saving}
         />
@@ -339,7 +351,12 @@ function SurveyRow({
     <Tr onClick={onPreview} data-testid="survey-row">
       <Td className="min-w-[14rem]">
         <span className="block font-semibold text-on-surface">{s.title || '—'}</span>
-        <Badge className="mt-1 text-[10px]">{t(`survey.typeOptions.${s.type}`)}</Badge>
+        <span className="mt-1 flex flex-wrap items-center gap-1.5">
+          <Badge className="text-[10px]">{t(`survey.typeOptions.${s.type}`)}</Badge>
+          <span className="text-xs text-on-surface-variant">
+            {s.target_class_ids?.length ? t('survey.audienceClasses', { count: s.target_class_ids.length }) : t('survey.audienceAll')}
+          </span>
+        </span>
       </Td>
       <Td>
         <Badge className={cn('border text-[10px]', STATUS_COLORS[s.status])}>{t(`survey.status.${s.status}`)}</Badge>

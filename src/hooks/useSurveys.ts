@@ -17,6 +17,7 @@ export function useSurveys(params: { nurseryId?: string; parentId?: string }) {
         .from('surveys')
         .select('*')
         .eq('nursery_id', params.nurseryId)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return (data ?? []) as SurveyRow[];
@@ -62,8 +63,10 @@ export function useSurveys(params: { nurseryId?: string; parentId?: string }) {
       questions: FormQuestion[];
       deadline?: string | null;
       targetClassIds?: string[] | null;
+      /** 'draft' saves quietly; 'active' sends and tells the families. */
+      status: 'draft' | 'active';
     }) => {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('surveys')
         .insert({
           nursery_id: payload.nurseryId,
@@ -74,13 +77,14 @@ export function useSurveys(params: { nurseryId?: string; parentId?: string }) {
           type: payload.type,
           deadline: payload.deadline ?? null,
           questions_json: payload.questions,
-          status: 'active',
+          target_class_ids: payload.targetClassIds?.length ? payload.targetClassIds : null,
+          status: payload.status,
         } as never)
         .select('id')
         .single();
       if (error) throw error;
 
-      const surveyId = (data as { id: string }).id;
+      if (payload.status !== 'active') return;
       const parentIds = await resolveParentIds(payload.nurseryId, payload.targetClassIds ?? null);
       if (!parentIds.length) return;
 
@@ -106,8 +110,6 @@ export function useSurveys(params: { nurseryId?: string; parentId?: string }) {
           sent_at: new Date().toISOString(),
         })) as never,
       );
-
-      void surveyId;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['surveys'] }),
   });
@@ -121,6 +123,8 @@ export function useSurveys(params: { nurseryId?: string; parentId?: string }) {
       deadline?: string | null;
       nurseryId?: string;
       targetClassIds?: string[] | null;
+      /** True only when this change sends the survey out (a draft is activated). */
+      notifyParents?: boolean;
     }) => {
       const { error } = await supabase
         .from('surveys')
@@ -128,7 +132,7 @@ export function useSurveys(params: { nurseryId?: string; parentId?: string }) {
         .eq('id', payload.id);
       if (error) throw error;
 
-      const activating = payload.updates?.status === 'active';
+      const activating = payload.updates?.status === 'active' && payload.notifyParents === true;
       if (!activating || !payload.nurseryId) return;
 
       const parentIds = await resolveParentIds(
@@ -193,7 +197,10 @@ export function useSurveys(params: { nurseryId?: string; parentId?: string }) {
 
   const deleteSurvey = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('surveys').delete().eq('id', id);
+      const { error } = await supabase
+        .from('surveys')
+        .update({ deleted_at: new Date().toISOString() } as never)
+        .eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['surveys'] }),

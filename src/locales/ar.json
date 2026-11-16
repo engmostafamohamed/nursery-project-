@@ -7463,7 +7463,9 @@
         "classes": "فصول محددة",
         "classesHint": "اختر الفصول التي تستلم هذا النموذج.",
         "confirm": "إرسال الآن"
-      }
+      },
+      "saveDraft": "حفظ كمسودة",
+      "saveChanges": "حفظ التعديلات"
     },
     "renderer": {
       "next": "التالي",
@@ -7504,7 +7506,17 @@
       "deadline": "آخر موعد",
       "actions": "إجراءات",
       "open": "فتح"
-    }
+    },
+    "draftSaved": "تم حفظ المسودة. أرسلها عندما تجهز.",
+    "changesSaved": "تم حفظ التعديلات دون إرسال إشعار جديد للأسر.",
+    "deleteConfirm": "حذف هذا النموذج؟ سيختفي من شاشات الأسر مع الاحتفاظ بالإجابات المسجلة.",
+    "audienceAll": "كل الأسر",
+    "audienceClasses_zero": "لا فصول",
+    "audienceClasses_one": "فصل واحد",
+    "audienceClasses_two": "فصلان",
+    "audienceClasses_few": "{{count}} فصول",
+    "audienceClasses_many": "{{count}} فصلًا",
+    "audienceClasses_other": "{{count}} فصل"
   },
   "inventory": {
     "adminTitle": "المخزون",

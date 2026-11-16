@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,11 +53,17 @@ export type SendAudience = {
   classIds: string[];
 };
 
+/** What saving means: keep it a quiet draft, change a sent survey without resending, or send it out. */
+export type SaveIntent = 'draft' | 'save' | 'send';
+
 type FormBuilderProps = {
   initialTitle?: string;
   initialType?: SurveyType;
   initialDeadline?: string;
   initialQuestions?: FormQuestion[];
+  initialAudience?: SendAudience;
+  /** The survey being edited: 'new' or 'draft' can still be sent; a sent one is only saved. */
+  currentStatus?: 'new' | 'draft' | 'active' | 'published' | 'closed';
   nurseryId?: string | null;
   onSave: (data: {
     title: string;
@@ -64,6 +71,7 @@ type FormBuilderProps = {
     questions: FormQuestion[];
     deadline: string | null;
     audience: SendAudience;
+    intent: SaveIntent;
   }) => Promise<void>;
   onCancel: () => void;
   saving?: boolean;
@@ -74,12 +82,15 @@ export function FormBuilder({
   initialType = 'questionnaire',
   initialDeadline = '',
   initialQuestions = [],
+  initialAudience,
+  currentStatus = 'new',
   nurseryId,
   onSave,
   onCancel,
   saving = false,
 }: FormBuilderProps) {
   const { t } = useTranslation();
+  const canSend = currentStatus === 'new' || currentStatus === 'draft';
 
   const [title, setTitle] = useState(initialTitle);
   const [surveyType, setSurveyType] = useState<SurveyType>(initialType);
@@ -88,6 +99,7 @@ export function FormBuilder({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [showSendPanel, setShowSendPanel] = useState(false);
+  const [audience, setAudience] = useState<SendAudience>(initialAudience ?? { mode: 'all', classIds: [] });
   const [preview, setPreview] = useState(false);
   const [previewAnswers, setPreviewAnswers] = useState<AnswersMap>({});
 
@@ -133,13 +145,19 @@ export function FormBuilder({
     });
   }, []);
 
-  const handleSend = async (audience: SendAudience) => {
+  const save = async (intent: SaveIntent, chosen?: SendAudience) => {
+    if (intent === 'send' && surveyType === 'permission' && !deadline) {
+      toast.error(t('survey.validation.deadlineRequired'));
+      setShowSendPanel(false);
+      return;
+    }
     await onSave({
       title,
       type: surveyType,
       questions,
       deadline: deadline ? new Date(deadline).toISOString() : null,
-      audience,
+      audience: chosen ?? audience,
+      intent,
     });
   };
 
@@ -185,14 +203,39 @@ export function FormBuilder({
             <MaterialSymbol name="visibility" size="text-sm" className="me-1.5" />
             {t('survey.builder.preview')}
           </Button>
-          <Button
-            size="sm"
-            onClick={() => setShowSendPanel(true)}
-            disabled={saving || !title.trim() || questions.length === 0}
-          >
-            <MaterialSymbol name="send" size="text-sm" className="me-1.5" />
-            {t('survey.builder.send')}
-          </Button>
+          {canSend ? (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void save('draft')}
+                disabled={saving || !title.trim()}
+                data-testid="survey-save-draft"
+              >
+                <MaterialSymbol name="save" size="text-sm" className="me-1.5" />
+                {t('survey.builder.saveDraft')}
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => setShowSendPanel(true)}
+                disabled={saving || !title.trim() || questions.length === 0}
+                data-testid="survey-send"
+              >
+                <MaterialSymbol name="send" size="text-sm" className="me-1.5" />
+                {t('survey.builder.send')}
+              </Button>
+            </>
+          ) : (
+            <Button
+              size="sm"
+              onClick={() => void save('save')}
+              disabled={saving || !title.trim() || questions.length === 0}
+              data-testid="survey-save-changes"
+            >
+              <MaterialSymbol name="save" size="text-sm" className="me-1.5" />
+              {t('survey.builder.saveChanges')}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -276,7 +319,11 @@ export function FormBuilder({
         <SendPanel
           classes={classesQuery.data ?? []}
           saving={saving}
-          onSend={(audience) => void handleSend(audience)}
+          initial={audience}
+          onSend={(chosen) => {
+            setAudience(chosen);
+            void save('send', chosen);
+          }}
           onClose={() => setShowSendPanel(false)}
         />
       )}
@@ -726,18 +773,20 @@ function TypePicker({
 function SendPanel({
   classes,
   saving,
+  initial,
   onSend,
   onClose,
 }: {
   classes: { id: string; name_ar: string; name_en: string }[];
   saving: boolean;
+  initial: SendAudience;
   onSend: (audience: SendAudience) => void;
   onClose: () => void;
 }) {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language?.startsWith('ar');
-  const [mode, setMode] = useState<'all' | 'classes'>('all');
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [mode, setMode] = useState<'all' | 'classes'>(initial.mode);
+  const [selectedIds, setSelectedIds] = useState<string[]>(initial.classIds);
 
   const toggleClass = (id: string) =>
     setSelectedIds((prev) =>

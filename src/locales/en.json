@@ -7080,7 +7080,9 @@
         "classes": "Specific classes",
         "classesHint": "Choose which classes receive this form.",
         "confirm": "Send now"
-      }
+      },
+      "saveDraft": "Save draft",
+      "saveChanges": "Save changes"
     },
     "renderer": {
       "next": "Next",
@@ -7121,7 +7123,13 @@
       "deadline": "Deadline",
       "actions": "Actions",
       "open": "Open"
-    }
+    },
+    "draftSaved": "Draft saved. Send it when it is ready.",
+    "changesSaved": "Changes saved. Families were not notified again.",
+    "deleteConfirm": "Delete this form? Families will stop seeing it; the answers already given are kept.",
+    "audienceAll": "All families",
+    "audienceClasses_one": "{{count}} class",
+    "audienceClasses_other": "{{count}} classes"
   },
   "inventory": {
     "adminTitle": "Inventory",

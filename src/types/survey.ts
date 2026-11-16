@@ -45,6 +45,7 @@ export type SurveyRow = {
   questions_json: FormQuestion[];
   deadline: string | null;
   target_class_ids?: string[] | null;
+  deleted_at?: string | null;
   created_at: string;
 };
 
