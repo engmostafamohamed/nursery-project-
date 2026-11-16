@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/select';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -132,6 +133,21 @@ function AdminCourseFormPage({ mode }: { mode: 'create' | 'edit' }) {
     }
   }, [existingCourse, form]);
 
+  const { data: enrolledCount = 0 } = useQuery({
+    queryKey: ['course-enrolled-count', courseId],
+    queryFn: async () => {
+      if (!courseId) return 0;
+      const { count, error } = await supabase
+        .from('course_enrollments')
+        .select('id', { count: 'exact', head: true })
+        .eq('course_id', courseId)
+        .eq('status', 'active');
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: mode === 'edit' && Boolean(courseId),
+  });
+
   const { data: teachers = [] } = useQuery({
     queryKey: ['nursery-teachers', nurseryId],
     queryFn: async () => {
@@ -209,23 +225,27 @@ function AdminCourseFormPage({ mode }: { mode: 'create' | 'edit' }) {
     );
   };
 
-  return (
-    <div className="mx-auto max-w-2xl space-y-5 pb-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-on-surface">
-          {mode === 'create' ? t('admin.courses.form.createTitle') : t('admin.courses.form.editTitle')}
-        </h1>
-        <Button asChild variant="outline">
-          <Link to={mode === 'edit' ? `/admin/courses/${courseId}` : '/admin/courses'}>
-            {t('admin.courses.form.back')}
-          </Link>
-        </Button>
-      </div>
+  const maxStudentsValue = Number(form.watch('max_students') || 0);
+  const capacityBelowEnrolled = mode === 'edit' && maxStudentsValue > 0 && enrolledCount > maxStudentsValue;
 
-      <form
-        onSubmit={onSubmit}
-        className="space-y-5 rounded-2xl border border-outline-variant bg-surface-container-lowest p-5"
-      >
+  return (
+    <div className="mx-auto max-w-3xl space-y-5 pb-8">
+      <PageHeader
+        icon="school"
+        eyebrow={t('admin.courses.title')}
+        title={mode === 'create' ? t('admin.courses.form.createTitle') : t('admin.courses.form.editTitle')}
+        description={t('admin.courses.form.pageHint')}
+        actions={
+          <Button asChild variant="outline">
+            <Link to={mode === 'edit' ? `/admin/courses/${courseId}` : '/admin/courses'}>
+              {t('admin.courses.form.back')}
+            </Link>
+          </Button>
+        }
+      />
+
+      <form onSubmit={onSubmit} className="space-y-5">
+        <FormSection icon="info" title={t('admin.courses.form.sections.about')}>
         {/* Titles */}
         <div className="grid gap-4 sm:grid-cols-2">
           {showEn ? (
@@ -275,7 +295,6 @@ function AdminCourseFormPage({ mode }: { mode: 'create' | 'edit' }) {
           ) : null}
         </div>
 
-        {/* Category + Status */}
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="category">{t('admin.courses.form.category')}</Label>
@@ -289,21 +308,11 @@ function AdminCourseFormPage({ mode }: { mode: 'create' | 'edit' }) {
               ))}
             </Select>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="status">{t('admin.courses.form.status')}</Label>
-            <Select
-              id="status"
-              className="h-11 w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface"
-              {...form.register('status')}
-            >
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>{t(`admin.courses.status.${s}`)}</option>
-              ))}
-            </Select>
-          </div>
         </div>
+        </FormSection>
 
-        {/* Teacher */}
+        <FormSection icon="badge" title={t('admin.courses.form.sections.teacherState')}>
+        <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="teacher_user_id">{t('admin.courses.form.teacher')}</Label>
           <Select
@@ -317,8 +326,22 @@ function AdminCourseFormPage({ mode }: { mode: 'create' | 'edit' }) {
             ))}
           </Select>
         </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="status">{t('admin.courses.form.status')}</Label>
+            <Select
+              id="status"
+              className="h-11 w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface"
+              {...form.register('status')}
+            >
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>{t(`admin.courses.status.${s}`)}</option>
+              ))}
+            </Select>
+          </div>
+        </div>
+        </FormSection>
 
-        {/* Price + Max Students */}
+        <FormSection icon="payments" title={t('admin.courses.form.sections.placesPrice')}>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="price_per_month">{t('admin.courses.form.pricePerMonth')}</Label>
@@ -339,9 +362,18 @@ function AdminCourseFormPage({ mode }: { mode: 'create' | 'edit' }) {
               placeholder={t('admin.courses.form.maxStudentsPlaceholder')}
               {...form.register('max_students')}
             />
+            {mode === 'edit' ? (
+              <p className={capacityBelowEnrolled ? 'text-xs font-medium text-warning' : 'text-xs text-on-surface-variant'}>
+                {capacityBelowEnrolled
+                  ? t('admin.courses.form.capacityBelowEnrolled', { count: enrolledCount })
+                  : t('admin.courses.form.enrolledNow', { count: enrolledCount })}
+              </p>
+            ) : null}
           </div>
         </div>
+        </FormSection>
 
+        <FormSection icon="calendar_month" title={t('admin.courses.form.sections.schedule')}>
         {/* Schedule days */}
         <div className="space-y-2">
           <Label>{t('admin.courses.form.scheduleDays')}</Label>
@@ -393,16 +425,32 @@ function AdminCourseFormPage({ mode }: { mode: 'create' | 'edit' }) {
             <p className="text-xs text-on-surface-variant">{t('admin.courses.form.endsOnHint')}</p>
           </div>
         </div>
+        </FormSection>
 
-        <div className="flex justify-end gap-3 border-t border-outline-variant pt-4">
+        <div className="flex justify-end gap-3 rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
           <Button type="button" variant="outline" onClick={() => navigate('/admin/courses')}>
             {t('admin.courses.form.cancel')}
           </Button>
-          <Button type="submit" disabled={saving}>
+          <Button type="submit" disabled={saving} data-testid="course-form-submit">
             {saving ? t('common.saving') : mode === 'create' ? t('admin.courses.form.create') : t('admin.courses.form.save')}
           </Button>
         </div>
       </form>
     </div>
+  );
+}
+
+/** One titled card of the course form. */
+function FormSection({ icon, title, children }: { icon: string; title: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-4 rounded-xl border border-outline-variant bg-surface p-4 shadow-sm sm:p-5">
+      <h2 className="flex items-center gap-2 text-sm font-semibold text-on-surface">
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <span className="material-symbols-outlined text-lg" aria-hidden>{icon}</span>
+        </span>
+        {title}
+      </h2>
+      {children}
+    </section>
   );
 }

@@ -3091,7 +3091,18 @@
         "saveSuccess": "Course updated.",
         "saveError": "Could not save course. Please try again.",
         "invalidDate": "Enter a valid date.",
-        "endBeforeStart": "End date must be after start date."
+        "endBeforeStart": "End date must be after start date.",
+        "pageHint": "What the course is, when it runs, how many places it has and what it costs a month.",
+        "sections": {
+          "about": "About the course",
+          "teacherState": "Teacher & state",
+          "placesPrice": "Places & price",
+          "schedule": "Schedule"
+        },
+        "enrolledNow_one": "{{count}} child is enrolled now.",
+        "enrolledNow_other": "{{count}} children are enrolled now.",
+        "capacityBelowEnrolled_one": "Fewer places than the {{count}} child already enrolled.",
+        "capacityBelowEnrolled_other": "Fewer places than the {{count}} children already enrolled."
       },
       "detail": {
         "editCourse": "Edit course",
@@ -3129,7 +3140,34 @@
         "emptyInvoicesTitle": "No invoices yet",
         "emptyInvoicesDescription": "Generate invoices above to bill enrolled students.",
         "notFound": "Course not found.",
-        "tabRequests": "Requests"
+        "tabRequests": "Requests",
+        "tiles": {
+          "enrolled": "Enrolled",
+          "overCapacity_one": "{{count}} over capacity",
+          "overCapacity_other": "{{count}} over capacity",
+          "monthlyPrice": "Monthly price",
+          "monthlyRevenue": "Expected a month",
+          "monthlyRevenueHint": "Price × enrolled children",
+          "pendingInvoices": "Unpaid bills"
+        },
+        "fullError": "The course is full ({{count}} places). Raise the places on the edit page to take more children.",
+        "searchChildPlaceholder": "Search by the child’s name…",
+        "noChildMatches": "No child matches this search.",
+        "rosterTable": {
+          "child": "Child",
+          "parent": "Parent",
+          "since": "Enrolled since",
+          "status": "Status",
+          "actions": "Actions"
+        },
+        "invoiceTable": {
+          "child": "Child",
+          "month": "Month",
+          "number": "Invoice no.",
+          "amount": "Amount",
+          "status": "Status",
+          "actions": "Actions"
+        }
       },
       "invoiceStatus": {
         "pending": "Pending",
@@ -6019,7 +6057,16 @@
       "sessionsHeading": "Sessions",
       "rosterHeading": "Enrolled students",
       "emptyRosterTitle": "No students enrolled",
-      "emptyRosterDescription": "No students have been enrolled in this course yet."
+      "emptyRosterDescription": "No students have been enrolled in this course yet.",
+      "table": {
+        "course": "Course",
+        "children": "Children",
+        "price": "Price",
+        "open": "Open"
+      },
+      "rosterTable": {
+        "child": "Child"
+      }
     }
   },
   "media": {

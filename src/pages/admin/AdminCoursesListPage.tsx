@@ -8,7 +8,7 @@ import { confirm } from '@/components/ui/confirm';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { DataTable, IconAction, TablePagination, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
+import { DataTable, IconAction, StatusPill, TablePagination, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingSkeleton } from '@/components/ui/LoadingSkeleton';
 import { useAuthSession } from '@/hooks/useAuthSession';
@@ -75,9 +75,17 @@ function CourseRow({
       <Td>
         <Badge className={`${STATUS_COLORS[course.status] ?? ''} text-xs`}>{t(`admin.courses.status.${course.status}`)}</Badge>
       </Td>
-      <Td className="whitespace-nowrap text-on-surface">
-        {t('admin.courses.list.enrolledCount', { count: course.enrollment_count })}
-        {course.max_students ? ` / ${course.max_students}` : ''}
+      <Td className="whitespace-nowrap">
+        {course.max_students && course.enrollment_count > course.max_students ? (
+          <StatusPill tone="error" icon="warning">
+            {course.enrollment_count} / {course.max_students}
+          </StatusPill>
+        ) : (
+          <span className="text-on-surface">
+            {t('admin.courses.list.enrolledCount', { count: course.enrollment_count })}
+            {course.max_students ? ` / ${course.max_students}` : ''}
+          </span>
+        )}
       </Td>
       <Td align="end" className="whitespace-nowrap">
         <span className="font-semibold text-on-surface">{priceFmt.format(course.price_per_month)}</span>{' '}

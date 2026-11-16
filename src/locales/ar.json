@@ -3286,7 +3286,26 @@
         "saveSuccess": "تم تحديث الكورس.",
         "saveError": "تعذّر حفظ الكورس. حاول مجدداً.",
         "invalidDate": "أدخل تاريخًا صالحًا.",
-        "endBeforeStart": "يجب أن يكون تاريخ الانتهاء بعد تاريخ البدء."
+        "endBeforeStart": "يجب أن يكون تاريخ الانتهاء بعد تاريخ البدء.",
+        "pageHint": "ما هي الدورة، ومتى تُقام، وكم مكانًا بها، وكم تكلف شهريًا.",
+        "sections": {
+          "about": "عن الدورة",
+          "teacherState": "المعلم والحالة",
+          "placesPrice": "الأماكن والسعر",
+          "schedule": "الجدول"
+        },
+        "enrolledNow_zero": "لا أطفال مسجلون الآن.",
+        "enrolledNow_one": "طفل واحد مسجل الآن.",
+        "enrolledNow_two": "طفلان مسجلان الآن.",
+        "enrolledNow_few": "{{count}} أطفال مسجلون الآن.",
+        "enrolledNow_many": "{{count}} طفلًا مسجلون الآن.",
+        "enrolledNow_other": "{{count}} طفل مسجلون الآن.",
+        "capacityBelowEnrolled_zero": "الأماكن أقل من عدد المسجلين.",
+        "capacityBelowEnrolled_one": "الأماكن أقل من الطفل المسجل بالفعل.",
+        "capacityBelowEnrolled_two": "الأماكن أقل من الطفلين المسجلين بالفعل.",
+        "capacityBelowEnrolled_few": "الأماكن أقل من {{count}} أطفال مسجلين بالفعل.",
+        "capacityBelowEnrolled_many": "الأماكن أقل من {{count}} طفلًا مسجلين بالفعل.",
+        "capacityBelowEnrolled_other": "الأماكن أقل من {{count}} طفل مسجلين بالفعل."
       },
       "detail": {
         "editCourse": "تعديل الكورس",
@@ -3324,7 +3343,38 @@
         "emptyInvoicesTitle": "لا توجد فواتير بعد",
         "emptyInvoicesDescription": "أنشئ الفواتير أعلاه لفوترة الطلاب المسجّلين.",
         "notFound": "الكورس غير موجود.",
-        "tabRequests": "الطلبات"
+        "tabRequests": "الطلبات",
+        "tiles": {
+          "enrolled": "المسجلون",
+          "overCapacity_zero": "ضمن السعة",
+          "overCapacity_one": "طفل فوق السعة",
+          "overCapacity_two": "طفلان فوق السعة",
+          "overCapacity_few": "{{count}} أطفال فوق السعة",
+          "overCapacity_many": "{{count}} طفلًا فوق السعة",
+          "overCapacity_other": "{{count}} طفل فوق السعة",
+          "monthlyPrice": "السعر الشهري",
+          "monthlyRevenue": "المتوقع شهريًا",
+          "monthlyRevenueHint": "السعر × الأطفال المسجلين",
+          "pendingInvoices": "فواتير غير مدفوعة"
+        },
+        "fullError": "الدورة مكتملة ({{count}} مكانًا). ارفع عدد الأماكن من صفحة التعديل لقبول أطفال أكثر.",
+        "searchChildPlaceholder": "ابحث باسم الطفل…",
+        "noChildMatches": "لا يوجد طفل يطابق هذا البحث.",
+        "rosterTable": {
+          "child": "الطفل",
+          "parent": "ولي الأمر",
+          "since": "مسجل منذ",
+          "status": "الحالة",
+          "actions": "إجراءات"
+        },
+        "invoiceTable": {
+          "child": "الطفل",
+          "month": "الشهر",
+          "number": "رقم الفاتورة",
+          "amount": "المبلغ",
+          "status": "الحالة",
+          "actions": "إجراءات"
+        }
       },
       "invoiceStatus": {
         "pending": "معلّقة",
@@ -6374,7 +6424,16 @@
       "sessionsHeading": "الحصص",
       "rosterHeading": "الطلاب المسجّلون",
       "emptyRosterTitle": "لا يوجد طلاب مسجّلون",
-      "emptyRosterDescription": "لم يُسجَّل أي طالب في هذا الكورس بعد."
+      "emptyRosterDescription": "لم يُسجَّل أي طالب في هذا الكورس بعد.",
+      "table": {
+        "course": "الدورة",
+        "children": "الأطفال",
+        "price": "السعر",
+        "open": "فتح"
+      },
+      "rosterTable": {
+        "child": "الطفل"
+      }
     }
   },
   "media": {
