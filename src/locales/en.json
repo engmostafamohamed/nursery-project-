@@ -11529,7 +11529,14 @@
       "usersCount_other": "{{count}} people",
       "discardTitle": "Discard your changes?",
       "discardBody": "You have changes to this role that are not saved yet.",
-      "discardConfirm": "Discard"
+      "discardConfirm": "Discard",
+      "searchPlaceholder": "Search roles…",
+      "noMatch": "No role matches this search.",
+      "selectBody": "A role decides which parts of the app its people open and what they may do there. Pick one to see or change it.",
+      "group": {
+        "teacher": "In the teacher app",
+        "manager": "In the dashboard"
+      }
     },
     "editor": {
       "newTitle": "New role",
@@ -11600,7 +11607,9 @@
       "branch_admin": "Branch admin",
       "chain_admin": "Chain admin",
       "super_admin": "Super admin",
-      "parent": "Parent"
+      "parent": "Parent",
+      "co_teacher": "Co-teacher",
+      "nanny": "Nanny"
     },
     "features": {
       "class_team": "Class team",
@@ -11639,7 +11648,9 @@
       "content_library": "Content library",
       "courses": "Courses",
       "settings": "Settings",
-      "roles_permissions": "Roles & permissions"
+      "roles_permissions": "Roles & permissions",
+      "staff_tasks": "Staff tasks",
+      "reminders": "Reminders"
     },
     "toast": {
       "created": "Role created",

@@ -12159,7 +12159,14 @@
       "usersCount_other": "{{count}} شخص",
       "discardTitle": "تجاهل التعديلات؟",
       "discardBody": "لديك تعديلات على هذا الدور لم تُحفظ بعد.",
-      "discardConfirm": "تجاهل"
+      "discardConfirm": "تجاهل",
+      "searchPlaceholder": "ابحث في الأدوار…",
+      "noMatch": "لا يوجد دور يطابق هذا البحث.",
+      "selectBody": "الدور يحدد أي أجزاء التطبيق يفتحها أصحابه وماذا يمكنهم فعله فيها. اختر دورًا لعرضه أو تعديله.",
+      "group": {
+        "teacher": "في تطبيق المعلّمة",
+        "manager": "في لوحة التحكم"
+      }
     },
     "editor": {
       "newTitle": "دور جديد",
@@ -12242,7 +12249,9 @@
       "branch_admin": "مدير الفرع",
       "chain_admin": "مدير السلسلة",
       "super_admin": "المدير العام",
-      "parent": "ولي أمر"
+      "parent": "ولي أمر",
+      "co_teacher": "معلّمة مشاركة",
+      "nanny": "مساعدة"
     },
     "features": {
       "class_team": "فريق الفصول",
@@ -12281,7 +12290,9 @@
       "content_library": "مكتبة المحتوى",
       "courses": "الكورسات",
       "settings": "الإعدادات",
-      "roles_permissions": "الأدوار والصلاحيات"
+      "roles_permissions": "الأدوار والصلاحيات",
+      "staff_tasks": "مهام الموظفين",
+      "reminders": "التذكيرات"
     },
     "toast": {
       "created": "تم إنشاء الدور",

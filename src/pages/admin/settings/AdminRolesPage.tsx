@@ -6,6 +6,7 @@ import { roleTypeOf } from '@/components/admin/rbac/roleType';
 import { roleLabel } from '@/components/admin/rbac/roleLabel';
 import { Button } from '@/components/ui/button';
 import { confirm } from '@/components/ui/confirm';
+import { SearchInput } from '@/components/ui/FilterBar';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useActiveNurseryId } from '@/hooks/useActiveNurseryId';
@@ -145,7 +146,11 @@ export function AdminRolesPage() {
               // A role that was just created appears once the list refreshes.
               <Skeleton className="h-96 w-full" />
             ) : (
-              <Notice icon="touch_app" text={t('rbac.page.selectHint')} />
+              <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-6 text-center">
+                <MaterialSymbol name="shield_person" size="text-4xl" className="text-outline-variant" />
+                <p className="mt-2 text-sm font-medium text-on-surface">{t('rbac.page.selectHint')}</p>
+                <p className="mx-auto mt-1 max-w-sm text-xs text-on-surface-variant">{t('rbac.page.selectBody')}</p>
+              </div>
             )}
           </div>
         </div>
@@ -216,6 +221,23 @@ function RoleList({
   onSelect: (id: Selection) => void;
 }) {
   const { t, i18n } = useTranslation();
+  const [search, setSearch] = useState('');
+
+  const shown = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return roles;
+    return roles.filter((role) => roleLabel(role, i18n.language, t).toLowerCase().includes(term));
+  }, [roles, search, i18n.language, t]);
+
+  // The roles of the teacher's app, then the office's, each under its own heading.
+  const groups = useMemo(
+    () => [
+      { key: 'teacher' as const, roles: shown.filter((r) => r.base_role === 'teacher') },
+      { key: 'manager' as const, roles: shown.filter((r) => r.base_role !== 'teacher') },
+    ].filter((g) => g.roles.length > 0),
+    [shown],
+  );
+
   return (
     <section className="space-y-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-3">
       <div className="flex items-center justify-between gap-2 px-1">
@@ -229,13 +251,28 @@ function RoleList({
           </Button>
         ) : null}
       </div>
+      {roles.length > 5 ? (
+        <SearchInput value={search} onChange={setSearch} placeholder={t('rbac.page.searchPlaceholder')} />
+      ) : null}
       {roles.length === 0 ? (
         <p className="rounded-xl border border-dashed border-outline-variant p-4 text-center text-sm text-on-surface-variant">
           {t('rbac.page.empty')}
         </p>
+      ) : !shown.length ? (
+        <p className="rounded-xl border border-dashed border-outline-variant p-4 text-center text-sm text-on-surface-variant">
+          {t('rbac.page.noMatch')}
+        </p>
       ) : (
+        <div className="space-y-3">
+          {groups.map((group) => (
+            <div key={group.key} className="space-y-1">
+              {groups.length > 1 ? (
+                <p className="px-1 text-[11px] font-semibold uppercase tracking-wide text-on-surface-variant">
+                  {t(`rbac.page.group.${group.key}`)}
+                </p>
+              ) : null}
         <ul className="space-y-1">
-          {roles.map((role) => {
+          {group.roles.map((role) => {
             const active = selection === role.id;
             const locked = role.is_system || role.is_seed;
             return (
@@ -263,6 +300,9 @@ function RoleList({
             );
           })}
         </ul>
+            </div>
+          ))}
+        </div>
       )}
     </section>
   );
