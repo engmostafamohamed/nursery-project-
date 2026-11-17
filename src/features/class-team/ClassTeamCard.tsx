@@ -6,14 +6,14 @@ import { FieldError, invalidFieldClass } from '@/components/ui/FieldError';
 import { FormProblem } from '@/components/ui/FormField';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Select } from '@/components/ui/select';
-import { assistants, candidatesFor, lead, nannies, otherClassesLed, pickName, substitute, teamStatus, type ClassTeamRole, type TeamClass, type TeamTeacher } from '@/lib/classTeam';
+import { coTeachers, candidatesFor, lead, nannies, otherClassesLed, pickName, substitute, teamStatus, type ClassTeamRole, type TeamClass, type TeamTeacher } from '@/lib/classTeam';
 import { cn } from '@/lib/utils';
 
 import { TEAM_STATUS_LOOK } from './teamLook';
 import type { TeamProblem } from './useClassTeamEditing';
 
 /**
- * A class's team editor: its lead teacher, backup teacher, assistants and nannies, each changeable
+ * A class's team editor: its lead teacher, backup teacher, co-teachers and nannies, each changeable
  * in place and checked as it stands (no lead, no backup, someone inactive, a lead of several
  * classes); a refused change shows under the place it was for. The same editor on a class's edit
  * page and in the Teams table's dialog (`embedded`: without its own frame and title).
@@ -26,6 +26,7 @@ export function ClassTeamCard({
   busy,
   onPlace,
   onRemove,
+  onMove,
   problem = null,
   embedded = false,
 }: {
@@ -36,6 +37,8 @@ export function ClassTeamCard({
   busy: boolean;
   onPlace: (role: ClassTeamRole, userId: string) => void;
   onRemove: (userId: string) => void;
+  /** Opens the move dialog for whoever holds this place; left out where moving is not offered. */
+  onMove?: (userId: string, role: ClassTeamRole) => void;
   problem?: TeamProblem | null;
   embedded?: boolean;
 }) {
@@ -96,9 +99,23 @@ export function ClassTeamCard({
               {candidatesFor(cls, staff, role).map(teacherOption)}
             </Select>
             {current ? (
-              <Button type="button" variant="ghost" size="icon" disabled={busy} aria-label={t('classTeam.card.remove', { name: nameOf(current) })} onClick={() => onRemove(current)}>
-                <MaterialSymbol name="person_remove" className="text-error" />
-              </Button>
+              <>
+                {onMove ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    disabled={busy}
+                    aria-label={t('classTeam.card.move', { name: nameOf(current) })}
+                    onClick={() => onMove(current, role)}
+                  >
+                    <MaterialSymbol name="move_down" className="text-primary" />
+                  </Button>
+                ) : null}
+                <Button type="button" variant="ghost" size="icon" disabled={busy} aria-label={t('classTeam.card.remove', { name: nameOf(current) })} onClick={() => onRemove(current)}>
+                  <MaterialSymbol name="person_remove" className="text-error" />
+                </Button>
+              </>
             ) : null}
           </div>
         ) : (
@@ -118,12 +135,12 @@ export function ClassTeamCard({
   // An assistant or a nanny is any active member of staff not already in this class.
   const freeStaff = staff.filter((s) => s.status === 'active' && !cls.members.some((m) => m.user_id === s.id));
 
-  /** The places a class has several of: assistants and nannies. */
-  const many = (role: 'assistant' | 'nanny', ids: string[]) => (
+  /** The places a class has several of: co-teachers and nannies. */
+  const many = (role: 'co_teacher' | 'nanny', ids: string[]) => (
     <div className="space-y-2" data-testid={`team-${role}s`}>
       <p className="flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant">
-        <MaterialSymbol name={role === 'assistant' ? 'group' : 'diversity_1'} className="text-sm" />
-        {t(role === 'assistant' ? 'classTeam.roles.assistant' : 'classTeam.roles.nanny')}
+        <MaterialSymbol name={role === 'co_teacher' ? 'group' : 'diversity_1'} className="text-sm" />
+        {t(role === 'co_teacher' ? 'classTeam.roles.co_teacher' : 'classTeam.roles.nanny')}
       </p>
       {ids.length ? (
         <ul className="flex flex-wrap gap-2">
@@ -137,6 +154,17 @@ export function ClassTeamCard({
               title={person(id)?.status === 'active' ? undefined : t('classTeam.check.inactive', { name: nameOf(id) })}
             >
               {nameOf(id)}
+              {canUpdate && onMove ? (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => onMove(id, role)}
+                  aria-label={t('classTeam.card.move', { name: nameOf(id) })}
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-full text-on-surface-variant hover:bg-primary/10 hover:text-primary"
+                >
+                  <MaterialSymbol name="move_down" className="text-sm" />
+                </button>
+              ) : null}
               {canUpdate ? (
                 <button
                   type="button"
@@ -152,12 +180,12 @@ export function ClassTeamCard({
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-on-surface-variant">{t(role === 'assistant' ? 'classTeam.card.noAssistants' : 'classTeam.card.noNannies')}</p>
+        <p className="text-sm text-on-surface-variant">{t(role === 'co_teacher' ? 'classTeam.card.noCoTeachers' : 'classTeam.card.noNannies')}</p>
       )}
       {canUpdate && freeStaff.length ? (
         <Select
           className={cn('h-10 text-sm', refusal(role) && invalidFieldClass)}
-          aria-label={t(role === 'assistant' ? 'classTeam.card.addAssistant' : 'classTeam.card.addNanny')}
+          aria-label={t(role === 'co_teacher' ? 'classTeam.card.addCoTeacher' : 'classTeam.card.addNanny')}
           aria-invalid={Boolean(refusal(role))}
           value=""
           disabled={busy}
@@ -165,7 +193,7 @@ export function ClassTeamCard({
             if (e.target.value) onPlace(role, e.target.value);
           }}
         >
-          <option value="">{t(role === 'assistant' ? 'classTeam.card.addAssistant' : 'classTeam.card.addNanny')}</option>
+          <option value="">{t(role === 'co_teacher' ? 'classTeam.card.addCoTeacher' : 'classTeam.card.addNanny')}</option>
           {freeStaff.map(teacherOption)}
         </Select>
       ) : null}
@@ -198,7 +226,7 @@ export function ClassTeamCard({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        {many('assistant', assistants(cls))}
+        {many('co_teacher', coTeachers(cls))}
         {many('nanny', nannies(cls))}
       </div>
 

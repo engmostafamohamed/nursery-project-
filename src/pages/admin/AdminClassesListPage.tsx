@@ -222,7 +222,7 @@ export function AdminClassesListPage() {
                         <span className="text-on-surface-variant">{t('admin.classes.list.noBackup')}</span>
                       )}
                     </Td>
-                    <Td className="tabular-nums text-on-surface-variant">{c.assistants.length}</Td>
+                    <Td className="tabular-nums text-on-surface-variant">{c.coTeachers.length}</Td>
                     <Td className="tabular-nums text-on-surface-variant">{c.nannies.length}</Td>
                     <Td>
                       <ClassCapacityMeter count={c.child_count} capacity={c.capacity} />

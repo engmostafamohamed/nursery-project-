@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import { MoveTeacherDialog, type MoveTarget } from '@/features/class-team/MoveTeacherDialog';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FormField, FormProblem } from '@/components/ui/FormField';
@@ -73,6 +74,7 @@ export function AdminClassDetailPage() {
   const save = useSaveClass();
   const moveIn = useMoveChildren();
 
+  const [moving, setMoving] = useState<MoveTarget | null>(null);
   const [draft, setDraft] = useState<ClassDraft>(() => classDraft(null));
   const [loaded, setLoaded] = useState<ClassDraft | null>(null);
   const [touched, setTouched] = useState<Partial<Record<DraftField, boolean>>>({});
@@ -244,16 +246,30 @@ export function AdminClassDetailPage() {
             testId="class-editor-team"
           >
             {teamClass ? (
-              <ClassTeamCard
-                cls={teamClass}
-                staff={team.staff}
-                nameOf={team.nameOf}
-                canUpdate={team.canUpdate}
-                busy={team.busy}
-                problem={team.problemFor(teamClass.id)}
-                onPlace={(role, userId) => void team.place(teamClass, role, userId)}
-                onRemove={(userId) => void team.takeOut(teamClass, userId)}
-              />
+              <>
+                <ClassTeamCard
+                  cls={teamClass}
+                  staff={team.staff}
+                  nameOf={team.nameOf}
+                  canUpdate={team.canUpdate}
+                  busy={team.busy}
+                  problem={team.problemFor(teamClass.id)}
+                  onPlace={(role, userId) => void team.place(teamClass, role, userId)}
+                  onRemove={(userId) => void team.takeOut(teamClass, userId)}
+                  onMove={team.canUpdate && team.classes.length > 1 ? (userId, role) => setMoving({ from: teamClass, userId, role }) : undefined}
+                />
+                <MoveTeacherDialog
+                  target={moving}
+                  classes={team.classes}
+                  nameOf={team.nameOf}
+                  busy={team.busy}
+                  onClose={() => setMoving(null)}
+                  onMove={(to, role) => {
+                    if (!moving) return;
+                    void team.moveTo(moving.from, to, moving.userId, role).then(() => setMoving(null));
+                  }}
+                />
+              </>
             ) : team.query.isPending ? <LoadingSkeleton /> : <p className="text-sm text-on-surface-variant">{t('classEditor.teamUnavailable')}</p>}
           </Panel>
 

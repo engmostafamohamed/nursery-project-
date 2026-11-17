@@ -63,7 +63,7 @@ const STATES: ChildState[] = ['all', 'here', 'picked_up', 'absent', 'extra_now']
 
 function placeName(t: T, place: ClassPlace): string {
   if (place === 'lead') return t('teacher.dashboard.places.lead');
-  if (place === 'assistant') return t('teacher.dashboard.places.assistant');
+  if (place === 'co_teacher') return t('teacher.dashboard.places.co_teacher');
   return t('teacher.dashboard.places.substitute');
 }
 

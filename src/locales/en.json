@@ -5745,7 +5745,7 @@
       },
       "places": {
         "lead": "Lead teacher",
-        "assistant": "Assistant",
+        "co_teacher": "Co-teacher",
         "substitute": "Backup teacher"
       },
       "states": {
@@ -5873,11 +5873,12 @@
       "leadBadge": "Lead",
       "backupBadge": "Backup",
       "nannyBadge": "Nanny",
-      "assistantBadge": "Assistant",
+      "coTeacherBadge": "Co-teacher",
       "leadLabel": "Lead teacher",
       "backupLabel": "Backup teacher",
       "backupNote": "You cover this class when {{lead}} is away.",
-      "backupNoteNoLead": "You cover this class when its lead teacher is away."
+      "backupNoteNoLead": "You cover this class when its lead teacher is away.",
+      "openClassCta": "Open the class"
     },
     "profile": {
       "tabs": {
@@ -8061,7 +8062,7 @@
       "classes": "Classes",
       "withoutLead": "Without a lead teacher",
       "withoutBackup": "Without a backup teacher",
-      "withoutAssistant": "Without an assistant",
+      "withoutCoTeacher": "Without an assistant",
       "withoutNanny": "Without a nanny",
       "teachers": "Teachers",
       "teachersWithoutClass": "Teachers without a class"
@@ -8082,18 +8083,18 @@
       "attention": "Needs attention",
       "noBackup": "No backup teacher",
       "complete": "Complete team",
-      "noAssistant": "No assistant",
+      "noCoTeacher": "Without a co-teacher",
       "allTeachers": "All teachers",
       "noClass": "No class",
       "leads": "Lead teachers",
-      "assistants": "Assistants",
+      "coTeachers": "Co-teachers",
       "noNanny": "Without a nanny",
       "nannies": "Nannies",
       "substitutes": "Backup teachers"
     },
     "roles": {
       "lead": "Lead teacher",
-      "assistant": "Assistant",
+      "co_teacher": "Co-teacher",
       "nanny": "Nanny",
       "substitute": "Backup teacher"
     },
@@ -8109,11 +8110,12 @@
       "ready": "Has a lead",
       "choose": "Choose a teacher",
       "none": "Not set",
-      "noAssistants": "No assistants yet",
+      "noCoTeachers": "No co-teachers yet",
       "noNannies": "No nanny yet.",
       "addNanny": "Add a nanny",
-      "addAssistant": "Add an assistant",
-      "remove": "Remove {{name}}"
+      "addCoTeacher": "Add a co-teacher",
+      "remove": "Remove {{name}}",
+      "move": "Move {{name}} to another class"
     },
     "confirm": {
       "replaceTitle": "Change the {{role}}?",
@@ -8121,7 +8123,11 @@
       "replace": "Change",
       "removeTitle": "Remove {{name}} from {{class}}?",
       "removeBody": "They will no longer see this class's children or families.",
-      "remove": "Remove"
+      "remove": "Remove",
+      "moveTitle": "Move {{name}}?",
+      "moveBody": "She leaves {{from}} and joins {{to}} as {{role}}.",
+      "moveBodyReplacing": "She leaves {{from}} and joins {{to}} as {{role}}, in place of {{old}}.",
+      "move": "Move"
     },
     "teachersTable": {
       "count": "Teachers: {{count}}",
@@ -8209,7 +8215,20 @@
       "not_a_teacher": "Only an active teacher of this nursery can join a class team.",
       "teacher_inactive": "This teacher is not active.",
       "class_not_found": "This class no longer exists.",
-      "failed": "Couldn't save. Try again."
+      "failed": "Couldn't save. Try again.",
+      "same_class": "She is already in that class.",
+      "other_nursery": "A teacher cannot be moved to another nursery’s class.",
+      "not_on_that_class": "She is not on that class’s team any more — reload the page."
+    },
+    "moved": "{{name}} moved to {{class}}.",
+    "move": {
+      "title": "Move {{name}} to another class",
+      "hint": "She is {{role}} in {{from}} now. Choose where she goes and the place she takes there.",
+      "toClass": "To which class",
+      "chooseClass": "Choose a class…",
+      "asRole": "As",
+      "stepsOut": "{{name}} is {{role}} there now and will step out of that place.",
+      "confirm": "Move her"
     }
   },
   "familyMessages": {
@@ -9328,6 +9347,10 @@
     "child_enrolled": {
       "title": "{{child}} is enrolled",
       "body": "The nursery added {{child}} to your family. You can follow their day in the app."
+    },
+    "class_team_moved": {
+      "title": "You moved to another class",
+      "body": "You are now {{role}} in {{class}}, moved from {{from}}."
     }
   },
   "qr": {

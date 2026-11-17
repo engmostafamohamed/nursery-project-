@@ -82,7 +82,7 @@ export function TeacherClassesHubPage() {
         );
         return {
           ...c,
-          role: roleByClass.get(c.id) ?? 'assistant',
+          role: roleByClass.get(c.id) ?? 'co_teacher',
           lead: staff.lead,
           backup: staff.substitute,
           childCount: childCount.get(c.id) ?? 0,
@@ -151,14 +151,24 @@ export function TeacherClassesHubPage() {
                       </p>
                     ) : null}
                   </div>
-                  <Button type="button" variant="secondary" size="sm" asChild>
-                    <Link to={`/teacher/classes/${row.id}/announcements`}>
-                      <span className="material-symbols-outlined me-1 text-base" aria-hidden>
-                        campaign
-                      </span>
-                      {t('teacher.classesHub.announcementsCta')}
-                    </Link>
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" size="sm" asChild>
+                      <Link to={`/teacher/classes/${row.id}`} data-testid="open-class">
+                        <span className="material-symbols-outlined me-1 text-base" aria-hidden>
+                          school
+                        </span>
+                        {t('teacher.classesHub.openClassCta')}
+                      </Link>
+                    </Button>
+                    <Button type="button" variant="secondary" size="sm" asChild>
+                      <Link to={`/teacher/classes/${row.id}/announcements`}>
+                        <span className="material-symbols-outlined me-1 text-base" aria-hidden>
+                          campaign
+                        </span>
+                        {t('teacher.classesHub.announcementsCta')}
+                      </Link>
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </li>

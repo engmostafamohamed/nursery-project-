@@ -40,7 +40,7 @@ describe('class teams and messages to families', () => {
       expect(lookup(dict, 'notificationTemplates.family_message.title')).toContain('{{sender}}');
       expect(lookup(dict, 'notificationTemplates.family_message.body')).toContain('{{preview}}');
       // The class place the assignment notice names (params.role = { i18n: 'classTeam.roles.<place>' }).
-      for (const place of ['lead', 'assistant', 'substitute']) expect(typeof lookup(dict, `classTeam.roles.${place}`)).toBe('string');
+      for (const place of ['lead', 'co_teacher', 'substitute']) expect(typeof lookup(dict, `classTeam.roles.${place}`)).toBe('string');
     }
   });
 

@@ -11,7 +11,7 @@ type T = ReturnType<typeof useTranslation>['t'];
 /** A place in a class, in the reader's language. */
 export function roleName(t: T, role: ClassTeamRole): string {
   if (role === 'lead') return t('classTeam.roles.lead');
-  if (role === 'assistant') return t('classTeam.roles.assistant');
+  if (role === 'co_teacher') return t('classTeam.roles.co_teacher');
   if (role === 'nanny') return t('classTeam.roles.nanny');
   return t('classTeam.roles.substitute');
 }
@@ -28,14 +28,14 @@ export function useClassTeamEditing(nurseryId: string | null | undefined) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   const query = useClassTeams(nurseryId);
-  const { assign, remove } = useClassTeamActions(nurseryId);
+  const { assign, remove, move } = useClassTeamActions(nurseryId);
   const [problem, setProblem] = useState<TeamProblem | null>(null);
   const data = query.data;
   const staff = useMemo(() => data?.staff ?? [], [data]);
   const classes = useMemo(() => data?.classes ?? [], [data]);
   const byId = useMemo(() => new Map(staff.map((s) => [s.id, s])), [staff]);
   const canUpdate = Boolean(data?.can_update);
-  const busy = assign.isPending || remove.isPending;
+  const busy = assign.isPending || remove.isPending || move.isPending;
   const nameOf = (id: string | null) => (id ? pickName(byId.get(id) ?? { name_ar: null, name_en: null }, lang) : '');
   const refused = (cls: TeamClass, role: ClassTeamRole | null, error: unknown) =>
     setProblem({ classId: cls.id, role, message: t(`classTeam.errors.${classTeamErrorKey(error)}`) });
@@ -77,10 +77,36 @@ export function useClassTeamEditing(nurseryId: string | null | undefined) {
     }
   };
 
+  /**
+   * Moves someone from one class to another as a single change: she leaves the first, takes the
+   * place given in the second, and is told once. Taking over the lead's or the backup's place asks
+   * first, since whoever holds it steps out.
+   */
+  const moveTo = async (from: TeamClass, to: TeamClass, userId: string, role: ClassTeamRole) => {
+    const current = role === 'lead' ? lead(to) : role === 'substitute' ? substitute(to) : null;
+    const ok = await confirm({
+      title: t('classTeam.confirm.moveTitle', { name: nameOf(userId) }),
+      description: current && current !== userId
+        ? t('classTeam.confirm.moveBodyReplacing', {
+            from: pickName(from, lang), to: pickName(to, lang), role: roleName(t, role), old: nameOf(current),
+          })
+        : t('classTeam.confirm.moveBody', { from: pickName(from, lang), to: pickName(to, lang), role: roleName(t, role) }),
+      confirmText: t('classTeam.confirm.move'),
+    });
+    if (!ok) return;
+    setProblem(null);
+    try {
+      await move.mutateAsync({ fromClassId: from.id, toClassId: to.id, userId, role });
+      toast.success(t('classTeam.moved', { name: nameOf(userId), class: pickName(to, lang) }));
+    } catch (error) {
+      refused(from, role, error);
+    }
+  };
+
   /** The refusal to show on a class's team, if the last change to it was refused. */
   const problemFor = (classId: string) => (problem?.classId === classId ? problem : null);
 
-  return { query, data, staff, classes, byId, canUpdate, busy, nameOf, place, takeOut, problemFor, clearProblem: () => setProblem(null) };
+  return { query, data, staff, classes, byId, canUpdate, busy, nameOf, place, takeOut, moveTo, problemFor, clearProblem: () => setProblem(null) };
 }
 
 export type ClassTeamEditing = ReturnType<typeof useClassTeamEditing>;

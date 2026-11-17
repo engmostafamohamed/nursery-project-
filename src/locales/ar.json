@@ -6104,7 +6104,7 @@
       },
       "places": {
         "lead": "المعلم الرئيسي",
-        "assistant": "مساعد",
+        "co_teacher": "معلّمة مشاركة",
         "substitute": "المعلم البديل"
       },
       "states": {
@@ -6232,11 +6232,12 @@
       "leadBadge": "رئيسي",
       "backupBadge": "بديل",
       "nannyBadge": "مربية",
-      "assistantBadge": "مساعد",
+      "coTeacherBadge": "معلّمة مشاركة",
       "leadLabel": "المعلم الرئيسي",
       "backupLabel": "المعلم البديل",
       "backupNote": "أنت تغطي هذا الفصل عند غياب {{lead}}.",
-      "backupNoteNoLead": "أنت تغطي هذا الفصل عند غياب المعلم الرئيسي."
+      "backupNoteNoLead": "أنت تغطي هذا الفصل عند غياب المعلم الرئيسي.",
+      "openClassCta": "فتح الفصل"
     },
     "profile": {
       "tabs": {
@@ -8520,7 +8521,7 @@
       "classes": "الفصول",
       "withoutLead": "بدون معلم رئيسي",
       "withoutBackup": "بدون معلم بديل",
-      "withoutAssistant": "بدون مساعد",
+      "withoutCoTeacher": "بدون مساعد",
       "withoutNanny": "بدون مربية",
       "teachers": "المعلمون",
       "teachersWithoutClass": "معلمون بدون فصل"
@@ -8541,18 +8542,18 @@
       "attention": "تحتاج متابعة",
       "noBackup": "بدون معلم بديل",
       "complete": "فريق مكتمل",
-      "noAssistant": "بدون مساعد",
+      "noCoTeacher": "بدون معلّمة مشاركة",
       "allTeachers": "كل المعلمين",
       "noClass": "بدون فصل",
       "leads": "المعلمون الرئيسيون",
-      "assistants": "المساعدون",
+      "coTeachers": "المعلّمات المشاركات",
       "noNanny": "بدون مربية",
       "nannies": "المربيات",
       "substitutes": "المعلمون البدلاء"
     },
     "roles": {
       "lead": "المعلم الرئيسي",
-      "assistant": "مساعد",
+      "co_teacher": "معلّمة مشاركة",
       "nanny": "مربية",
       "substitute": "المعلم البديل"
     },
@@ -8568,11 +8569,12 @@
       "ready": "له معلم رئيسي",
       "choose": "اختر معلمًا",
       "none": "غير محدد",
-      "noAssistants": "لا يوجد مساعدون بعد",
+      "noCoTeachers": "لا توجد معلّمات مشاركات بعد",
       "noNannies": "لا توجد مربية بعد.",
       "addNanny": "إضافة مربية",
-      "addAssistant": "إضافة مساعد",
-      "remove": "إزالة {{name}}"
+      "addCoTeacher": "إضافة معلّمة مشاركة",
+      "remove": "إزالة {{name}}",
+      "move": "نقل {{name}} إلى فصل آخر"
     },
     "confirm": {
       "replaceTitle": "تغيير {{role}}؟",
@@ -8580,7 +8582,11 @@
       "replace": "تغيير",
       "removeTitle": "إزالة {{name}} من فصل {{class}}؟",
       "removeBody": "لن يرى أطفال هذا الفصل ولا أسرهم بعد الآن.",
-      "remove": "إزالة"
+      "remove": "إزالة",
+      "moveTitle": "نقل {{name}}؟",
+      "moveBody": "ستترك {{from}} وتنضم إلى {{to}} بصفة {{role}}.",
+      "moveBodyReplacing": "ستترك {{from}} وتنضم إلى {{to}} بصفة {{role}}، بدلًا من {{old}}.",
+      "move": "نقل"
     },
     "teachersTable": {
       "count": "عدد المعلمين: {{count}}",
@@ -8672,7 +8678,20 @@
       "not_a_teacher": "يمكن فقط لمعلم نشط في هذه الحضانة الانضمام إلى فريق فصل.",
       "teacher_inactive": "هذا المعلم غير نشط.",
       "class_not_found": "هذا الفصل لم يعد موجودًا.",
-      "failed": "تعذّر الحفظ. حاول مرة أخرى."
+      "failed": "تعذّر الحفظ. حاول مرة أخرى.",
+      "same_class": "هي بالفعل في هذا الفصل.",
+      "other_nursery": "لا يمكن نقل معلّمة إلى فصل في حضانة أخرى.",
+      "not_on_that_class": "لم تعد ضمن فريق هذا الفصل — أعد تحميل الصفحة."
+    },
+    "moved": "تم نقل {{name}} إلى {{class}}.",
+    "move": {
+      "title": "نقل {{name}} إلى فصل آخر",
+      "hint": "هي {{role}} في {{from}} الآن. اختر الفصل الذي تنتقل إليه والمكان الذي تشغله هناك.",
+      "toClass": "إلى أي فصل",
+      "chooseClass": "اختر فصلًا…",
+      "asRole": "بصفة",
+      "stepsOut": "{{name}} هي {{role}} هناك الآن وستترك هذا المكان.",
+      "confirm": "نقلها"
     }
   },
   "familyMessages": {
@@ -9899,6 +9918,10 @@
     "child_enrolled": {
       "title": "تم تسجيل {{child}}",
       "body": "أضافت الحضانة {{child}} إلى أسرتك. يمكنك متابعة يومه في التطبيق."
+    },
+    "class_team_moved": {
+      "title": "تم نقلك إلى فصل آخر",
+      "body": "أنت الآن {{role}} في {{class}}، بعد نقلك من {{from}}."
     }
   },
   "qr": {

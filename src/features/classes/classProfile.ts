@@ -13,7 +13,7 @@ import type { ClassStaffRole } from '@/types/tables';
 // -----------------------------------------------------------------------------------------------
 // The profile
 
-const STAFF_ROLES: readonly ClassStaffRole[] = ['lead', 'substitute', 'assistant', 'nanny'];
+const STAFF_ROLES: readonly ClassStaffRole[] = ['lead', 'substitute', 'co_teacher', 'nanny'];
 /**
  * A child's day as the class page sees it: the daily reports' states, and "expected" for a child who
  * has not come yet while the nursery is still open (absent only once it has closed).
@@ -151,7 +151,7 @@ function toMember(m: JsonRecord): TeamMember {
     nameEn: text(m.name_en),
     email: textOrNull(m.email),
     phone: textOrNull(m.phone),
-    role: role(m.role) ?? 'assistant',
+    role: role(m.role) ?? 'co_teacher',
     since: text(m.since),
     active: m.active !== false,
     onDuty: m.on_duty === true,

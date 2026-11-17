@@ -220,6 +220,7 @@ export function AppRouter() {
               <Route path="scanner" element={<P.QRScannerPage />} />
               <Route path="classes" element={<P.TeacherClassesHubPage />} />
               <Route path="classes/:classId/announcements" element={<P.TeacherClassAnnouncementsPage />} />
+              <Route path="classes/:classId" element={<P.TeacherClassProfilePage />} />
               <Route path="events" element={<P.TeacherEventsPage />} />
               <Route path="courses" element={<P.TeacherCoursesPage />} />
               <Route path="community" element={<P.TeacherCommunityPage />} />

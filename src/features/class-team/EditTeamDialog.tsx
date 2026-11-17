@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
+import { MoveTeacherDialog, type MoveTarget } from '@/features/class-team/MoveTeacherDialog';
 import { Button } from '@/components/ui/button';
 import { StatusPill } from '@/components/ui/DataTable';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -21,6 +23,7 @@ export function EditTeamDialog({ cls, editing, classHref, onClose }: {
   classHref?: string;
   onClose: () => void;
 }) {
+  const [moving, setMoving] = useState<MoveTarget | null>(null);
   const { t, i18n } = useTranslation();
   const name = pickName(cls, i18n.language);
   const status = teamStatus(cls);
@@ -54,7 +57,19 @@ export function EditTeamDialog({ cls, editing, classHref, onClose }: {
           problem={editing.problemFor(cls.id)}
           onPlace={(role, userId) => void editing.place(cls, role, userId)}
           onRemove={(userId) => void editing.takeOut(cls, userId)}
+          onMove={editing.canUpdate && editing.classes.length > 1 ? (userId, role) => setMoving({ from: cls, userId, role }) : undefined}
           embedded
+        />
+        <MoveTeacherDialog
+          target={moving}
+          classes={editing.classes}
+          nameOf={editing.nameOf}
+          busy={editing.busy}
+          onClose={() => setMoving(null)}
+          onMove={(to, role) => {
+            if (!moving) return;
+            void editing.moveTo(moving.from, to, moving.userId, role).then(() => setMoving(null));
+          }}
         />
         <DialogFooter className="gap-2 border-t border-outline-variant pt-4 sm:justify-between sm:rtl:justify-between">
           {classHref ? (

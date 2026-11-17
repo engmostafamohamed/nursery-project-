@@ -64,7 +64,7 @@ describe("the teacher's day", () => {
 describe('the class team page', () => {
   const classes: TeamClass[] = [
     { id: 'b', name_ar: null, name_en: 'Butterflies', capacity: 20, room_number: null, children_count: 18, members: [{ user_id: 'nadia', role: 'lead' }] },
-    { id: 's', name_ar: null, name_en: 'Stars', capacity: null, room_number: null, children_count: 9, members: [{ user_id: 'sara', role: 'assistant' }] },
+    { id: 's', name_ar: null, name_en: 'Stars', capacity: null, room_number: null, children_count: 9, members: [{ user_id: 'sara', role: 'co_teacher' }] },
   ];
   const teacher = (id: string, name: string, status = 'active'): TeamTeacher => ({
     id, name_ar: null, name_en: name, email: `${id}@x.test`, phone: null, role: 'teacher', role_title_ar: null, role_title_en: null,
@@ -73,13 +73,13 @@ describe('the class team page', () => {
   const staff = [teacher('nadia', 'Nadia'), teacher('sara', 'Sara'), teacher('huda', 'Huda'), teacher('old', 'Old', 'inactive')];
 
   it('the numbers at the top', () => {
-    expect(teamSummary({ classes, staff })).toEqual({ classes: 2, withoutLead: 1, withoutBackup: 2, withoutAssistant: 1, withoutNanny: 2, teachers: 3, teachersWithoutClass: 1 });
+    expect(teamSummary({ classes, staff })).toEqual({ classes: 2, withoutLead: 1, withoutBackup: 2, withoutCoTeacher: 1, withoutNanny: 2, teachers: 3, teachersWithoutClass: 1 });
   });
 
   it('finds classes by name or team member, or those missing a lead; teachers by name or place', () => {
     expect(filterClasses(classes, staff, 'sara', 'all').map((c) => c.name_en)).toEqual(['Stars']);
     expect(filterClasses(classes, staff, '', 'no_lead').map((c) => c.name_en)).toEqual(['Stars']);
-    expect(filterClasses(classes, staff, '', 'no_assistant').map((c) => c.name_en)).toEqual(['Butterflies']);
+    expect(filterClasses(classes, staff, '', 'no_co_teacher').map((c) => c.name_en)).toEqual(['Butterflies']);
     expect(filterClasses(classes, staff, '', 'attention').map((c) => c.name_en)).toEqual(['Butterflies', 'Stars']);
     expect(filterClasses(classes, staff, '', 'complete')).toEqual([]);
     expect(filterTeachers(staff, '', 'no_class').map((s) => s.name_en)).toEqual(['Huda', 'Old']);
@@ -91,18 +91,18 @@ describe('the class team page', () => {
   });
 
   it('says what each team is missing, the classes that need attention first', () => {
-    expect(teamGaps(classes[0])).toEqual(['no_backup', 'no_assistant', 'no_nanny']);
+    expect(teamGaps(classes[0])).toEqual(['no_backup', 'no_co_teacher', 'no_nanny']);
     expect(teamGaps(classes[1])).toEqual(['no_lead', 'no_backup', 'no_nanny']);
     expect(classes.map(teamStatus)).toEqual(['incomplete', 'no_lead']);
     const full: TeamClass = { ...classes[0], id: 'f', name_en: 'Full', members: [
-      { user_id: 'nadia', role: 'lead' }, { user_id: 'huda', role: 'substitute' }, { user_id: 'sara', role: 'assistant' }, { user_id: 'old', role: 'nanny' },
+      { user_id: 'nadia', role: 'lead' }, { user_id: 'huda', role: 'substitute' }, { user_id: 'sara', role: 'co_teacher' }, { user_id: 'old', role: 'nanny' },
     ] };
     expect(teamStatus(full)).toBe('complete');
     expect(sortByTeamStatus([full, ...classes]).map((c) => c.name_en)).toEqual(['Stars', 'Butterflies', 'Full']);
   });
 
   it('counts the other classes someone leads', () => {
-    const nadia = { classes: [{ class_id: 'b', role: 'lead' as const }, { class_id: 'x', role: 'lead' as const }, { class_id: 'y', role: 'assistant' as const }] };
+    const nadia = { classes: [{ class_id: 'b', role: 'lead' as const }, { class_id: 'x', role: 'lead' as const }, { class_id: 'y', role: 'co_teacher' as const }] };
     expect(otherClassesLed(nadia, 'b')).toBe(1);
     expect(otherClassesLed(undefined, 'b')).toBe(0);
   });

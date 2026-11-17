@@ -78,7 +78,7 @@ update public.users u
  where u.id = v.id::uuid;
 insert into public.class_staff (class_id, user_id, role) values
   ('00000000-0000-4000-9f00-0000000000b1', '00000000-0000-4000-9f00-000000000a03', 'lead'),
-  ('00000000-0000-4000-9f00-0000000000b1', '00000000-0000-4000-9f00-000000000a04', 'assistant'),
+  ('00000000-0000-4000-9f00-0000000000b1', '00000000-0000-4000-9f00-000000000a04', 'co_teacher'),
   ('00000000-0000-4000-9f00-0000000000b2', '00000000-0000-4000-9f00-000000000a05', 'lead');
 insert into public.staff_absences (nursery_id, user_id, starts_on, ends_on, reason) values
   ('00000000-0000-4000-9f00-00000000000a', '00000000-0000-4000-9f00-000000000a05',

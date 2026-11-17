@@ -1,17 +1,17 @@
 import type { ClassStaffRole } from '@/types/tables';
 
-/** Order staff are listed in: the lead teacher, then the backup teacher, then assistants, then the nannies. */
-const ROLE_ORDER: Record<ClassStaffRole, number> = { lead: 0, substitute: 1, assistant: 2, nanny: 3 };
+/** Order staff are listed in: the lead teacher, then the backup teacher, then co-teachers, then the nannies. */
+const ROLE_ORDER: Record<ClassStaffRole, number> = { lead: 0, substitute: 1, co_teacher: 2, nanny: 3 };
 
 /** Translation key of the badge that names a teacher's role in a class. */
 export function classStaffRoleKey(role: ClassStaffRole): string {
   if (role === 'lead') return 'teacher.classesHub.leadBadge';
   if (role === 'substitute') return 'teacher.classesHub.backupBadge';
   if (role === 'nanny') return 'teacher.classesHub.nannyBadge';
-  return 'teacher.classesHub.assistantBadge';
+  return 'teacher.classesHub.coTeacherBadge';
 }
 
-/** Badge style for a role: the lead stands out, the backup is outlined, assistants are muted. */
+/** Badge style for a role: the lead stands out, the backup is outlined, co-teachers are muted. */
 export function classStaffBadgeVariant(role: ClassStaffRole): 'default' | 'outline' | 'secondary' {
   if (role === 'lead') return 'default';
   if (role === 'substitute') return 'outline';
@@ -26,13 +26,13 @@ export type ClassStaffGroups<P> = {
   lead: P | null;
   /** The backup teacher who covers when the lead is away. */
   substitute: P | null;
-  assistants: P[];
+  coTeachers: P[];
   /** The carers beside the teachers (feeding, changing, naps). */
   nannies: P[];
 };
 
 /**
- * Splits a class's `class_staff` rows into its lead, backup and assistants, resolving each user
+ * Splits a class's `class_staff` rows into its lead, backup and co-teachers, resolving each user
  * through `people`. Rows whose user cannot be resolved (for example, not visible to the viewer)
  * are left out.
  */
@@ -47,8 +47,8 @@ export function groupClassStaff<P>(
   return {
     lead: find('lead'),
     substitute: find('substitute'),
-    assistants: members
-      .filter((m) => m.role === 'assistant')
+    coTeachers: members
+      .filter((m) => m.role === 'co_teacher')
       .map((m) => people.get(m.user_id))
       .filter((p): p is P => p !== undefined),
     nannies: members

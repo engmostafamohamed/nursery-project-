@@ -37,6 +37,7 @@ export function ClassChildrenPanel({
   base,
   filter,
   onFilterChange,
+  canManage = true,
 }: {
   profile: ClassProfile;
   names: BilingualNames;
@@ -44,6 +45,7 @@ export function ClassChildrenPanel({
   base: string;
   filter: ChildFilter;
   onFilterChange: (filter: ChildFilter) => void;
+  canManage?: boolean;
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -90,6 +92,7 @@ export function ClassChildrenPanel({
           title={t('classProfile.children.emptyTitle')}
           description={t('classProfile.children.emptyDescription')}
           action={
+            canManage ? (
             <ActionGate feature="classes" action="update">
               <Button asChild className="gap-2">
                 <Link to={adminLinks(base).classEdit(profile.info.id)}>
@@ -98,6 +101,7 @@ export function ClassChildrenPanel({
                 </Link>
               </Button>
             </ActionGate>
+            ) : null
           }
         />
       ) : !shown.length ? (

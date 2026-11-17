@@ -34,7 +34,19 @@ const RING: Record<ReturnType<typeof clockState>, string> = {
  * a row opens that member of staff's page. Then the team's last changes. The team itself is set on
  * the Teams page (Classes section).
  */
-export function ClassTeamPanel({ profile, names, format, base }: { profile: ClassProfile; names: BilingualNames; format: ClassFormat; base: string }) {
+export function ClassTeamPanel({
+  profile,
+  names,
+  format,
+  base,
+  canManage = true,
+}: {
+  profile: ClassProfile;
+  names: BilingualNames;
+  format: ClassFormat;
+  base: string;
+  canManage?: boolean;
+}) {
   const teamPager = usePagination(profile.team, 10, profile.team.length);
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -43,7 +55,8 @@ export function ClassTeamPanel({ profile, names, format, base }: { profile: Clas
   const [recording, setRecording] = useState<TeamMember | null>(null);
   const className = names.lines(profile.info.nameAr, profile.info.nameEn).primary;
   const links = adminLinks(base);
-  const personHref = (id: string) => links.staffPage(id);
+  // A teacher reading her own class sees her colleagues' names, not their staff files.
+  const personHref = (id: string) => (canManage ? links.staffPage(id) : null);
 
   const changes: TeamChangeRow[] = profile.teamChanges.map((c) => ({
     id: c.id,
@@ -114,8 +127,11 @@ export function ClassTeamPanel({ profile, names, format, base }: { profile: Clas
                   format={format}
                   schoolDay={profile.schoolDay}
                   dayOpen={profile.dayOpen}
-                  href={personHref(member.id)}
-                  onOpen={() => navigate(personHref(member.id))}
+                  href={personHref(member.id) ?? undefined}
+                  onOpen={() => {
+                    const href = personHref(member.id);
+                    if (href) navigate(href);
+                  }}
                   onRecord={() => setRecording(member)}
                 />
               ))}
@@ -149,7 +165,7 @@ function MemberRow({ member, names, format, schoolDay, dayOpen, href, onOpen, on
   format: ClassFormat;
   schoolDay: boolean;
   dayOpen: boolean;
-  href: string;
+  href?: string;
   onOpen: () => void;
   onRecord: () => void;
 }) {
@@ -188,9 +204,13 @@ function MemberRow({ member, names, format, schoolDay, dayOpen, href, onOpen, on
             {getUserInitials(name.primary, member.email)}
           </span>
           <span className="min-w-0">
-            <Link to={href} className="block hover:text-primary hover:underline">
+            {href ? (
+              <Link to={href} className="block hover:text-primary hover:underline">
+                <NameStack name={name} strong />
+              </Link>
+            ) : (
               <NameStack name={name} strong />
-            </Link>
+            )}
             <span className="block text-xs font-medium text-primary">
               {member.covering ? t('classProfile.duty.covering') : t(`classTeam.roles.${member.role}`)}
             </span>
@@ -249,7 +269,7 @@ function MemberRow({ member, names, format, schoolDay, dayOpen, href, onOpen, on
             label={t(clocked ? 'classProfile.team.correctFor' : 'classProfile.team.recordFor', { name: name.primary })}
             onClick={onRecord}
           />
-          <IconAction icon="badge" label={t('staffAbsence.table.openPerson', { name: name.primary })} to={href} />
+          {href ? <IconAction icon="badge" label={t('staffAbsence.table.openPerson', { name: name.primary })} to={href} /> : null}
         </span>
       </Td>
     </Tr>

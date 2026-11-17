@@ -118,7 +118,7 @@ select is(pg_temp.team('00000000-0000-4000-7000-0000000000e1'), 'Nadia:lead', 'o
 select pg_temp.act_as('00000000-0000-4000-7000-000000000a02');
 
 select lives_ok(
-  $$ select public.set_class_team_member('00000000-0000-4000-7000-0000000000e1', '00000000-0000-4000-7000-000000000a03', 'assistant') $$,
+  $$ select public.set_class_team_member('00000000-0000-4000-7000-0000000000e1', '00000000-0000-4000-7000-000000000a03', 'co_teacher') $$,
   'an assistant is added'
 );
 select lives_ok(
@@ -131,18 +131,18 @@ select is(
   (select string_agg(format('%s %s %s', u.name_en, ch.action, coalesce(ch.role::text, '-')), '; ' order by u.name_en, ch.action)
      from public.class_team_changes ch join public.users u on u.id = ch.user_id
     where ch.class_id = '00000000-0000-4000-7000-0000000000e1'),
-  'Nadia assigned lead; Sara assigned assistant; Sara removed -',
+  'Nadia assigned lead; Sara assigned co_teacher; Sara removed -',
   'every change is logged'
 );
 select pg_temp.act_as('00000000-0000-4000-7000-000000000a02');
 
 select throws_ok(
-  $$ select public.set_class_team_member('00000000-0000-4000-7000-0000000000e1', '00000000-0000-4000-7000-000000000a06', 'assistant') $$,
+  $$ select public.set_class_team_member('00000000-0000-4000-7000-0000000000e1', '00000000-0000-4000-7000-000000000a06', 'co_teacher') $$,
   '22023', 'class_team_not_a_teacher',
   'only a teacher can join a class team'
 );
 select throws_ok(
-  $$ select public.set_class_team_member('00000000-0000-4000-7000-0000000000e1', '00000000-0000-4000-7000-000000000b02', 'assistant') $$,
+  $$ select public.set_class_team_member('00000000-0000-4000-7000-0000000000e1', '00000000-0000-4000-7000-000000000b02', 'co_teacher') $$,
   '22023', 'class_team_not_a_teacher',
   'nor a teacher of another nursery'
 );
@@ -191,7 +191,7 @@ select pg_temp.act_as('00000000-0000-4000-7000-000000000a04');
 select is(
   (select format('%s %s %s [%s]', c.name_en, c.my_role, c.children_count, (select string_agg(x->>'name_en' || ':' || (x->>'role'), ', ') from jsonb_array_elements(c.team) x))
      from public.get_my_classes() c),
-  'Butterflies lead 2 [Nadia:lead, Sara:assistant]',
+  'Butterflies lead 2 [Nadia:lead, Sara:co_teacher]',
   'my classes: my place, the children and the team'
 );
 

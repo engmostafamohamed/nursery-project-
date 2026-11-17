@@ -23,7 +23,16 @@ import { useClassFormat } from './useClassFormat';
  * (who works with it today), activity, waiting list and details in tabs. The open tab is kept in the address (?tab=team), so
  * a link, a reload or Back lands on it.
  */
-export function ClassProfileView({ profile, base }: { profile: ClassProfile; base: string }) {
+export function ClassProfileView({
+  profile,
+  base,
+  /** False for a teacher reading her own class: she sees everything, changes nothing. */
+  canManage = true,
+}: {
+  profile: ClassProfile;
+  base: string;
+  canManage?: boolean;
+}) {
   const { t } = useTranslation();
   const names = useBilingualNames(profile.info.nurseryId);
   const format = useClassFormat(profile);
@@ -46,7 +55,7 @@ export function ClassProfileView({ profile, base }: { profile: ClassProfile; bas
     { id: 'waitlist', icon: 'hourglass_top', label: t('classProfile.tabs.waitlist'), count: profile.waitlist.length },
     { id: 'details', icon: 'info', label: t('classProfile.tabs.details') },
   ];
-  const panel = { profile, names, format, base };
+  const panel = { profile, names, format, base, canManage };
 
   return (
     <div className="space-y-5 pb-8" data-testid="class-profile">
@@ -58,7 +67,7 @@ export function ClassProfileView({ profile, base }: { profile: ClassProfile; bas
         {t('classProfile.backToClasses')}
       </Link>
 
-      <ClassProfileHero profile={profile} names={names} base={base}>
+      <ClassProfileHero profile={profile} names={names} base={base} canManage={canManage}>
         <ClassTodayTiles summary={summary} active={tab === 'children' ? childFilter : 'all'} onPick={showChildren} />
       </ClassProfileHero>
 

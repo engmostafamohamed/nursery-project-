@@ -85,7 +85,7 @@ export function TeacherProfilePage() {
 
       return ((classesRes.data ?? []) as Array<{ id: string; name_ar: string; name_en: string }>).map((c) => ({
         ...c,
-        role: roleByClass.get(c.id) ?? 'assistant',
+        role: roleByClass.get(c.id) ?? 'co_teacher',
         students: childRows
           .filter((ch) => ch.class_id === c.id)
           .map((ch) => ({

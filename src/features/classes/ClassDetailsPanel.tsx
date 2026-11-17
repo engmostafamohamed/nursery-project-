@@ -15,7 +15,19 @@ import type { ClassProfile } from './classProfile';
 import type { ClassFormat } from './useClassFormat';
 
 /** The class's own facts (names, age group, room, places, since when) and the cameras in its room. */
-export function ClassDetailsPanel({ profile, names, format, base }: { profile: ClassProfile; names: BilingualNames; format: ClassFormat; base: string }) {
+export function ClassDetailsPanel({
+  profile,
+  names,
+  format,
+  base,
+  canManage = true,
+}: {
+  profile: ClassProfile;
+  names: BilingualNames;
+  format: ClassFormat;
+  base: string;
+  canManage?: boolean;
+}) {
   const { t } = useTranslation();
   const { info } = profile;
 
@@ -24,14 +36,16 @@ export function ClassDetailsPanel({ profile, names, format, base }: { profile: C
       <TableCard
         title={t('classProfile.details.title')}
         actions={
-          <ActionGate feature="classes" action="update">
-            <Button asChild variant="outline" size="sm" className="gap-1.5">
-              <Link to={adminLinks(base).classEdit(info.id)}>
-                <MaterialSymbol name="edit" size="text-base" />
-                {t('classProfile.actions.edit')}
-              </Link>
-            </Button>
-          </ActionGate>
+          canManage ? (
+            <ActionGate feature="classes" action="update">
+              <Button asChild variant="outline" size="sm" className="gap-1.5">
+                <Link to={adminLinks(base).classEdit(info.id)}>
+                  <MaterialSymbol name="edit" size="text-base" />
+                  {t('classProfile.actions.edit')}
+                </Link>
+              </Button>
+            </ActionGate>
+          ) : null
         }
       >
         <FactList>

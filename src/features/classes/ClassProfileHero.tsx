@@ -24,11 +24,13 @@ export function ClassProfileHero({
   profile,
   names,
   base,
+  canManage = true,
   children,
 }: {
   profile: ClassProfile;
   names: BilingualNames;
   base: string;
+  canManage?: boolean;
   children?: ReactNode;
 }) {
   const { t } = useTranslation();
@@ -69,14 +71,16 @@ export function ClassProfileHero({
               {t('classProfile.actions.announce')}
             </Link>
           </Button>
-          <ActionGate feature="classes" action="update">
-            <Button asChild className="gap-2">
-              <Link to={adminLinks(base).classEdit(info.id)}>
-                <MaterialSymbol name="edit" size="text-base" />
-                {t('classProfile.actions.edit')}
-              </Link>
-            </Button>
-          </ActionGate>
+          {canManage ? (
+            <ActionGate feature="classes" action="update">
+              <Button asChild className="gap-2">
+                <Link to={adminLinks(base).classEdit(info.id)}>
+                  <MaterialSymbol name="edit" size="text-base" />
+                  {t('classProfile.actions.edit')}
+                </Link>
+              </Button>
+            </ActionGate>
+          ) : null}
         </>
       }
     >

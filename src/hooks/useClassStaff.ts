@@ -26,7 +26,7 @@ export type NurseryClassRow = {
   lead: StaffPerson | null;
   /** The backup teacher who covers the class when the lead is away. */
   substitute: StaffPerson | null;
-  assistants: StaffPerson[];
+  coTeachers: StaffPerson[];
   /** The carers beside the teachers. */
   nannies: StaffPerson[];
   child_count: number;
@@ -91,7 +91,7 @@ export function useNurseryClasses(nurseryId: string | null | undefined) {
   });
 }
 
-/** Single class with lead + assistants. Roster fetched separately. */
+/** Single class with lead + co-teachers. Roster fetched separately. */
 export function useClassWithStaff(classId: string | null | undefined) {
   return useQuery({
     queryKey: ['class-with-staff', classId ?? null],
@@ -320,7 +320,7 @@ export function useAddClassAssistant() {
     mutationFn: async (params: { classId: string; userId: string }) => {
       const { error } = await supabase
         .from('class_staff')
-        .insert({ class_id: params.classId, user_id: params.userId, role: 'assistant' } as never);
+        .insert({ class_id: params.classId, user_id: params.userId, role: 'co_teacher' } as never);
       if (error && !String(error.message).toLowerCase().includes('duplicate')) throw error;
     },
     onSuccess: (_d, vars) => {

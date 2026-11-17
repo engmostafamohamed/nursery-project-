@@ -10,7 +10,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(17);
+select plan(18);
 
 insert into public.nurseries (id, name_ar, name_en, working_days) values
   ('00000000-0000-4000-9700-00000000000a', 'حضانة الفصل', 'Class Nursery', '["sun", "mon", "tue", "wed", "thu", "fri", "sat"]'),
@@ -27,7 +27,8 @@ insert into auth.users (id, email) values
   ('00000000-0000-4000-9700-000000000a04', 'cp.assistant@test.local'),
   ('00000000-0000-4000-9700-000000000a05', 'cp.parent@test.local'),
   ('00000000-0000-4000-9700-000000000a06', 'cp.manager@test.local'),
-  ('00000000-0000-4000-9700-000000000a07', 'cp.other.admin@test.local');
+  ('00000000-0000-4000-9700-000000000a07', 'cp.other.admin@test.local'),
+  ('00000000-0000-4000-9700-000000000a08', 'cp.spare.teacher@test.local');
 update public.users u
    set role = v.role::public.user_role, nursery_id = v.nursery::uuid, name_ar = v.name_en, name_en = v.name_en, status = 'active'
   from (values
@@ -37,7 +38,8 @@ update public.users u
     ('00000000-0000-4000-9700-000000000a04', 'teacher', 'Assistant Hoda', '00000000-0000-4000-9700-00000000000a'),
     ('00000000-0000-4000-9700-000000000a05', 'parent', 'Mona', '00000000-0000-4000-9700-00000000000a'),
     ('00000000-0000-4000-9700-000000000a06', 'manager', 'Manager Amr', '00000000-0000-4000-9700-00000000000a'),
-    ('00000000-0000-4000-9700-000000000a07', 'branch_admin', 'Other Admin', '00000000-0000-4000-9700-00000000000b')
+    ('00000000-0000-4000-9700-000000000a07', 'branch_admin', 'Other Admin', '00000000-0000-4000-9700-00000000000b'),
+    ('00000000-0000-4000-9700-000000000a08', 'teacher', 'Spare Nada', '00000000-0000-4000-9700-00000000000a')
   ) as v(id, role, name_en, nursery)
  where u.id = v.id::uuid;
 
@@ -48,7 +50,7 @@ insert into public.classes (id, nursery_id, name_ar, name_en, grade_level, room_
 insert into public.class_staff (class_id, user_id, role) values
   ('00000000-0000-4000-9700-0000000000b1', '00000000-0000-4000-9700-000000000a02', 'lead'),
   ('00000000-0000-4000-9700-0000000000b1', '00000000-0000-4000-9700-000000000a03', 'substitute'),
-  ('00000000-0000-4000-9700-0000000000b1', '00000000-0000-4000-9700-000000000a04', 'assistant');
+  ('00000000-0000-4000-9700-0000000000b1', '00000000-0000-4000-9700-000000000a04', 'co_teacher');
 -- The lead is away today, so the backup covers.
 insert into public.staff_absences (nursery_id, user_id, starts_on, ends_on, reason, reported_by) values
   ('00000000-0000-4000-9700-00000000000a', '00000000-0000-4000-9700-000000000a02', pg_temp.today(), pg_temp.today() + 1, 'sick', '00000000-0000-4000-9700-000000000a01');
@@ -103,7 +105,9 @@ select pg_temp.act_as('00000000-0000-4000-9700-000000000a05');
 select throws_ok($$ select public.get_class_profile('00000000-0000-4000-9700-0000000000b1') $$, '42501', 'class_forbidden', 'a parent cannot read a class profile');
 
 select pg_temp.act_as('00000000-0000-4000-9700-000000000a02');
-select throws_ok($$ select public.get_class_profile('00000000-0000-4000-9700-0000000000b1') $$, '42501', 'class_forbidden', 'a teacher cannot read it, even their own class');
+select lives_ok($$ select public.get_class_profile('00000000-0000-4000-9700-0000000000b1') $$, 'a teacher on the team reads her own class');
+select pg_temp.act_as('00000000-0000-4000-9700-000000000a08');
+select throws_ok($$ select public.get_class_profile('00000000-0000-4000-9700-0000000000b1') $$, '42501', 'class_forbidden', 'a teacher of the nursery who is not on the team cannot read it');
 
 select pg_temp.act_as('00000000-0000-4000-9700-000000000a07');
 select throws_ok($$ select public.get_class_profile('00000000-0000-4000-9700-0000000000b1') $$, '42501', 'class_forbidden', 'another branch''s admin cannot read it');
@@ -143,8 +147,8 @@ select is(
 select is(
   (select string_agg((m ->> 'role') || ':' || (m ->> 'on_duty') || ':' || (m ->> 'covering') || ':' || coalesce(m #>> '{absence,reason}', '-'), ',')
      from jsonb_array_elements(pg_temp.profile() -> 'team') m),
-  'lead:false:false:sick,substitute:true:true:-,assistant:true:false:-',
-  'the team comes lead, backup, assistants; the away lead''s backup covers'
+  'lead:false:false:sick,substitute:true:true:-,co_teacher:true:false:-',
+  'the team comes lead, backup, co-teachers; the away lead''s backup covers'
 );
 select is(jsonb_array_length(pg_temp.profile() -> 'waitlist'), 1, 'the waiting family shows');
 select is(pg_temp.profile() #>> '{waitlist,0,child_name}', 'Omar', 'with the waiting child''s name');

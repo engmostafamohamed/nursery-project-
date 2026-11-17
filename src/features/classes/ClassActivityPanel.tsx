@@ -17,7 +17,19 @@ import type { ClassFormat } from './useClassFormat';
  * What happens around the class: its photos and videos (waiting for approval, approved this month)
  * and the last messages its families received, class announcements and teachers' messages alike.
  */
-export function ClassActivityPanel({ profile, names, format, base }: { profile: ClassProfile; names: BilingualNames; format: ClassFormat; base: string }) {
+export function ClassActivityPanel({
+  profile,
+  names,
+  format,
+  base,
+  canManage: _canManage = true,
+}: {
+  profile: ClassProfile;
+  names: BilingualNames;
+  format: ClassFormat;
+  base: string;
+  canManage?: boolean;
+}) {
   const { t } = useTranslation();
   const { media } = profile;
 

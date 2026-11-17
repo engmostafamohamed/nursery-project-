@@ -3,8 +3,8 @@ import { localName } from '@/lib/bilingualName';
 // teacher, what each team is missing, every teacher with their role and classes, and the numbers at
 // the top. Plain functions over what get_class_teams returns.
 
-export type ClassTeamRole = 'lead' | 'assistant' | 'nanny' | 'substitute';
-export const CLASS_TEAM_ROLES: ClassTeamRole[] = ['lead', 'assistant', 'nanny', 'substitute'];
+export type ClassTeamRole = 'lead' | 'co_teacher' | 'nanny' | 'substitute';
+export const CLASS_TEAM_ROLES: ClassTeamRole[] = ['lead', 'co_teacher', 'nanny', 'substitute'];
 
 export type TeamClass = {
   id: string;
@@ -55,8 +55,8 @@ export function lead(cls: TeamClass): string | null {
 export function substitute(cls: TeamClass): string | null {
   return cls.members.find((m) => m.role === 'substitute')?.user_id ?? null;
 }
-export function assistants(cls: TeamClass): string[] {
-  return cls.members.filter((m) => m.role === 'assistant').map((m) => m.user_id);
+export function coTeachers(cls: TeamClass): string[] {
+  return cls.members.filter((m) => m.role === 'co_teacher').map((m) => m.user_id);
 }
 export function nannies(cls: TeamClass): string[] {
   return cls.members.filter((m) => m.role === 'nanny').map((m) => m.user_id);
@@ -66,7 +66,7 @@ export type TeamSummary = {
   classes: number;
   withoutLead: number;
   withoutBackup: number;
-  withoutAssistant: number;
+  withoutCoTeacher: number;
   withoutNanny: number;
   teachers: number;
   teachersWithoutClass: number;
@@ -78,15 +78,15 @@ export function teamSummary(data: Pick<ClassTeams, 'classes' | 'staff'>): TeamSu
     classes: data.classes.length,
     withoutLead: data.classes.filter((c) => !lead(c)).length,
     withoutBackup: data.classes.filter((c) => !substitute(c)).length,
-    withoutAssistant: data.classes.filter((c) => assistants(c).length === 0).length,
+    withoutCoTeacher: data.classes.filter((c) => coTeachers(c).length === 0).length,
     withoutNanny: data.classes.filter((c) => nannies(c).length === 0).length,
     teachers: active.length,
     teachersWithoutClass: active.filter((s) => s.classes.length === 0).length,
   };
 }
 
-export type ClassFilter = 'all' | 'attention' | 'no_lead' | 'no_backup' | 'no_assistant' | 'no_nanny' | 'complete';
-export const CLASS_FILTERS: ClassFilter[] = ['all', 'attention', 'no_lead', 'no_backup', 'no_assistant', 'no_nanny', 'complete'];
+export type ClassFilter = 'all' | 'attention' | 'no_lead' | 'no_backup' | 'no_co_teacher' | 'no_nanny' | 'complete';
+export const CLASS_FILTERS: ClassFilter[] = ['all', 'attention', 'no_lead', 'no_backup', 'no_co_teacher', 'no_nanny', 'complete'];
 
 /**
  * Classes whose name, or a team member's name, holds the search; optionally only those whose team
@@ -128,19 +128,22 @@ export function candidatesFor(cls: TeamClass, staff: TeamTeacher[], role: ClassT
 /** The server's refusal as a locale key under classTeam.errors (unknown ones fall back to `failed`). */
 export function classTeamErrorKey(error: unknown): string {
   const message = String((error as { message?: unknown })?.message ?? error ?? '');
-  const known = ['class_team_forbidden', 'class_team_not_a_teacher', 'class_team_teacher_inactive', 'class_team_class_not_found'];
+  const known = [
+    'class_team_forbidden', 'class_team_not_a_teacher', 'class_team_teacher_inactive', 'class_team_class_not_found',
+    'class_team_same_class', 'class_team_other_nursery', 'class_team_not_on_that_class',
+  ];
   const hit = known.find((code) => message.includes(code));
   return hit ? hit.replace('class_team_', '') : 'failed';
 }
 
-export type TeamGap = 'no_lead' | 'no_backup' | 'no_assistant' | 'no_nanny';
+export type TeamGap = 'no_lead' | 'no_backup' | 'no_co_teacher' | 'no_nanny';
 
 /** What a class's team is missing, the most serious first. */
 export function teamGaps(cls: TeamClass): TeamGap[] {
   const gaps: TeamGap[] = [];
   if (!lead(cls)) gaps.push('no_lead');
   if (!substitute(cls)) gaps.push('no_backup');
-  if (assistants(cls).length === 0) gaps.push('no_assistant');
+  if (coTeachers(cls).length === 0) gaps.push('no_co_teacher');
   if (nannies(cls).length === 0) gaps.push('no_nanny');
   return gaps;
 }

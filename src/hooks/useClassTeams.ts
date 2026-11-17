@@ -19,7 +19,10 @@ export function useClassTeams(nurseryId: string | null | undefined) {
   });
 }
 
-/** Puts a teacher in a class (set_class_team_member) or takes them out (remove_class_team_member). */
+/**
+ * Puts a teacher in a class (set_class_team_member), takes them out (remove_class_team_member),
+ * or moves them from one class to another as a single change (move_class_team_member).
+ */
 export function useClassTeamActions(nurseryId: string | null | undefined) {
   const qc = useQueryClient();
   const refresh = () => {
@@ -48,5 +51,17 @@ export function useClassTeamActions(nurseryId: string | null | undefined) {
     },
     onSuccess: refresh,
   });
-  return { assign, remove };
+  const move = useMutation({
+    mutationFn: async (args: { fromClassId: string; toClassId: string; userId: string; role: ClassTeamRole }) => {
+      const { error } = await supabase.rpc('move_class_team_member' as never, {
+        p_from_class_id: args.fromClassId,
+        p_to_class_id: args.toClassId,
+        p_user_id: args.userId,
+        p_role: args.role,
+      } as never);
+      if (error) throw error;
+    },
+    onSuccess: refresh,
+  });
+  return { assign, remove, move };
 }

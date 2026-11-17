@@ -378,6 +378,9 @@ export const TeacherMediaUploadPage = lazy(() =>
 export const TeacherClassAnnouncementsPage = lazy(() =>
   import('@/pages/teacher/TeacherClassAnnouncementsPage').then((m) => ({ default: m.TeacherClassAnnouncementsPage })),
 );
+export const TeacherClassProfilePage = lazy(() =>
+  import('@/pages/teacher/TeacherClassProfilePage').then((m) => ({ default: m.TeacherClassProfilePage })),
+);
 export const TeacherClassesHubPage = lazy(() =>
   import('@/pages/teacher/TeacherClassesHubPage').then((m) => ({ default: m.TeacherClassesHubPage })),
 );

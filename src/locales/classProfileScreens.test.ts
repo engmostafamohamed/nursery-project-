@@ -53,7 +53,7 @@ describe('class screens', () => {
       // Reused from other screens.
       ...CHILD_ABSENCE_REASONS.map((r) => `attendance.absence.reasons.${r}`),
       ...['sent', 'in_progress', 'not_started', 'not_expected'].map((s) => `dailyReport.stage.${s}`),
-      ...['lead', 'assistant', 'substitute'].map((r) => `classTeam.roles.${r}`),
+      ...['lead', 'co_teacher', 'substitute'].map((r) => `classTeam.roles.${r}`),
       ...['assigned', 'changed', 'removed'].map((a) => `classTeam.changes.${a}`),
       ...['uncovered', 'covered', 'no_lead', 'normal'].map((s) => `staffAbsence.board.status.${s}`),
       ...['sick', 'personal', 'vacation', 'training', 'other'].map((r) => `staffAbsence.reasons.${r}`),

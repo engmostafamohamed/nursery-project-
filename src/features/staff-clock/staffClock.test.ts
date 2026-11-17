@@ -57,9 +57,9 @@ describe('the class page’s day', () => {
   it('knows where each of the team stands and sums them up', () => {
     const team = [
       member({ id: 'a', clockIn: 'x', lateMinutes: 12 }),
-      member({ id: 'b', role: 'assistant', clockIn: 'x', clockOut: 'y' }),
+      member({ id: 'b', role: 'co_teacher', clockIn: 'x', clockOut: 'y' }),
       member({ id: 'c', role: 'nanny' }),
-      member({ id: 'd', role: 'assistant', absence: { reason: 'sick', startsOn: '2026-11-10', endsOn: '2026-11-11' } }),
+      member({ id: 'd', role: 'co_teacher', absence: { reason: 'sick', startsOn: '2026-11-10', endsOn: '2026-11-11' } }),
       member({ id: 'e', role: 'substitute', onDuty: false }),
     ];
     expect(team.map(clockState)).toEqual(['in', 'left', 'not_in', 'away', 'not_in']);

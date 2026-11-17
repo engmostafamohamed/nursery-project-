@@ -1,7 +1,7 @@
 // The teacher's own classes and children (get_my_classes / get_my_class_children): today's numbers,
 // the children table's filters, and which children a message to families goes to.
 
-export type ClassPlace = 'lead' | 'assistant' | 'substitute';
+export type ClassPlace = 'lead' | 'co_teacher' | 'substitute';
 
 export type MyClass = {
   class_id: string;

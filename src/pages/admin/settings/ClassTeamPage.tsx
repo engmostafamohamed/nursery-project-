@@ -41,7 +41,7 @@ const FILTER_LABEL: Record<ClassFilter, string> = {
   attention: 'classTeam.filters.attention',
   no_lead: 'classTeam.filters.noLead',
   no_backup: 'classTeam.filters.noBackup',
-  no_assistant: 'classTeam.filters.noAssistant',
+  no_co_teacher: 'classTeam.filters.noCoTeacher',
   no_nanny: 'classTeam.filters.noNanny',
   complete: 'classTeam.filters.complete',
 };
@@ -115,7 +115,7 @@ export function ClassTeamPage() {
           <StatTile icon="school" label={t('classTeam.tiles.classes')} value={summary.classes} onClick={() => pickClassFilter('all')} active={view === 'classes' && classFilter === 'all'} />
           {classTile('no_lead', 'person_off', t('classTeam.tiles.withoutLead'), summary.withoutLead, 'error')}
           {classTile('no_backup', 'swap_horiz', t('classTeam.tiles.withoutBackup'), summary.withoutBackup, 'warning')}
-          {classTile('no_assistant', 'group_remove', t('classTeam.tiles.withoutAssistant'), summary.withoutAssistant, 'warning')}
+          {classTile('no_co_teacher', 'group_remove', t('classTeam.tiles.withoutCoTeacher'), summary.withoutCoTeacher, 'warning')}
           {classTile('no_nanny', 'diversity_1', t('classTeam.tiles.withoutNanny'), summary.withoutNanny, 'warning')}
           <StatTile
             icon="no_accounts"
@@ -206,7 +206,7 @@ export function ClassTeamPage() {
                   <option value="all">{t('classTeam.filters.allTeachers')}</option>
                   <option value="no_class">{t('classTeam.filters.noClass')}</option>
                   <option value="lead">{t('classTeam.filters.leads')}</option>
-                  <option value="assistant">{t('classTeam.filters.assistants')}</option>
+                  <option value="co_teacher">{t('classTeam.filters.coTeachers')}</option>
                   <option value="nanny">{t('classTeam.filters.nannies')}</option>
                   <option value="substitute">{t('classTeam.filters.substitutes')}</option>
                 </Select>

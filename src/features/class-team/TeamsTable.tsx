@@ -7,7 +7,7 @@ import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { usePagination } from '@/hooks/usePagination';
 import { useTableSort } from '@/hooks/useTableSort';
 import {
-  assistants,
+  coTeachers,
   lead,
   nannies,
   otherClassesLed,
@@ -27,7 +27,7 @@ type SortKey = 'class' | 'lead' | 'children' | 'status';
 
 /**
  * The classes' teams as rows: the lead teacher (required; flagged when inactive or leading other
- * classes), the backup, the assistants and nannies, and what the team is missing. The classes that
+ * classes), the backup, the coTeachers and nannies, and what the team is missing. The classes that
  * need attention come first; a row (or its button) opens the team to change it.
  */
 export function TeamsTable({
@@ -89,7 +89,7 @@ export function TeamsTable({
     );
   };
 
-  /** Several people (assistants, nannies): the first two, then how many more. */
+  /** Several people (coTeachers, nannies): the first two, then how many more. */
   const many = (ids: string[]) => {
     if (!ids.length) return <span className="text-xs text-on-surface-variant">{t('classTeam.table.none')}</span>;
     const shown = ids.slice(0, 2);
@@ -125,7 +125,7 @@ export function TeamsTable({
             <Th sort={sort.sortFor('class')}>{t('classTeam.table.class')}</Th>
             <Th sort={sort.sortFor('lead')}>{t('classTeam.table.lead')}</Th>
             <Th>{t('classTeam.table.backup')}</Th>
-            <Th>{t('classTeam.table.assistants')}</Th>
+            <Th>{t('classTeam.table.coTeachers')}</Th>
             <Th>{t('classTeam.table.nannies')}</Th>
             <Th sort={sort.sortFor('status')}>{t('classTeam.table.status')}</Th>
             <Th align="end">{t('classTeam.table.actions')}</Th>
@@ -151,7 +151,7 @@ export function TeamsTable({
                   </Td>
                   <Td>{one(lead(cls), 'lead', cls.id)}</Td>
                   <Td>{one(substitute(cls), 'substitute', cls.id)}</Td>
-                  <Td>{many(assistants(cls))}</Td>
+                  <Td>{many(coTeachers(cls))}</Td>
                   <Td>{many(nannies(cls))}</Td>
                   <Td>
                     <StatusPill tone={look.tone} icon={look.icon}>{t(`classTeam.status.${status}`)}</StatusPill>

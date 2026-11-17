@@ -1,4 +1,4 @@
-// Module 3 · Classes & courses — who teaches each class (lead, backup, assistants), and placing a
+// Module 3 · Classes & courses — who teaches each class (lead, backup, coTeachers), and placing a
 // newly enrolled child in a class.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -16,7 +16,7 @@ import { activateEnrollment } from './enrollmentActivation';
 
 vi.mock('@/lib/supabase', () => import('@/test/fakeSupabase'));
 
-const ROLES: ClassStaffRole[] = ['lead', 'substitute', 'assistant'];
+const ROLES: ClassStaffRole[] = ['lead', 'substitute', 'co_teacher'];
 
 describe('class staff roles', () => {
   it('names each role in both languages', () => {
@@ -27,16 +27,16 @@ describe('class staff roles', () => {
     expect(i18n.t(classStaffRoleKey('substitute'), { lng: 'en' })).toBe('Backup');
   });
 
-  it('shows the lead, the backup and assistants with different badges', () => {
+  it('shows the lead, the backup and coTeachers with different badges', () => {
     expect(new Set(ROLES.map(classStaffBadgeVariant)).size).toBe(3);
     expect(classStaffBadgeVariant('lead')).toBe('default');
   });
 
-  it('lists the lead first, then the backup, then assistants', () => {
-    expect(['assistant', 'substitute', 'lead'].sort((a, b) => compareClassStaffRoles(a as ClassStaffRole, b as ClassStaffRole))).toEqual([
+  it('lists the lead first, then the backup, then coTeachers', () => {
+    expect(['co_teacher', 'substitute', 'lead'].sort((a, b) => compareClassStaffRoles(a as ClassStaffRole, b as ClassStaffRole))).toEqual([
       'lead',
       'substitute',
-      'assistant',
+      'co_teacher',
     ]);
   });
 });
@@ -50,13 +50,13 @@ describe('groupClassStaff', () => {
     ['u5', { name: 'Samia' }],
   ]);
 
-  it('splits a class into its lead, backup and assistants', () => {
+  it('splits a class into its lead, backup and co-teachers', () => {
     const staff = groupClassStaff(
       [
-        { user_id: 'u3', role: 'assistant' },
+        { user_id: 'u3', role: 'co_teacher' },
         { user_id: 'u1', role: 'lead' },
         { user_id: 'u2', role: 'substitute' },
-        { user_id: 'u4', role: 'assistant' },
+        { user_id: 'u4', role: 'co_teacher' },
         { user_id: 'u5', role: 'nanny' },
       ],
       people,
@@ -64,7 +64,7 @@ describe('groupClassStaff', () => {
     expect(staff).toEqual({
       lead: { name: 'Sara' },
       substitute: { name: 'Mona' },
-      assistants: [{ name: 'Hoda' }, { name: 'Laila' }],
+      coTeachers: [{ name: 'Hoda' }, { name: 'Laila' }],
       nannies: [{ name: 'Samia' }],
     });
   });
@@ -73,7 +73,7 @@ describe('groupClassStaff', () => {
     expect(groupClassStaff([{ user_id: 'u1', role: 'lead' }], people)).toEqual({
       lead: { name: 'Sara' },
       substitute: null,
-      assistants: [],
+      coTeachers: [],
       nannies: [],
     });
   });
@@ -83,11 +83,11 @@ describe('groupClassStaff', () => {
       groupClassStaff(
         [
           { user_id: 'hidden', role: 'substitute' },
-          { user_id: 'hidden', role: 'assistant' },
+          { user_id: 'hidden', role: 'co_teacher' },
         ],
         people,
       ),
-    ).toEqual({ lead: null, substitute: null, assistants: [], nannies: [] });
+    ).toEqual({ lead: null, substitute: null, coTeachers: [], nannies: [] });
   });
 });
 

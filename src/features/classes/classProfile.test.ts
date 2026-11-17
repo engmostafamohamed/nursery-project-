@@ -87,7 +87,7 @@ describe('reading get_class_profile', () => {
       ],
       messages: [{ id: 'm1', kind: 'family_message', status: 'scheduled', body_ar: 'مرحبا', body_en: 'Hi', sent_at: '2026-11-08T10:00:00Z' }],
       waitlist: [{ id: 'w1', inquiry_id: 'i1', position: 2, status: 'offered', child_name: 'Omar', child_dob: '2024-01-01' }],
-      team_changes: [{ id: 't1', action: 'assigned', role: 'assistant', previous_role: null, at: '2026-11-01T09:00:00Z', name_en: 'B' }],
+      team_changes: [{ id: 't1', action: 'assigned', role: 'co_teacher', previous_role: null, at: '2026-11-01T09:00:00Z', name_en: 'B' }],
       media: { pending: 3, approved_30d: 12 },
       cameras: [{ id: 'cam', name_en: 'Room cam', active: false }],
     });
@@ -95,7 +95,7 @@ describe('reading get_class_profile', () => {
     expect(p.schoolDay).toBe(false);
     expect(p.info).toMatchObject({ nameEn: 'Butterflies', capacity: 25, roomNumber: 'A2', timezone: 'Africa/Cairo' });
     expect(p.team[0].absence).toEqual({ reason: 'sick', startsOn: '2026-11-09', endsOn: '2026-11-11' });
-    expect(p.team[1].role).toBe('assistant');
+    expect(p.team[1].role).toBe('co_teacher');
     expect(p.team[1].active).toBe(true);
 
     expect(p.children[0]).toMatchObject({ gender: null, attendance: 'partial', report: 'published', conditions: 2, medications: 0 });
@@ -107,7 +107,7 @@ describe('reading get_class_profile', () => {
 
     expect(p.messages[0]).toMatchObject({ kind: 'family_message', status: 'scheduled' });
     expect(p.waitlist[0]).toMatchObject({ position: 2, status: 'offered', childDob: '2024-01-01', parentPhone: null });
-    expect(p.teamChanges[0]).toMatchObject({ action: 'assigned', role: 'assistant', previousRole: null });
+    expect(p.teamChanges[0]).toMatchObject({ action: 'assigned', role: 'co_teacher', previousRole: null });
     expect(p.media).toEqual({ pending: 3, approvedLast30Days: 12 });
     expect(p.cameras[0]).toMatchObject({ active: false, location: null });
   });
@@ -180,7 +180,7 @@ describe('the team today', () => {
     ({ info: toClassProfile({ class: { id: 'k1', name_ar: 'ف', name_en: 'K' } }).info, team, children });
 
   it('reads the cover the way the absences screen does', () => {
-    expect(coverStatus(classCover(profile([member(), member({ id: 'u2', role: 'assistant' })])))).toBe('normal');
+    expect(coverStatus(classCover(profile([member(), member({ id: 'u2', role: 'co_teacher' })])))).toBe('normal');
 
     const away = { reason: 'sick' as const, startsOn: '2026-11-09', endsOn: '2026-11-10' };
     const covered = classCover(profile([member({ onDuty: false, absence: away }), member({ id: 'b', role: 'substitute', covering: true })]));
@@ -188,7 +188,7 @@ describe('the team today', () => {
     expect(coverStatus(covered)).toBe('covered');
 
     expect(coverStatus(classCover(profile([member({ onDuty: false, absence: away })])))).toBe('uncovered');
-    expect(coverStatus(classCover(profile([member({ id: 'a', role: 'assistant' })])))).toBe('no_lead');
+    expect(coverStatus(classCover(profile([member({ id: 'a', role: 'co_teacher' })])))).toBe('no_lead');
     expect(coverStatus(classCover(profile([], [])))).toBe('no_lead');
   });
 });
