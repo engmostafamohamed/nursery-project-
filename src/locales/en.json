@@ -2019,7 +2019,8 @@
       "collapseSidebar": "Collapse sidebar",
       "expandSidebar": "Expand sidebar",
       "staffTasks": "Staff tasks",
-      "myTasks": "My tasks"
+      "myTasks": "My tasks",
+      "activityLog": "Activity log"
     },
     "classes": {
       "list": {
@@ -12457,6 +12458,86 @@
       "past": "Days that have passed stay as they were: an ended day off can't change, and a started one can only end early.",
       "network": "No connection. Try again.",
       "failed": "Something went wrong. Try again."
+    }
+  },
+  "activityLog": {
+    "eyebrow": "Records",
+    "title": "Activity log",
+    "subtitle": "Every change made to a class or to a member of staff, newest first.",
+    "tableTitle": "What happened",
+    "lineCount_one": "{{count}} line",
+    "lineCount_other": "{{count}} lines",
+    "searchPlaceholder": "Search by a class or a person…",
+    "filterSubject": "About",
+    "inClass": "in {{class}}",
+    "bySystem": "The system",
+    "loadError": "The log could not be read.",
+    "noMatch": "Nothing matches this search.",
+    "emptyTitle": "Nothing recorded yet",
+    "emptyDescription": "Changes to classes and staff will appear here as they happen.",
+    "subjects": {
+      "class": "Classes",
+      "staff": "Staff"
+    },
+    "actions": {
+      "created": "Added",
+      "updated": "Changed",
+      "deleted": "Removed"
+    },
+    "table": {
+      "what": "What",
+      "about": "About",
+      "changed": "What changed",
+      "who": "By",
+      "when": "When"
+    },
+    "fields": {
+      "name_ar": "Name (Arabic)",
+      "name_en": "Name (English)",
+      "grade_level": "Age group",
+      "room_number": "Room",
+      "capacity": "Places",
+      "role": "Place",
+      "role_id": "Role",
+      "status": "State",
+      "phone": "Phone",
+      "email": "Email",
+      "class_id": "Class",
+      "starts_on": "From",
+      "ends_on": "To",
+      "reason": "Reason",
+      "cancelled_at": "Withdrawn",
+      "check_in_at": "Arrived",
+      "check_out_at": "Left",
+      "note": "Note"
+    },
+    "events": {
+      "class": {
+        "created": "A class was opened",
+        "updated": "A class was changed",
+        "deleted": "A class was removed",
+        "closed": "A class was closed"
+      },
+      "class_team": {
+        "created": "Someone joined a class team",
+        "updated": "A place in a class team changed",
+        "deleted": "Someone left a class team"
+      },
+      "staff": {
+        "created": "A member of staff was added",
+        "updated": "A member of staff’s details changed",
+        "deleted": "A member of staff was removed"
+      },
+      "staff_absence": {
+        "created": "An absence was recorded",
+        "updated": "An absence was changed",
+        "deleted": "An absence was removed"
+      },
+      "staff_attendance": {
+        "created": "A day’s clocking was recorded",
+        "updated": "A day’s clocking was corrected",
+        "deleted": "A day’s clocking was removed"
+      }
     }
   }
 }

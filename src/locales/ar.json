@@ -2199,7 +2199,8 @@
       "collapseSidebar": "طي الشريط الجانبي",
       "expandSidebar": "توسيع الشريط الجانبي",
       "staffTasks": "مهام الموظفين",
-      "myTasks": "مهامي"
+      "myTasks": "مهامي",
+      "activityLog": "سجل النشاط"
     },
     "classes": {
       "list": {
@@ -13150,6 +13151,90 @@
       "past": "الأيام التي مضت تبقى كما هي: لا تتغير إجازة انتهت، والإجازة التي بدأت يمكن إنهاؤها مبكرًا فقط.",
       "network": "لا يوجد اتصال. حاول مرة أخرى.",
       "failed": "حدث خطأ. حاول مرة أخرى."
+    }
+  },
+  "activityLog": {
+    "eyebrow": "السجلات",
+    "title": "سجل النشاط",
+    "subtitle": "كل تغيير جرى على فصل أو على موظف، الأحدث أولًا.",
+    "tableTitle": "ماذا حدث",
+    "lineCount_zero": "لا سطور",
+    "lineCount_one": "سطر واحد",
+    "lineCount_two": "سطران",
+    "lineCount_few": "{{count}} سطور",
+    "lineCount_many": "{{count}} سطرًا",
+    "lineCount_other": "{{count}} سطر",
+    "searchPlaceholder": "ابحث باسم فصل أو شخص…",
+    "filterSubject": "يخص",
+    "inClass": "في {{class}}",
+    "bySystem": "النظام",
+    "loadError": "تعذّرت قراءة السجل.",
+    "noMatch": "لا شيء يطابق هذا البحث.",
+    "emptyTitle": "لم يُسجَّل شيء بعد",
+    "emptyDescription": "ستظهر هنا التغييرات على الفصول والموظفين فور حدوثها.",
+    "subjects": {
+      "class": "الفصول",
+      "staff": "الموظفون"
+    },
+    "actions": {
+      "created": "إضافة",
+      "updated": "تعديل",
+      "deleted": "حذف"
+    },
+    "table": {
+      "what": "ماذا",
+      "about": "يخص",
+      "changed": "ما تغيّر",
+      "who": "بواسطة",
+      "when": "متى"
+    },
+    "fields": {
+      "name_ar": "الاسم (عربي)",
+      "name_en": "الاسم (إنجليزي)",
+      "grade_level": "الفئة العمرية",
+      "room_number": "الغرفة",
+      "capacity": "الأماكن",
+      "role": "المكان",
+      "role_id": "الدور",
+      "status": "الحالة",
+      "phone": "الهاتف",
+      "email": "البريد",
+      "class_id": "الفصل",
+      "starts_on": "من",
+      "ends_on": "إلى",
+      "reason": "السبب",
+      "cancelled_at": "سُحب",
+      "check_in_at": "الحضور",
+      "check_out_at": "الانصراف",
+      "note": "ملاحظة"
+    },
+    "events": {
+      "class": {
+        "created": "تم فتح فصل",
+        "updated": "تم تعديل فصل",
+        "deleted": "تم حذف فصل",
+        "closed": "تم إغلاق فصل"
+      },
+      "class_team": {
+        "created": "انضم شخص إلى فريق فصل",
+        "updated": "تغيّر مكان في فريق فصل",
+        "deleted": "ترك شخص فريق فصل"
+      },
+      "staff": {
+        "created": "تمت إضافة موظف",
+        "updated": "تغيّرت بيانات موظف",
+        "deleted": "تم حذف موظف"
+      },
+      "staff_absence": {
+        "created": "تم تسجيل غياب",
+        "updated": "تم تعديل غياب",
+        "deleted": "تم حذف غياب"
+      },
+      "staff_attendance": {
+        "created": "تم تسجيل حضور يوم",
+        "updated": "تم تصحيح حضور يوم",
+        "deleted": "تم حذف حضور يوم"
+      }
     }
   }
 }

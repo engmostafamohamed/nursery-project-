@@ -130,6 +130,9 @@ export const ClassTeamPage = lazy(() =>
 export const DailyReportRatesPage = lazy(() =>
   import('@/pages/admin/DailyReportRatesPage').then((m) => ({ default: m.DailyReportRatesPage })),
 );
+export const AdminActivityLogPage = lazy(() =>
+  import('@/pages/admin/AdminActivityLogPage').then((m) => ({ default: m.AdminActivityLogPage })),
+);
 export const AdminRolesPage = lazy(() =>
   import('@/pages/admin/settings/AdminRolesPage').then((m) => ({ default: m.AdminRolesPage })),
 );

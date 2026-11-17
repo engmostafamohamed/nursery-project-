@@ -138,6 +138,7 @@ const moreNavGroups: { titleKey: string; items: NavItem[] }[] = [
       { to: '/admin/loyalty', key: 'loyalty', icon: 'workspace_premium', feature: 'loyalty' },
       { to: '/admin/messages/broadcasts', key: 'broadcastHistory', icon: 'history', feature: 'broadcast_messages' },
       { to: '/admin/reminders', key: 'reminders', icon: 'alarm' },
+      { to: '/admin/activity', key: 'activityLog', icon: 'history', feature: 'roles_permissions' },
       { to: '/admin/settings/positions', key: 'rbacPositions', icon: 'work', xoOnly: true },
       { to: '/admin/settings/roles', key: 'rbacRoles', icon: 'shield_person', feature: 'roles_permissions' },
       { to: '/admin/settings/features', key: 'rbacFeatures', icon: 'extension', xoOnly: true },

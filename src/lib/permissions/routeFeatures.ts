@@ -52,6 +52,7 @@ const ADMIN_ROUTES: ReadonlyArray<readonly [string, FeatureKey]> = [
   ['/admin/messages', 'messages'],
   ['/admin/chat', 'chat'],
   ['/admin/settings/team', 'class_team'],
+  ['/admin/activity', 'roles_permissions'],
   ['/admin/settings/roles', 'roles_permissions'],
   ['/admin/settings/positions', 'roles_permissions'],
   ['/admin/settings/features', 'roles_permissions'],

@@ -118,6 +118,7 @@ export function AppRouter() {
               <Route path="deals/partners" element={<P.AdminPartnershipsPage />} />
               <Route path="deals/partners/:partnerId" element={<P.AdminPartnerPage />} />
               <Route path="reports" element={<P.AdminReportsPage />} />
+              <Route path="activity" element={<P.AdminActivityLogPage />} />
               <Route path="daily-reports" element={<P.DailyReportRatesPage />} />
               <Route path="reports/quarterly" element={<P.AdminReportsPage />} />
               <Route path="staff/onboarding" element={<P.AdminStaffOnboardingPage />} />
@@ -296,6 +297,7 @@ export function AppRouter() {
               <Route path="nursery/media" element={<P.AdminMediaLibraryPage />} />
               <Route path="nursery/profile" element={<P.AdminProfilePage />} />
               <Route path="nursery/settings" element={<P.AdminSettingsPage />} />
+              <Route path="nursery/activity" element={<P.AdminActivityLogPage />} />
               <Route path="nursery/teacher-reminders" element={<Navigate to="/admin/staff-tasks/list" replace />} />
               <Route path="nursery/reminders" element={<P.RemindersPage />} />
               <Route path="nursery/packages" element={<P.AdminPackagesPage />} />
