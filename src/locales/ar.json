@@ -1068,7 +1068,8 @@
       "message": "الرسالة",
       "when": "متى",
       "open": "فتح"
-    }
+    },
+    "menu": "القائمة"
   },
   "validation": {
     "pleaseComplete": "يرجى إكمال {{count}} حقول مطلوبة أدناه."

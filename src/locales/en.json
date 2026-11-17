@@ -944,7 +944,8 @@
       "message": "Message",
       "when": "When",
       "open": "Open"
-    }
+    },
+    "menu": "Menu"
   },
   "validation": {
     "pleaseComplete": "Please complete {{count}} required fields below."

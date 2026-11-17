@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { endSession } from '@/lib/sessionExpiry';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { HelpAiBundle } from '@/components/help/HelpAiBundle';
@@ -84,7 +85,25 @@ export function TeacherLayout() {
   const { data: unreadCount = 0 } = useUnreadMessagesCount(user?.id);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { data: notifications = [] } = useNotificationsCenter(user?.id);
-  const [moreOpen, setMoreOpen] = useState(false);
+  // Below lg the sidebar is a drawer: closed until the menu button opens it, and shut again on
+  // Escape, on the backdrop, or as soon as the teacher opens another screen.
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
+  const [navOpen, setNavOpen] = useState(false);
+  const drawerShut = !isDesktop && !navOpen;
+  const { pathname } = useLocation();
+  const [navPath, setNavPath] = useState(pathname);
+  if (navPath !== pathname) {
+    setNavPath(pathname);
+    setNavOpen(false);
+  }
+  useEffect(() => {
+    if (!navOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setNavOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [navOpen]);
   const notificationUnreadCount = useMemo(
     () => notifications.filter((item) => !item.read).length,
     [notifications],
@@ -111,21 +130,44 @@ export function TeacherLayout() {
   const handleLogout = async () => {
     // Always ends the session here, even when the server cannot be reached.
     await endSession('user');
-    setMoreOpen(false);
+    setNavOpen(false);
     navigate('/login', { replace: true });
   };
 
   return (
-    <div className="min-h-screen bg-background pb-32 lg:ps-64 lg:pb-20">
-      {/* Desktop sidebar — uses the empty side space on wide screens. */}
-      <aside className="hidden lg:fixed lg:inset-y-0 lg:start-0 lg:z-40 lg:flex lg:w-64 lg:flex-col lg:border-e lg:border-outline-variant lg:bg-surface">
+    <div className="min-h-screen bg-background pb-8 lg:ps-64">
+      {/* The backdrop that closes the drawer on a phone or tablet. */}
+      {navOpen ? (
+        <button
+          type="button"
+          aria-label={t('common.close')}
+          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+          onClick={() => setNavOpen(false)}
+        />
+      ) : null}
+      {/* One list of screens: a drawer over the page below lg, a fixed sidebar above it. */}
+      <aside
+        inert={drawerShut}
+        className={cn(
+          'fixed inset-y-0 start-0 z-50 flex w-64 flex-col border-e border-outline-variant bg-surface transition-transform duration-300 ease-in-out lg:z-40 lg:translate-x-0 lg:rtl:translate-x-0',
+          drawerShut && '-translate-x-full rtl:translate-x-full',
+        )}
+      >
         <div className="flex items-center gap-2 border-b border-outline-variant px-5 py-4">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-sm font-bold text-primary-foreground">
             XO
           </span>
-          <span className="text-sm font-semibold text-on-surface">
+          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-on-surface">
             {t('teacher.nav.brand', { defaultValue: 'XO Nursery' })}
           </span>
+          <button
+            type="button"
+            aria-label={t('common.close')}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container lg:hidden"
+            onClick={() => setNavOpen(false)}
+          >
+            <span className="material-symbols-outlined text-xl" aria-hidden>close</span>
+          </button>
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4" aria-label={t('teacher.nav.bottomBarLabel')}>
           {[...visiblePrimary, ...visibleSecondary].map((item) => {
@@ -183,6 +225,15 @@ export function TeacherLayout() {
       <header className="sticky top-0 z-30 border-b border-outline-variant bg-surface/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 lg:max-w-none lg:px-8">
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-label={t('common.menu')}
+              aria-expanded={navOpen}
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-full border border-outline-variant bg-surface text-foreground lg:hidden"
+              onClick={() => setNavOpen(true)}
+            >
+              <span className="material-symbols-outlined text-xl" aria-hidden>menu</span>
+            </button>
             <BackButton />
             <UserMenu profilePath="/teacher/profile" profileLabel={t('teacher.nav.profile')} />
             <div>
@@ -237,118 +288,6 @@ export function TeacherLayout() {
         </FeatureRouteGuard>
       </main>
 
-      <nav
-        className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-4xl rounded-t-3xl border border-outline-variant bg-surface/85 px-4 py-3 backdrop-blur-2xl lg:hidden"
-        aria-label={t('teacher.nav.bottomBarLabel')}
-      >
-        <ul className="grid grid-cols-6 gap-2">
-          {visiblePrimary.map((item) => (
-            <li key={item.key}>
-              <NavLink
-                to={item.to}
-                end={item.to === '/teacher'}
-                className={({ isActive }) =>
-                  cn(
-                    'flex flex-col items-center gap-1 rounded-xl px-2 py-2 text-xs',
-                    isActive
-                      ? 'rounded-2xl bg-primary-container px-6 py-2 text-white'
-                      : 'text-slate-400',
-                  )
-                }
-              >
-                <span className="relative material-symbols-outlined text-base" aria-hidden>
-                  {item.icon}
-                  {item.key === 'messages' && unreadCount > 0 ? (
-                    <span className="absolute -end-2 -top-2 rounded-full bg-primary px-1 text-[10px] text-white">
-                      {unreadCount}
-                    </span>
-                  ) : null}
-                </span>
-                {t(`teacher.nav.${item.key}`)}
-              </NavLink>
-            </li>
-          ))}
-          <li>
-            <button
-              type="button"
-              className={cn(
-                'flex w-full flex-col items-center gap-1 text-[11px] font-medium transition-colors',
-                moreOpen ? 'text-primary' : 'text-on-surface-variant',
-              )}
-              aria-label={t('common.more')}
-              aria-expanded={moreOpen}
-              onClick={() => setMoreOpen((prev) => !prev)}
-            >
-              <span
-                className={cn(
-                  'flex h-8 w-full max-w-[3.5rem] items-center justify-center rounded-full transition-colors',
-                  moreOpen ? 'bg-primary/15' : '',
-                )}
-              >
-                <span className="material-symbols-outlined text-[22px]" aria-hidden>
-                  menu
-                </span>
-              </span>
-              {t('common.more')}
-            </button>
-          </li>
-        </ul>
-      </nav>
-      {moreOpen ? (
-        <button
-          type="button"
-          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
-          aria-label={t('common.close')}
-          onClick={() => setMoreOpen(false)}
-        />
-      ) : null}
-      <aside
-        className={cn(
-          'fixed inset-x-0 bottom-0 z-50 max-h-[70vh] rounded-t-3xl border border-outline-variant bg-surface p-4 shadow-ambient transition-transform lg:hidden',
-          moreOpen ? 'translate-y-0' : 'translate-y-full',
-        )}
-      >
-        <div className="mb-3 flex items-center justify-between">
-          <p className="text-sm font-semibold text-on-surface">{t('common.more')}</p>
-          <button
-            type="button"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-outline-variant"
-            aria-label={t('common.close')}
-            onClick={() => setMoreOpen(false)}
-          >
-            <span className="material-symbols-outlined text-sm" aria-hidden>close</span>
-          </button>
-        </div>
-        <div className="grid grid-cols-2 gap-2 overflow-y-auto pb-4">
-          {visibleSecondary.map((item) => (
-            <NavLink
-              key={item.key}
-              to={item.to}
-              end={item.to === '/teacher'}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-2 rounded-xl border border-outline-variant px-3 py-2 text-sm text-on-surface-variant',
-                  isActive ? 'bg-primary-container text-white' : 'bg-surface-container-lowest',
-                )
-              }
-              onClick={() => setMoreOpen(false)}
-            >
-              <span className="material-symbols-outlined text-base" aria-hidden>{item.icon}</span>
-              {t(`teacher.nav.${item.key}`)}
-            </NavLink>
-          ))}
-          <button
-            type="button"
-            className="col-span-2 flex items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-error"
-            onClick={() => {
-              void handleLogout();
-            }}
-          >
-            <span className="material-symbols-outlined text-base" aria-hidden>logout</span>
-            {t('common.logout')}
-          </button>
-        </div>
-      </aside>
       <NotificationCenterDrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
