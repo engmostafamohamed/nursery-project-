@@ -8178,7 +8178,7 @@
       "class": "Class",
       "lead": "Lead teacher",
       "backup": "Backup teacher",
-      "assistants": "Assistants",
+      "coTeachers": "Co-teachers",
       "nannies": "Nannies",
       "status": "Team",
       "actions": "Actions",

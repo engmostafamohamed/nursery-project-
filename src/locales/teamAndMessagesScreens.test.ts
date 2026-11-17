@@ -10,6 +10,12 @@ import en from './en.json';
 
 const files = [
   '../pages/admin/settings/ClassTeamPage.tsx',
+  '../features/class-team/TeamsTable.tsx',
+  '../features/class-team/TeamTeachersTable.tsx',
+  '../features/class-team/TeamChangesTable.tsx',
+  '../features/class-team/ClassTeamCard.tsx',
+  '../features/class-team/MoveTeacherDialog.tsx',
+  '../features/class-team/EditTeamDialog.tsx',
   '../pages/teacher/TeacherHomePage.tsx',
   '../pages/teacher/TeacherFamilyMessagesPage.tsx',
   '../components/family-messages/FamilyMessageView.tsx',
