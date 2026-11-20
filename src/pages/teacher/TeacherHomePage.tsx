@@ -28,6 +28,7 @@ import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatTile } from '@/components/ui/StatTile';
+import { TeachingStatsPanel } from '@/features/teacher-stats/TeachingStatsPanel';
 import { MedicineDueBanner } from '@/features/medicine-round/MedicineDueBanner';
 import { StaffClockCard } from '@/features/staff-clock/StaffClockCard';
 import { MyTasksTodayCard } from '@/features/staff-tasks/MyTasksTodayCard';
@@ -278,6 +279,8 @@ export function TeacherHomePage() {
           {canSeeRates ? <ReportRateCard nurseryId={profile?.nursery_id} to="/teacher/report-rates" /> : null}
         </div>
       ) : null}
+
+      <TeachingStatsPanel userId={user?.id} />
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
         {/* My classes and their team */}

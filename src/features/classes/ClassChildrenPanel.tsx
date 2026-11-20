@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
+import { ChildHistoryDialog } from '@/features/child-history/ChildHistoryDialog';
 import { ActionGate } from '@/components/shared/ActionGate';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -48,15 +49,16 @@ export function ClassChildrenPanel({
   canManage?: boolean;
 }) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const counts = useMemo(() => filterCounts(profile.children), [profile.children]);
   const shown = useMemo(() => filterChildren(profile.children, filter, search), [profile.children, filter, search]);
   const pager = usePagination(shown, 10, `${filter}|${search}`);
-  const open = (child: ClassChild) => navigate(`${base}/children/${child.id}`);
+  const [openChildId, setOpenChildId] = useState<string | null>(null);
+  const open = (child: ClassChild) => setOpenChildId(child.id);
   const canClear = filter !== 'all' || Boolean(search.trim());
 
   return (
+    <>
     <TableCard
       title={t('classProfile.children.title')}
       count={t('classProfile.children.count', { count: shown.length })}
@@ -171,6 +173,12 @@ export function ClassChildrenPanel({
         </>
       )}
     </TableCard>
+    <ChildHistoryDialog
+      childId={openChildId}
+      nurseryId={profile.info.nurseryId}
+      onClose={() => setOpenChildId(null)}
+    />
+    </>
   );
 }
 

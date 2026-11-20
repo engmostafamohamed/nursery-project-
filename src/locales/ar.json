@@ -6474,6 +6474,28 @@
       "rosterTable": {
         "child": "الطفل"
       }
+    },
+    "stats": {
+      "tiles": {
+        "children": "الأطفال",
+        "classes": "الفصول",
+        "busiest": "الأكبر: {{name}}",
+        "attendance": "الحضور",
+        "reportsSent": "التقارير المرسلة",
+        "overFortnight": "خلال الأسبوعين الماضيين"
+      },
+      "charts": {
+        "attendance": "من حضر",
+        "attendanceHint": "أطفال فصولك، يومًا بيوم.",
+        "here": "حضر",
+        "noDays": "لا أيام مسجّلة بعد",
+        "reports": "تقارير اليوم",
+        "reportsHint": "التقارير المرسلة للأسر، يومًا بيوم.",
+        "sent": "مُرسل",
+        "noReports": "لم تُكتب تقارير بعد",
+        "classes": "فصولك",
+        "classesHint": "كم طفلًا في كل فصل."
+      }
     }
   },
   "media": {
@@ -13235,6 +13257,50 @@
         "updated": "تم تصحيح حضور يوم",
         "deleted": "تم حذف حضور يوم"
       }
+    }
+  },
+  "childHistory": {
+    "title": "سجل الطفل",
+    "loadError": "تعذّرت قراءة سجل هذا الطفل.",
+    "ageMonths_zero": "أقل من شهر",
+    "ageMonths_one": "شهر واحد",
+    "ageMonths_two": "شهران",
+    "ageMonths_few": "{{count}} أشهر",
+    "ageMonths_many": "{{count}} شهرًا",
+    "ageMonths_other": "{{count}} شهر",
+    "enrolledOn": "انضم في {{date}}",
+    "recordedBy": "سجّلها {{name}}",
+    "came": "حضر",
+    "away": "غائب",
+    "parts": {
+      "reports": "التقارير",
+      "attendance": "الأيام",
+      "events": "الفعاليات",
+      "milestones": "الإنجازات",
+      "health": "الصحة",
+      "messages": "رسائل الأسرة",
+      "media": "الصور"
+    },
+    "table": {
+      "date": "التاريخ",
+      "mood": "المزاج",
+      "note": "ملاحظة",
+      "by": "بواسطة",
+      "day": "اليوم",
+      "times": "الحضور والانصراف",
+      "event": "الفعالية",
+      "permission": "الإذن",
+      "went": "حضر",
+      "kind": "النوع"
+    },
+    "empty": {
+      "reports": "لم تُكتب تقارير بعد",
+      "attendance": "لا أيام مسجّلة بعد",
+      "events": "لم تُدعَ إلى فعالية بعد",
+      "milestones": "لم يُسجَّل شيء بعد",
+      "health": "لا ملاحظات صحية مسجّلة",
+      "messages": "لم يُرسل شيء إلى أسرتها بعد",
+      "media": "لا صور بعد"
     }
   }
 }

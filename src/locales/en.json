@@ -6107,6 +6107,28 @@
       "rosterTable": {
         "child": "Child"
       }
+    },
+    "stats": {
+      "tiles": {
+        "children": "Children",
+        "classes": "Classes",
+        "busiest": "Busiest: {{name}}",
+        "attendance": "Attendance",
+        "reportsSent": "Reports sent",
+        "overFortnight": "Over the last fortnight"
+      },
+      "charts": {
+        "attendance": "Who came",
+        "attendanceHint": "Children of your classes, day by day.",
+        "here": "Came",
+        "noDays": "No days recorded yet",
+        "reports": "The day's reports",
+        "reportsHint": "Reports sent to families, day by day.",
+        "sent": "Sent",
+        "noReports": "No reports written yet",
+        "classes": "Your classes",
+        "classesHint": "How many children each one holds."
+      }
     }
   },
   "media": {
@@ -12538,6 +12560,46 @@
         "updated": "A day’s clocking was corrected",
         "deleted": "A day’s clocking was removed"
       }
+    }
+  },
+  "childHistory": {
+    "title": "A child's record",
+    "loadError": "This child's record could not be read.",
+    "ageMonths_one": "{{count}} month old",
+    "ageMonths_other": "{{count}} months old",
+    "enrolledOn": "Joined {{date}}",
+    "recordedBy": "Recorded by {{name}}",
+    "came": "Came",
+    "away": "Away",
+    "parts": {
+      "reports": "Reports",
+      "attendance": "Days",
+      "events": "Events",
+      "milestones": "Milestones",
+      "health": "Health",
+      "messages": "Messages home",
+      "media": "Photos"
+    },
+    "table": {
+      "date": "Date",
+      "mood": "Mood",
+      "note": "Note",
+      "by": "By",
+      "day": "Day",
+      "times": "In and out",
+      "event": "Event",
+      "permission": "Permission",
+      "went": "Went",
+      "kind": "Kind"
+    },
+    "empty": {
+      "reports": "No reports written yet",
+      "attendance": "No days recorded yet",
+      "events": "She has not been asked to an event yet",
+      "milestones": "Nothing recorded yet",
+      "health": "No health notes on file",
+      "messages": "Nothing sent to her family yet",
+      "media": "No photographs yet"
     }
   }
 }
