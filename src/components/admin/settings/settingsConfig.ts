@@ -63,6 +63,9 @@ export const DEFAULT_SETTINGS: Record<SettingsKey, unknown> = {
   late_invoice_mode: 'daily',
   pickup_reminder_minutes_before: 15,
   min_minutes_between_scans: 5,
+  clock_in_opens_minutes_before: 60,
+  clock_out_closes_minutes_after: 120,
+  clock_out_grace_minutes: 15,
   absence_alert_time: '09:30',
   end_of_day_checklist_time: '17:00',
   permission_deadline_default_hours: 24,
@@ -158,6 +161,10 @@ export const SETTINGS_TABS: SettingsTabConfig[] = [
       { key: 'min_minutes_between_scans', type: 'number', min: 0, max: 120 },
       { key: 'absence_alert_time', type: 'time' },
       { key: 'end_of_day_checklist_time', type: 'time' },
+      // The window around each member of staff's own shift in which they may clock in and out.
+      { key: 'clock_in_opens_minutes_before', type: 'number', min: 0, max: 600 },
+      { key: 'clock_out_closes_minutes_after', type: 'number', min: 0, max: 600 },
+      { key: 'clock_out_grace_minutes', type: 'number', min: 0, max: 240 },
     ],
   },
   {

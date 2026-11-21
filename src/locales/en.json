@@ -3,7 +3,6 @@
     "titleNotIn": "You haven’t clocked in today",
     "titleIn": "Clocked in at {{time}}",
     "titleLeft": "You’ve clocked out for today",
-    "opensAt": "The nursery opens at {{time}}. Clock in when you arrive.",
     "notInHint": "Clock in when you arrive.",
     "lateBy_one": "{{count}} minute after opening",
     "lateBy_other": "{{count}} minutes after opening",
@@ -17,6 +16,7 @@
     "clockOut": "Clock out",
     "confirmOutTitle": "Clock out now?",
     "confirmOutBody": "Your day ends now. Only the admin can change it after this.",
+    "confirmOutEarlyBody": "Your day ends now. You are leaving before your shift ends, so the manager will settle the day. Only the admin can change it after this.",
     "errors": {
       "forbidden": "Your account can’t clock in here.",
       "already_in": "You’ve already clocked in today.",
@@ -25,7 +25,12 @@
       "invalid": "Check the times.",
       "person": "This person isn’t on the staff.",
       "network": "We can’t reach the server. Check your internet connection and try again.",
-      "failed": "Something went wrong. Try again."
+      "failed": "Something went wrong. Try again.",
+      "too_early": "Clocking in is not open yet for your shift.",
+      "shift_over": "Your shift has ended. Ask the manager to record the day.",
+      "no_shift": "You are not on a shift today.",
+      "not_found": "That day is no longer there.",
+      "invalid_times": "Check the times — leaving must come after arriving, and neither can be in the future."
     },
     "record": {
       "title": "{{name}}’s day",
@@ -46,6 +51,44 @@
         "out_before_in": "Leaving must be after arriving.",
         "in_future": "That time hasn’t come yet.",
         "out_future": "That time hasn’t come yet.",
+        "note_too_long": "Keep the note under {{max}} characters."
+      }
+    },
+    "blocked": {
+      "early": "Too early — clocking in opens at {{time}}.",
+      "over": "Your shift has ended. Ask the manager to record the day.",
+      "noShift": "You are not on a shift today. Ask the manager to record the day."
+    },
+    "shift": {
+      "mine": "Your shift today · {{from}} – {{to}}",
+      "house": "The nursery's hours · {{from}} – {{to}}",
+      "leavingEarly": "Leaving now is before your shift ends, so the manager will settle the day."
+    },
+    "review": {
+      "title": "Days waiting for you",
+      "count_one": "{{count}} day",
+      "count_other": "{{count}} days",
+      "description": "Somebody left before their shift ended, stayed long after it, or never clocked out. Settle the times as they really were and the day counts.",
+      "day": "Day",
+      "why": "Why",
+      "waiting": "Waiting for the manager",
+      "left_early": "Left early",
+      "late_departure": "Stayed late",
+      "no_departure": "Never clocked out"
+    },
+    "settle": {
+      "open": "Settle {{name}}'s day",
+      "title": "{{name}}'s day",
+      "description": "{{day}}",
+      "confirm": "Settle the day",
+      "note": "What happened",
+      "noteHint": "Kept on the day, so the reason is there later.",
+      "notePlaceholder": "e.g. Left for a dentist appointment",
+      "saved": "{{name}}'s day was settled.",
+      "issues": {
+        "in_required": "Enter when they arrived.",
+        "out_required": "Enter when they left.",
+        "out_before_in": "Leaving must be after arriving.",
         "note_too_long": "Keep the note under {{max}} characters."
       }
     }
@@ -1991,7 +2034,7 @@
       "calendar": "Calendar",
       "attendanceDashboard": "Attendance analytics",
       "healthAlerts": "Health alerts",
-      "attendance": "Attendance today",
+      "attendance": "Attendance",
       "inbox": "Inbox",
       "messages": "Messages",
       "messagesMonitor": "Messages",
@@ -2257,7 +2300,7 @@
     "attendance": {
       "dayLabel": "Day",
       "classLabel": "Class",
-      "title": "Attendance today",
+      "title": "Attendance",
       "titlePast": "Attendance",
       "description": "Children checked in at your nursery.",
       "searchPlaceholder": "Search by child name",
@@ -2315,6 +2358,22 @@
         "notePlaceholder": "Anything the family told you…",
         "save": "Save the excuse",
         "saved": "The excuse was recorded."
+      },
+      "eyebrow": "Attendance",
+      "tabs": {
+        "children": "Children",
+        "staff": "Staff",
+        "analytics": "Analytics",
+        "logs": "Logs"
+      },
+      "dayCharts": {
+        "byClass": "The day, class by class",
+        "byClassHint": "How each class stands on the day shown.",
+        "arrivals": "When they arrived",
+        "arrivalsHint": "Children checked in each hour of the day shown.",
+        "children": "children",
+        "noClasses": "No classes with children on this day.",
+        "noArrivals": "Nobody has been checked in on this day yet."
       }
     },
     "attendanceAnalytics": {
@@ -10435,6 +10494,18 @@
       "sibling_discount_enabled": {
         "label": "Sibling discount",
         "helper": "The 2nd and 3rd child billed to one family get these discounts on tuition."
+      },
+      "clock_in_opens_minutes_before": {
+        "label": "Clocking in opens (minutes before the shift)",
+        "helper": "How long before a member of staff's shift starts they may clock in. Earlier than that, the manager records the day."
+      },
+      "clock_out_closes_minutes_after": {
+        "label": "Clocking out closes (minutes after the shift)",
+        "helper": "How long after a shift ends clocking out still counts by itself. Later than that, the day waits for the manager."
+      },
+      "clock_out_grace_minutes": {
+        "label": "Leaving early grace (minutes)",
+        "helper": "Leaving within this many minutes of the shift's end needs nobody's approval. Earlier, and the day goes to the manager."
       }
     },
     "options": {
@@ -12600,6 +12671,84 @@
       "health": "No health notes on file",
       "messages": "Nothing sent to her family yet",
       "media": "No photographs yet"
+    }
+  },
+  "staffAttendance": {
+    "title": "Staff attendance",
+    "subtitle": "Who was here, who was late and by how long, the hours worked, and the days somebody was due and never came.",
+    "spanLabel": "Span",
+    "spans": {
+      "today": "Today",
+      "week": "Last 7 days",
+      "month": "Last 30 days",
+      "quarter": "Last 90 days",
+      "custom": "Pick dates"
+    },
+    "fromLabel": "From",
+    "toLabel": "To",
+    "searchLabel": "Search",
+    "searchPlaceholder": "A name or what they do",
+    "roleLabel": "Role",
+    "allRoles": "Every role",
+    "departmentLabel": "Department",
+    "allDepartments": "Every department",
+    "allStates": "Every day",
+    "states": {
+      "on_time": "On time",
+      "late": "Late",
+      "still_in": "Still here",
+      "review": "Waiting for review",
+      "away": "Away",
+      "missing": "Never came"
+    },
+    "tiles": {
+      "punctuality": "On time",
+      "ofRecorded": "of the days recorded",
+      "lateMinutes_one": "{{count}} minute in all",
+      "lateMinutes_other": "{{count}} minutes in all",
+      "hours": "Hours",
+      "hoursHint": "Worked in the span"
+    },
+    "charts": {
+      "trend": "The span, day by day",
+      "trendHint": "Who was here, who was away and who was due and never came.",
+      "here": "Here",
+      "noDays": "No days in this span.",
+      "late": "Where the lateness is",
+      "lateHint": "The minutes add up over the span, worst first.",
+      "minutes": "minutes late",
+      "nobodyLate": "Nobody was late in this span."
+    },
+    "table": {
+      "peopleTitle": "Each member of staff",
+      "peopleHint": "What the span came to for each of them. A row opens their own page, where the month and every correction live.",
+      "people_one": "{{count}} person",
+      "people_other": "{{count}} people",
+      "here": "Here",
+      "outOf": "{{here}} of {{expected}}",
+      "rate": "Share",
+      "byMinutes_one": "{{count}} minute",
+      "byMinutes_other": "{{count}} minutes",
+      "left": "Has left",
+      "days": "The days themselves",
+      "daysHint": "Newest first. A day nobody was due is not here - a day off is not a row.",
+      "dayCount_one": "{{count}} day",
+      "dayCount_other": "{{count}} days",
+      "shift": "Shift",
+      "hoursShort": "Hours",
+      "state": "The day",
+      "byAdmin": "Recorded by the admin",
+      "noMatch": "Nothing matches these filters.",
+      "nobody": "This nursery has no staff yet.",
+      "noDays": "No days were recorded in this span."
+    },
+    "errors": {
+      "forbidden": "Your account can't read the nursery's staff attendance.",
+      "invalid": "Check the dates.",
+      "range_too_long": "Pick a span of three months or less.",
+      "badRange": "The end of the span comes before its start.",
+      "network": "We can't reach the server. Check your internet connection and try again.",
+      "failed": "Something went wrong. Try again."
     }
   }
 }

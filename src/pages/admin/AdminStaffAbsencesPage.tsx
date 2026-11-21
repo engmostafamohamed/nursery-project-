@@ -17,6 +17,7 @@ import { ClassCoverTable } from '@/features/staff-absence/ClassCoverTable';
 import { ABSENCE_REASONS, absenceState, addDays, coverStatus, type AbsenceReason } from '@/features/staff-absence/staffAbsence';
 import { absenceErrorKey } from '@/features/staff-absence/staffAbsenceApi';
 import { useStaffAbsences } from '@/features/staff-absence/useStaffAbsence';
+import { StaffReviewPanel } from '@/features/staff-clock/StaffReviewPanel';
 import { useAdminBasePath } from '@/hooks/useAdminBasePath';
 import { adminLinks } from '@/lib/adminLinks';
 import { getNurseryCalendarDateString } from '@/lib/nurseryDay';
@@ -25,14 +26,15 @@ import { useSettings } from '@/lib/useSettings';
 type View = 'current' | 'past';
 
 /**
- * Staff absences: today's, the coming and the past ones as a table to search and filter (a row opens
- * that member of staff, on their absences), then who covers each class today (a class left with
- * nobody links to its team), and recording an absence for anyone.
+ * Staff absences: the days waiting for the manager's word when there are any, then today's, the
+ * coming and the past absences as a table to search and filter (a row opens that member of staff,
+ * on their absences), who covers each class today (a class left with nobody links to its team), and
+ * recording an absence for anyone.
  */
 export function AdminStaffAbsencesPage() {
   const { t } = useTranslation();
   const base = useAdminBasePath();
-  const { nurseryId } = useSettings();
+  const { nurseryId, settings } = useSettings();
   const today = getNurseryCalendarDateString();
   const [view, setView] = useState<View>('current');
   const [search, setSearch] = useState('');
@@ -85,6 +87,8 @@ export function AdminStaffAbsencesPage() {
             <StatTile icon="swap_horiz" label={t('staffAbsence.admin.coveredToday')} value={covered} tone="primary" />
             <StatTile icon="person_off" label={t('staffAbsence.admin.uncoveredToday')} value={uncovered} tone={uncovered ? 'error' : 'success'} />
           </div>
+
+          <StaffReviewPanel nurseryId={nurseryId} timezone={settings?.timezone ?? 'Africa/Cairo'} personHref={personHref} />
 
           <AbsenceTable
             absences={shown}

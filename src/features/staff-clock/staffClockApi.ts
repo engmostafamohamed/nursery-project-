@@ -25,7 +25,8 @@ export const recordStaffAttendance = async (input: { userId: string; day: string
     p_note: input.note?.trim() || null,
   }));
 
-const CODES = ['staff_clock_forbidden', 'staff_clock_already_in', 'staff_clock_already_out', 'staff_clock_not_in', 'staff_clock_invalid', 'staff_clock_person'] as const;
+const CODES = ['staff_clock_forbidden', 'staff_clock_already_in', 'staff_clock_already_out', 'staff_clock_not_in', 'staff_clock_invalid', 'staff_clock_person',
+  'staff_clock_too_early', 'staff_clock_shift_over', 'staff_clock_no_shift', 'staff_clock_not_found', 'staff_clock_invalid_times'] as const;
 
 /** The text key for a failed call (staffClock.errors.<code without staff_clock_>, network, failed). */
 export const staffClockErrorKey = (error: unknown): string => errorTextKey(error, CODES, 'staffClock.errors', 'staff_clock_');

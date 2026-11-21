@@ -17,6 +17,29 @@ export type StaffDay = {
   workHours: number | null;
   source: 'self' | 'admin' | null;
   note: string | null;
+  needsReview: boolean;
+  reviewReason: ReviewReason | null;
+};
+
+/** Why a day waits for the manager's word. */
+export const REVIEW_REASONS = ['left_early', 'late_departure', 'no_departure'] as const;
+export type ReviewReason = (typeof REVIEW_REASONS)[number];
+
+/**
+ * The shift a member of staff works today and the window around it. The database works it out
+ * (get_my_staff_day) from the same rule clock_staff enforces, so the screen never guesses.
+ */
+export type StaffShift = {
+  startsAt: string | null;
+  endsAt: string | null;
+  /** Their own shift, rather than the nursery's hours standing in for one. */
+  mine: boolean;
+  windowOpensAt: string | null;
+  windowClosesAt: string | null;
+  /** What pressing "clock in" would do now: it is open, too early for the shift, or the shift is over. */
+  arrival: 'open' | 'early' | 'over';
+  /** Leaving now would be early, and the manager would have to settle the day. */
+  leavingEarly: boolean;
 };
 
 export type MyStaffDay = {
@@ -26,6 +49,7 @@ export type MyStaffDay = {
   closesAt: string | null;
   timezone: string;
   day: StaffDay | null;
+  shift: StaffShift | null;
   absence: { reason: string; startsOn: string; endsOn: string } | null;
 };
 
@@ -51,8 +75,33 @@ export function toStaffDay(raw: unknown): StaffDay | null {
     workHours: numberOrNull(d.work_hours),
     source: d.source === 'self' || d.source === 'admin' ? d.source : null,
     note: textOrNull(d.notes),
+    needsReview: d.needs_review === true,
+    reviewReason: reviewReason(d.review_reason),
   };
 }
+
+export const reviewReason = (raw: unknown): ReviewReason | null =>
+  REVIEW_REASONS.find((r) => r === raw) ?? null;
+
+export function toStaffShift(raw: unknown): StaffShift | null {
+  const s = obj(raw);
+  if (!s.starts_at) return null;
+  return {
+    startsAt: hhmm(s.starts_at),
+    endsAt: hhmm(s.ends_at),
+    mine: s.mine === true,
+    windowOpensAt: textOrNull(s.window_opens_at),
+    windowClosesAt: textOrNull(s.window_closes_at),
+    arrival: s.arrival === 'early' || s.arrival === 'over' ? s.arrival : 'open',
+    leavingEarly: s.leaving_early === true,
+  };
+}
+
+/** Why the "clock in" button cannot be pressed, or null while it can. */
+export type ArrivalBlock = 'early' | 'over' | 'no_shift';
+
+export const arrivalBlock = (shift: StaffShift | null): ArrivalBlock | null =>
+  !shift ? 'no_shift' : shift.arrival === 'open' ? null : shift.arrival;
 
 /** get_my_staff_day's answer, checked. */
 export function toMyStaffDay(raw: unknown): MyStaffDay {
@@ -65,6 +114,7 @@ export function toMyStaffDay(raw: unknown): MyStaffDay {
     closesAt: hhmm(r.closes_at),
     timezone: text(r.timezone) || 'Africa/Cairo',
     day: toStaffDay(r.day),
+    shift: toStaffShift(r.shift),
     absence: absence.starts_on ? { reason: text(absence.reason) || 'other', startsOn: text(absence.starts_on), endsOn: text(absence.ends_on) } : null,
   };
 }

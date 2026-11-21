@@ -80,6 +80,11 @@ export interface NurserySettingsRow {
   points_redemption_rate: string | null;
   loyalty_tier_thresholds: { silver?: number; gold?: number; platinum?: number } | null;
   default_language: 'ar' | 'en' | null;
+  /** How long before a shift starts clocking in opens, and how long after it ends clocking out closes. */
+  clock_in_opens_minutes_before: number | null;
+  clock_out_closes_minutes_after: number | null;
+  /** Leaving within this many minutes of the shift's end needs nobody's approval. */
+  clock_out_grace_minutes: number | null;
   timezone: string | null;
   currency: string | null;
   date_format: string | null;

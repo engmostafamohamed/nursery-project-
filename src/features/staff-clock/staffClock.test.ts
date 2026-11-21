@@ -88,9 +88,12 @@ describe('texts', () => {
       'classProfile.attendance.expected', 'classProfile.filters.not_arrived', 'classProfile.today.notArrived', 'classProfile.today.notArrivedHint',
       ...['inSince', 'notInYet', 'didNotClock', 'away', 'onTime', 'clockHint', 'byAdmin', 'record', 'correct']
         .map((k) => `classProfile.teamToday.${k}`),
-      ...['titleNotIn', 'titleIn', 'titleLeft', 'opensAt', 'onTime', 'clockIn', 'clockOut', 'confirmOutTitle', 'recordedByAdmin', 'absentToday']
+      ...['titleNotIn', 'titleIn', 'titleLeft', 'notInHint', 'onTime', 'clockIn', 'clockOut', 'confirmOutTitle', 'confirmOutEarlyBody', 'recordedByAdmin', 'absentToday']
         .map((k) => `staffClock.${k}`),
-      ...['forbidden', 'already_in', 'already_out', 'not_in', 'invalid', 'person', 'network', 'failed'].map((k) => `staffClock.errors.${k}`),
+      ...['early', 'over', 'noShift'].map((k) => `staffClock.blocked.${k}`),
+      ...['mine', 'house', 'leavingEarly'].map((k) => `staffClock.shift.${k}`),
+      ...['forbidden', 'already_in', 'already_out', 'not_in', 'invalid', 'person', 'too_early', 'shift_over', 'no_shift', 'not_found', 'invalid_times', 'network', 'failed']
+        .map((k) => `staffClock.errors.${k}`),
       ...['in_required', 'out_before_in', 'in_future', 'out_future', 'note_too_long'].map((k) => `staffClock.record.issues.${k}`),
     ];
     for (const key of keys) {

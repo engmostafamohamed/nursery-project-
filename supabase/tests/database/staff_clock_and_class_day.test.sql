@@ -14,9 +14,22 @@ set local search_path = public, extensions;
 
 select plan(22);
 
+-- Clocking in only works inside the window around the shift, and clock_staff reads the real clock,
+-- so the nursery is given whichever timezone puts its own midday at this moment: an hour's offset
+-- either side of UTC, never a summer-time one, so its day is the date the session is on. The test
+-- then says the same thing at three in the morning as it does at noon.
+create function pg_temp.tz() returns text language sql stable as $$
+  select case
+    when h = 12 then 'UTC'
+    when h < 12 then 'Etc/GMT-' || (12 - h)::text
+    else 'Etc/GMT+' || (h - 12)::text
+  end
+  from (select extract(hour from now() at time zone 'UTC')::int as h) t
+$$;
+
 insert into public.nurseries (id, name_ar, name_en, working_days, opens_at, closes_at) values
   ('00000000-0000-4000-9900-00000000000a', 'حضانة الدوام', 'Clock Nursery', '["sun", "mon", "tue", "wed", "thu", "fri", "sat"]', '08:00', '23:59');
-update public.nursery_settings set timezone = 'Africa/Cairo' where nursery_id = '00000000-0000-4000-9900-00000000000a';
+update public.nursery_settings set timezone = pg_temp.tz() where nursery_id = '00000000-0000-4000-9900-00000000000a';
 
 insert into auth.users (id, email) values
   ('00000000-0000-4000-9900-000000000a01', 'c.admin@test.local'),
@@ -49,7 +62,7 @@ end;
 $$;
 create function pg_temp.today() returns date language sql as $$ select public.nursery_today('00000000-0000-4000-9900-00000000000a') $$;
 create function pg_temp.day(p_user uuid, p_day date) returns text language sql security definer as $$
-  select format('%s %s %s %s %s', to_char(check_in_at at time zone 'Africa/Cairo', 'HH24:MI'), coalesce(to_char(check_out_at at time zone 'Africa/Cairo', 'HH24:MI'), '-'),
+  select format('%s %s %s %s %s', to_char(check_in_at at time zone pg_temp.tz(), 'HH24:MI'), coalesce(to_char(check_out_at at time zone pg_temp.tz(), 'HH24:MI'), '-'),
                 status, late_minutes, coalesce(work_hours::text, '-'))
     from public.staff_attendance where user_id = p_user and work_date = p_day
 $$;
