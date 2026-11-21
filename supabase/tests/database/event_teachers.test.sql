@@ -78,7 +78,14 @@ select is(pg_temp.events(), 'Museum 1/1/1, Party 2/0/0',
 select is(pg_temp.roster('00000000-0000-4000-9700-0000000000e3'), 'Nour granted true', 'the museum''s roster: only her class''s child, going and checked in');
 select is(pg_temp.roster('00000000-0000-4000-9700-0000000000e1'), 'Laila pending false, Nour pending false', 'the party''s roster: her two children, still to answer');
 select throws_ok($$ select * from public.event_roster('00000000-0000-4000-9700-0000000000e5') $$, '42501', 'event_forbidden', 'not the roster of a draft');
-select throws_ok($$ select public.my_class_children() $$, '42501', null, 'the helper is not called from the app');
+-- The helper is open to the signed-in teacher because an RLS policy on milestones calls it, and a
+-- policy is evaluated as the caller (20261114020000). It is safe open: it answers about the
+-- caller's own classes and nothing else, which is what she may see anyway.
+select is((select count(*)::int from public.my_class_children() c
+            where c not in (select ch.id from public.children ch
+                             join public.class_staff cs on cs.class_id = ch.class_id
+                            where cs.user_id = auth.uid())),
+          0, 'the helper answers about her own classes and nothing else');
 
 -- The admin sees everyone asked.
 select pg_temp.act_as('00000000-0000-4000-9700-000000000a01');

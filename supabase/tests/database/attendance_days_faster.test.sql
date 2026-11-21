@@ -1,10 +1,17 @@
--- Database test · the faster get_attendance_days answers exactly like the one it replaces.
+-- Database test · what get_attendance_days answers for a day of every kind, and to whom.
 --
 -- A branch with a holiday, a weekend, children who joined at different times and days of every
--- kind (present, still in, absent, excused, before joining, in the future). For each caller — the
--- branch admin, a teacher of the branch, a father, a teacher of another branch and a stranger —
--- the rows the rewrite returns must match the old function's rows exactly, field for field, and
--- the access rules must still hold. Rolled back.
+-- kind (present, still in, absent, excused, before joining, in the future). Every day in the span
+-- comes back exactly once per child and reads the way the nursery's own calendar says it should;
+-- the names behind the ids are there; and each caller — the branch admin, a teacher of the branch,
+-- a father, a teacher of another branch and the chain's admin — sees what they are allowed to and
+-- no more.
+--
+-- It began life proving the rewrite of this function matched the one it replaced, by diffing the
+-- two. That proof is spent: the old function is gone, and a test that cannot run is worth less
+-- than one that pins the answers themselves. These are the same cases, asserted directly.
+--
+-- Rolled back.
 --
 -- Run against the local database:   supabase test db
 begin;
@@ -12,7 +19,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(14);
+select plan(19);
 
 create function pg_temp.act_as(p_user uuid) returns void language plpgsql as $$
 begin
@@ -22,23 +29,23 @@ begin
 end;
 $$;
 
--- Rows the rewrite returns but the old one does not, and the other way round: both must be empty.
-create function pg_temp.diff(p_kids uuid[], p_from date, p_to date) returns int language sql as $$
-  select (
-    select count(*) from (
-      (select * from public.get_attendance_days(p_kids, p_from, p_to)
-       except all
-       select * from public.get_attendance_days_old(p_kids, p_from, p_to))
-      union all
-      (select * from public.get_attendance_days_old(p_kids, p_from, p_to)
-       except all
-       select * from public.get_attendance_days(p_kids, p_from, p_to))
-    ) d
-  )::int
-$$;
-
 create function pg_temp.rows_seen(p_kids uuid[], p_from date, p_to date) returns int language sql as $$
   select count(*)::int from public.get_attendance_days(p_kids, p_from, p_to)
+$$;
+
+-- How many times a child and a day come back together more than once. A join that fans out is what
+-- this function was rewritten away from, so the shape is worth pinning: one row per child per day.
+create function pg_temp.repeats(p_kids uuid[], p_from date, p_to date) returns int language sql as $$
+  select coalesce(sum(n - 1), 0)::int from (
+    select count(*) as n from public.get_attendance_days(p_kids, p_from, p_to)
+     group by child_id, day having count(*) > 1
+  ) d
+$$;
+
+-- How many days in the span read as the given status, for one child.
+create function pg_temp.status_count(p_kid uuid, p_from date, p_to date, p_status text) returns int language sql as $$
+  select count(*)::int from public.get_attendance_days(array[p_kid]::uuid[], p_from, p_to)
+   where day_status = p_status
 $$;
 
 -- Two branches of one chain, plus a nursery nobody here belongs to.
@@ -102,55 +109,76 @@ insert into public.attendance_absence_reports (nursery_id, child_id, absence_dat
 values ('00000000-0000-4000-9f12-00000000000a', '00000000-0000-4000-9f12-0000000000c1', current_date - 4,
         'sick', 'temperature', '00000000-0000-4000-9f12-000000000a03');
 
--- 1-6 · the branch admin, over a fortnight covering the holiday, the weekend and every status.
+-- 1-3 · the branch admin, over a fortnight covering the holiday, the weekend and every status.
+--       Every child gets every day of the span, exactly once.
 select pg_temp.act_as('00000000-0000-4000-9f12-000000000a01');
-select is(pg_temp.diff(array['00000000-0000-4000-9f12-0000000000c1','00000000-0000-4000-9f12-0000000000c2']::uuid[],
-                       current_date - 10, current_date + 2),
-          0, 'the admin gets exactly the same rows as before');
-select cmp_ok(pg_temp.rows_seen(array['00000000-0000-4000-9f12-0000000000c1','00000000-0000-4000-9f12-0000000000c2']::uuid[],
-                                current_date - 10, current_date + 2),
-              '>', 20, 'and there really are rows to compare');
+select is(pg_temp.rows_seen(array['00000000-0000-4000-9f12-0000000000c1','00000000-0000-4000-9f12-0000000000c2']::uuid[],
+                            current_date - 10, current_date + 2),
+          26, 'two children over thirteen days is twenty-six rows');
+select is(pg_temp.repeats(array['00000000-0000-4000-9f12-0000000000c1','00000000-0000-4000-9f12-0000000000c2']::uuid[],
+                          current_date - 10, current_date + 2),
+          0, 'and no child gets the same day twice');
+select is(
+  (select count(distinct day)::int from public.get_attendance_days(array['00000000-0000-4000-9f12-0000000000c1']::uuid[],
+                                                                   current_date - 10, current_date + 2)),
+  13, 'every day of the span is answered for, with none skipped');
+
+-- 4-8 · the day of each kind reads as its kind.
+select is((select day_status from public.get_attendance_days(array['00000000-0000-4000-9f12-0000000000c1']::uuid[], current_date - 5, current_date - 5)),
+          'present', 'a full day reads as present');
 select is((select day_status from public.get_attendance_days(array['00000000-0000-4000-9f12-0000000000c1']::uuid[], current_date - 3, current_date - 3)),
-          'holiday', 'a holiday still reads as a holiday');
+          'holiday', 'a holiday reads as a holiday');
 select is((select day_status from public.get_attendance_days(array['00000000-0000-4000-9f12-0000000000c1']::uuid[], current_date - 4, current_date - 4)),
-          'excused', 'an excused absence still reads as excused');
+          'excused', 'an excused absence reads as excused');
 select is((select day_status from public.get_attendance_days(array['00000000-0000-4000-9f12-0000000000c1']::uuid[], current_date, current_date)),
           'partial', 'a child still in the nursery reads as partial');
 select is((select day_status from public.get_attendance_days(array['00000000-0000-4000-9f12-0000000000c2']::uuid[], current_date - 10, current_date - 10)),
-          'not_enrolled', 'a day before the child joined still reads as not enrolled');
+          'not_enrolled', 'a day before the child joined reads as not enrolled');
 
--- 7-9 · the names behind the ids, which now come from joins.
+-- 9-12 · and every other day reads the way the nursery's own calendar says. Written against the
+--        weekdays rather than fixed dates, so the test says the same thing whatever day it runs on.
+select is(
+  (select count(*)::int from public.get_attendance_days(array['00000000-0000-4000-9f12-0000000000c1']::uuid[], current_date - 10, current_date) d
+    where d.day_status = 'off' and extract(dow from d.day) not in (5, 6)),
+  0, 'a day off is only ever a day this nursery does not open');
+select is(
+  (select count(*)::int from public.get_attendance_days(array['00000000-0000-4000-9f12-0000000000c1']::uuid[], current_date - 10, current_date) d
+    where extract(dow from d.day) in (5, 6) and d.day_status <> 'off'
+      and d.day not in (current_date, current_date - 3, current_date - 4, current_date - 5)),
+  0, 'and every weekend day nothing was recorded for reads as one');
+select is(
+  (select count(*)::int from public.get_attendance_days(array['00000000-0000-4000-9f12-0000000000c1']::uuid[], current_date - 10, current_date) d
+    where d.day_status = 'absent'
+      and (extract(dow from d.day) in (5, 6)
+           or d.day in (current_date, current_date - 3, current_date - 4, current_date - 5))),
+  0, 'nothing with a record, a notice, a holiday or a weekend behind it reads as a plain absence');
+select cmp_ok(pg_temp.status_count('00000000-0000-4000-9f12-0000000000c1', current_date - 10, current_date, 'absent'),
+              '>', 0, 'and the plain absences are there to be counted');
+
+-- 13-15 · the names behind the ids, which come from joins.
 select is((select checked_in_by_en from public.get_attendance_days(array['00000000-0000-4000-9f12-0000000000c1']::uuid[], current_date - 5, current_date - 5)),
-          'Teacher', 'who checked the child in is still named');
+          'Teacher', 'who checked the child in is named');
 select is((select checked_out_by_ar from public.get_attendance_days(array['00000000-0000-4000-9f12-0000000000c1']::uuid[], current_date - 5, current_date - 5)),
-          'المدير', 'who checked the child out is still named, in Arabic');
+          'المدير', 'who checked the child out is named, in Arabic');
 select is((select absence_reported_by_en from public.get_attendance_days(array['00000000-0000-4000-9f12-0000000000c1']::uuid[], current_date - 4, current_date - 4)),
-          'Father', 'who sent the absence notice is still named');
+          'Father', 'who sent the absence notice is named');
 
--- 10-11 · the teacher of the branch, and the father, see the same as before.
+-- 16-18 · and who may see what.
 select pg_temp.act_as('00000000-0000-4000-9f12-000000000a02');
-select is(pg_temp.diff(array['00000000-0000-4000-9f12-0000000000c1','00000000-0000-4000-9f12-0000000000c2']::uuid[],
-                       current_date - 10, current_date + 2),
-          0, 'the branch teacher gets exactly the same rows as before');
+select is(pg_temp.rows_seen(array['00000000-0000-4000-9f12-0000000000c1','00000000-0000-4000-9f12-0000000000c2']::uuid[],
+                            current_date - 10, current_date + 2),
+          26, 'the branch''s teacher sees the branch''s children');
 select pg_temp.act_as('00000000-0000-4000-9f12-000000000a03');
-select is(pg_temp.diff(array['00000000-0000-4000-9f12-0000000000c1','00000000-0000-4000-9f12-0000000000c2']::uuid[],
-                       current_date - 10, current_date + 2),
-          0, 'the father gets exactly the same rows as before');
-
--- 12 · and the father still sees only his own child, not the other family's.
-select is(pg_temp.rows_seen(array['00000000-0000-4000-9f12-0000000000c2']::uuid[], current_date - 2, current_date),
-          0, 'a father gets nothing for a child who is not his');
-
--- 13 · a teacher of another branch gets nothing for this branch's children.
+select is(pg_temp.rows_seen(array['00000000-0000-4000-9f12-0000000000c1','00000000-0000-4000-9f12-0000000000c2']::uuid[],
+                            current_date - 10, current_date + 2),
+          13, 'a father asking about two children is answered about his own');
 select pg_temp.act_as('00000000-0000-4000-9f12-000000000a04');
 select is(pg_temp.rows_seen(array['00000000-0000-4000-9f12-0000000000c1']::uuid[], current_date - 2, current_date),
-          0, 'a teacher of another branch gets nothing');
-
--- 14 · the chain's admin sees both branches, exactly as before.
+          0, 'a teacher of another branch is answered about nobody');
 select pg_temp.act_as('00000000-0000-4000-9f12-000000000a06');
-select is(pg_temp.diff(array['00000000-0000-4000-9f12-0000000000c1','00000000-0000-4000-9f12-0000000000c3']::uuid[],
-                       current_date - 10, current_date + 2),
-          0, 'the chain admin gets exactly the same rows as before, across branches');
+select is(pg_temp.rows_seen(array['00000000-0000-4000-9f12-0000000000c1','00000000-0000-4000-9f12-0000000000c3']::uuid[],
+                            current_date - 10, current_date + 2),
+          26, 'the chain''s admin sees both branches');
 
 select * from finish();
 rollback;
