@@ -29,6 +29,9 @@ import { FilterField } from '@/components/ui/FilterField';
 import { Input } from '@/components/ui/input';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { SectionTabs } from '@/components/ui/SectionTabs';
+import { useAdminBasePath } from '@/hooks/useAdminBasePath';
+import { attendanceSectionTabs } from '@/lib/attendanceTabs';
 import { Select } from '@/components/ui/select';
 import { StatTile } from '@/components/ui/StatTile';
 import { useAuthSession } from '@/hooks/useAuthSession';
@@ -74,6 +77,7 @@ export function AdminAttendanceLogsPage() {
   const queryClient = useQueryClient();
   const { user } = useAuthSession();
   const { data: profile } = useUserProfile(user?.id);
+  const basePath = useAdminBasePath();
   const nurseryId = profile?.nursery_id ?? undefined;
   const { data: languagePref = 'both' } = useNurseryLanguagePref(nurseryId);
   const { data: classes } = useNurseryClasses(nurseryId);
@@ -219,12 +223,6 @@ export function AdminAttendanceLogsPage() {
         description={t('attendance.logs.subtitle')}
         actions={
           <>
-            <Button asChild variant="outline">
-              <Link to="/admin/attendance">
-                <MaterialSymbol name="how_to_reg" size="text-base" className="me-1" />
-                {t('admin.attendance.title')}
-              </Link>
-            </Button>
             <Button type="button" variant="outline" className="gap-1" onClick={exportCsv} disabled={!rows.length}>
               <MaterialSymbol name="download" size="text-lg" />
               {t('admin.attendanceAnalytics.exportCsv')}
@@ -232,6 +230,8 @@ export function AdminAttendanceLogsPage() {
           </>
         }
       >
+        <SectionTabs tabs={attendanceSectionTabs(basePath, t)} label={t('admin.attendance.title')} className="mb-4" />
+
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
           <StatTile icon="how_to_reg" label={t('attendance.logs.totals.records')} value={totals.records} />
           <StatTile

@@ -10,6 +10,7 @@ import {
   type CorrectionTarget,
 } from '@/components/admin/attendance/AttendanceActionDialogs';
 import { ExcuseAbsenceDialog, type ExcuseTarget } from '@/components/admin/attendance/ExcuseAbsenceDialog';
+import { AttendanceDayCharts } from '@/features/attendance-day/AttendanceDayCharts';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,10 +19,12 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { FilterField } from '@/components/ui/FilterField';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { SectionTabs } from '@/components/ui/SectionTabs';
 import { DataTable, IconAction, StatusPill, TablePagination, TBody, Td, Th, THead, Tr, type PillTone } from '@/components/ui/DataTable';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatTile, type StatTone } from '@/components/ui/StatTile';
+import { useAdminBasePath } from '@/hooks/useAdminBasePath';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useNurseryClasses } from '@/hooks/useClassStaff';
 import { usePagination } from '@/hooks/usePagination';
@@ -38,6 +41,7 @@ import {
   undoCheckIn,
   type AttendanceDay,
 } from '@/lib/attendanceApi';
+import { attendanceSectionTabs } from '@/lib/attendanceTabs';
 import { addCalendarDaysYmd, getNurseryCalendarDateString } from '@/lib/nurseryDay';
 import { supabase } from '@/lib/supabase';
 import { formatQueryError, getUserInitials } from '@/lib/utils';
@@ -90,6 +94,7 @@ export function AdminAttendancePage() {
   const { data: languagePref = 'both' } = useNurseryLanguagePref(nurseryId);
   const { settings } = useNurserySettings(nurseryId);
   const { data: classes } = useNurseryClasses(nurseryId);
+  const basePath = useAdminBasePath();
   const today = getNurseryCalendarDateString();
   const [selectedDate, setSelectedDate] = useState(today);
   const [selectedClassId, setSelectedClassId] = useState<string>('all');
@@ -273,7 +278,7 @@ export function AdminAttendancePage() {
     <div className="space-y-5 pb-8">
       <PageHeader
         icon="how_to_reg"
-        title={isToday ? t('admin.attendance.title') : t('admin.attendance.titlePast')}
+        title={t('admin.attendance.title')}
         description={
           <div className="space-y-1.5">
             <p>{t('admin.attendance.description')}</p>
@@ -318,6 +323,8 @@ export function AdminAttendancePage() {
           </>
         }
       >
+        <SectionTabs tabs={attendanceSectionTabs(basePath, t)} label={t('admin.attendance.title')} className="mb-4" />
+
         <div className="grid gap-3 lg:grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)] lg:items-end">
           <FilterField label={t('admin.attendance.dayLabel')}>
             <div className="flex items-center gap-2">
@@ -590,6 +597,14 @@ export function AdminAttendancePage() {
           <TablePagination pager={pager} pageSizeOptions={[10, 20, 50]} />
         </div>
       )}
+
+      {!showSkeleton && nurseryId && !listQuery.isError && !isOffDay && totalCount > 0 ? (
+        <AttendanceDayCharts
+          rows={(listQuery.data ?? []).map((row) => ({ classId: row.child.class_id ?? null, status: row.status, checkIn: row.checkIn }))}
+          timezone={typeof settings?.timezone === 'string' ? settings.timezone : 'Africa/Cairo'}
+          classNameById={classNameById}
+        />
+      ) : null}
 
       <CorrectAttendanceDialog
         key={correcting?.attendanceId ?? 'none'}

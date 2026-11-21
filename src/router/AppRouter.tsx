@@ -127,6 +127,7 @@ export function AppRouter() {
               <Route path="staff" element={<P.AdminStaffDirectoryPage />} />
               <Route path="staff/:staffId" element={<P.AdminStaffProfilePage />} />
               <Route path="attendance/dashboard" element={<P.AdminAttendanceDashboardPage />} />
+              <Route path="attendance/staff" element={<P.AdminStaffAttendancePage />} />
               <Route path="attendance/logs" element={<P.AdminAttendanceLogsPage />} />
               <Route path="attendance/child/:childId" element={<P.AdminChildAttendanceReportPage />} />
               <Route path="attendance" element={<P.AdminAttendancePage />} />
@@ -313,6 +314,7 @@ export function AppRouter() {
               <Route path="nursery/staff" element={<P.AdminStaffDirectoryPage />} />
               <Route path="nursery/staff/:staffId" element={<P.AdminStaffProfilePage />} />
               <Route path="nursery/attendance/dashboard" element={<P.AdminAttendanceDashboardPage />} />
+              <Route path="nursery/attendance/staff" element={<P.AdminStaffAttendancePage />} />
               <Route path="nursery/attendance/logs" element={<P.AdminAttendanceLogsPage />} />
               <Route path="nursery/attendance/child/:childId" element={<P.AdminChildAttendanceReportPage />} />
               <Route path="nursery/attendance" element={<P.AdminAttendancePage />} />

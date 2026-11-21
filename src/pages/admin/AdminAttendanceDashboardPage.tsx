@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LoadError } from '@/components/ui/LoadError';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { SectionTabs } from '@/components/ui/SectionTabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   MAX_ANALYTICS_RANGE_DAYS,
@@ -17,6 +18,7 @@ import {
   type AttendanceDatePreset,
 } from '@/hooks/useAdminAttendanceAnalytics';
 import { useAdminBasePath } from '@/hooks/useAdminBasePath';
+import { attendanceSectionTabs } from '@/lib/attendanceTabs';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useUserProfile } from '@/hooks/useUserProfile';
 
@@ -92,6 +94,8 @@ export function AdminAttendanceDashboardPage() {
           {t('admin.attendanceAnalytics.exportCsv')}
         </Button>
       </div>
+
+      <SectionTabs tabs={attendanceSectionTabs(basePath, t)} label={t('admin.attendance.title')} />
 
       <AttendanceKpiPanel nurseryId={profile?.nursery_id} basePath={basePath} />
 

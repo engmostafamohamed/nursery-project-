@@ -10,6 +10,9 @@ export const AdminAttendanceDashboardPage = lazy(() =>
 export const AdminAttendancePage = lazy(() =>
   import('@/pages/admin/AdminAttendancePage').then((m) => ({ default: m.AdminAttendancePage })),
 );
+export const AdminStaffAttendancePage = lazy(() =>
+  import('@/pages/admin/AdminStaffAttendancePage').then((m) => ({ default: m.AdminStaffAttendancePage })),
+);
 export const AdminAttendanceLogsPage = lazy(() =>
   import('@/pages/admin/AdminAttendanceLogsPage').then((m) => ({ default: m.AdminAttendanceLogsPage })),
 );

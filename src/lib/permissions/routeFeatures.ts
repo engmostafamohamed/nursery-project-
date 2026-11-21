@@ -6,6 +6,8 @@ import type { FeatureKey } from './types';
  * `/xo-admin/nursery/...` screens are the admin screens and use the `/admin` table.
  */
 const ADMIN_ROUTES: ReadonlyArray<readonly [string, FeatureKey]> = [
+  // The staff's own attendance is an HR record, not the children's day: it needs the staff permission.
+  ['/admin/attendance/staff', 'staff'],
   ['/admin/attendance', 'dashboard_attendance'],
   ['/admin/scanner', 'qr_scanner'],
   ['/admin/children/enroll', 'child_enrollment'],
