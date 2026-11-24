@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { callRpc } from '@/lib/rpc';
 import { supabase } from '@/lib/supabase';
 import type {
   Nursery,
@@ -39,11 +40,7 @@ export type XoNurseryListRow = {
 export function useNurseriesList() {
   return useQuery({
     queryKey: XO_NURSERIES_LIST_KEY,
-    queryFn: async (): Promise<XoNurseryListRow[]> => {
-      const { data, error } = await supabase.rpc('get_xo_nursery_list' as never);
-      if (error) throw error;
-      return (data ?? []) as XoNurseryListRow[];
-    },
+    queryFn: async () => ((await callRpc('get_xo_nursery_list')) ?? []) as XoNurseryListRow[],
   });
 }
 
