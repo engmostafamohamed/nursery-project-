@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
 import { corsHeaders, jsonResponse } from '../_shared/http.ts';
 
 type ExportJob = {
@@ -19,7 +20,7 @@ type Profile = { id: string; role: string; nursery_id: string | null; chain_id: 
  * any branch of their chain; without a name they get their own nursery, if any.
  */
 async function resolveNurseryId(
-  serviceClient: ReturnType<typeof createClient>,
+  serviceClient: SupabaseClient,
   profile: Profile,
   requested: string | null,
 ): Promise<string | null> {
@@ -76,11 +77,12 @@ Deno.serve(async (req) => {
   }
   const userId = authData.user.id;
 
-  const { data: profile, error: profileErr } = await serviceClient
+  const { data: profileRow, error: profileErr } = await serviceClient
     .from('users')
     .select('id, role, nursery_id, chain_id')
     .eq('id', userId)
-    .maybeSingle<Profile>();
+    .maybeSingle();
+  const profile = profileRow as Profile | null;
 
   if (profileErr || !profile || !ALLOWED_ROLES.has(String(profile.role))) {
     return jsonResponse({ error: 'Forbidden' }, 403);
