@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next';
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
+import { Cell, Pie, PieChart, Tooltip } from 'recharts';
+
+import { ResponsiveChart } from '@/components/ui/ResponsiveChart';
 
 const COLORS = ['#0060ac', '#afc8f0', '#68abff', '#001f3f'];
 
@@ -21,7 +23,7 @@ export function FinancialDashboardMethodPie({ data }: { data: Row[] }) {
       <h3 className="mb-3 text-sm font-semibold">{t('admin.financialDashboard.charts.revenueByMethod')}</h3>
       <p className="mb-2 text-xs text-on-surface-variant">{t('admin.financialDashboard.charts.methodsSixMonthHint')}</p>
       <div className="h-64">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveChart>
           <PieChart>
             <Pie data={data} dataKey="amount" nameKey="label" outerRadius={90} label>
               {data.map((_, idx) => (
@@ -30,7 +32,7 @@ export function FinancialDashboardMethodPie({ data }: { data: Row[] }) {
             </Pie>
             <Tooltip formatter={(value) => (typeof value === 'number' ? value.toFixed(2) : String(value ?? ''))} />
           </PieChart>
-        </ResponsiveContainer>
+        </ResponsiveChart>
       </div>
     </section>
   );

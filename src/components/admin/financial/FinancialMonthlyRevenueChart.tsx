@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from 'recharts';
+
+import { ResponsiveChart } from '@/components/ui/ResponsiveChart';
 
 type Row = { monthKey: string; amount: number };
 
@@ -25,7 +27,7 @@ export function FinancialMonthlyRevenueChart({ data }: { data: Row[] }) {
     <section className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
       <h3 className="mb-3 text-sm font-semibold">{t('admin.financialDashboard.charts.monthlyRevenue')}</h3>
       <div className="h-64">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveChart>
           <BarChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="label" tick={{ fontSize: 11 }} />
@@ -33,7 +35,7 @@ export function FinancialMonthlyRevenueChart({ data }: { data: Row[] }) {
             <Tooltip />
             <Bar dataKey="amount" fill="#0060ac" radius={[4, 4, 0, 0]} />
           </BarChart>
-        </ResponsiveContainer>
+        </ResponsiveChart>
       </div>
     </section>
   );

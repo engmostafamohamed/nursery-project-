@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from 'recharts';
 
 import { TableCard } from '@/components/ui/DataTable';
+import { ResponsiveChart } from '@/components/ui/ResponsiveChart';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { AdminDashboardCharts } from '@/hooks/useAdminDashboardCharts';
 import { localName } from '@/lib/bilingualName';
@@ -63,7 +64,7 @@ export function DashboardMiniCharts({ data, isLoading }: Props) {
         description={t('admin.dashboard.charts.attendanceHint')}
       >
         <div className="h-52 p-4 sm:p-5" dir="ltr">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveChart>
             <BarChart data={attendance} margin={chart.margin}>
               <CartesianGrid stroke={CHART_GRID_STROKE} strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={11} {...chart.xAxis} />
@@ -76,7 +77,7 @@ export function DashboardMiniCharts({ data, isLoading }: Props) {
               />
               <Bar dataKey="ratePercent" fill={primary} radius={[4, 4, 0, 0]} maxBarSize={28} />
             </BarChart>
-          </ResponsiveContainer>
+          </ResponsiveChart>
         </div>
       </TableCard>
 
@@ -87,7 +88,7 @@ export function DashboardMiniCharts({ data, isLoading }: Props) {
         description={t('admin.dashboard.charts.revenueHint')}
       >
         <div className="h-52 p-4 sm:p-5" dir="ltr">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveChart>
             <AreaChart data={revenue} margin={revenueChart.margin}>
               <defs>
                 <linearGradient id="dashboard-revenue-fill" x1="0" y1="0" x2="0" y2="1">
@@ -106,7 +107,7 @@ export function DashboardMiniCharts({ data, isLoading }: Props) {
               />
               <Area type="monotone" dataKey="amount" stroke={primary} strokeWidth={2} fill="url(#dashboard-revenue-fill)" dot={false} activeDot={{ r: 4 }} />
             </AreaChart>
-          </ResponsiveContainer>
+          </ResponsiveChart>
         </div>
       </TableCard>
       ) : null}

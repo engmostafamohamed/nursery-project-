@@ -6,7 +6,6 @@ import {
   Cell,
   Pie,
   PieChart,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
@@ -20,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { DataTable, TableCard, TableEmpty, TableLoading, TablePagination, TBody, Td, Th, THead, Tr } from '@/components/ui/DataTable';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { Input } from '@/components/ui/input';
+import { ResponsiveChart } from '@/components/ui/ResponsiveChart';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatTile } from '@/components/ui/StatTile';
@@ -367,7 +367,7 @@ export function ParentDailyReportsPage() {
                 {t('parent.reports.noWeekReports')}
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveChart>
                 <BarChart data={chartRows} margin={chart.margin}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={CHART_GRID_STROKE} />
                   <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={12} {...chart.xAxis} />
@@ -375,7 +375,7 @@ export function ParentDailyReportsPage() {
                   <Tooltip cursor={CHART_CURSOR} contentStyle={CHART_TOOLTIP_STYLE} />
                   <Bar dataKey="reports" name={t('parent.reports.title')} fill={chartColor('primary')} radius={[6, 6, 0, 0]} maxBarSize={48} />
                 </BarChart>
-              </ResponsiveContainer>
+              </ResponsiveChart>
             )}
           </div>
         </div>
@@ -390,7 +390,7 @@ export function ParentDailyReportsPage() {
           {moodRows.length ? (
             <div className="mt-4 grid gap-4 sm:grid-cols-[176px_minmax(0,1fr)] sm:items-center xl:grid-cols-1">
               <div className="relative mx-auto h-44 w-44">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveChart>
                   <PieChart>
                     <Pie data={moodRows} dataKey="value" nameKey="name" innerRadius={56} outerRadius={80} paddingAngle={moodRows.length > 1 ? 3 : 0} stroke="none">
                       {moodRows.map((row, index) => (
@@ -399,7 +399,7 @@ export function ParentDailyReportsPage() {
                     </Pie>
                     <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
                   </PieChart>
-                </ResponsiveContainer>
+                </ResponsiveChart>
                 <span className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-2xl font-bold tabular-nums text-on-surface">{moodTotal}</span>
                   <span className="text-xs text-on-surface-variant">{t('parent.reports.title')}</span>

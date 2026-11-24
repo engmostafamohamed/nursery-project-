@@ -9,7 +9,6 @@ import {
   Cell,
   Pie,
   PieChart,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
@@ -17,6 +16,7 @@ import {
 
 import { ChildAttendanceHistory } from '@/components/attendance/ChildAttendanceHistory';
 import { ChildSelector } from '@/components/parent/ChildSelector';
+import { ResponsiveChart } from '@/components/ui/ResponsiveChart';
 import { useParentChildren } from '@/hooks/useParentChildren';
 import { ReportAbsencePanel } from '@/components/parent/ReportAbsencePanel';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -469,7 +469,7 @@ export function ParentAttendanceHistoryPage() {
                   />
                 </div>
                 <div className="h-80 p-4 xl:h-auto xl:min-h-80 xl:flex-1">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveChart>
                     <BarChart data={chartRows} margin={chart.margin}>
                       <CartesianGrid stroke={CHART_GRID_STROKE} strokeDasharray="3 3" vertical={false} />
                       <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={12} minTickGap={8} {...chart.xAxis} />
@@ -479,7 +479,7 @@ export function ParentAttendanceHistoryPage() {
                       <Bar dataKey="partial" name={partialLabel} stackId="attendance" fill={chartColor('primary')} radius={[4, 4, 0, 0]} />
                       <Bar dataKey="absent" name={absentLabel} stackId="attendance" fill={chartColor('error')} radius={[4, 4, 0, 0]} />
                     </BarChart>
-                  </ResponsiveContainer>
+                  </ResponsiveChart>
                 </div>
               </div>
 
@@ -499,14 +499,14 @@ export function ParentAttendanceHistoryPage() {
                   <div className="relative h-52">
                     {pieRows.length ? (
                       <>
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveChart>
                           <PieChart>
                             <Pie data={pieRows} dataKey="value" nameKey="name" innerRadius={58} outerRadius={82} paddingAngle={pieRows.length > 1 ? 3 : 0} stroke="none">
                               {pieRows.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
                             </Pie>
                             <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
                           </PieChart>
-                        </ResponsiveContainer>
+                        </ResponsiveChart>
                         <span className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                           <span className="text-2xl font-bold tabular-nums text-on-surface">{metrics.rate}%</span>
                           <span className="text-xs text-on-surface-variant">

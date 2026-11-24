@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from 'recharts';
 
 import { TableCard } from '@/components/ui/DataTable';
+import { ResponsiveChart } from '@/components/ui/ResponsiveChart';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatTile } from '@/components/ui/StatTile';
 import { localName } from '@/lib/bilingualName';
@@ -65,7 +66,7 @@ export function TeachingStatsPanel({ userId }: { userId: string | null | undefin
         <TableCard title={t('teacher.stats.charts.attendance')} description={t('teacher.stats.charts.attendanceHint')}>
           <div className="h-56 p-4 sm:p-5" dir="ltr">
             {stats.attendance.length ? (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveChart>
                 <AreaChart data={stats.attendance} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} vertical={false} />
                   <XAxis dataKey="day" tickFormatter={dayLabel} tick={{ fontSize: 11 }} reversed={chart.xAxis.reversed} />
@@ -78,7 +79,7 @@ export function TeachingStatsPanel({ userId }: { userId: string | null | undefin
                   />
                   <Area type="monotone" dataKey="here" stroke={CHART_SERIES[0]} fill={CHART_SERIES[0]} fillOpacity={0.18} strokeWidth={2} />
                 </AreaChart>
-              </ResponsiveContainer>
+              </ResponsiveChart>
             ) : (
               <p className="flex h-full items-center justify-center text-sm text-on-surface-variant">{t('teacher.stats.charts.noDays')}</p>
             )}
@@ -88,7 +89,7 @@ export function TeachingStatsPanel({ userId }: { userId: string | null | undefin
         <TableCard title={t('teacher.stats.charts.reports')} description={t('teacher.stats.charts.reportsHint')}>
           <div className="h-56 p-4 sm:p-5" dir="ltr">
             {stats.reports.length ? (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveChart>
                 <BarChart data={stats.reports} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} vertical={false} />
                   <XAxis dataKey="day" tickFormatter={dayLabel} tick={{ fontSize: 11 }} reversed={chart.xAxis.reversed} />
@@ -101,7 +102,7 @@ export function TeachingStatsPanel({ userId }: { userId: string | null | undefin
                   />
                   <Bar dataKey="sent" fill={CHART_SERIES[1]} radius={[4, 4, 0, 0]} />
                 </BarChart>
-              </ResponsiveContainer>
+              </ResponsiveChart>
             ) : (
               <p className="flex h-full items-center justify-center text-sm text-on-surface-variant">{t('teacher.stats.charts.noReports')}</p>
             )}
@@ -112,7 +113,7 @@ export function TeachingStatsPanel({ userId }: { userId: string | null | undefin
       {classBars.length > 1 ? (
         <TableCard title={t('teacher.stats.charts.classes')} description={t('teacher.stats.charts.classesHint')}>
           <div className="h-52 p-4 sm:p-5" dir="ltr">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveChart>
               <BarChart data={classBars} layout="vertical" margin={{ top: 4, right: 12, left: 8, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} horizontal={false} />
                 <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
@@ -121,7 +122,7 @@ export function TeachingStatsPanel({ userId }: { userId: string | null | undefin
                          formatter={(value) => [Number(value ?? 0), t('teacher.stats.tiles.children')] as [number, string]} />
                 <Bar dataKey="children" fill={CHART_SERIES[2]} radius={[0, 4, 4, 0]} />
               </BarChart>
-            </ResponsiveContainer>
+            </ResponsiveChart>
           </div>
         </TableCard>
       ) : null}

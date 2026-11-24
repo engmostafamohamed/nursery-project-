@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, Legend, Tooltip, XAxis, YAxis } from 'recharts';
 
 import { TableCard } from '@/components/ui/DataTable';
+import { ResponsiveChart } from '@/components/ui/ResponsiveChart';
 import { CHART_CURSOR, CHART_GRID_STROKE, CHART_SERIES, CHART_TOOLTIP_STYLE, chartDirection } from '@/lib/chartTheme';
 
 import { arrivalHistogram, busiestHour, classBreakdown, type DayRow } from './attendanceDay';
@@ -32,7 +33,7 @@ export function AttendanceDayCharts({
       <TableCard title={t('admin.attendance.dayCharts.byClass')} description={t('admin.attendance.dayCharts.byClassHint')}>
         <div className="h-60 p-4 sm:p-5" dir="ltr">
           {classes.length ? (
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveChart>
               <BarChart data={classes} layout="vertical" margin={{ top: 4, right: 12, left: 8, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} horizontal={false} />
                 <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
@@ -43,7 +44,7 @@ export function AttendanceDayCharts({
                 <Bar stackId="c" dataKey="excused" name={t('attendance.sections.excused')} fill={CHART_SERIES[4]} />
                 <Bar stackId="c" dataKey="absent" name={t('attendance.sections.absent')} fill={CHART_SERIES[3]} radius={[0, 4, 4, 0]} />
               </BarChart>
-            </ResponsiveContainer>
+            </ResponsiveChart>
           ) : (
             <p className="flex h-full items-center justify-center text-sm text-on-surface-variant">{t('admin.attendance.dayCharts.noClasses')}</p>
           )}
@@ -58,7 +59,7 @@ export function AttendanceDayCharts({
       >
         <div className="h-60 p-4 sm:p-5" dir="ltr">
           {arrivals.length ? (
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveChart>
               <BarChart data={arrivals} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} vertical={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 11 }} reversed={chart.xAxis.reversed} />
@@ -70,7 +71,7 @@ export function AttendanceDayCharts({
                 />
                 <Bar dataKey="count" fill={CHART_SERIES[0]} radius={[4, 4, 0, 0]} />
               </BarChart>
-            </ResponsiveContainer>
+            </ResponsiveChart>
           ) : (
             <p className="flex h-full items-center justify-center text-sm text-on-surface-variant">{t('admin.attendance.dayCharts.noArrivals')}</p>
           )}

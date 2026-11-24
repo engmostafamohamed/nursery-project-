@@ -1,9 +1,10 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
+import { Bar, BarChart, Cell, Pie, PieChart, Tooltip } from 'recharts';
 
 import { Button } from '@/components/ui/button';
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { ResponsiveChart } from '@/components/ui/ResponsiveChart';
 import type { FormQuestion, SurveyResponseRow } from '@/types/survey';
 
 const CHART_COLORS = ['#68abff', '#0060ac', '#afc8f0', '#001f3f', '#4a90d9', '#2166cc'];
@@ -170,7 +171,7 @@ function QuestionChart({ question, responses }: { question: FormQuestion; respon
       {data && isPie && data.length > 0 && (
         <div className="grid grid-cols-2 gap-4 items-center">
           <div className="h-44">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveChart>
               <PieChart>
                 <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70}>
                   {data.map((_, idx) => (
@@ -179,7 +180,7 @@ function QuestionChart({ question, responses }: { question: FormQuestion; respon
                 </Pie>
                 <Tooltip />
               </PieChart>
-            </ResponsiveContainer>
+            </ResponsiveChart>
           </div>
           <div className="space-y-1.5">
             {data.map((item, idx) => (
@@ -198,7 +199,7 @@ function QuestionChart({ question, responses }: { question: FormQuestion; respon
 
       {data && !isPie && data.length > 0 && (
         <div className="h-40">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveChart>
             <BarChart data={data} barSize={28}>
               <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                 {data.map((_, idx) => (
@@ -207,7 +208,7 @@ function QuestionChart({ question, responses }: { question: FormQuestion; respon
               </Bar>
               <Tooltip />
             </BarChart>
-          </ResponsiveContainer>
+          </ResponsiveChart>
         </div>
       )}
 

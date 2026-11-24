@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, Legend, Tooltip, XAxis, YAxis } from 'recharts';
 
 import { TableCard } from '@/components/ui/DataTable';
+import { ResponsiveChart } from '@/components/ui/ResponsiveChart';
 import { StatTile } from '@/components/ui/StatTile';
 import { localName } from '@/lib/bilingualName';
 import { CHART_CURSOR, CHART_GRID_STROKE, CHART_SERIES, CHART_TOOLTIP_STYLE, chartDirection } from '@/lib/chartTheme';
@@ -85,7 +86,7 @@ export function StaffAttendanceStats({
         <TableCard title={t('staffAttendance.charts.trend')} description={t('staffAttendance.charts.trendHint')}>
           <div className="h-60 p-4 sm:p-5" dir="ltr">
             {trend.length ? (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveChart>
                 <BarChart data={trend} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} vertical={false} />
                   <XAxis dataKey="date" tickFormatter={dayLabel} tick={{ fontSize: 11 }} reversed={chart.xAxis.reversed} />
@@ -96,7 +97,7 @@ export function StaffAttendanceStats({
                   <Bar stackId="d" dataKey="away" name={t('staffAttendance.states.away')} fill={CHART_SERIES[4]} />
                   <Bar stackId="d" dataKey="missing" name={t('staffAttendance.states.missing')} fill={CHART_SERIES[3]} radius={[4, 4, 0, 0]} />
                 </BarChart>
-              </ResponsiveContainer>
+              </ResponsiveChart>
             ) : (
               <p className="flex h-full items-center justify-center text-sm text-on-surface-variant">{t('staffAttendance.charts.noDays')}</p>
             )}
@@ -106,7 +107,7 @@ export function StaffAttendanceStats({
         <TableCard title={t('staffAttendance.charts.late')} description={t('staffAttendance.charts.lateHint')}>
           <div className="h-60 p-4 sm:p-5" dir="ltr">
             {late.length ? (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveChart>
                 <BarChart data={late} layout="vertical" margin={{ top: 4, right: 12, left: 8, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} horizontal={false} />
                   <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
@@ -115,7 +116,7 @@ export function StaffAttendanceStats({
                            formatter={(value) => [Number(value ?? 0), t('staffAttendance.charts.minutes')] as [number, string]} />
                   <Bar dataKey="minutes" fill={CHART_SERIES[2]} radius={[0, 4, 4, 0]} />
                 </BarChart>
-              </ResponsiveContainer>
+              </ResponsiveChart>
             ) : (
               <p className="flex h-full items-center justify-center text-sm text-on-surface-variant">{t('staffAttendance.charts.nobodyLate')}</p>
             )}

@@ -16,6 +16,8 @@ void i18n
     fallbackLng: 'ar',
     supportedLngs: ['ar', 'en'],
     interpolation: { escapeValue: false },
+    // i18next prints an advert for its paid service to the console otherwise.
+    showSupportNotice: false,
     detection: {
       order: ['localStorage', 'navigator'],
       caches: ['localStorage'],

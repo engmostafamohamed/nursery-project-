@@ -1,8 +1,9 @@
 import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Bar, BarChart, CartesianGrid, ComposedChart, ResponsiveContainer, Scatter, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, ComposedChart, Scatter, Tooltip, XAxis, YAxis } from 'recharts';
 
 import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
+import { ResponsiveChart } from '@/components/ui/ResponsiveChart';
 import { stayPoints, stayTimeDomain, weeklyBuckets, type StayPoint, type WeekBucket } from '@/lib/childAttendanceHistory';
 import type { AttendanceDay } from '@/lib/attendanceApi';
 
@@ -118,7 +119,7 @@ export function AttendanceHistoryCharts({ days }: { days: AttendanceDay[] }) {
         }
       >
         {weeks.length ? (
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveChart>
             <BarChart data={weeks} margin={{ top: 4, right: 8, left: 8, bottom: 0 }} barCategoryGap="30%">
               <CartesianGrid vertical={false} stroke={GRID} />
               <XAxis
@@ -159,7 +160,7 @@ export function AttendanceHistoryCharts({ days }: { days: AttendanceDay[] }) {
                 isAnimationActive={false}
               />
             </BarChart>
-          </ResponsiveContainer>
+          </ResponsiveChart>
         ) : (
           <EmptyChart text={t('attendanceHistory.charts.noDays')} />
         )}
@@ -176,7 +177,7 @@ export function AttendanceHistoryCharts({ days }: { days: AttendanceDay[] }) {
         }
       >
         {anyStay ? (
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveChart>
             <ComposedChart data={points} margin={{ top: 12, right: 8, left: 8, bottom: 0 }} barCategoryGap="20%">
               <CartesianGrid vertical={false} stroke={GRID} />
               <XAxis
@@ -231,7 +232,7 @@ export function AttendanceHistoryCharts({ days }: { days: AttendanceDay[] }) {
               <Bar dataKey="stay" fill={COLOR.attended} radius={4} maxBarSize={14} isAnimationActive={false} />
               <Scatter data={arrivals} dataKey="arrivalOnly" fill={SURFACE} stroke={COLOR.attended} strokeWidth={2} isAnimationActive={false} />
             </ComposedChart>
-          </ResponsiveContainer>
+          </ResponsiveChart>
         ) : (
           <EmptyChart text={t('attendanceHistory.charts.noTimes')} />
         )}

@@ -15,6 +15,7 @@ import {
 import { formatMoneyAmount } from '@/lib/money';
 import { EMPTY_PARENT_PACKAGE_TEXTS, textFor } from '@/lib/parentPackageTexts';
 import { localName } from '@/lib/bilingualName';
+import { CHOICE_GRID_COLUMNS } from '@/lib/choiceGrid';
 import { cn } from '@/lib/utils';
 
 import { SignupOrderSummary, SignupTotalBar } from './SignupOrderSummary';
@@ -158,7 +159,7 @@ export function SignupPackagesSection({
               title={t('signup.payment.tuitionPlan')}
               hint={textFor(texts.tuitionIntro, isArabic) ?? t('signup.payment.chooseTuitionHint')}
             />
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className={cn('grid gap-3', CHOICE_GRID_COLUMNS)}>
               {options.packages.map((pkg) => {
                 const offered = offeredBillingPeriods(pkg).includes(activePeriod);
                 const quote = computePackageBillingQuote(pkg, activePeriod);

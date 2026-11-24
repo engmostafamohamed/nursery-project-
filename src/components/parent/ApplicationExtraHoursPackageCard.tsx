@@ -5,6 +5,7 @@ import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { DiscountCountdown } from '@/components/parent/DiscountCountdown';
 import { computeExtraHoursDisplayPrice, type ApplicationExtraHoursPackage } from '@/hooks/useApplicationExtraHoursPackage';
 import { localName } from '@/lib/bilingualName';
+import { CHOICE_GRID_COLUMNS } from '@/lib/choiceGrid';
 import { formatMoneyAmount } from '@/lib/money';
 import { cn } from '@/lib/utils';
 
@@ -117,7 +118,7 @@ export function ApplicationExtraHoursPackageCard({
       <div
         role="radiogroup"
         aria-label={t('applications.extraHoursPackage.title', { defaultValue: 'Extra hours' })}
-        className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3"
+        className={cn('grid gap-4', CHOICE_GRID_COLUMNS)}
       >
         {/* The basic plan: pay per hour. Selected until the parent picks a package, and again once it is removed. */}
         <button

@@ -8,7 +8,6 @@ import {
   Cell,
   Pie,
   PieChart,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
@@ -30,6 +29,7 @@ import { ParentFamilyMessagesCard } from '@/components/parent/ParentFamilyMessag
 import { ParentPasswordResetCard } from '@/components/parent/ParentPasswordResetCard';
 import { Button } from '@/components/ui/button';
 import { ChartLegend } from '@/components/ui/ChartLegend';
+import { ResponsiveChart } from '@/components/ui/ResponsiveChart';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatTile } from '@/components/ui/StatTile';
 import { useApplicationPackagePayment } from '@/hooks/useApplicationPackagePayment';
@@ -192,7 +192,7 @@ function ParentDashboardAnalyticsPanel({
               {isLoading ? (
                 <Skeleton className="h-full w-full" />
               ) : dayData.length ? (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveChart>
                   <BarChart data={dayData} margin={chart.margin}>
                     <CartesianGrid stroke={CHART_GRID_STROKE} strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={12} {...chart.xAxis} />
@@ -201,7 +201,7 @@ function ParentDashboardAnalyticsPanel({
                     <Bar dataKey="present" name={presentLabel} stackId="attendance" fill={chartColor('success')} radius={[4, 4, 0, 0]} />
                     <Bar dataKey="absent" name={absentLabel} stackId="attendance" fill={chartColor('error')} radius={[4, 4, 0, 0]} />
                   </BarChart>
-                </ResponsiveContainer>
+                </ResponsiveChart>
               ) : (
                 <div className="flex h-full items-center justify-center px-4 text-center text-sm text-on-surface-variant">
                   {t('parent.dashboard.analytics.emptyChart', { defaultValue: 'Attendance chart will appear after the first check-in.' })}
@@ -219,14 +219,14 @@ function ParentDashboardAnalyticsPanel({
             <div className="mt-3 flex items-center gap-4">
               <div className="relative h-28 w-28 shrink-0">
                 {pieData.length ? (
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveChart>
                     <PieChart>
                       <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={40} outerRadius={56} paddingAngle={pieData.length > 1 ? 3 : 0} stroke="none">
                         {pieData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
                       </Pie>
                       <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
                     </PieChart>
-                  </ResponsiveContainer>
+                  </ResponsiveChart>
                 ) : (
                   <div className="h-full w-full rounded-full border-[14px] border-surface-high" />
                 )}

@@ -6,13 +6,13 @@ import {
   Legend,
   Line,
   LineChart,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ResponsiveChart } from '@/components/ui/ResponsiveChart';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { usePlatformAnalytics } from '@/hooks/usePlatformAnalytics';
@@ -85,7 +85,7 @@ export function AnalyticsPage() {
             {isLoading || !data ? (
               <Skeleton className="h-full w-full rounded-xl" />
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveChart>
                 <LineChart data={data.monthlySignups}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border-subtle))" />
                   <XAxis dataKey="month" stroke="rgb(var(--foreground-tertiary))" />
@@ -105,7 +105,7 @@ export function AnalyticsPage() {
                     activeDot={{ r: 5 }}
                   />
                 </LineChart>
-              </ResponsiveContainer>
+              </ResponsiveChart>
             )}
           </CardContent>
         </Card>
@@ -127,7 +127,7 @@ export function AnalyticsPage() {
                 {t('xoAdmin.analytics.noPlanData')}
               </p>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveChart>
                 <BarChart data={planData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border-subtle))" />
                   <XAxis dataKey="plan" stroke="rgb(var(--foreground-tertiary))" />
@@ -141,7 +141,7 @@ export function AnalyticsPage() {
                     radius={[4, 4, 0, 0]}
                   />
                 </BarChart>
-              </ResponsiveContainer>
+              </ResponsiveChart>
             )}
           </CardContent>
         </Card>
@@ -160,7 +160,7 @@ export function AnalyticsPage() {
                 {t('xoAdmin.analytics.noStatusData')}
               </p>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveChart>
                 <BarChart data={statusData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border-subtle))" />
                   <XAxis dataKey="status" stroke="rgb(var(--foreground-tertiary))" />
@@ -174,7 +174,7 @@ export function AnalyticsPage() {
                     radius={[4, 4, 0, 0]}
                   />
                 </BarChart>
-              </ResponsiveContainer>
+              </ResponsiveChart>
             )}
           </CardContent>
         </Card>

@@ -1,8 +1,9 @@
 import { useTranslation } from 'react-i18next';
-import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from 'recharts';
 import type { TooltipContentProps } from 'recharts';
 
 import { TableCard } from '@/components/ui/DataTable';
+import { ResponsiveChart } from '@/components/ui/ResponsiveChart';
 import { CHART_CURSOR, CHART_GRID_STROKE, chartColor, chartDirection } from '@/lib/chartTheme';
 
 import { ChartLegend, ChartTooltipBox, PanelEmpty, ScreenReaderTable } from './chartParts';
@@ -49,7 +50,7 @@ export function MoneyTrendChart({ data }: { data: PlatformDashboard['finance']['
       <div className="space-y-3 p-4 sm:p-5">
         <ChartLegend items={legend} />
         <div className="h-64" dir="ltr">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveChart>
             <LineChart data={rows} margin={chart.margin}>
               <CartesianGrid stroke={CHART_GRID_STROKE} vertical={false} />
               <XAxis dataKey="label" {...AXIS} {...chart.xAxis} />
@@ -74,7 +75,7 @@ export function MoneyTrendChart({ data }: { data: PlatformDashboard['finance']['
               <Line type="monotone" dataKey="billed" stroke={REFERENCE} strokeWidth={2} dot={false} activeDot={{ r: 4, stroke: SURFACE, strokeWidth: 2 }} />
               <Line type="monotone" dataKey="collected" stroke={PRIMARY} strokeWidth={2} dot={false} activeDot={{ r: 4, stroke: SURFACE, strokeWidth: 2 }} />
             </LineChart>
-          </ResponsiveContainer>
+          </ResponsiveChart>
         </div>
         <ScreenReaderTable
           caption={t('xoAdmin.dashboard.money.trendTitle')}
@@ -110,7 +111,7 @@ export function AttendanceTrendChart({ data }: { data: PlatformDashboard['attend
       ) : (
         <div className="p-4 sm:p-5">
           <div className="h-60" dir="ltr">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveChart>
               <BarChart data={rows} margin={chart.margin}>
                 <CartesianGrid stroke={CHART_GRID_STROKE} vertical={false} />
                 <XAxis dataKey="label" {...AXIS} interval="preserveStartEnd" minTickGap={24} {...chart.xAxis} />
@@ -140,7 +141,7 @@ export function AttendanceTrendChart({ data }: { data: PlatformDashboard['attend
                 />
                 <Bar dataKey="rate" fill={PRIMARY} activeBar={{ fill: PRIMARY_HOVER }} radius={[4, 4, 0, 0]} maxBarSize={14} />
               </BarChart>
-            </ResponsiveContainer>
+            </ResponsiveChart>
           </div>
           <ScreenReaderTable
             caption={t('xoAdmin.dashboard.children.attendanceTitle')}
@@ -163,7 +164,7 @@ function CountColumns({ rows, caption, valueName, heightClass = 'h-56' }: { rows
   return (
     <>
       <div className={heightClass} dir="ltr">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveChart>
           <BarChart data={rows} margin={chart.margin}>
             <CartesianGrid stroke={CHART_GRID_STROKE} vertical={false} />
             <XAxis dataKey="label" {...AXIS} interval={0} {...chart.xAxis} />
@@ -184,7 +185,7 @@ function CountColumns({ rows, caption, valueName, heightClass = 'h-56' }: { rows
             />
             <Bar dataKey="count" fill={PRIMARY} activeBar={{ fill: PRIMARY_HOVER }} radius={[4, 4, 0, 0]} maxBarSize={24} />
           </BarChart>
-        </ResponsiveContainer>
+        </ResponsiveChart>
       </div>
       <ScreenReaderTable caption={caption} columns={[t('xoAdmin.dashboard.group'), valueName]} rows={rows.map((r) => [r.title, f.int(r.count)])} />
     </>
@@ -272,7 +273,7 @@ export function OverdueAgingChart({ data }: { data: PlatformDashboard['finance']
       ) : (
         <div className="p-4 sm:p-5">
           <div className="h-56" dir="ltr">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveChart>
               <BarChart data={rows} margin={chart.margin}>
                 <CartesianGrid stroke={CHART_GRID_STROKE} vertical={false} />
                 <XAxis dataKey="label" {...AXIS} interval={0} {...chart.xAxis} />
@@ -294,7 +295,7 @@ export function OverdueAgingChart({ data }: { data: PlatformDashboard['finance']
                 />
                 <Bar dataKey="amount" fill={PRIMARY} activeBar={{ fill: PRIMARY_HOVER }} radius={[4, 4, 0, 0]} maxBarSize={24} />
               </BarChart>
-            </ResponsiveContainer>
+            </ResponsiveChart>
           </div>
           <ScreenReaderTable
             caption={t('xoAdmin.dashboard.money.agingTitle')}
