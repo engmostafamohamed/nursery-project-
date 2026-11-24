@@ -18,16 +18,21 @@ type TenantExportListResponse = {
   error?: string;
 };
 
-export function useTenantExports(enabled: boolean) {
+/**
+ * The export jobs of one nursery, and starting a new one. The nursery is named on every call: the
+ * platform's admin has no nursery of their own, and a chain's admin works on the branch they picked.
+ */
+export function useTenantExports(nurseryId: string | null | undefined) {
   const queryClient = useQueryClient();
 
   const jobsQuery = useQuery({
-    queryKey: ['tenant-export-jobs'],
-    enabled,
+    queryKey: ['tenant-export-jobs', nurseryId],
+    enabled: Boolean(nurseryId),
     queryFn: async (): Promise<TenantExportJob[]> => {
-      const { data, error } = await supabase.functions.invoke<TenantExportListResponse>('tenant-export', {
-        method: 'GET',
-      });
+      const { data, error } = await supabase.functions.invoke<TenantExportListResponse>(
+        `tenant-export?nursery_id=${encodeURIComponent(String(nurseryId))}`,
+        { method: 'GET' },
+      );
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       return data?.jobs ?? [];
@@ -38,7 +43,7 @@ export function useTenantExports(enabled: boolean) {
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke<{ success?: boolean; error?: string }>('tenant-export', {
         method: 'POST',
-        body: {},
+        body: { nursery_id: nurseryId },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);

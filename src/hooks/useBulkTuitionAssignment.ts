@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { adminDealsKey } from '@/hooks/useAdminDeals';
 import { tuitionPackagesKey } from '@/hooks/useAdminTuitionPackages';
+import { fetchNurseryFamilyLinks } from '@/lib/familyLinks';
 import { supabase } from '@/lib/supabase';
 import { formatQueryError } from '@/lib/utils';
 
@@ -40,7 +41,7 @@ export function useBulkTuitionAssignment(nurseryId: string | null | undefined) {
     enabled: Boolean(nurseryId),
     queryFn: async (): Promise<BulkAssignChild[]> => {
       if (!nurseryId) return [];
-      const [childrenRes, classesRes, subsRes] = await Promise.all([
+      const [childrenRes, classesRes, subsRes, familyLinks] = await Promise.all([
         supabase
           .from('children')
           .select('id, full_name_ar, full_name_en, class_id')
@@ -53,16 +54,13 @@ export function useBulkTuitionAssignment(nurseryId: string | null | undefined) {
           .select('child_id, tuition_package_name_ar, tuition_package_name_en')
           .eq('nursery_id', nurseryId)
           .eq('status', 'active'),
+        fetchNurseryFamilyLinks(nurseryId),
       ]);
       if (childrenRes.error) throw childrenRes.error;
       if (classesRes.error) throw classesRes.error;
       if (subsRes.error) throw subsRes.error;
 
       const children = (childrenRes.data ?? []) as Array<{ id: string; full_name_ar: string; full_name_en: string; class_id: string | null }>;
-      const parentRes = children.length
-        ? await supabase.from('parent_children').select('child_id').in('child_id', children.map((c) => c.id))
-        : { data: [], error: null };
-      if (parentRes.error) throw parentRes.error;
 
       const classes = new Map(
         ((classesRes.data ?? []) as Array<{ id: string; name_ar: string; name_en: string }>).map((c) => [c.id, c]),
@@ -72,7 +70,7 @@ export function useBulkTuitionAssignment(nurseryId: string | null | undefined) {
           (s) => [s.child_id, s],
         ),
       );
-      const withParent = new Set(((parentRes.data ?? []) as Array<{ child_id: string }>).map((p) => p.child_id));
+      const withParent = new Set(familyLinks.map((link) => link.child_id));
 
       return children.map((c) => {
         const cls = c.class_id ? classes.get(c.class_id) : undefined;

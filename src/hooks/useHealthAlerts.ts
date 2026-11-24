@@ -7,6 +7,7 @@ import {
   todayYmdLocal,
   type HealthAlertItem,
 } from '@/lib/healthAlertsCompute';
+import { fetchAllRows } from '@/lib/fetchAllRows';
 import { supabase } from '@/lib/supabase';
 import type { ChildAllergiesRow, ChildHealthRecordsRow, ChildMedicationsRow, ChildVaccinationsRow } from '@/types/tables/child_health';
 
@@ -27,7 +28,10 @@ export function useHealthAlerts() {
 
       const today = todayYmdLocal();
 
-      const [childrenRes, classesRes, dismissRes] = await Promise.all([
+      // Everything at once. The health rows are the nursery's own, every page of them; only the
+      // active children's are kept below (listing every child id in the request instead made it too
+      // long for a big nursery).
+      const [childrenRes, classesRes, dismissRes, records, medications, vaccinations, allergies] = await Promise.all([
         supabase
           .from('children')
           .select('id, full_name_ar, full_name_en, class_id, emergency_contacts')
@@ -35,6 +39,18 @@ export function useHealthAlerts() {
           .eq('status', 'active'),
         supabase.from('classes').select('id, name_ar, name_en').eq('nursery_id', nurseryId),
         supabase.from('child_health_alert_dismissals').select('alert_fingerprint').eq('nursery_id', nurseryId),
+        fetchAllRows<ChildHealthRecordsRow>((from, to) =>
+          supabase.from('child_health_records').select('*').eq('nursery_id', nurseryId).order('id').range(from, to),
+        ),
+        fetchAllRows<ChildMedicationsRow>((from, to) =>
+          supabase.from('child_medications').select('*').eq('nursery_id', nurseryId).order('id').range(from, to),
+        ),
+        fetchAllRows<ChildVaccinationsRow>((from, to) =>
+          supabase.from('child_vaccinations').select('*').eq('nursery_id', nurseryId).order('id').range(from, to),
+        ),
+        fetchAllRows<ChildAllergiesRow>((from, to) =>
+          supabase.from('child_allergies').select('*').eq('nursery_id', nurseryId).order('id').range(from, to),
+        ),
       ]);
       if (childrenRes.error) throw childrenRes.error;
       if (classesRes.error) throw classesRes.error;
@@ -49,36 +65,24 @@ export function useHealthAlerts() {
       }[];
       const classes = (classesRes.data ?? []) as { id: string; name_ar: string; name_en: string }[];
       const classesById = new Map(classes.map((c) => [c.id, c]));
-      const childIds = children.map((c) => c.id);
-      if (!childIds.length) return { alerts: [], classes };
+      if (!children.length) return { alerts: [], classes };
+      const activeIds = new Set(children.map((c) => c.id));
+      const ofActive = <T extends { child_id: string }>(rows: T[]): T[] => rows.filter((row) => activeIds.has(row.child_id));
 
       const dismissedFingerprints = new Set(
         ((dismissRes.data ?? []) as { alert_fingerprint: string }[]).map((d) => d.alert_fingerprint),
       );
 
-      const [recordsRes, medsRes, vacsRes, alRes] = await Promise.all([
-        supabase.from('child_health_records').select('*').eq('nursery_id', nurseryId).in('child_id', childIds),
-        supabase.from('child_medications').select('*').eq('nursery_id', nurseryId).in('child_id', childIds),
-        supabase.from('child_vaccinations').select('*').eq('nursery_id', nurseryId).in('child_id', childIds),
-        supabase.from('child_allergies').select('*').eq('nursery_id', nurseryId).in('child_id', childIds),
-      ]);
-      if (recordsRes.error) throw recordsRes.error;
-      if (medsRes.error) throw medsRes.error;
-      if (vacsRes.error) throw vacsRes.error;
-      if (alRes.error) throw alRes.error;
-
-      const recordsByChildId = new Map(
-        ((recordsRes.data ?? []) as ChildHealthRecordsRow[]).map((r) => [r.child_id, r]),
-      );
+      const recordsByChildId = new Map(ofActive(records).map((r) => [r.child_id, r]));
 
       const alerts = computeHealthAlerts({
         today,
         children,
         classesById,
         recordsByChildId,
-        medications: (medsRes.data ?? []) as ChildMedicationsRow[],
-        vaccinations: (vacsRes.data ?? []) as ChildVaccinationsRow[],
-        allergies: (alRes.data ?? []) as ChildAllergiesRow[],
+        medications: ofActive(medications),
+        vaccinations: ofActive(vaccinations),
+        allergies: ofActive(allergies),
         dismissedFingerprints,
       });
 

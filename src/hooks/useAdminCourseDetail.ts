@@ -1,5 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
 import type {
@@ -76,7 +75,6 @@ export type CourseInvoiceRow = {
 };
 
 export function useAdminCourseDetail(courseId: string | null | undefined) {
-  const queryClient = useQueryClient();
   const key = adminCourseDetailQueryKey(courseId);
 
   const query = useQuery({
@@ -111,24 +109,10 @@ export function useAdminCourseDetail(courseId: string | null | undefined) {
     enabled: Boolean(courseId),
   });
 
-  // Depends on the id, not `key`: that array is rebuilt every render, which would
-  // close and reopen the realtime channel on every render.
-  useEffect(() => {
-    if (!courseId) return;
-    const channel = supabase
-      .channel(`admin-course-detail-${courseId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'courses', filter: `id=eq.${courseId}` }, () =>
-        void queryClient.invalidateQueries({ queryKey: adminCourseDetailQueryKey(courseId) }),
-      )
-      .subscribe();
-    return () => { void supabase.removeChannel(channel); };
-  }, [courseId, queryClient]);
-
   return query;
 }
 
 export function useAdminCourseEnrollments(courseId: string | null | undefined) {
-  const queryClient = useQueryClient();
   const key = adminCourseEnrollmentsQueryKey(courseId);
 
   const query = useQuery({
@@ -186,24 +170,10 @@ export function useAdminCourseEnrollments(courseId: string | null | undefined) {
     enabled: Boolean(courseId),
   });
 
-  // Depends on the id, not `key`: that array is rebuilt every render, which would
-  // close and reopen the realtime channel on every render.
-  useEffect(() => {
-    if (!courseId) return;
-    const channel = supabase
-      .channel(`admin-course-enrollments-${courseId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'course_enrollments', filter: `course_id=eq.${courseId}` }, () =>
-        void queryClient.invalidateQueries({ queryKey: adminCourseEnrollmentsQueryKey(courseId) }),
-      )
-      .subscribe();
-    return () => { void supabase.removeChannel(channel); };
-  }, [courseId, queryClient]);
-
   return query;
 }
 
 export function useAdminCourseInvoices(courseId: string | null | undefined) {
-  const queryClient = useQueryClient();
   const key = adminCourseInvoicesQueryKey(courseId);
 
   const query = useQuery({
@@ -239,19 +209,6 @@ export function useAdminCourseInvoices(courseId: string | null | undefined) {
     },
     enabled: Boolean(courseId),
   });
-
-  // Depends on the id, not `key`: that array is rebuilt every render, which would
-  // close and reopen the realtime channel on every render.
-  useEffect(() => {
-    if (!courseId) return;
-    const channel = supabase
-      .channel(`admin-course-invoices-${courseId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'course_invoices', filter: `course_id=eq.${courseId}` }, () =>
-        void queryClient.invalidateQueries({ queryKey: adminCourseInvoicesQueryKey(courseId) }),
-      )
-      .subscribe();
-    return () => { void supabase.removeChannel(channel); };
-  }, [courseId, queryClient]);
 
   return query;
 }

@@ -15,9 +15,10 @@ import { MaterialSymbol } from '@/components/ui/MaterialSymbol';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/select';
 import { StatTile } from '@/components/ui/StatTile';
+import { useActiveNurseryId } from '@/hooks/useActiveNurseryId';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { usePagination } from '@/hooks/usePagination';
-import { useAllStaff, useStaff, type StaffProfileView } from '@/hooks/useStaff';
+import { useStaff, type StaffProfileView } from '@/hooks/useStaff';
 import { useCanAction } from '@/hooks/usePermissions';
 import { useUserProfile } from '@/hooks/useUserProfile';
 
@@ -26,15 +27,10 @@ export function AdminStaffDirectoryPage() {
   const qc = useQueryClient();
   const { user } = useAuthSession();
   const { data: profile } = useUserProfile(user?.id);
-  const nurseryId = profile?.nursery_id ?? undefined;
-  // Cross-nursery roles get the unfiltered query (RLS limits visibility).
-  // Single-nursery roles use the nursery-scoped query.
-  const isCrossNursery =
-    profile?.role === 'xo_super_admin' || profile?.role === 'chain_super_admin';
-  const scopedStaff = useStaff(isCrossNursery ? undefined : nurseryId);
-  const allStaff = useAllStaff();
-  const staff = isCrossNursery ? allStaff : scopedStaff;
-  const showNurseryColumn = isCrossNursery;
+  // The nursery being managed: a platform or chain admin picks it, everyone else has their own.
+  const { activeNurseryId } = useActiveNurseryId();
+  const nurseryId = activeNurseryId ?? undefined;
+  const staff = useStaff(nurseryId);
   const canEdit = useCanAction('staff', 'update');
   const [dept, setDept] = useState('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
@@ -121,7 +117,7 @@ export function AdminStaffDirectoryPage() {
   };
   const toggleStatus = (value: 'active' | 'inactive') => setStatusFilter((current) => (current === value ? 'all' : value));
 
-  const loading = (isCrossNursery || Boolean(nurseryId)) && staff.isLoading;
+  const loading = Boolean(nurseryId) && staff.isLoading;
   const pager = usePagination(rows, 10, `${dept}|${statusFilter}|${search.trim().toLowerCase()}`);
 
   return (
@@ -217,7 +213,6 @@ export function AdminStaffDirectoryPage() {
           <StaffDirectoryTable
             rows={pager.pageItems as StaffProfileView[]}
             language={i18n.language}
-            showNurseryColumn={showNurseryColumn}
             canEdit={canEdit}
           />
         )}
@@ -228,9 +223,9 @@ export function AdminStaffDirectoryPage() {
           open={importOpen}
           onOpenChange={setImportOpen}
           nurseryId={nurseryId}
-          staff={scopedStaff.staff as StaffProfileView[]}
+          staff={staff.staff as StaffProfileView[]}
           onImported={() => void qc.invalidateQueries({ queryKey: ['staff-profiles'] })}
-          saveStaff={scopedStaff.saveStaff}
+          saveStaff={staff.saveStaff}
         />
       ) : null}
     </div>

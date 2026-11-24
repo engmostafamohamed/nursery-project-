@@ -1,4 +1,3 @@
-import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -22,7 +21,6 @@ import { useAdminDashboardActivityFeed } from '@/hooks/useAdminDashboardActivity
 import { useAdminDashboardAlerts } from '@/hooks/useAdminDashboardAlerts';
 import { useAdminDashboardCharts } from '@/hooks/useAdminDashboardCharts';
 import { useAdminDashboardEnhancedStats } from '@/hooks/useAdminDashboardEnhancedStats';
-import { useAdminDashboardRealtime } from '@/hooks/useAdminDashboardRealtime';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useNurserySettings } from '@/hooks/useNurserySettings';
 import { useCan, usePermissionsReady } from '@/hooks/usePermissions';
@@ -35,7 +33,6 @@ function formatInt(n: number, locale: string): string {
 
 export function AdminDashboardPage() {
   const { t, i18n } = useTranslation();
-  const queryClient = useQueryClient();
   const { user } = useAuthSession();
   const { data: profile, isPending: profilePending } = useUserProfile(user?.id);
   const { activeNurseryId } = useActiveNurseryId();
@@ -57,8 +54,6 @@ export function AdminDashboardPage() {
   const { data: alerts, isPending: alertsPending } = useAdminDashboardAlerts(nurseryId, canSeeMoney);
   const { data: feedItems = [], isPending: feedPending } = useAdminDashboardActivityFeed(nurseryId, canSeeMoney);
   const { settings, updateSettings, isSaving: settingsSaving } = useNurserySettings(nurseryId);
-
-  useAdminDashboardRealtime(nurseryId, queryClient);
 
   const showStatSkeleton = profilePending || (Boolean(nurseryId) && statsPending);
 

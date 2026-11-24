@@ -66,16 +66,22 @@ export function useFinancialReports(nurseryId: string | undefined, preset: Range
     queryKey: ['financial-reports', nurseryId, preset, customFrom, customTo],
     queryFn: async () => {
       if (!nurseryId) return { invoices: [] as Invoice[], parents: new Map<string, ParentInfo>(), reportNowMs: Date.now() };
-      // Page through: a long range (e.g. a year) has more invoices than one response returns.
+      // Page through: a long range (e.g. a year) has more invoices than one response returns. The
+      // parent comes with each invoice: looking parents up after, by listing every id in the request,
+      // grows too long for the server once a nursery has a few hundred families.
       const rows = await fetchAllRows<unknown>((start, end) => {
         let q = supabase
           .from('invoices')
-          .select('id, parent_id, amount, status, due_date, created_at, paid_at, payment_method, invoice_type, payments(amount, method, paid_at, status)')
+          .select(
+            'id, parent_id, amount, status, due_date, created_at, paid_at, payment_method, invoice_type, payments(amount, method, paid_at, status), parent:users!invoices_parent_id_fkey(name_ar, name_en, email, phone, language_pref)',
+          )
           .eq('nursery_id', nurseryId);
         if (range.from) q = q.gte('created_at', range.from);
         if (range.to) q = q.lte('created_at', range.to);
         return q.order('created_at').order('id').range(start, end).returns<unknown[]>();
       });
+      type ParentRow = { name_ar: string | null; name_en: string | null; email: string | null; phone: string | null; language_pref: string | null };
+      const parents = new Map<string, ParentInfo>();
       const invoices = (rows as Array<{
         id: string;
         parent_id: string;
@@ -87,7 +93,16 @@ export function useFinancialReports(nurseryId: string | undefined, preset: Range
         payment_method: string | null;
         invoice_type: InvoiceType;
         payments: Array<{ amount: string | number; method: string; paid_at: string; status: string }> | null;
-      }>).map((row) => {
+        parent: ParentRow | null;
+      }>).map(({ parent, ...row }) => {
+        if (parent && !parents.has(row.parent_id)) {
+          parents.set(row.parent_id, {
+            name: parent.name_ar || parent.name_en || 'Parent',
+            email: parent.email,
+            phone: parent.phone,
+            language: parent.language_pref === 'en' ? 'en' : 'ar',
+          });
+        }
         const payments = (row.payments ?? []).map((payment) => ({
           amount: Number(payment.amount ?? 0),
           method: payment.method,
@@ -99,23 +114,6 @@ export function useFinancialReports(nurseryId: string | undefined, preset: Range
           .reduce((sum, payment) => sum + payment.amount, 0);
         return { ...row, amount: Number(row.amount ?? 0), payments, paidAmount };
       }) as Invoice[];
-
-      const parentIds = [...new Set(invoices.map((i) => i.parent_id))];
-      const usersRes = parentIds.length
-        ? await supabase.from('users').select('id, name_ar, name_en, email, phone, language_pref').in('id', parentIds)
-        : { data: [], error: null };
-      if (usersRes.error) throw usersRes.error;
-      const parents = new Map<string, ParentInfo>(
-        ((usersRes.data ?? []) as { id: string; name_ar: string | null; name_en: string | null; email: string | null; phone: string | null; language_pref: string | null }[]).map((u) => [
-          u.id,
-          {
-            name: u.name_ar || u.name_en || 'Parent',
-            email: u.email,
-            phone: u.phone,
-            language: (u.language_pref === 'en' ? 'en' : 'ar') as 'ar' | 'en',
-          },
-        ]),
-      );
       return { invoices, parents, reportNowMs: Date.now() };
     },
     enabled: Boolean(nurseryId),

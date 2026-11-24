@@ -76,7 +76,8 @@ export const EDGE_FUNCTIONS = [
   {
     name: 'tenant-export',
     audience: 'app',
-    summary: 'Nursery data export: GET lists the export jobs, POST starts a new export.',
+    summary: 'Nursery data export: GET lists the export jobs, POST starts a new export. A platform or chain admin names the nursery (nursery_id).',
+    fields: ['nursery_id'],
     method: 'post',
   },
 

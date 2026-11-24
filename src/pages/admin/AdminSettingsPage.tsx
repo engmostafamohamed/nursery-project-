@@ -255,7 +255,7 @@ export function AdminSettingsPage() {
         </DialogContent>
       </Dialog>
     </div>
-    <TenantExportCard enabled={Boolean(profile?.nursery_id)} />
+    <TenantExportCard nurseryId={profile?.nursery_id} />
     <PushNotificationsCard />
     <HelpAiPreferencesCard />
     </div>

@@ -12,24 +12,6 @@ export interface Nursery extends NurseriesRow {
   pricing_model: PricingModel | null;
 }
 
-export interface NurseryListFilters {
-  search: string;
-  city: string | 'all';
-  subscriptionStatus: SubscriptionStatus | 'all';
-}
-
-export interface NurseryListItem {
-  id: string;
-  nameAr: string;
-  nameEn: string;
-  city: string | null;
-  phone: string | null;
-  languagePref: 'ar' | 'en' | 'both';
-  subscriptionStatus: SubscriptionStatus;
-  subscriptionPlan: SubscriptionPlan | null;
-  trialEndsAt: string | null;
-}
-
 export interface NurseryStats {
   totalChildren: number;
   totalStaff: number;

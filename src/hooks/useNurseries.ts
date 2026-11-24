@@ -3,69 +3,48 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type {
   Nursery,
-  NurseryListFilters,
-  NurseryListItem,
   NurseryStats,
   NurseryUserSummary,
   PricingModel,
   SubscriptionPlan,
+  SubscriptionStatus,
 } from '@/types/nursery';
 
-const LIST_QUERY_KEY = 'xo-admin-nurseries';
+/** The platform admin's nurseries list: invalidate it after anything that changes a nursery. */
+export const XO_NURSERIES_LIST_KEY = ['xo-admin-nurseries'] as const;
 
-function mapNurseryRowToListItem(row: Nursery): NurseryListItem {
-  const status = (row.subscription_status ?? 'trial') as Nursery['subscription_status'];
-  const plan = row.subscription_plan as SubscriptionPlan | null;
-  return {
-    id: row.id,
-    nameAr: row.name_ar,
-    nameEn: row.name_en,
-    city: row.city,
-    phone: row.phone,
-    languagePref: row.language_pref,
-    subscriptionStatus: status ?? 'trial',
-    subscriptionPlan: plan,
-    trialEndsAt: row.trial_ends_at,
-  };
-}
+/** One nursery on the platform admin's list, with what it holds counted (get_xo_nursery_list). */
+export type XoNurseryListRow = {
+  id: string;
+  name_ar: string;
+  name_en: string;
+  city: string | null;
+  logo_url: string | null;
+  subscription_status: SubscriptionStatus | null;
+  subscription_plan: SubscriptionPlan | null;
+  trial_ends_at: string | null;
+  suspended_at: string | null;
+  deleted_at: string | null;
+  created_at: string | null;
+  user_count: number;
+  child_count: number;
+  active_child_count: number;
+  invoice_count: number;
+};
 
-export function useNurseriesList(filters: NurseryListFilters) {
-  const query = useQuery({
-    queryKey: [LIST_QUERY_KEY, filters],
-    queryFn: async (): Promise<NurseryListItem[]> => {
-      let queryBuilder = supabase.from('nurseries').select('*');
-
-      if (filters.city !== 'all' && filters.city.trim()) {
-        queryBuilder = queryBuilder.eq('city', filters.city.trim());
-      }
-      if (filters.subscriptionStatus !== 'all') {
-        queryBuilder = queryBuilder.eq('subscription_status', filters.subscriptionStatus);
-      }
-
-      const { data, error } = await queryBuilder;
+/**
+ * Every nursery on the platform, deleted ones included, counted by the database in one call.
+ * The page filters and searches this list itself, so changing a filter sends nothing.
+ */
+export function useNurseriesList() {
+  return useQuery({
+    queryKey: XO_NURSERIES_LIST_KEY,
+    queryFn: async (): Promise<XoNurseryListRow[]> => {
+      const { data, error } = await supabase.rpc('get_xo_nursery_list' as never);
       if (error) throw error;
-
-      let rows = (data ?? []) as Nursery[];
-
-      if (filters.search.trim()) {
-        const q = filters.search.trim().toLowerCase();
-        rows = rows.filter(
-          (n) =>
-            n.name_ar.toLowerCase().includes(q) ||
-            n.name_en.toLowerCase().includes(q),
-        );
-      }
-
-      return rows.map(mapNurseryRowToListItem);
+      return (data ?? []) as XoNurseryListRow[];
     },
   });
-
-  return {
-    items: query.data ?? [],
-    isLoading: query.isLoading,
-    error: query.error,
-    refetch: query.refetch,
-  };
 }
 
 export function useNursery(id: string | null | undefined) {
@@ -202,16 +181,8 @@ export function useCreateNursery() {
         .single();
 
       if (nurseryError) throw nurseryError;
+      // Its settings row is made with it, by the database (create_default_nursery_settings).
       const nursery = nurseryRow as Nursery;
-
-      const { error: settingsError } = await supabase
-        .from('nursery_settings')
-        .insert({ nursery_id: nursery.id } as never)
-        .select('*')
-        .single();
-      if (settingsError && settingsError.code !== '23505') {
-        throw settingsError;
-      }
 
       const tempPassword = generateTemporaryPassword();
 
@@ -261,7 +232,7 @@ export function useCreateNursery() {
       */
     },
     onSuccess: (result) => {
-      void queryClient.invalidateQueries({ queryKey: [LIST_QUERY_KEY] });
+      void queryClient.invalidateQueries({ queryKey: XO_NURSERIES_LIST_KEY });
       void queryClient.invalidateQueries({ queryKey: ['xo-admin-nursery', result.nursery.id] });
     },
   });
@@ -317,7 +288,7 @@ export function useUpdateNursery() {
       return data as Nursery;
     },
     onSuccess: (nursery) => {
-      void queryClient.invalidateQueries({ queryKey: [LIST_QUERY_KEY] });
+      void queryClient.invalidateQueries({ queryKey: XO_NURSERIES_LIST_KEY });
       void queryClient.invalidateQueries({ queryKey: ['xo-admin-nursery', nursery.id] });
     },
   });

@@ -1,5 +1,4 @@
-import { useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
 import type { ChildrenRow, CourseEnrollmentsRow, CoursesRow } from '@/types/tables';
@@ -31,7 +30,6 @@ export type TeacherCourseEnrolleeRow = {
 };
 
 export function useTeacherCourses(userId: string | undefined) {
-  const queryClient = useQueryClient();
   const key = ['teacher-courses', userId] as const;
 
   const query = useQuery({
@@ -68,22 +66,10 @@ export function useTeacherCourses(userId: string | undefined) {
     enabled: Boolean(userId),
   });
 
-  useEffect(() => {
-    if (!userId) return;
-    const channel = supabase
-      .channel(`teacher-courses-${userId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'courses', filter: `teacher_user_id=eq.${userId}` }, () =>
-        void queryClient.invalidateQueries({ queryKey: key }),
-      )
-      .subscribe();
-    return () => { void supabase.removeChannel(channel); };
-  }, [userId, queryClient, key]);
-
   return query;
 }
 
 export function useTeacherCourseEnrollees(courseId: string | null | undefined) {
-  const queryClient = useQueryClient();
   const key = ['teacher-course-enrollees', courseId] as const;
 
   const query = useQuery({
@@ -122,17 +108,6 @@ export function useTeacherCourseEnrollees(courseId: string | null | undefined) {
     },
     enabled: Boolean(courseId),
   });
-
-  useEffect(() => {
-    if (!courseId) return;
-    const channel = supabase
-      .channel(`teacher-course-enrollees-${courseId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'course_enrollments', filter: `course_id=eq.${courseId}` }, () =>
-        void queryClient.invalidateQueries({ queryKey: key }),
-      )
-      .subscribe();
-    return () => { void supabase.removeChannel(channel); };
-  }, [courseId, queryClient, key]);
 
   return query;
 }

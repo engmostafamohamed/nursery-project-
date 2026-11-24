@@ -55,6 +55,8 @@ type InvoiceRow = {
     status: string;
     paid_at: string;
   }> | null;
+  payment_attempts: AttemptRow[] | null;
+  parent: Omit<ParentRow, 'id'> | null;
 };
 
 type AttemptRow = {
@@ -182,6 +184,19 @@ export function usePaymentHistory({ nurseryId, parentId, applicationId, fromDate
             gateway_ref,
             status,
             paid_at
+          ),
+          payment_attempts (
+            id,
+            invoice_id,
+            amount,
+            payment_method,
+            status,
+            created_at,
+            confirmed_at
+          ),
+          parent:users!invoices_parent_id_fkey (
+            name_ar,
+            name_en
           )
         `,
         )
@@ -199,26 +214,11 @@ export function usePaymentHistory({ nurseryId, parentId, applicationId, fromDate
       const invoices = applicationId
         ? allInvoices.filter((invoice) => invoiceApplicationId(invoice.line_items_json) === applicationId)
         : allInvoices;
-      const invoiceIds = invoices.map((i) => i.id);
-      const parentIds = [...new Set(invoices.map((i) => i.parent_id))];
-
-      const [attemptsRes, parentsRes] = await Promise.all([
-        invoiceIds.length
-          ? supabase
-              .from('payment_attempts')
-              .select('id, invoice_id, amount, payment_method, status, created_at, confirmed_at')
-              .in('invoice_id', invoiceIds)
-          : Promise.resolve({ data: [], error: null }),
-        parentIds.length
-          ? supabase.from('users').select('id, name_ar, name_en').in('id', parentIds)
-          : Promise.resolve({ data: [], error: null }),
-      ]);
-      if (attemptsRes.error) throw attemptsRes.error;
-      if (parentsRes.error) throw parentsRes.error;
-
+      // The attempts and the parent came with each invoice. Looking them up after, by listing every
+      // invoice and parent id in the request, made it too long for the server on a busy nursery.
       const attemptsByInvoice = new Map<string, AttemptRow>();
       const pendingAmountByInvoice = new Map<string, number>();
-      for (const attempt of (attemptsRes.data ?? []) as AttemptRow[]) {
+      for (const attempt of invoices.flatMap((invoice) => invoice.payment_attempts ?? [])) {
         if (attempt.status === 'pending_confirmation') {
           pendingAmountByInvoice.set(
             attempt.invoice_id,
@@ -231,7 +231,7 @@ export function usePaymentHistory({ nurseryId, parentId, applicationId, fromDate
         }
       }
       const parents = new Map(
-        ((parentsRes.data ?? []) as ParentRow[]).map((p) => [p.id, p.name_ar || p.name_en || 'Parent']),
+        invoices.map((invoice) => [invoice.parent_id, invoice.parent?.name_ar || invoice.parent?.name_en || 'Parent']),
       );
 
       return invoices.map((invoice) => {

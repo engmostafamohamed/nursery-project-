@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
 
@@ -51,7 +51,6 @@ export function useAdminEventsList({
   categoryFilter: AdminEventsListCategoryFilter;
   dateFilter: AdminEventsListDateFilter;
 }) {
-  const queryClient = useQueryClient();
   const key = adminEventsListQueryKey(nurseryId);
 
   const query = useQuery({
@@ -70,23 +69,6 @@ export function useAdminEventsList({
     },
     enabled: Boolean(nurseryId),
   });
-
-  // Depends on the nursery id, not `key`: that array is rebuilt every render, which would
-  // close and reopen the realtime channel on every render.
-  useEffect(() => {
-    if (!nurseryId) return;
-    const channel = supabase
-      .channel(`admin-events-list-${nurseryId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'events' },
-        () => void queryClient.invalidateQueries({ queryKey: adminEventsListQueryKey(nurseryId) }),
-      )
-      .subscribe();
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [nurseryId, queryClient]);
 
   const [nowMs] = useState(Date.now);
   const filtered = useMemo(() => {

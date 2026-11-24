@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { adminDealsKey } from '@/hooks/useAdminDeals';
@@ -130,24 +129,6 @@ export function useAdminPackages(nurseryId: string | null | undefined) {
       void queryClient.invalidateQueries({ queryKey: adminDealsKey(nurseryId) });
     },
   });
-
-  // Depends on the nursery id, not `key`: that array is rebuilt every render, which would
-  // close and reopen the realtime channel on each keystroke in the forms using this hook.
-  useEffect(() => {
-    if (!nurseryId) return;
-    const channel = supabase
-      .channel(`admin-packages-${nurseryId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'packages' }, () =>
-        void queryClient.invalidateQueries({ queryKey: packagesKey(nurseryId) }),
-      )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'child_packages' }, () =>
-        void queryClient.invalidateQueries({ queryKey: packagesKey(nurseryId) }),
-      )
-      .subscribe();
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [nurseryId, queryClient]);
 
   return { query, create, update };
 }

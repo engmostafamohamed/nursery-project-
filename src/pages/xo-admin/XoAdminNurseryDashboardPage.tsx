@@ -1,4 +1,3 @@
-import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -15,7 +14,6 @@ import { useAdminDashboardActivityFeed } from '@/hooks/useAdminDashboardActivity
 import { useAdminDashboardAlerts } from '@/hooks/useAdminDashboardAlerts';
 import { useAdminDashboardCharts } from '@/hooks/useAdminDashboardCharts';
 import { useAdminDashboardEnhancedStats } from '@/hooks/useAdminDashboardEnhancedStats';
-import { useAdminDashboardRealtime } from '@/hooks/useAdminDashboardRealtime';
 
 function formatInt(n: number, locale: string): string {
   return new Intl.NumberFormat(locale === 'ar' ? 'ar-EG' : 'en-GB').format(n);
@@ -31,7 +29,6 @@ function formatMoney(n: number, locale: string): string {
 
 export function XoAdminNurseryDashboardPage() {
   const { t, i18n } = useTranslation();
-  const queryClient = useQueryClient();
   const { activeNurseryId, isLoading: isNurserySelectionLoading } = useActiveNurseryId();
   const locale = i18n.language;
   const nurseryId = activeNurseryId ?? undefined;
@@ -46,8 +43,6 @@ export function XoAdminNurseryDashboardPage() {
     useAdminDashboardAlerts(nurseryId, true);
   const { data: nurseryFeedItems = [], isPending: nurseryFeedPending } =
     useAdminDashboardActivityFeed(nurseryId, true);
-
-  useAdminDashboardRealtime(nurseryId, queryClient);
 
   const nurseryMetricsLoading =
     isNurserySelectionLoading || (Boolean(nurseryId) && nurseryStatsPending);

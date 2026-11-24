@@ -80,13 +80,18 @@ export function useStaff(nurseryId?: string) {
     queryFn: async () => {
       if (!nurseryId) return [];
 
-      const usersRes = await supabase
-        .from('users')
-        .select(
-          'id, name_ar, name_en, email, role, status, phone, role_data:role_id(name_en, name_ar, base_role, base_department, managed_position_keys)',
-        )
-        .eq('nursery_id', nurseryId)
-        .in('role', ['teacher', 'manager', 'branch_admin', 'chain_super_admin']);
+      // Both reads at once. The profiles are the nursery's own; listing every staff id in the
+      // request instead made it too long for the server once a nursery had a few hundred staff.
+      const [usersRes, profilesRes] = await Promise.all([
+        supabase
+          .from('users')
+          .select(
+            'id, name_ar, name_en, email, role, status, phone, role_data:role_id(name_en, name_ar, base_role, base_department, managed_position_keys)',
+          )
+          .eq('nursery_id', nurseryId)
+          .in('role', ['teacher', 'manager', 'branch_admin', 'chain_super_admin']),
+        supabase.from('staff_profiles').select('*').eq('nursery_id', nurseryId),
+      ]);
 
       if (usersRes.error) throw usersRes.error;
       const users = (usersRes.data ?? []) as unknown as Array<{
@@ -100,11 +105,7 @@ export function useStaff(nurseryId?: string) {
         role_data: UserRoleEmbed | null;
       }>;
 
-      const userIds = users.map((u) => u.id);
-      if (!userIds.length) return [] as StaffProfileView[];
-
-      const profilesRes = await supabase.from('staff_profiles').select('*').eq('nursery_id', nurseryId).in('user_id', userIds);
-
+      if (!users.length) return [] as StaffProfileView[];
       if (profilesRes.error) throw profilesRes.error;
       const profiles = (profilesRes.data ?? []) as Array<Record<string, unknown>>;
       const profileByUserId = new Map(profiles.map((p) => [String(p.user_id), p]));
@@ -181,89 +182,5 @@ export function useStaff(nurseryId?: string) {
     isLoading: staffQuery.isLoading,
     saveStaff: upsertStaff.mutateAsync,
     deactivateStaff: deactivateStaff.mutateAsync,
-  };
-}
-
-/**
- * Cross-nursery variant of useStaff. Does NOT filter by nursery_id — server-side
- * RLS enforces visibility: xo_super_admin sees every nursery, chain_super_admin
- * sees their chain, everyone else gets back only their own nursery's rows.
- *
- * Each returned row carries `nursery_id` so the UI can render a Nursery column
- * when the caller has cross-nursery visibility.
- */
-export function useAllStaff() {
-  const staffQuery = useQuery({
-    queryKey: ['staff-profiles', 'all'],
-    queryFn: async () => {
-      const usersRes = await supabase
-        .from('users')
-        .select(
-          'id, nursery_id, name_ar, name_en, email, role, status, phone, role_data:role_id(name_en, name_ar, base_role, base_department)',
-        )
-        .in('role', ['teacher', 'manager', 'branch_admin', 'chain_super_admin']);
-
-      if (usersRes.error) throw usersRes.error;
-      const users = (usersRes.data ?? []) as unknown as Array<{
-        id: string;
-        nursery_id: string | null;
-        name_ar: string;
-        name_en: string;
-        email: string | null;
-        role: string;
-        status: string;
-        phone: string | null;
-        role_data: UserRoleEmbed | null;
-      }>;
-
-      const userIds = users.map((u) => u.id);
-      if (!userIds.length) return [] as StaffProfileView[];
-
-      const profilesRes = await supabase
-        .from('staff_profiles')
-        .select('*')
-        .in('user_id', userIds);
-
-      if (profilesRes.error) throw profilesRes.error;
-      const profiles = (profilesRes.data ?? []) as Array<Record<string, unknown>>;
-      const profileByUserId = new Map(profiles.map((p) => [String(p.user_id), p]));
-
-      return users.map((u) => {
-        const sp = profileByUserId.get(u.id);
-        const userView = userToView(u);
-        if (sp) {
-          return {
-            ...sp,
-            id: String(sp.id),
-            user_id: u.id,
-            nursery_id: String(sp.nursery_id ?? u.nursery_id ?? ''),
-            hasStaffProfile: true,
-            user: userView,
-          } as StaffProfileView;
-        }
-        return {
-          id: u.id,
-          user_id: u.id,
-          nursery_id: u.nursery_id ?? '',
-          employee_id: '—',
-          department: 'teaching' as StaffDepartment,
-          position: '—',
-          hire_date: new Date().toISOString().slice(0, 10),
-          contract_type: 'full_time' as StaffContractType,
-          salary_amount: null,
-          emergency_contact_name: null,
-          emergency_contact_phone: null,
-          address: null,
-          national_id: null,
-          hasStaffProfile: false,
-          user: userView,
-        } as StaffProfileView;
-      });
-    },
-  });
-
-  return {
-    staff: staffQuery.data ?? [],
-    isLoading: staffQuery.isLoading,
   };
 }

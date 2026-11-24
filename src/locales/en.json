@@ -1478,7 +1478,8 @@
     "empty": {
       "title": "No nurseries yet",
       "subtitle": "Create the first nursery to get started.",
-      "cta": "Create first nursery"
+      "cta": "Create first nursery",
+      "noMatch": "No nursery matches these filters."
     },
     "fields": {
       "nameAr": "Nursery name (Arabic)",

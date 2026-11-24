@@ -7,12 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useTenantExports } from '@/hooks/useTenantExports';
 
 type TenantExportCardProps = {
-  enabled: boolean;
+  /** The nursery whose data is exported; nothing loads until there is one. */
+  nurseryId: string | null | undefined;
 };
 
-export function TenantExportCard({ enabled }: TenantExportCardProps) {
+export function TenantExportCard({ nurseryId }: TenantExportCardProps) {
   const { t, i18n } = useTranslation();
-  const { jobs, isLoading, isRequestingExport, requestExport, refetch, isRefreshing } = useTenantExports(enabled);
+  const { jobs, isLoading, isRequestingExport, requestExport, refetch, isRefreshing } = useTenantExports(nurseryId);
 
   const dateFormatter = useMemo(
     () =>
@@ -40,10 +41,10 @@ export function TenantExportCard({ enabled }: TenantExportCardProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap gap-2">
-          <Button type="button" onClick={() => void onRequest()} disabled={!enabled || isRequestingExport}>
+          <Button type="button" onClick={() => void onRequest()} disabled={!nurseryId || isRequestingExport}>
             {isRequestingExport ? t('tenantExport.actions.requesting') : t('tenantExport.actions.request')}
           </Button>
-          <Button type="button" variant="outline" onClick={() => void refetch()} disabled={isRefreshing || !enabled}>
+          <Button type="button" variant="outline" onClick={() => void refetch()} disabled={isRefreshing || !nurseryId}>
             {t('tenantExport.actions.refresh')}
           </Button>
         </div>

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { XO_NURSERIES_LIST_KEY } from '@/hooks/useNurseries';
 import { supabase } from '@/lib/supabase';
 import type { Nursery } from '@/types/nursery';
 
@@ -58,7 +59,7 @@ export function useUpdateNursery() {
     },
     onSuccess: (data) => {
       void queryClient.invalidateQueries({ queryKey: ['nursery', data.id] });
-      void queryClient.invalidateQueries({ queryKey: ['xo-admin', 'nurseries-analytics'] });
+      void queryClient.invalidateQueries({ queryKey: XO_NURSERIES_LIST_KEY });
     },
   });
 }

@@ -1,5 +1,4 @@
-import { useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import { NOTIFICATION_TEXT_COLUMNS, type NotificationTextRow } from '@/lib/notificationText';
 import { supabase } from '@/lib/supabase';
@@ -19,7 +18,6 @@ export function adminInAppNotificationsQueryKey(userId: string | undefined) {
 }
 
 export function useAdminInAppNotifications(userId: string | undefined) {
-  const queryClient = useQueryClient();
   const key = adminInAppNotificationsQueryKey(userId);
 
   const query = useQuery({
@@ -39,25 +37,6 @@ export function useAdminInAppNotifications(userId: string | undefined) {
     // Realtime subscription keeps this fresh — no need to poll aggressively.
     staleTime: 5 * 60 * 1000,
   });
-
-  useEffect(() => {
-    if (!userId) return;
-    const qk = adminInAppNotificationsQueryKey(userId);
-    const channel = supabase
-      .channel(`admin-in-app-notifications-${userId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
-        () => {
-          void queryClient.invalidateQueries({ queryKey: qk });
-        },
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [queryClient, userId]);
 
   return query;
 }

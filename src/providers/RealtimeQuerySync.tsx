@@ -6,6 +6,11 @@ import { supabase } from '@/lib/supabase';
 
 /** Coalesces bursts (a save usually touches several rows/tables) into one refresh. */
 const REFRESH_DEBOUNCE_MS = 600;
+/**
+ * However busy the platform, at most one refresh this often: each one refetches every query on
+ * screen, and the platform's admin hears every change in every nursery.
+ */
+const MIN_REFRESH_GAP_MS = 5000;
 
 /**
  * Queries whose data is regenerated rather than read (fresh signed URLs every fetch):
@@ -35,6 +40,7 @@ export function RealtimeQuerySync() {
     let timer: ReturnType<typeof setTimeout> | undefined;
     let missedWhileHidden = false;
     let hasSubscribed = false;
+    let lastRefreshAt = 0;
 
     const refresh = () => {
       timer = undefined;
@@ -43,10 +49,13 @@ export function RealtimeQuerySync() {
         missedWhileHidden = true;
         return;
       }
+      lastRefreshAt = Date.now();
       void queryClient.invalidateQueries({ predicate: shouldRefresh });
     };
     const scheduleRefresh = () => {
-      if (timer === undefined) timer = setTimeout(refresh, REFRESH_DEBOUNCE_MS);
+      if (timer !== undefined) return;
+      const wait = Math.max(REFRESH_DEBOUNCE_MS, lastRefreshAt + MIN_REFRESH_GAP_MS - Date.now());
+      timer = setTimeout(refresh, wait);
     };
     const onVisibilityChange = () => {
       if (document.visibilityState !== 'visible' || !missedWhileHidden) return;

@@ -170,7 +170,7 @@ export function XoAdminSettingsPage() {
         </div>
       </section>
 
-      <TenantExportCard enabled={Boolean(activeNurseryId)} />
+      <TenantExportCard nurseryId={activeNurseryId} />
     </div>
   );
 }

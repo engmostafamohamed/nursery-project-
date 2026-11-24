@@ -10,6 +10,8 @@ export function useNurserySettings(nurseryId: string | null | undefined) {
 
   const query = useQuery({
     queryKey: queryKeyFor(nurseryId),
+    // The database makes every nursery's settings row with the nursery (create_default_nursery_settings);
+    // none to read means this user may not read it, and the screens fall back to the defaults.
     queryFn: async (): Promise<NurserySettingsRow | null> => {
       if (!nurseryId) return null;
       const { data, error } = await supabase
@@ -18,15 +20,7 @@ export function useNurserySettings(nurseryId: string | null | undefined) {
         .eq('nursery_id', nurseryId)
         .maybeSingle();
       if (error) throw error;
-      if (data) return data as NurserySettingsRow;
-
-      const createRes = await supabase
-        .from('nursery_settings')
-        .insert({ nursery_id: nurseryId } as never)
-        .select('*')
-        .single();
-      if (createRes.error) throw createRes.error;
-      return createRes.data as NurserySettingsRow;
+      return (data as NurserySettingsRow | null) ?? null;
     },
     enabled: Boolean(nurseryId),
   });

@@ -35,6 +35,7 @@ import { usePagination } from '@/hooks/usePagination';
 import { useCan } from '@/hooks/usePermissions';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { fetchAttendanceDays, type AttendanceDay } from '@/lib/attendanceApi';
+import { fetchNurseryFamilyLinks } from '@/lib/familyLinks';
 import { fetchAllRows } from '@/lib/fetchAllRows';
 import { getNurseryCalendarDateString, NURSERY_CALENDAR_TIMEZONE } from '@/lib/nurseryDay';
 import { supabase } from '@/lib/supabase';
@@ -298,27 +299,6 @@ export function AdminChildrenListPage() {
       const childIds = childRows.map((child) => child.id);
       const classIds = [...new Set(childRows.map((child) => child.class_id).filter(Boolean) as string[])];
 
-      const [classesRes, linksRes, absenceDays] = await Promise.all([
-        classIds.length
-          ? supabase.from('classes').select('id, name_ar, name_en').in('id', classIds)
-          : Promise.resolve({ data: [], error: null }),
-        supabase.from('parent_children').select('child_id, parent_id').in('child_id', childIds),
-        // Day statuses from the server, which knows the nursery's working days, holidays and each
-        // child's enrollment date. A range the server rejects (reversed, or over a year) counts nothing.
-        absenceStart <= absenceEnd && Date.parse(absenceEnd) - Date.parse(absenceStart) <= MAX_ABSENCE_RANGE_DAYS * 86_400_000
-          ? fetchAttendanceDays(childIds, absenceStart, absenceEnd)
-          : Promise.resolve([] as AttendanceDay[]),
-      ]);
-      if (classesRes.error) throw classesRes.error;
-      if (linksRes.error) throw linksRes.error;
-
-      const classMap = new Map(
-        ((classesRes.data ?? []) as Array<{ id: string; name_ar: string | null; name_en: string | null }>).map((row) => [
-          row.id,
-          languagePref === 'ar' ? row.name_ar || row.name_en || '-' : row.name_en || row.name_ar || '-',
-        ]),
-      );
-
       type InvoiceRow = {
         id: string;
         generated_invoice_number: string | null;
@@ -328,34 +308,50 @@ export function AdminChildrenListPage() {
         created_at: string;
         payments: Array<{ amount: string | number; status: string }> | null;
       };
-      const links = (linksRes.data ?? []) as Array<{ child_id: string; parent_id: string }>;
-      const parentIds = [...new Set(links.map((link) => link.parent_id))];
-      const [parentsRes, invoiceRows] = await Promise.all([
-        parentIds.length
-          ? supabase.from('users').select('id, name_ar, name_en').in('id', parentIds)
+      // All at once, each read by nursery: the family links with the parents' names, and the open
+      // invoices (only those matter for balances). Listing every child or parent id in the request
+      // instead made it too long for the server once a nursery had a few hundred children.
+      const [classesRes, allLinks, absenceDays, invoiceRows] = await Promise.all([
+        classIds.length
+          ? supabase.from('classes').select('id, name_ar, name_en').in('id', classIds)
           : Promise.resolve({ data: [], error: null }),
-        // Only open invoices of this nursery matter for balances; page through in case there are many.
-        parentIds.length
-          ? fetchAllRows<InvoiceRow>((start, end) =>
-              supabase
-                .from('invoices')
-                .select('id, generated_invoice_number, parent_id, amount, status, created_at, payments ( amount, status )')
-                .eq('nursery_id', nurseryId)
-                .in('parent_id', parentIds)
-                .not('status', 'in', '(paid,cancelled)')
-                .order('created_at')
-                .order('id')
-                .range(start, end)
-                .returns<InvoiceRow[]>(),
-            )
-          : Promise.resolve([] as InvoiceRow[]),
+        fetchNurseryFamilyLinks(nurseryId),
+        // Day statuses from the server, which knows the nursery's working days, holidays and each
+        // child's enrollment date. A range the server rejects (reversed, or over a year) counts nothing.
+        absenceStart <= absenceEnd && Date.parse(absenceEnd) - Date.parse(absenceStart) <= MAX_ABSENCE_RANGE_DAYS * 86_400_000
+          ? fetchAttendanceDays(childIds, absenceStart, absenceEnd)
+          : Promise.resolve([] as AttendanceDay[]),
+        fetchAllRows<InvoiceRow>((start, end) =>
+          supabase
+            .from('invoices')
+            .select('id, generated_invoice_number, parent_id, amount, status, created_at, payments ( amount, status )')
+            .eq('nursery_id', nurseryId)
+            .not('status', 'in', '(paid,cancelled)')
+            .order('created_at')
+            .order('id')
+            .range(start, end)
+            .returns<InvoiceRow[]>(),
+        ),
       ]);
-      if (parentsRes.error) throw parentsRes.error;
+      if (classesRes.error) throw classesRes.error;
 
-      const parentMap = new Map(
-        ((parentsRes.data ?? []) as Array<{ id: string; name_ar: string | null; name_en: string | null }>).map((row) => [
+      const classMap = new Map(
+        ((classesRes.data ?? []) as Array<{ id: string; name_ar: string | null; name_en: string | null }>).map((row) => [
           row.id,
-          languagePref === 'ar' ? row.name_ar || row.name_en || 'Parent' : row.name_en || row.name_ar || 'Parent',
+          languagePref === 'ar' ? row.name_ar || row.name_en || '-' : row.name_en || row.name_ar || '-',
+        ]),
+      );
+
+      // The families of the children listed (a search lists only some).
+      const listedChildIds = new Set(childIds);
+      const links = allLinks.filter((link) => listedChildIds.has(link.child_id));
+      const listedParentIds = new Set(links.map((link) => link.parent_id));
+      const parentMap = new Map(
+        links.map((link) => [
+          link.parent_id,
+          languagePref === 'ar'
+            ? link.parent?.name_ar || link.parent?.name_en || 'Parent'
+            : link.parent?.name_en || link.parent?.name_ar || 'Parent',
         ]),
       );
       const parentIdsByChild = links.reduce<Record<string, string[]>>((acc, link) => {
@@ -373,6 +369,7 @@ export function AdminChildrenListPage() {
 
       const invoiceSummaryByParent = new Map<string, { balance: number; invoiceNumber: string | null; invoiceDate: string }>();
       for (const invoice of invoiceRows) {
+        if (!listedParentIds.has(invoice.parent_id)) continue;
         const invoiceAmount = Number(invoice.amount ?? 0);
         const rawPaid = (invoice.payments ?? [])
           .filter((payment) => payment.status === 'completed')

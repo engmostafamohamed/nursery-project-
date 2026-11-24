@@ -9,6 +9,31 @@ type ExportJob = {
 };
 
 const ALLOWED_ROLES = new Set(['branch_admin', 'chain_super_admin', 'xo_super_admin']);
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+type Profile = { id: string; role: string; nursery_id: string | null; chain_id: string | null };
+
+/**
+ * The nursery to work on. A branch admin always gets their own. The platform's super admin (who has
+ * no nursery of their own) names the nursery they are managing, and a chain's super admin may name
+ * any branch of their chain; without a name they get their own nursery, if any.
+ */
+async function resolveNurseryId(
+  serviceClient: ReturnType<typeof createClient>,
+  profile: Profile,
+  requested: string | null,
+): Promise<string | null> {
+  const canName = profile.role === 'xo_super_admin' || profile.role === 'chain_super_admin';
+  if (!canName || !requested) return profile.nursery_id;
+  if (!UUID_RE.test(requested)) return null;
+  let query = serviceClient.from('nurseries').select('id').eq('id', requested);
+  if (profile.role === 'chain_super_admin') {
+    if (!profile.chain_id) return null;
+    query = query.eq('chain_id', profile.chain_id);
+  }
+  const { data } = await query.maybeSingle();
+  return data ? requested : null;
+}
 
 async function sha256Hex(input: string): Promise<string> {
   const bytes = new TextEncoder().encode(input);
@@ -53,19 +78,29 @@ Deno.serve(async (req) => {
 
   const { data: profile, error: profileErr } = await serviceClient
     .from('users')
-    .select('id, role, nursery_id')
+    .select('id, role, nursery_id, chain_id')
     .eq('id', userId)
-    .maybeSingle();
+    .maybeSingle<Profile>();
 
   if (profileErr || !profile || !ALLOWED_ROLES.has(String(profile.role))) {
     return jsonResponse({ error: 'Forbidden' }, 403);
+  }
+
+  // The nursery is named by ?nursery_id= on a read and { nursery_id } on a new export.
+  const requested =
+    req.method === 'GET'
+      ? new URL(req.url).searchParams.get('nursery_id')
+      : ((await req.json().catch(() => ({}))) as { nursery_id?: unknown }).nursery_id;
+  const nurseryId = await resolveNurseryId(serviceClient, profile, typeof requested === 'string' ? requested : null);
+  if (!nurseryId) {
+    return jsonResponse({ error: 'No nursery to export: choose one first' }, 403);
   }
 
   if (req.method === 'GET') {
     const { data, error } = await serviceClient
       .from('tenant_export_jobs')
       .select('id, nursery_id, requested_by, status, created_at, completed_at, expires_at, error_message')
-      .eq('nursery_id', String(profile.nursery_id))
+      .eq('nursery_id', nurseryId)
       .order('created_at', { ascending: false })
       .limit(10);
     if (error) {
@@ -78,7 +113,6 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'Method not allowed' }, 405);
   }
 
-  const nurseryId = String(profile.nursery_id);
   const nowIso = new Date().toISOString();
   const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString();
 
