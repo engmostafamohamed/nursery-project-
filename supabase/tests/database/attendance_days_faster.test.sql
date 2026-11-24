@@ -48,6 +48,15 @@ create function pg_temp.status_count(p_kid uuid, p_from date, p_to date, p_statu
    where day_status = p_status
 $$;
 
+-- The day of the excused absence: the latest working day (Sunday to Thursday, below) from nine to
+-- four days back, other than the full day five back. The weekend reads as a day off before a notice
+-- counts, so a fixed "four days back" fell on the weekend whenever the test ran on a Tuesday or a
+-- Wednesday, and read as off.
+create function pg_temp.excused_day() returns date language sql as $$
+  select max(d)::date from generate_series(current_date - 9, current_date - 4, interval '1 day') d
+   where extract(dow from d) not in (5, 6) and d::date <> current_date - 5
+$$;
+
 -- Two branches of one chain, plus a nursery nobody here belongs to.
 insert into public.chains (id, name) values ('00000000-0000-4000-9f12-00000000000c', 'Chain');
 insert into public.nurseries (id, chain_id, name_ar, name_en, working_days) values
@@ -106,7 +115,7 @@ values
    '00000000-0000-4000-9f12-000000000a02', null, 'manual', null,
    0, 0, 0, 0, 'none', false, null);
 insert into public.attendance_absence_reports (nursery_id, child_id, absence_date, reason, note, reported_by)
-values ('00000000-0000-4000-9f12-00000000000a', '00000000-0000-4000-9f12-0000000000c1', current_date - 4,
+values ('00000000-0000-4000-9f12-00000000000a', '00000000-0000-4000-9f12-0000000000c1', pg_temp.excused_day(),
         'sick', 'temperature', '00000000-0000-4000-9f12-000000000a03');
 
 -- 1-3 · the branch admin, over a fortnight covering the holiday, the weekend and every status.
@@ -128,7 +137,7 @@ select is((select day_status from public.get_attendance_days(array['00000000-000
           'present', 'a full day reads as present');
 select is((select day_status from public.get_attendance_days(array['00000000-0000-4000-9f12-0000000000c1']::uuid[], current_date - 3, current_date - 3)),
           'holiday', 'a holiday reads as a holiday');
-select is((select day_status from public.get_attendance_days(array['00000000-0000-4000-9f12-0000000000c1']::uuid[], current_date - 4, current_date - 4)),
+select is((select day_status from public.get_attendance_days(array['00000000-0000-4000-9f12-0000000000c1']::uuid[], pg_temp.excused_day(), pg_temp.excused_day())),
           'excused', 'an excused absence reads as excused');
 select is((select day_status from public.get_attendance_days(array['00000000-0000-4000-9f12-0000000000c1']::uuid[], current_date, current_date)),
           'partial', 'a child still in the nursery reads as partial');
@@ -144,13 +153,13 @@ select is(
 select is(
   (select count(*)::int from public.get_attendance_days(array['00000000-0000-4000-9f12-0000000000c1']::uuid[], current_date - 10, current_date) d
     where extract(dow from d.day) in (5, 6) and d.day_status <> 'off'
-      and d.day not in (current_date, current_date - 3, current_date - 4, current_date - 5)),
+      and d.day not in (current_date, current_date - 3, pg_temp.excused_day(), current_date - 5)),
   0, 'and every weekend day nothing was recorded for reads as one');
 select is(
   (select count(*)::int from public.get_attendance_days(array['00000000-0000-4000-9f12-0000000000c1']::uuid[], current_date - 10, current_date) d
     where d.day_status = 'absent'
       and (extract(dow from d.day) in (5, 6)
-           or d.day in (current_date, current_date - 3, current_date - 4, current_date - 5))),
+           or d.day in (current_date, current_date - 3, pg_temp.excused_day(), current_date - 5))),
   0, 'nothing with a record, a notice, a holiday or a weekend behind it reads as a plain absence');
 select cmp_ok(pg_temp.status_count('00000000-0000-4000-9f12-0000000000c1', current_date - 10, current_date, 'absent'),
               '>', 0, 'and the plain absences are there to be counted');
@@ -160,7 +169,7 @@ select is((select checked_in_by_en from public.get_attendance_days(array['000000
           'Teacher', 'who checked the child in is named');
 select is((select checked_out_by_ar from public.get_attendance_days(array['00000000-0000-4000-9f12-0000000000c1']::uuid[], current_date - 5, current_date - 5)),
           'المدير', 'who checked the child out is named, in Arabic');
-select is((select absence_reported_by_en from public.get_attendance_days(array['00000000-0000-4000-9f12-0000000000c1']::uuid[], current_date - 4, current_date - 4)),
+select is((select absence_reported_by_en from public.get_attendance_days(array['00000000-0000-4000-9f12-0000000000c1']::uuid[], pg_temp.excused_day(), pg_temp.excused_day())),
           'Father', 'who sent the absence notice is named');
 
 -- 16-18 · and who may see what.
