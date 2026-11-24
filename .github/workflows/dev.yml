@@ -6,7 +6,8 @@ name: Dev database
 #   pull request that changes migrations -> preview them on dev (dry run, nothing applied)
 #   push to main that changes migrations -> apply them to dev
 # A change to this workflow or the shared steps runs it too, so the pipeline is checked as it changes.
-# Secrets: GitHub environment "dev" -> SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD.
+# Secrets: GitHub environment "dev" -> SUPABASE_DB_PASSWORD only (no access token: see
+# supabase-migrate.yml). The edge functions have their own workflow, dev-functions.yml.
 on:
   push:
     branches: [main]
@@ -14,14 +15,12 @@ on:
       - "supabase/migrations/**"
       - ".github/workflows/dev.yml"
       - ".github/workflows/supabase-migrate.yml"
-      - ".github/actions/supabase-token-check/**"
   pull_request:
     branches: [main]
     paths:
       - "supabase/migrations/**"
       - ".github/workflows/dev.yml"
       - ".github/workflows/supabase-migrate.yml"
-      - ".github/actions/supabase-token-check/**"
   workflow_dispatch:
 
 permissions:
@@ -41,4 +40,5 @@ jobs:
     with:
       environment: dev
       project-ref: hlhlpjecinkqqsqrjpcj
+      pooler-host: aws-1-eu-west-1.pooler.supabase.com
       apply: ${{ github.event_name != 'pull_request' }}

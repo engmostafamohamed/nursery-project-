@@ -59,10 +59,18 @@ jobs:
             if grep -qE '^(supabase/functions/_shared/|supabase/config\.toml$|\.github/workflows/(dev-functions|supabase-functions)\.yml$|\.github/actions/supabase-token-check/)' <<<"$changed"; then
               functions=all
             else
-              # The functions whose folder changed and still exist (a removed one is deleted by hand).
-              functions=$(grep -oE '^supabase/functions/[^/_][^/]*/' <<<"$changed" | cut -d/ -f3 | sort -u | while read -r name; do
-                [ -f "supabase/functions/$name/index.ts" ] && echo "$name"
-              done | tr '\n' ' ' | sed 's/ *$//')
+              # The functions whose folder changed and still exist. A push that changes no function
+              # folder (only a file such as .env.example) gives none, and is not an error.
+              functions=""
+              for name in $(grep -oE '^supabase/functions/[^/_.][^/]*/' <<<"$changed" | cut -d/ -f3 | sort -u || true); do
+                if [ -f "supabase/functions/$name/index.ts" ]; then
+                  functions="$functions $name"
+                else
+                  # Removing a function from the repo does not remove it from Supabase.
+                  echo "::warning::supabase/functions/$name was removed from the repo: delete it from the dev project by hand (Dashboard -> Edge Functions -> $name -> Delete)."
+                fi
+              done
+              functions="${functions# }"
             fi
           fi
           echo "functions=$functions" >> "$GITHUB_OUTPUT"

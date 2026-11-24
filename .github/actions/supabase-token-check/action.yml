@@ -2,7 +2,7 @@ name: Check the Supabase access token
 description: >
   Fails with a plain annotation (readable without a GitHub sign-in) when the access token is missing,
   invalid, or cannot reach the project, instead of a later step failing with only "exit code 1".
-  Used by the migrations and the edge functions workflows.
+  Used by the edge functions workflow (the migrations need no access token).
 
 inputs:
   token:
@@ -17,7 +17,7 @@ inputs:
   permissions:
     description: The token permissions the calling workflow needs (for the messages)
     required: false
-    default: Project Settings, API Keys and API Key Secrets (Read)
+    default: Edge Functions (Read and write)
 
 runs:
   using: composite

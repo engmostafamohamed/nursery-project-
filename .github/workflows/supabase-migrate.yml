@@ -1,12 +1,16 @@
 name: Supabase migrations (shared)
 
 # One set of migration steps for every environment. Called by dev.yml and production.yml;
-# never triggered on its own. Each caller names a GitHub environment (dev, production) that
-# holds that environment's secrets under the same names:
-#   SUPABASE_ACCESS_TOKEN   personal access token of the Supabase account
-#   SUPABASE_DB_PASSWORD    database password of that environment's project
-# The caller must pass `secrets: inherit`: without it this workflow sees none of them, even with
+# never triggered on its own. Each caller names a GitHub environment (dev, production) that holds
+# that project's database password as SUPABASE_DB_PASSWORD, and passes the project's session pooler
+# host. The caller must pass `secrets: inherit`: without it this workflow sees no secret, even with
 # the environment set on its job.
+#
+# No access token: the steps talk to the database itself through the session pooler (GitHub's
+# runners have no IPv6 for the direct db.<ref>.supabase.co host). A personal access token expires
+# or gets revoked; the database password only changes when someone resets it.
+# --include-all applies every repo migration the database has not recorded, even one older than the
+# last applied, so a version applied by hand out of order does not stop the push.
 on:
   workflow_call:
     inputs:
@@ -16,6 +20,10 @@ on:
         required: true
       project-ref:
         description: Supabase project ref of that environment
+        type: string
+        required: true
+      pooler-host:
+        description: Session pooler host of that project (Dashboard -> Connect -> Session pooler), such as aws-1-eu-west-1.pooler.supabase.com
         type: string
         required: true
       apply:
@@ -32,9 +40,9 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     env:
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       SUPABASE_PROJECT_REF: ${{ inputs.project-ref }}
+      POOLER_HOST: ${{ inputs.pooler-host }}
       TARGET_ENVIRONMENT: ${{ inputs.environment }}
     steps:
       - uses: actions/checkout@v5
@@ -43,31 +51,36 @@ jobs:
         with:
           version: 2.120.0
 
-      - name: Check the database password
+      # The run's log needs a GitHub sign-in to read, but its annotations do not: say plainly what is
+      # wrong instead of failing with only "exit code 1".
+      - name: Connect to the database
         shell: bash
         run: |
           test -n "$SUPABASE_DB_PASSWORD" || { echo "::error::Missing secret SUPABASE_DB_PASSWORD in the '$TARGET_ENVIRONMENT' GitHub environment"; exit 1; }
-
-      # The run's log needs a GitHub sign-in to read, but its annotations do not: say plainly which
-      # secret is wrong instead of failing inside `supabase link` with only "exit code 1".
-      - uses: ./.github/actions/supabase-token-check
-        with:
-          token: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          project-ref: ${{ inputs.project-ref }}
-          environment: ${{ inputs.environment }}
-
-      - name: Link the project
-        shell: bash
-        run: |
-          set -o pipefail
-          if ! supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD" 2>&1 | tee link.log; then
-            echo "::error::supabase link failed (a wrong SUPABASE_DB_PASSWORD shows as a password authentication error): $(tail -n 3 link.log | tr '\n' ' ')"
+          [[ "$SUPABASE_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]] || { echo "::error::'$SUPABASE_PROJECT_REF' is not a Supabase project ref"; exit 1; }
+          [[ "$POOLER_HOST" =~ ^[a-z0-9.-]+\.pooler\.supabase\.com$ ]] || { echo "::error::'$POOLER_HOST' is not a Supabase pooler host (Dashboard -> Connect -> Session pooler)"; exit 1; }
+          # The CLI wants the connection string percent-encoded.
+          password=$(jq -rn --arg v "$SUPABASE_DB_PASSWORD" '$v|@uri')
+          echo "::add-mask::$password"
+          db_url="postgresql://postgres.$SUPABASE_PROJECT_REF:$password@$POOLER_HOST:5432/postgres"
+          echo "::add-mask::$db_url"
+          if ! supabase migration list --db-url "$db_url" > list.log 2>&1; then
+            cat list.log
+            if grep -qiE "password authentication failed|SASL auth" list.log; then
+              echo "::error::SUPABASE_DB_PASSWORD in the '$TARGET_ENVIRONMENT' GitHub environment is not the database password of $SUPABASE_PROJECT_REF (Dashboard -> Project Settings -> Database; resetting it there changes it)."
+            elif grep -qiE "tenant/user .* not found|tenant or user not found" list.log; then
+              echo "::error::$POOLER_HOST does not serve project $SUPABASE_PROJECT_REF: copy the host from Dashboard -> Connect -> Session pooler."
+            else
+              echo "::error::Could not reach the $TARGET_ENVIRONMENT database through $POOLER_HOST: $(tail -n 3 list.log | tr '\n' ' ')"
+            fi
             exit 1
           fi
+          cat list.log
+          echo "DB_URL=$db_url" >> "$GITHUB_ENV"
 
       - name: Preview pending migrations
-        run: supabase db push --linked --dry-run
+        run: supabase db push --db-url "$DB_URL" --include-all --dry-run
 
       - name: Apply pending migrations
         if: inputs.apply
-        run: supabase db push --linked
+        run: supabase db push --db-url "$DB_URL" --include-all

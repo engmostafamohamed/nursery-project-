@@ -6,11 +6,13 @@ name: Production release (not live yet)
 #
 # Setup when going live (GitHub -> Settings):
 #   Environments -> "production" (add Required reviewers so every release waits for approval):
-#     secrets  SUPABASE_ACCESS_TOKEN (with Edge Functions: read and write), SUPABASE_DB_PASSWORD,
-#              VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
+#     secrets  SUPABASE_DB_PASSWORD (the migrations), SUPABASE_ACCESS_TOKEN (the edge functions; with
+#              Edge Functions: read and write, and no expiry), VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
 #   In the production Supabase project: the functions' own secrets (ANTHROPIC_API_KEY, PAYMOB_*, …).
 #   Secrets and variables -> Actions -> Variables (repository):
 #     SUPABASE_PRODUCTION_PROJECT_REF   ref of the production Supabase project
+#     SUPABASE_PRODUCTION_POOLER_HOST   its session pooler host (Dashboard -> Connect -> Session pooler),
+#                                       such as aws-1-eu-west-1.pooler.supabase.com
 #   In the production Vercel project, turn off automatic Git deployments: this workflow deploys it.
 on:
   workflow_dispatch:
@@ -39,6 +41,7 @@ jobs:
     env:
       CONFIRM: ${{ inputs.confirm }}
       PRODUCTION_PROJECT_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+      PRODUCTION_POOLER_HOST: ${{ vars.SUPABASE_PRODUCTION_POOLER_HOST }}
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
@@ -49,6 +52,7 @@ jobs:
           test "$CONFIRM" = "release production" || { echo "::error::Type exactly: release production"; exit 1; }
           test -n "$PRODUCTION_PROJECT_REF" || { echo "::error::Set the repository variable SUPABASE_PRODUCTION_PROJECT_REF"; exit 1; }
           test "$PRODUCTION_PROJECT_REF" != "$DEV_PROJECT_REF" || { echo "::error::SUPABASE_PRODUCTION_PROJECT_REF points at the dev project"; exit 1; }
+          test -n "$PRODUCTION_POOLER_HOST" || { echo "::error::Set the repository variable SUPABASE_PRODUCTION_POOLER_HOST (production project -> Connect -> Session pooler host)"; exit 1; }
           test -n "$VERCEL_TOKEN" || { echo "::error::Missing secret VERCEL_TOKEN in the 'production' GitHub environment"; exit 1; }
           test -n "$VERCEL_ORG_ID" || { echo "::error::Missing secret VERCEL_ORG_ID in the 'production' GitHub environment"; exit 1; }
           test -n "$VERCEL_PROJECT_ID" || { echo "::error::Missing secret VERCEL_PROJECT_ID in the 'production' GitHub environment"; exit 1; }
@@ -61,6 +65,7 @@ jobs:
     with:
       environment: production
       project-ref: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+      pooler-host: ${{ vars.SUPABASE_PRODUCTION_POOLER_HOST }}
       apply: true
 
   functions:

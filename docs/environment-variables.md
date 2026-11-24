@@ -83,22 +83,18 @@ npx supabase secrets set --env-file supabase/functions/.env.production.local --p
 
 **dev (مطلوب دلوقتي):** GitHub ← Settings ← Environments ← `dev`:
 
-- `SUPABASE_ACCESS_TOKEN`: من Supabase Dashboard ← Account ← Access Tokens.
-- `SUPABASE_DB_PASSWORD`: كلمة سر قاعدة بيانات `hlhlpjecinkqqsqrjpcj` (نفس اللي في `.env` عندك).
+- `SUPABASE_DB_PASSWORD`: كلمة سر قاعدة بيانات `hlhlpjecinkqqsqrjpcj`. الـ migrations محتاجة دي بس: بتتوصل بقاعدة البيانات مباشرة عن طريق الـ session pooler (`aws-1-eu-west-1.pooler.supabase.com`)، من غير access token، فانتهاء الـ token أو إلغاؤه مابيوقفهاش.
+- `SUPABASE_ACCESS_TOKEN`: لنشر دوال السيرفر بس ([`dev-functions.yml`](../.github/workflows/dev-functions.yml)). اعمله من Supabase Dashboard ← Account ← Access Tokens، بصلاحية Edge Functions (Read and write) ومن غير تاريخ انتهاء. لو اتلغى أو انتهى، النشر بيقف برسالة بتقول كده بالظبط.
 
 **production (يوم الإطلاق):**
 
-- GitHub environment `production` فيه **Required reviewers** (كل إطلاق يستنى موافقة)، والـ secrets: `SUPABASE_ACCESS_TOKEN`، و`SUPABASE_DB_PASSWORD` (بتاع مشروع production)، و`VERCEL_TOKEN`، و`VERCEL_ORG_ID`، و`VERCEL_PROJECT_ID` (بتوع مشروع Vercel الجديد).
-- Repository variable اسمه `SUPABASE_PRODUCTION_PROJECT_REF`. الـ workflow بيرفض يشتغل لو مش موجود أو لو بيشاور على مشروع dev.
+- GitHub environment `production` فيه **Required reviewers** (كل إطلاق يستنى موافقة)، والـ secrets: `SUPABASE_DB_PASSWORD` (بتاع مشروع production)، و`SUPABASE_ACCESS_TOKEN` (للدوال)، و`VERCEL_TOKEN`، و`VERCEL_ORG_ID`، و`VERCEL_PROJECT_ID` (بتوع مشروع Vercel الجديد).
+- Repository variables: `SUPABASE_PRODUCTION_PROJECT_REF`، و`SUPABASE_PRODUCTION_POOLER_HOST` (من مشروع production ← Connect ← Session pooler). الـ workflow بيرفض يشتغل لو واحد منهم مش موجود، أو لو الـ ref بيشاور على مشروع dev.
 - في مشروع Vercel بتاع production: اقفل النشر التلقائي من Git، علشان الواجهة ماتتنشرش قبل الـ migrations.
 
-كل الـ migrations متطبقة على dev لحد `20261021040000` (اتأكدت بـ `supabase migration list` يوم 24 أكتوبر).
+كل الـ migrations متطبقة على dev لحد `20261122100000` (اتأكدت من `schema_migrations` يوم 24 نوفمبر). أي migration بيتسجل في الـ repo ومش متطبق بيتطبق، حتى لو أقدم من آخر واحد متطبق (`--include-all`).
 
-الـ CI **مابينشرش** دوال السيرفر. بعد أي تعديل في `supabase/functions`:
-
-```
-npx supabase functions deploy <name> --project-ref <project-ref> --use-api
-```
+دوال السيرفر بتتنشر من الـ CI ([`dev-functions.yml`](../.github/workflows/dev-functions.yml)): push على `main` بينشر اللي اتغير بس، وتعديل في `_shared` أو `config.toml` بينشرها كلها. الدالة اللي بتتمسح من الـ repo مابتتمسحش من Supabase: الـ workflow بيطلع تحذير، وتتمسح بإيدك من Dashboard ← Edge Functions.
 
 ## 5. بيانات بتتكتب من لوحة الأدمن (مش متغيرات)
 
@@ -134,8 +130,8 @@ npx supabase functions deploy <name> --project-ref <project-ref> --use-api
 2. Supabase Secrets: Paymob و`APP_BASE_URL`، و`SIGNUP_PAYMENT_TEST_MODE=false`، وResend، وSMS Misr، و360dialog، وAnthropic.
 3. Supabase Auth: الـ Site URL والـ Redirect URLs، وSMTP.
 4. Vercel (مشروع production): متغيرات `VITE_*` من `.env.production.example`، و`VITE_SHOW_DEMO_ACCOUNTS=false`.
-5. GitHub: البيئة `production` (Required reviewers والـ secrets الخمسة)، والمتغير `SUPABASE_PRODUCTION_PROJECT_REF`. وبعدها Actions ← Production release ← Run workflow (بيطبق الـ migrations وبينشر الواجهة).
-6. دوال السيرفر على المشروع الجديد (الـ workflow مابينشرهاش): `npx supabase functions deploy --project-ref <production-ref> --use-api`.
+5. GitHub: البيئة `production` (Required reviewers والـ secrets الخمسة)، والمتغيرين `SUPABASE_PRODUCTION_PROJECT_REF` و`SUPABASE_PRODUCTION_POOLER_HOST`. وبعدها Actions ← Production release ← Run workflow (بيطبق الـ migrations، وبينشر دوال السيرفر، وبعدين الواجهة).
+6. ماتنساش secrets دوال السيرفر نفسها على المشروع الجديد (الخطوة 2): الـ workflow بينشر الدوال بس، مش متغيراتها.
 7. لوحة الأدمن لكل حضانة: InstaPay، وأرقام المحافظ، والتحويل البنكي.
 8. Paymob: الـ webhook يشاور على `https://<project-ref>.supabase.co/functions/v1/paymob-webhook`.
 9. تجربة: دفعة كارت صغيرة، وإيميل، وSMS، وواتساب لرقمك. كل واحدة لازم تظهر في `message_deliveries` بـ `mode = live` و`status = sent`.

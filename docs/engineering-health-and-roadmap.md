@@ -197,8 +197,10 @@ hand, after a reviewer approves, from a commit already verified on dev.
 - The timestamped files in `supabase/migrations/` **are** the schema's version history. Never edit an applied migration;
   add a new one.
 - Apply with `supabase db push` from CI only. **Never apply migrations by hand to production.**
-- Every environment runs the same steps from `.github/workflows/supabase-migrate.yml` (link, dry run, push). Each
-  environment is a GitHub environment holding the same secret names: `SUPABASE_ACCESS_TOKEN` and `SUPABASE_DB_PASSWORD`.
+- Every environment runs the same steps from `.github/workflows/supabase-migrate.yml` (connect through the session
+  pooler, dry run, `db push --include-all`). Each environment is a GitHub environment holding `SUPABASE_DB_PASSWORD`;
+  the migrations need no access token, so an expired or revoked one cannot stop them. `SUPABASE_ACCESS_TOKEN`
+  (Edge Functions: read and write) is only for deploying the edge functions.
 - **Dev** (`dev.yml`): a pull request to `main` that changes `supabase/migrations/**` previews the pending migrations on
   `hlhlpjecinkqqsqrjpcj` (dry run, nothing applied); the push to `main` applies them.
 - **Production** (`production.yml`, not live yet): run by hand and confirmed by typing `release production`. It checks
